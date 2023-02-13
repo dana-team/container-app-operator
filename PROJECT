@@ -1,0 +1,19 @@
+domain: dana.io
+layout:
+- go.kubebuilder.io/v3
+plugins:
+  manifests.sdk.operatorframework.io/v2: {}
+  scorecard.sdk.operatorframework.io/v2: {}
+projectName: capp-operaor
+repo: github.com/dana-team/container-app-operator
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: dana.io
+  group: rcs
+  kind: Capp
+  path: github.com/dana-team/container-app-operator/api/v1alpha1
+  version: v1alpha1
+version: "3"
