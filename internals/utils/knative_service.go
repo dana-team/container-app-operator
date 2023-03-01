@@ -16,17 +16,21 @@ import (
 )
 
 func prepareKnativeService(ctx context.Context, capp rcsv1alpha1.Capp) knativev1.Service {
-	knativeService := &knativev1.Service{
+	knativeService := knativev1.Service{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      capp.Name,
 			Namespace: capp.Namespace,
+			Annotations: map[string]string{
+				CappResourceKey: capp.Name,
+			},
 		},
 		Spec: knativev1.ServiceSpec{
 			ConfigurationSpec: capp.Spec.ConfigurationSpec,
 		},
 	}
-	return *knativeService
+	knativeService.Spec.Template.ObjectMeta.Annotations = SetAutoScaler(capp, knativeService)
+	return knativeService
 }
 
 func CreateOrUpdateKnativeService(ctx context.Context, capp rcsv1alpha1.Capp, r client.Client, log logr.Logger) error {

@@ -7,6 +7,7 @@ import (
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
+	knativev1alphav1 "knative.dev/serving/pkg/apis/serving/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -31,15 +32,46 @@ func HandleResourceDeletion(ctx context.Context, capp rcsv1alpha1.Capp, log logr
 	return nil, false
 }
 
-func finalizeService(ctx context.Context, capp rcsv1alpha1.Capp, log logr.Logger, r client.Client) error {
+func deleteKnativeService(ctx context.Context, capp rcsv1alpha1.Capp, log logr.Logger, r client.Client) error {
 	knativeService := &knativev1.Service{}
 	if err := r.Get(ctx, types.NamespacedName{Name: capp.Name, Namespace: capp.Namespace}, knativeService); err != nil {
-		if errors.IsNotFound(err) {
-			return nil
+		if !errors.IsNotFound(err) {
+			log.Error(err, "unable to get KnativeService")
+			return err
 		}
+		return nil
 	}
 	if err := r.Delete(ctx, knativeService); err != nil {
 		log.Error(err, "unable to delete KnativeService")
+		return err
+	}
+	return nil
+}
+
+func deleteKnativeDomainMapping(ctx context.Context, capp rcsv1alpha1.Capp, log logr.Logger, r client.Client) error {
+	knativeDomainMapping := &knativev1alphav1.DomainMapping{}
+	if capp.Spec.RouteSpec.Hostname == "" {
+		return nil
+	}
+	if err := r.Get(ctx, types.NamespacedName{Name: capp.Spec.RouteSpec.Hostname, Namespace: capp.Namespace}, knativeDomainMapping); err != nil {
+		if !errors.IsNotFound(err) {
+			log.Error(err, "unable to get domainMapping")
+			return err
+		}
+		return nil
+	}
+	if err := r.Delete(ctx, knativeDomainMapping); err != nil {
+		log.Error(err, "unable to delete Knative domainMapping")
+		return err
+	}
+	return nil
+}
+
+func finalizeService(ctx context.Context, capp rcsv1alpha1.Capp, log logr.Logger, r client.Client) error {
+	if err := deleteKnativeService(ctx, capp, log, r); err != nil {
+		return err
+	}
+	if err := deleteKnativeDomainMapping(ctx, capp, log, r); err != nil {
 		return err
 	}
 	return nil

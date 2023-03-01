@@ -15,7 +15,20 @@ spec:
     singular: capp
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - description: cluster of the resource
+      jsonPath: .status.applicationLinks.site
+      name: Site
+      type: string
+    - description: shorten url
+      jsonPath: .spec.routeSpec.hostname
+      name: Custom URL
+      type: string
+    - description: autoscale metric
+      jsonPath: .spec.scaleMetric
+      name: AutoScale Type
+      type: string
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: Capp is the Schema for the capps API

@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -45,7 +44,7 @@ func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	if err := utils.EnsureFinalizer(ctx, capp, r.Client); err != nil {
 		return ctrl.Result{}, err
 	}
-	if err := r.syncApplication(ctx, capp); err != nil {
+	if err := r.SyncApplication(ctx, capp); err != nil {
 		return ctrl.Result{}, err
 	}
 	return ctrl.Result{}, nil
@@ -58,12 +57,11 @@ func (r *CappReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *CappReconciler) syncApplication(ctx context.Context, capp rcsv1alpha1.Capp) error {
+func (r *CappReconciler) SyncApplication(ctx context.Context, capp rcsv1alpha1.Capp) error {
 	if err := utils.CreateOrUpdateKnativeService(ctx, capp, r.Client, r.Log); err != nil {
 		return err
 	}
 	if capp.Spec.RouteSpec.Hostname != "" {
-		fmt.Print(capp.Spec.RouteSpec.Hostname)
 		if err := utils.CreateOrUpdateKnativeDomainMapping(ctx, capp, r.Client, r.Log); err != nil {
 			return err
 		}

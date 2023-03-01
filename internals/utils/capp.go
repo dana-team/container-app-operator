@@ -2,6 +2,7 @@ package utils
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 
 	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
@@ -18,14 +19,17 @@ var clusters = map[string]string{
 }
 
 func buildApplicationLinks(ctx context.Context, capp rcsv1alpha1.Capp, log logr.Logger, r client.Client) (*rcsv1alpha1.ApplicationLinks, error) {
-	applicationLinks := rcsv1alpha1.ApplicationLinks{}
 	consoleRoute := routev1.Route{}
 	if err := r.Get(ctx, openshiftConsoleKey, &consoleRoute); err != nil {
+		log.Error(err, "Cant get console route")
 		return nil, err
 	}
-	applicationLinks.ConsoleLink = consoleRoute.Spec.Host
-	applicationLinks.Site = capp.Status.ApplicationLinks.Site
-	applicationLinks.ClusterSegment = clusters[applicationLinks.Site]
+	applicationLinks := rcsv1alpha1.ApplicationLinks{
+		ConsoleLink:    consoleRoute.Spec.Host,
+		Site:           capp.Spec.Site,
+		ClusterSegment: clusters[capp.Spec.Site],
+	}
+	fmt.Print(applicationLinks)
 	return &applicationLinks, nil
 }
 
@@ -39,8 +43,13 @@ func SyncStatus(ctx context.Context, capp rcsv1alpha1.Capp, log logr.Logger, r c
 		return err
 	}
 	capp.Status.ApplicationLinks = *applicationLinks
+	fmt.Print("\n")
+	fmt.Print(applicationLinks)
+	fmt.Print("\n")
+
 	if !reflect.DeepEqual(capp.Status, cappObject.Status) {
 		if err := r.Status().Update(ctx, &cappObject); err != nil {
+			log.Error(err, "Cant updare capp status")
 			return err
 		}
 	}

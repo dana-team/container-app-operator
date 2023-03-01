@@ -17,12 +17,17 @@ import (
 	knativev1alphav1 "knative.dev/serving/pkg/apis/serving/v1alpha1"
 )
 
+const CappResourceKey = "dana.io/parent-capp"
+
 func PrepareKnativeDomainMapping(ctx context.Context, capp rcsv1alpha1.Capp) knativev1alphav1.DomainMapping {
 	knativeDomainMapping := &knativev1alphav1.DomainMapping{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      capp.Spec.RouteSpec.Hostname,
 			Namespace: capp.Namespace,
+			Annotations: map[string]string{
+				CappResourceKey: capp.Name,
+			},
 		},
 		Spec: knativev1alphav1.DomainMappingSpec{
 			Ref: duckv1.KReference{
