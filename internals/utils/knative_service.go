@@ -21,6 +21,9 @@ func prepareKnativeService(ctx context.Context, capp rcsv1alpha1.Capp) knativev1
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      capp.Name,
 			Namespace: capp.Namespace,
+			Labels: map[string]string{
+				CappResourceKey: capp.Name,
+			},
 			Annotations: map[string]string{
 				CappResourceKey: capp.Name,
 			},

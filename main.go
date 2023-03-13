@@ -31,6 +31,7 @@ import (
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 
 	"github.com/go-logr/zapr"
+	networkingv1 "github.com/openshift/api/network/v1"
 	"go.elastic.co/ecszap"
 	"go.uber.org/zap"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -51,6 +52,7 @@ var (
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+	utilruntime.Must(networkingv1.AddToScheme(scheme))
 	utilruntime.Must(knativev1.AddToScheme(scheme))
 	utilruntime.Must(knativev1alphav1.AddToScheme(scheme))
 	utilruntime.Must(routev1.AddToScheme(scheme))

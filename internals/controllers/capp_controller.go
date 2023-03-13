@@ -8,6 +8,15 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	status_utils "github.com/dana-team/container-app-operator/internals/utils/status"
+	"k8s.io/apimachinery/pkg/types"
+	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
+
 	utils "github.com/dana-team/container-app-operator/internals/utils"
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -50,10 +59,37 @@ func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	return ctrl.Result{}, nil
 }
 
+func (r *CappReconciler) findCappFromKnative(knativeService client.Object) []reconcile.Request {
+	cappList := &rcsv1alpha1.CappList{}
+	listOps := &client.ListOptions{
+		Namespace: knativeService.GetNamespace(),
+	}
+	err := r.List(context.TODO(), cappList, listOps)
+	if err != nil {
+		return []reconcile.Request{}
+	}
+
+	requests := make([]reconcile.Request, len(cappList.Items))
+	for i, item := range cappList.Items {
+		requests[i] = reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Name:      item.GetName(),
+				Namespace: item.GetNamespace(),
+			},
+		}
+	}
+	return requests
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *CappReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&rcsv1alpha1.Capp{}).
+		Watches(
+			&source.Kind{Type: &knativev1.Service{}},
+			handler.EnqueueRequestsFromMapFunc(r.findCappFromKnative),
+			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
+		).
 		Complete(r)
 }
 
@@ -66,7 +102,7 @@ func (r *CappReconciler) SyncApplication(ctx context.Context, capp rcsv1alpha1.C
 			return err
 		}
 	}
-	if err := utils.SyncStatus(ctx, capp, r.Log, r.Client); err != nil {
+	if err := status_utils.SyncStatus(ctx, capp, r.Log, r.Client); err != nil {
 		return err
 	}
 	return nil
