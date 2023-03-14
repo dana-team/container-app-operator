@@ -46,9 +46,9 @@ func getClusterSegment(ctx context.Context, capp rcsv1alpha1.Capp, log logr.Logg
 	return hostsubnets.Items[0].Subnet, nil
 }
 
-func buildRevisionsStatus(ctx context.Context, capp rcsv1alpha1.Capp, knativeService knativev1.Service, log logr.Logger, r client.Client) ([]knativev1.RevisionStatus, error) {
+func buildRevisionsStatus(ctx context.Context, capp rcsv1alpha1.Capp, knativeService knativev1.Service, log logr.Logger, r client.Client) ([]rcsv1alpha1.RevisionInfo, error) {
 	knativeRevisions := knativev1.RevisionList{}
-	revisionsInfo := []knativev1.RevisionStatus{}
+	revisionsInfo := []rcsv1alpha1.RevisionInfo{}
 	requirement, err := labels.NewRequirement("serving.knative.dev/configuration", selection.Equals, []string{capp.Name})
 	if err != nil {
 		fmt.Print("sahar \n", requirement)
@@ -63,7 +63,10 @@ func buildRevisionsStatus(ctx context.Context, capp rcsv1alpha1.Capp, knativeSer
 		return revisionsInfo, err
 	}
 	for _, revision := range knativeRevisions.Items {
-		revisionsInfo = append(revisionsInfo, revision.Status)
+		revisionsInfo = append(revisionsInfo, rcsv1alpha1.RevisionInfo{
+			RevisionName:   revision.Name,
+			RevisionStatus: revision.Status,
+		})
 	}
 	return revisionsInfo, nil
 }
@@ -87,7 +90,7 @@ func SyncStatus(ctx context.Context, capp rcsv1alpha1.Capp, log logr.Logger, r c
 		return err
 	}
 	cappObject.Status.KnativeObjectStatus = kservice.Status
-	cappObject.Status.Revisions = RevisionsStatus
+	cappObject.Status.RevisionInfo = RevisionsStatus
 	if !reflect.DeepEqual(applicationLinks, cappObject.Status.ApplicationLinks) {
 		cappObject.Status.ApplicationLinks = *applicationLinks
 		if err := r.Status().Update(ctx, &cappObject); err != nil {
