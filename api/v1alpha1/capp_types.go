@@ -43,12 +43,17 @@ type ApplicationLinks struct {
 	ClusterSegment string `json:"clusterSegment,omitempty"`
 }
 
+type RevisionInfo struct {
+	RevisionStatus knativev1.RevisionStatus `json:"RevisionsStatus,omitempty"`
+	RevisionName   string                   `json:"name,omitempty"`
+}
+
 // CappStatus defines the observed state of Capp
 type CappStatus struct {
-	ApplicationLinks    ApplicationLinks           `json:"applicationLinks,omitempty"`
-	KnativeObjectStatus knativev1.ServiceStatus    `json:"knativeObjectStatus,omitempty"`
-	Revisions           []knativev1.RevisionStatus `json:"RevisionsStatus,omitempty"`
-	Conditions          []metav1.Condition         `json:"conditions,omitempty"`
+	ApplicationLinks    ApplicationLinks        `json:"applicationLinks,omitempty"`
+	KnativeObjectStatus knativev1.ServiceStatus `json:"knativeObjectStatus,omitempty"`
+	RevisionInfo        []RevisionInfo          `json:"Revisions,omitempty"`
+	Conditions          []metav1.Condition      `json:"conditions,omitempty"`
 }
 
 //+kubebuilder:object:root=true
