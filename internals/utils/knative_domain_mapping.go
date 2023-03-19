@@ -19,6 +19,9 @@ import (
 
 const CappResourceKey = "dana.io/parent-capp"
 
+// PrepareKnativeDomainMapping creates a new DomainMapping for a Knative service.
+// Takes a context.Context object, and a rcsv1alpha1.Capp object as input.
+// Returns a knativev1alphav1.DomainMapping object.
 func PrepareKnativeDomainMapping(ctx context.Context, capp rcsv1alpha1.Capp) knativev1alphav1.DomainMapping {
 	knativeDomainMapping := &knativev1alphav1.DomainMapping{
 		TypeMeta: metav1.TypeMeta{},
@@ -40,6 +43,9 @@ func PrepareKnativeDomainMapping(ctx context.Context, capp rcsv1alpha1.Capp) kna
 	return *knativeDomainMapping
 }
 
+// CreateOrUpdateKnativeDomainMapping creates or updates a DomainMapping object for a Knative service.
+// Takes a context.Context object, a rcsv1alpha1.Capp object, a client.Client object, and a logr.Logger object as input.
+// Returns an error if there is an issue creating or updating the DomainMapping.
 func CreateOrUpdateKnativeDomainMapping(ctx context.Context, capp rcsv1alpha1.Capp, r client.Client, log logr.Logger) error {
 	knativeDomainMappingFromCapp := PrepareKnativeDomainMapping(ctx, capp)
 	knativeDomainMapping := knativev1alphav1.DomainMapping{}
@@ -81,5 +87,24 @@ func UpdateKnativeDomainMapping(ctx context.Context, domainMapping knativev1alph
 		return err
 	}
 	log.Info(fmt.Sprintf("%s %s updated", oldDomainMapping.GetObjectKind().GroupVersionKind().Kind, oldDomainMapping.Name))
+	return nil
+}
+
+func DeleteKnativeDomainMapping(ctx context.Context, capp rcsv1alpha1.Capp, log logr.Logger, r client.Client) error {
+	knativeDomainMapping := &knativev1alphav1.DomainMapping{}
+	if capp.Spec.RouteSpec.Hostname == "" {
+		return nil
+	}
+	if err := r.Get(ctx, types.NamespacedName{Name: capp.Spec.RouteSpec.Hostname, Namespace: capp.Namespace}, knativeDomainMapping); err != nil {
+		if !errors.IsNotFound(err) {
+			log.Error(err, "unable to get domainMapping")
+			return err
+		}
+		return nil
+	}
+	if err := r.Delete(ctx, knativeDomainMapping); err != nil {
+		log.Error(err, "unable to delete Knative domainMapping")
+		return err
+	}
 	return nil
 }
