@@ -7839,112 +7839,117 @@ spec:
           status:
             description: CappStatus defines the observed state of Capp
             properties:
-              RevisionsStatus:
+              Revisions:
                 items:
-                  description: RevisionStatus communicates the observed state of the
-                    Revision (from the controller).
                   properties:
-                    actualReplicas:
-                      description: ActualReplicas reflects the amount of ready pods
-                        running this revision.
-                      format: int32
-                      type: integer
-                    annotations:
-                      additionalProperties:
-                        type: string
-                      description: Annotations is additional Status fields for the
-                        Resource to save some additional State as well as convey more
-                        information to the user. This is roughly akin to Annotations
-                        on any k8s resource, just the reconciler conveying richer
-                        information outwards.
+                    RevisionsStatus:
+                      description: RevisionStatus communicates the observed state
+                        of the Revision (from the controller).
+                      properties:
+                        actualReplicas:
+                          description: ActualReplicas reflects the amount of ready
+                            pods running this revision.
+                          format: int32
+                          type: integer
+                        annotations:
+                          additionalProperties:
+                            type: string
+                          description: Annotations is additional Status fields for
+                            the Resource to save some additional State as well as
+                            convey more information to the user. This is roughly akin
+                            to Annotations on any k8s resource, just the reconciler
+                            conveying richer information outwards.
+                          type: object
+                        conditions:
+                          description: Conditions the latest available observations
+                            of a resource's current state.
+                          items:
+                            description: 'Condition defines a readiness condition
+                              for a Knative resource. See: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties'
+                            properties:
+                              lastTransitionTime:
+                                description: LastTransitionTime is the last time the
+                                  condition transitioned from one status to another.
+                                  We use VolatileTime in place of metav1.Time to exclude
+                                  this from creating equality.Semantic differences
+                                  (all other things held constant).
+                                type: string
+                              message:
+                                description: A human readable message indicating details
+                                  about the transition.
+                                type: string
+                              reason:
+                                description: The reason for the condition's last transition.
+                                type: string
+                              severity:
+                                description: Severity with which to treat failures
+                                  of this type of condition. When this is not specified,
+                                  it defaults to Error.
+                                type: string
+                              status:
+                                description: Status of the condition, one of True,
+                                  False, Unknown.
+                                type: string
+                              type:
+                                description: Type of condition.
+                                type: string
+                            required:
+                            - status
+                            - type
+                            type: object
+                          type: array
+                        containerStatuses:
+                          description: 'ContainerStatuses is a slice of images present
+                            in .Spec.Container[*].Image to their respective digests
+                            and their container name. The digests are resolved during
+                            the creation of Revision. ContainerStatuses holds the
+                            container name and image digests for both serving and
+                            non serving containers. ref: http://bit.ly/image-digests'
+                          items:
+                            description: ContainerStatus holds the information of
+                              container name and image digest value
+                            properties:
+                              imageDigest:
+                                type: string
+                              name:
+                                type: string
+                            type: object
+                          type: array
+                        desiredReplicas:
+                          description: DesiredReplicas reflects the desired amount
+                            of pods running this revision.
+                          format: int32
+                          type: integer
+                        initContainerStatuses:
+                          description: 'InitContainerStatuses is a slice of images
+                            present in .Spec.InitContainer[*].Image to their respective
+                            digests and their container name. The digests are resolved
+                            during the creation of Revision. ContainerStatuses holds
+                            the container name and image digests for both serving
+                            and non serving containers. ref: http://bit.ly/image-digests'
+                          items:
+                            description: ContainerStatus holds the information of
+                              container name and image digest value
+                            properties:
+                              imageDigest:
+                                type: string
+                              name:
+                                type: string
+                            type: object
+                          type: array
+                        logUrl:
+                          description: LogURL specifies the generated logging url
+                            for this particular revision based on the revision url
+                            template specified in the controller's config.
+                          type: string
+                        observedGeneration:
+                          description: ObservedGeneration is the 'Generation' of the
+                            Service that was last processed by the controller.
+                          format: int64
+                          type: integer
                       type: object
-                    conditions:
-                      description: Conditions the latest available observations of
-                        a resource's current state.
-                      items:
-                        description: 'Condition defines a readiness condition for
-                          a Knative resource. See: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties'
-                        properties:
-                          lastTransitionTime:
-                            description: LastTransitionTime is the last time the condition
-                              transitioned from one status to another. We use VolatileTime
-                              in place of metav1.Time to exclude this from creating
-                              equality.Semantic differences (all other things held
-                              constant).
-                            type: string
-                          message:
-                            description: A human readable message indicating details
-                              about the transition.
-                            type: string
-                          reason:
-                            description: The reason for the condition's last transition.
-                            type: string
-                          severity:
-                            description: Severity with which to treat failures of
-                              this type of condition. When this is not specified,
-                              it defaults to Error.
-                            type: string
-                          status:
-                            description: Status of the condition, one of True, False,
-                              Unknown.
-                            type: string
-                          type:
-                            description: Type of condition.
-                            type: string
-                        required:
-                        - status
-                        - type
-                        type: object
-                      type: array
-                    containerStatuses:
-                      description: 'ContainerStatuses is a slice of images present
-                        in .Spec.Container[*].Image to their respective digests and
-                        their container name. The digests are resolved during the
-                        creation of Revision. ContainerStatuses holds the container
-                        name and image digests for both serving and non serving containers.
-                        ref: http://bit.ly/image-digests'
-                      items:
-                        description: ContainerStatus holds the information of container
-                          name and image digest value
-                        properties:
-                          imageDigest:
-                            type: string
-                          name:
-                            type: string
-                        type: object
-                      type: array
-                    desiredReplicas:
-                      description: DesiredReplicas reflects the desired amount of
-                        pods running this revision.
-                      format: int32
-                      type: integer
-                    initContainerStatuses:
-                      description: 'InitContainerStatuses is a slice of images present
-                        in .Spec.InitContainer[*].Image to their respective digests
-                        and their container name. The digests are resolved during
-                        the creation of Revision. ContainerStatuses holds the container
-                        name and image digests for both serving and non serving containers.
-                        ref: http://bit.ly/image-digests'
-                      items:
-                        description: ContainerStatus holds the information of container
-                          name and image digest value
-                        properties:
-                          imageDigest:
-                            type: string
-                          name:
-                            type: string
-                        type: object
-                      type: array
-                    logUrl:
-                      description: LogURL specifies the generated logging url for
-                        this particular revision based on the revision url template
-                        specified in the controller's config.
+                    name:
                       type: string
-                    observedGeneration:
-                      description: ObservedGeneration is the 'Generation' of the Service
-                        that was last processed by the controller.
-                      format: int64
-                      type: integer
                   type: object
                 type: array
               applicationLinks:
