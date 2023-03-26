@@ -1,4 +1,4 @@
-package utils
+package wrappers
 
 import (
 	"context"
@@ -27,12 +27,11 @@ func HandleResourceDeletion(ctx context.Context, capp rcsv1alpha1.Capp, log logr
 	return nil, false
 }
 
-func finalizeService(ctx context.Context, capp rcsv1alpha1.Capp, log logr.Logger, r client.Client) error {
-	if err := DeleteKnativeService(ctx, capp, log, r); err != nil {
-		return err
-	}
-	if err := DeleteKnativeDomainMapping(ctx, capp, log, r); err != nil {
-		return err
+func finalizeService(capp rcsv1alpha1.Capp, resource_managers ...ResourceManager) error {
+	for _, manager := range resource_managers {
+		if err := manager.DeleteResource(capp); err != nil {
+			return err
+		}
 	}
 	return nil
 }

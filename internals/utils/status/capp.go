@@ -22,6 +22,10 @@ import (
 
 var openshiftConsoleKey = types.NamespacedName{Namespace: "openshift-console", Name: "console"}
 
+const (
+	KnativeLabelKey = "serving.knative.dev/configuration"
+)
+
 // This function builds the ApplicationLinks status of the Capp  by getting the console route and the cluster segment. It returns a pointer to the ApplicationLinks struct.
 func buildApplicationLinks(ctx context.Context, capp rcsv1alpha1.Capp, log logr.Logger, r client.Client) (*rcsv1alpha1.ApplicationLinks, error) {
 	consoleRoute := routev1.Route{}
@@ -54,7 +58,7 @@ func getClusterSegment(ctx context.Context, capp rcsv1alpha1.Capp, log logr.Logg
 func buildRevisionsStatus(ctx context.Context, capp rcsv1alpha1.Capp, knativeService knativev1.Service, log logr.Logger, r client.Client) ([]rcsv1alpha1.RevisionInfo, error) {
 	knativeRevisions := knativev1.RevisionList{}
 	revisionsInfo := []rcsv1alpha1.RevisionInfo{}
-	requirement, err := labels.NewRequirement("serving.knative.dev/configuration", selection.Equals, []string{capp.Name})
+	requirement, err := labels.NewRequirement(KnativeLabelKey, selection.Equals, []string{capp.Name})
 	if err != nil {
 		fmt.Print("sahar \n", requirement)
 		return revisionsInfo, err

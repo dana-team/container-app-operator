@@ -1,4 +1,4 @@
-package utils
+package resourcemanagers
 
 import (
 	"context"
@@ -19,10 +19,16 @@ import (
 
 const CappResourceKey = "dana.io/parent-capp"
 
+type KnativeDomainMappingManager struct {
+	ctx       context.Context
+	k8sclient client.Client
+	log       logr.Logger
+}
+
 // PrepareKnativeDomainMapping creates a new DomainMapping for a Knative service.
 // Takes a context.Context object, and a rcsv1alpha1.Capp object as input.
 // Returns a knativev1alphav1.DomainMapping object.
-func PrepareKnativeDomainMapping(ctx context.Context, capp rcsv1alpha1.Capp) knativev1alphav1.DomainMapping {
+func (k KnativeDomainMappingManager) PrepareResource(capp rcsv1alpha1.Capp) knativev1alphav1.DomainMapping {
 	knativeDomainMapping := &knativev1alphav1.DomainMapping{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
@@ -46,15 +52,15 @@ func PrepareKnativeDomainMapping(ctx context.Context, capp rcsv1alpha1.Capp) kna
 // CreateOrUpdateKnativeDomainMapping creates or updates a DomainMapping object for a Knative service.
 // Takes a context.Context object, a rcsv1alpha1.Capp object, a client.Client object, and a logr.Logger object as input.
 // Returns an error if there is an issue creating or updating the DomainMapping.
-func CreateOrUpdateKnativeDomainMapping(ctx context.Context, capp rcsv1alpha1.Capp, r client.Client, log logr.Logger) error {
+func (k KnativeDomainMappingManager) CreateOrUpdateResource(capp rcsv1alpha1.Capp) error {
 	if capp.Spec.RouteSpec.Hostname == "" {
 		return nil
 	}
-	knativeDomainMappingFromCapp := PrepareKnativeDomainMapping(ctx, capp)
+	knativeDomainMappingFromCapp := k.PrepareResource(capp)
 	knativeDomainMapping := knativev1alphav1.DomainMapping{}
-	if err := r.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: capp.Spec.RouteSpec.Hostname}, &knativeDomainMapping); err != nil {
+	if err := k.k8sclient.Get(k.ctx, types.NamespacedName{Namespace: capp.Namespace, Name: capp.Spec.RouteSpec.Hostname}, &knativeDomainMapping); err != nil {
 		if errors.IsNotFound(err) {
-			if err := CreateKnativeDomainMapping(ctx, knativeDomainMappingFromCapp, r, log); err != nil {
+			if err := k.CreateResource(knativeDomainMappingFromCapp); err != nil {
 				return err
 			}
 		} else {
@@ -62,51 +68,51 @@ func CreateOrUpdateKnativeDomainMapping(ctx context.Context, capp rcsv1alpha1.Ca
 		}
 		return nil
 	}
-	if err := UpdateKnativeDomainMapping(ctx, knativeDomainMappingFromCapp, knativeDomainMapping, r, log); err != nil {
+	if err := k.UpdateResource(knativeDomainMappingFromCapp, knativeDomainMapping); err != nil {
 		return err
 	}
 	return nil
 }
 
-func CreateKnativeDomainMapping(ctx context.Context, domainMapping knativev1alphav1.DomainMapping, r client.Client, log logr.Logger) error {
-	if err := r.Create(ctx, &domainMapping); err != nil {
-		log.Error(err, fmt.Sprintf("unable to create %s %s ", domainMapping.GetObjectKind().GroupVersionKind().Kind, domainMapping.Name))
+func (k KnativeDomainMappingManager) CreateResource(domainMapping knativev1alphav1.DomainMapping) error {
+	if err := k.k8sclient.Create(k.ctx, &domainMapping); err != nil {
+		k.log.Error(err, fmt.Sprintf("unable to create %s %s ", domainMapping.GetObjectKind().GroupVersionKind().Kind, domainMapping.Name))
 		return err
 	}
 	return nil
 }
 
-func UpdateKnativeDomainMapping(ctx context.Context, domainMapping knativev1alphav1.DomainMapping, oldDomainMapping knativev1alphav1.DomainMapping, r client.Client, log logr.Logger) error {
+func (k KnativeDomainMappingManager) UpdateResource(domainMapping knativev1alphav1.DomainMapping, oldDomainMapping knativev1alphav1.DomainMapping) error {
 	if reflect.DeepEqual(oldDomainMapping.Spec, domainMapping.Spec) {
 		return nil
 	}
 	oldDomainMapping.Spec = domainMapping.Spec
-	if err := r.Update(ctx, &oldDomainMapping); err != nil {
+	if err := k.k8sclient.Update(k.ctx, &oldDomainMapping); err != nil {
 		if errors.IsConflict(err) {
-			log.Info(fmt.Sprintf("newer resource version exists for %s %s ", oldDomainMapping.GetObjectKind().GroupVersionKind().Kind, domainMapping.Name))
+			k.log.Info(fmt.Sprintf("newer resource version exists for %s %s ", oldDomainMapping.GetObjectKind().GroupVersionKind().Kind, domainMapping.Name))
 			return err
 		}
-		log.Error(err, fmt.Sprintf("unable to update %s %s ", oldDomainMapping.GetObjectKind().GroupVersionKind().Kind, oldDomainMapping.Name))
+		k.log.Error(err, fmt.Sprintf("unable to update %s %s ", oldDomainMapping.GetObjectKind().GroupVersionKind().Kind, oldDomainMapping.Name))
 		return err
 	}
-	log.Info(fmt.Sprintf("%s %s updated", oldDomainMapping.GetObjectKind().GroupVersionKind().Kind, oldDomainMapping.Name))
+	k.log.Info(fmt.Sprintf("%s %s updated", oldDomainMapping.GetObjectKind().GroupVersionKind().Kind, oldDomainMapping.Name))
 	return nil
 }
 
-func DeleteKnativeDomainMapping(ctx context.Context, capp rcsv1alpha1.Capp, log logr.Logger, r client.Client) error {
+func (k KnativeDomainMappingManager) DeleteResource(capp rcsv1alpha1.Capp) error {
 	knativeDomainMapping := &knativev1alphav1.DomainMapping{}
 	if capp.Spec.RouteSpec.Hostname == "" {
 		return nil
 	}
-	if err := r.Get(ctx, types.NamespacedName{Name: capp.Spec.RouteSpec.Hostname, Namespace: capp.Namespace}, knativeDomainMapping); err != nil {
+	if err := k.k8sclient.Get(k.ctx, types.NamespacedName{Name: capp.Spec.RouteSpec.Hostname, Namespace: capp.Namespace}, knativeDomainMapping); err != nil {
 		if !errors.IsNotFound(err) {
-			log.Error(err, "unable to get domainMapping")
+			k.log.Error(err, "unable to get domainMapping")
 			return err
 		}
 		return nil
 	}
-	if err := r.Delete(ctx, knativeDomainMapping); err != nil {
-		log.Error(err, "unable to delete Knative domainMapping")
+	if err := k.k8sclient.Delete(k.ctx, knativeDomainMapping); err != nil {
+		k.log.Error(err, "unable to delete Knative domainMapping")
 		return err
 	}
 	return nil
