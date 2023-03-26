@@ -47,6 +47,9 @@ func PrepareKnativeDomainMapping(ctx context.Context, capp rcsv1alpha1.Capp) kna
 // Takes a context.Context object, a rcsv1alpha1.Capp object, a client.Client object, and a logr.Logger object as input.
 // Returns an error if there is an issue creating or updating the DomainMapping.
 func CreateOrUpdateKnativeDomainMapping(ctx context.Context, capp rcsv1alpha1.Capp, r client.Client, log logr.Logger) error {
+	if capp.Spec.RouteSpec.Hostname == "" {
+		return nil
+	}
 	knativeDomainMappingFromCapp := PrepareKnativeDomainMapping(ctx, capp)
 	knativeDomainMapping := knativev1alphav1.DomainMapping{}
 	if err := r.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: capp.Spec.RouteSpec.Hostname}, &knativeDomainMapping); err != nil {
