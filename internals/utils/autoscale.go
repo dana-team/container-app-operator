@@ -31,6 +31,8 @@ var TargetDefaultValues = map[string]string{
 
 var KPAMetrics = []string{"rps", "concurrency"}
 
+//  This function takes a Capp and a Knative Service and sets the autoscaler annotations based on the Capp's ScaleMetric.
+// Returns a map of the autoscaler annotations that were set.
 func SetAutoScaler(capp rcsv1alpha1.Capp, knativeService knativev1.Service) map[string]string {
 	scaleMetric := capp.Spec.ScaleMetric
 	autoScaleAnnotations := make(map[string]string)
@@ -47,6 +49,7 @@ func SetAutoScaler(capp rcsv1alpha1.Capp, knativeService knativev1.Service) map[
 	return autoScaleAnnotations
 }
 
+// Determines the autoscaling class based on the metric provided. Returns "kpa.autoscaling.knative.dev" if the metric is in KPAMetrics, "hpa.autoscaling.knative.dev" otherwise.
 func getAutoScaleClassByMetric(metric string) string {
 	if slices.Contains(KPAMetrics, metric) {
 		return "kpa.autoscaling.knative.dev"

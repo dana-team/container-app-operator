@@ -82,3 +82,19 @@ func UpdateKnativeService(ctx context.Context, knativeService knativev1.Service,
 	log.Info(fmt.Sprintf("%s %s updated", knativeService.GetObjectKind().GroupVersionKind().Kind, knativeService.Name))
 	return nil
 }
+
+func DeleteKnativeService(ctx context.Context, capp rcsv1alpha1.Capp, log logr.Logger, r client.Client) error {
+	knativeService := &knativev1.Service{}
+	if err := r.Get(ctx, types.NamespacedName{Name: capp.Name, Namespace: capp.Namespace}, knativeService); err != nil {
+		if !errors.IsNotFound(err) {
+			log.Error(err, "unable to get KnativeService")
+			return err
+		}
+		return nil
+	}
+	if err := r.Delete(ctx, knativeService); err != nil {
+		log.Error(err, "unable to delete KnativeService")
+		return err
+	}
+	return nil
+}

@@ -8,6 +8,8 @@ Knative is an open-source project used by RCS to build, deploy, and manage serve
 ## Description
 
 ### How does it work ?
+
+The `CappReconciler` takes `Capp` resource created by the `ManifestWork` agent on the managed cluster and "Translate" it to knative objects such as `Knative service`, `Knative Domainmapping` with configured `AutoScale` and `TLS` options.
 ![Architecture](materials/architecture.png)
 
 
