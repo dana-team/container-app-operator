@@ -43,7 +43,7 @@ func (k KnativeServiceManager) PrepareResource(capp rcsv1alpha1.Capp) knativev1.
 	return knativeService
 }
 
-func (k KnativeServiceManager) CreateOrUpdateResource(ctx context.Context, capp rcsv1alpha1.Capp, r client.Client, log logr.Logger) error {
+func (k KnativeServiceManager) CreateOrUpdateResource(capp rcsv1alpha1.Capp) error {
 	knativeServiceFromCapp := k.PrepareResource(capp)
 	knativeService := knativev1.Service{}
 	if err := r.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: capp.Name}, &knativeService); err != nil {
