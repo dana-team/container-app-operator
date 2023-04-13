@@ -7828,6 +7828,8 @@ spec:
                 properties:
                   hostname:
                     type: string
+                  protocol:
+                    type: boolean
                 type: object
               scaleMetric:
                 type: string

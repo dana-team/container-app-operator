@@ -8,6 +8,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	rmanagers "github.com/dana-team/container-app-operator/internals/resource-managers"
+	finalizer_utils "github.com/dana-team/container-app-operator/internals/utils/finalizer"
 	status_utils "github.com/dana-team/container-app-operator/internals/utils/status"
 	"k8s.io/apimachinery/pkg/types"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
@@ -17,7 +19,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	utils "github.com/dana-team/container-app-operator/internals/utils"
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -43,17 +44,20 @@ func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		}
 		return ctrl.Result{}, err
 	}
-	err, deleted := utils.HandleResourceDeletion(ctx, capp, r.Log, r.Client)
+	resourceManagers := []rmanagers.ResourceManager{
+		rmanagers.KnativeDomainMappingManager{Ctx: ctx, Log: r.Log, K8sclient: r.Client},
+		rmanagers.KnativeServiceManager{Ctx: ctx, Log: r.Log, K8sclient: r.Client}}
+	err, deleted := finalizer_utils.HandleResourceDeletion(ctx, capp, r.Log, r.Client, resourceManagers)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 	if deleted {
 		return ctrl.Result{}, nil
 	}
-	if err := utils.EnsureFinalizer(ctx, capp, r.Client); err != nil {
+	if err := finalizer_utils.EnsureFinalizer(ctx, capp, r.Client); err != nil {
 		return ctrl.Result{}, err
 	}
-	if err := r.SyncApplication(ctx, capp); err != nil {
+	if err := r.SyncApplication(ctx, capp, resourceManagers); err != nil {
 		return ctrl.Result{}, err
 	}
 	return ctrl.Result{}, nil
@@ -93,12 +97,9 @@ func (r *CappReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *CappReconciler) SyncApplication(ctx context.Context, capp rcsv1alpha1.Capp) error {
-	if err := utils.CreateOrUpdateKnativeService(ctx, capp, r.Client, r.Log); err != nil {
-		return err
-	}
-	if capp.Spec.RouteSpec.Hostname != "" {
-		if err := utils.CreateOrUpdateKnativeDomainMapping(ctx, capp, r.Client, r.Log); err != nil {
+func (r *CappReconciler) SyncApplication(ctx context.Context, capp rcsv1alpha1.Capp, resourceManagers []rmanagers.ResourceManager) error {
+	for _, manager := range resourceManagers {
+		if err := manager.CreateOrUpdateObject(capp); err != nil {
 			return err
 		}
 	}
