@@ -17,7 +17,7 @@ const CappResourceKey = "dana.io/parent-capp"
 type ResourceManager interface {
 	CreateResource(resource client.Object) error
 	UpdateResource(resource client.Object, oldResource client.Object) error
-	DeleteResource(capp rcsv1alpha1.Capp) error
+	DeleteResource(resource client.Object, name string, namespace string) error
 }
 
 type ResourceBaseManager struct {
