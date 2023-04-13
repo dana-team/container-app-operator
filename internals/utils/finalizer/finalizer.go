@@ -1,9 +1,10 @@
-package utils
+package finalizer
 
 import (
 	"context"
 
 	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	rmanagers "github.com/dana-team/container-app-operator/internals/resource-managers"
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -11,10 +12,10 @@ import (
 
 const FinalizerCleanupCapp = "dana.io/capp-cleanup"
 
-func HandleResourceDeletion(ctx context.Context, capp rcsv1alpha1.Capp, log logr.Logger, r client.Client) (error, bool) {
+func HandleResourceDeletion(ctx context.Context, capp rcsv1alpha1.Capp, log logr.Logger, r client.Client, resource_managers []rmanagers.ResourceManager) (error, bool) {
 	if capp.ObjectMeta.DeletionTimestamp != nil {
 		if controllerutil.ContainsFinalizer(&capp, FinalizerCleanupCapp) {
-			if err := finalizeService(ctx, capp, log, r); err != nil {
+			if err := finalizeService(capp, resource_managers); err != nil {
 				return err, false
 			}
 			controllerutil.RemoveFinalizer(&capp, FinalizerCleanupCapp)
@@ -27,12 +28,11 @@ func HandleResourceDeletion(ctx context.Context, capp rcsv1alpha1.Capp, log logr
 	return nil, false
 }
 
-func finalizeService(ctx context.Context, capp rcsv1alpha1.Capp, log logr.Logger, r client.Client) error {
-	if err := DeleteKnativeService(ctx, capp, log, r); err != nil {
-		return err
-	}
-	if err := DeleteKnativeDomainMapping(ctx, capp, log, r); err != nil {
-		return err
+func finalizeService(capp rcsv1alpha1.Capp, resource_managers []rmanagers.ResourceManager) error {
+	for _, manager := range resource_managers {
+		if err := manager.CleanUp(capp); err != nil {
+			return err
+		}
 	}
 	return nil
 }
