@@ -52,28 +52,29 @@ spec:
             periodSeconds: 3
   routeSpec:
     hostname: example.com
-    Https: true
+    https: true
+    secretName: secret-tls
   scaleMetric: rps
   site: ocp-nikola
 ```
 
-1. name: The name of the Capp resource, in this case, it is capp-example.
-2. volumes: The list of volumes that the container will mount, in this case, an NFS share.
-3. name: The name of the volume that the container will mount, in this case, nfs-share.
-
-4. env: The list of environment variables that the container will use, including the values for ENV and APP.
-5. envFrom: The list of environment variables that the container will use, sourced from a Kubernetes secret named test-secret.
-6. imagePullSecrets: secret to pull image from private registry.
-7. image: The name of the container image that the pod will use, in this case, example-python-app:v1.
-8. name: The name of the container that the pod will create, in this case, my-application.
-9. volumeMounts: The list of volumes that the container will mount, in this case, the nfs-share volume.
-10. ports: The list of ports that the container will listen on, in this case, a single port on 9000.
-11. livenessProbe: The specification for the liveness probe that will be used to determine if the container is healthy.
-12. readinessProbe: The specification for the readiness probe that will be used to determine if the container is ready and getting requests.
-13. routeSpec: The specification for the capp routing.
-14. hostname: Custom DNS name for the capp route. 
-15. Https: Enable TLS for the route.
-16. site: Where to deploy the Capp, it can be a specific cluster or a placement name. 
+1. `name:` The name of the Capp resource, in this case, it is capp-example.
+2. `volumes:` The list of volumes that the container will mount, in this case, an NFS share.
+    a. `name:` The name of the volume that the container will mount, in this case, nfs-share.
+3. `env:` The list of environment variables that the container will use, including the values for ENV and APP.
+    a. `envFrom:` The list of environment variables that the container will use, sourced from a Kubernetes secret named test-secret.
+4. `imagePullSecrets:` secret to pull image from private registry.
+5. `image:` The name of the container image that the pod will use, in this case, example-python-app:v1.
+    a. `name:` The name of the container that the pod will create, in this case, my-application.
+    b. `volumeMounts:` The list of volumes that the container will mount, in this case, the nfs-share volume.
+    c. `ports:` The list of ports that the container will listen on, in this case, a single port on 9000.
+    d. `livenessProbe:` The specification for the liveness probe that will be used to determine if the container is healthy.
+    e. `readinessProbe:` The specification for the readiness probe that will be used to determine if the container is ready and getting requests.
+6. `routeSpec:` The specification for the capp routing.
+    a. `hostname:` Custom DNS name for the capp route. 
+    b.`https:` Enable TLS for the route.
+    c. `secretName:` Secret name containes TLS cerifacte.
+7. `site:` Where to deploy the Capp, it can be a specific cluster or a placement name. 
 
 ## Capp status
 
