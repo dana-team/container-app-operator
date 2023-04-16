@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
-
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
