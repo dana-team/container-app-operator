@@ -1,0 +1,25 @@
+apiVersion: rcs.dana.io/v1alpha1
+kind: Capp
+metadata:
+  creationTimestamp: "2023-04-04T12:57:58Z"
+  finalizers:
+  - dana.io/capp-cleanup
+  generation: 1
+  name: koki
+spec:
+  configurationSpec:
+    template:
+      metadata:
+        creationTimestamp: null
+      spec:
+        containers:
+        - env:
+          - name: APP_NAME
+            value: capp-with-cluster
+          image: sahar2339/example-python-app:v1-flask
+          name: capp-with-cluster
+          resources: {}
+  routeSpec:
+    hostname: rbacqwegen.dev
+  scaleMetric: cpu
+  site: ocp-nikola
