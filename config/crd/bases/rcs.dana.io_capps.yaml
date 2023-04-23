@@ -7828,7 +7828,7 @@ spec:
                 properties:
                   hostname:
                     type: string
-                  protocol:
+                  https:
                     type: boolean
                 type: object
               scaleMetric:
