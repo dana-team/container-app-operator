@@ -1,0 +1,54 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: user-role
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - rcs.dana.io/v1alpha1
+  resources:
+  - capp
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - rcs.dana.io/v1alpha1
+  resources:
+  - capp/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - rcs.dana.io/v1alpha1
+  resources:
+  - capp/status
+  verbs:
+  - get
+  - list
+  - watch
+
