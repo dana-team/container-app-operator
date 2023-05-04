@@ -5,6 +5,7 @@ import (
 	"reflect"
 
 	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	secure_utils "github.com/dana-team/container-app-operator/internals/utils/secure"
 	rclient "github.com/dana-team/container-app-operator/internals/wrappers"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -45,6 +46,8 @@ func (k KnativeDomainMappingManager) prepareResource(capp rcsv1alpha1.Capp) knat
 			},
 		},
 	}
+	resourceManager := rclient.ResourceBaseManager{Ctx: k.Ctx, K8sclient: k.K8sclient, Log: k.Log}
+	secure_utils.SetHttpsKnativeDomainMapping(capp, knativeDomainMapping, resourceManager)
 	return *knativeDomainMapping
 }
 
@@ -77,7 +80,7 @@ func (k KnativeDomainMappingManager) CreateOrUpdateObject(capp rcsv1alpha1.Capp)
 		}
 		return nil
 	}
-	if reflect.DeepEqual(knativeDomainMapping.Spec, knativeDomainMappingFromCapp.Spec) {
+	if !reflect.DeepEqual(knativeDomainMapping.Spec, knativeDomainMappingFromCapp.Spec) {
 		knativeDomainMapping.Spec = knativeDomainMappingFromCapp.Spec
 		if err := resourceManager.UpdateResource(&knativeDomainMapping); err != nil {
 			return err
