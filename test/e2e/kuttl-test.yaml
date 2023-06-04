@@ -1,0 +1,6 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestSuite
+crdDir: config/crd/bases
+testDirs:
+- ./test/e2e/
+skipDelete: true

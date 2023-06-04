@@ -88,3 +88,31 @@ func TestCleanUpDomainMapping(t *testing.T) {
 	err := fakeClient.Get(ctx, types.NamespacedName{Name: "test-capp", Namespace: "test-ns"}, &domainMapping)
 	assert.True(t, errors.IsNotFound(err), "Expected the knative service to be deleted.")
 }
+
+func TestDommainMappingHostname(t *testing.T) {
+	fakeClient := newFakeClient()
+	ctx := context.Background()
+	capp := genrateBaseCapp()
+	capp.Spec.RouteSpec.Hostname = "dma.dev"
+	domainMapping := knativev1alphav1.DomainMapping{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "dma.dev",
+			Namespace: "test-ns",
+			Labels: map[string]string{
+				CappResourceKey: capp.Name,
+			},
+			Annotations: map[string]string{
+				CappResourceKey: capp.Name,
+			},
+		},
+		Spec: knativev1alphav1.DomainMappingSpec{},
+	}
+	fakeClient.Create(ctx, &capp)
+	fakeClient.Create(ctx, &domainMapping)
+	capp.Spec.RouteSpec.Hostname = "dmc.dev"
+	fakeClient.Update(ctx, &capp)
+	knativeManager := resourceprepares.KnativeDomainMappingManager{Ctx: ctx, Log: logr.Logger{}, K8sclient: fakeClient}
+	assert.NoError(t, knativeManager.HandleDomainMappingHostname(capp), "Expected no error when calling Handling DomainMapping hostname.")
+	err := fakeClient.Get(ctx, types.NamespacedName{Name: "dma.dev", Namespace: "test-ns"}, &domainMapping)
+	assert.True(t, errors.IsNotFound(err), "Expected the DomainMapping to be deleted.")
+}
