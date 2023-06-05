@@ -112,7 +112,7 @@ func TestDommainMappingHostname(t *testing.T) {
 	capp.Spec.RouteSpec.Hostname = "dmc.dev"
 	fakeClient.Update(ctx, &capp)
 	knativeManager := resourceprepares.KnativeDomainMappingManager{Ctx: ctx, Log: logr.Logger{}, K8sclient: fakeClient}
-	assert.NoError(t, knativeManager.HandleDomainMappingHostname(capp), "Expected no error when calling Handling DomainMapping hostname.")
+	assert.NoError(t, knativeManager.HandleIrrelevantDomainMapping(capp), "Expected no error when calling Handling DomainMapping hostname.")
 	err := fakeClient.Get(ctx, types.NamespacedName{Name: "dma.dev", Namespace: "test-ns"}, &domainMapping)
 	assert.True(t, errors.IsNotFound(err), "Expected the DomainMapping to be deleted.")
 }

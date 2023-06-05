@@ -70,7 +70,7 @@ func (k KnativeDomainMappingManager) CleanUp(capp rcsv1alpha1.Capp) error {
 }
 
 func (k KnativeDomainMappingManager) CreateOrUpdateObject(capp rcsv1alpha1.Capp) error {
-	if err := k.HandleDomainMappingHostname(capp); err != nil {
+	if err := k.HandleIrrelevantDomainMapping(capp); err != nil {
 		return err
 	}
 	if capp.Spec.RouteSpec.Hostname == "" {
@@ -98,7 +98,7 @@ func (k KnativeDomainMappingManager) CreateOrUpdateObject(capp rcsv1alpha1.Capp)
 	return nil
 }
 
-func (k KnativeDomainMappingManager) HandleDomainMappingHostname(capp rcsv1alpha1.Capp) error {
+func (k KnativeDomainMappingManager) HandleIrrelevantDomainMapping(capp rcsv1alpha1.Capp) error {
 	requirement, err := labels.NewRequirement(CappResourceKey, selection.Equals, []string{capp.Name})
 	if err != nil {
 		return err
