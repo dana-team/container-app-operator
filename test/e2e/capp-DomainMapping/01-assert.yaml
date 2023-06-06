@@ -1,0 +1,16 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 120  # Timeout waiting for the state
+---
+apiVersion: serving.knative.dev/v1beta1
+kind: DomainMapping
+metadata:
+  annotations:
+    dana.io/parent-capp: capp-with-https
+  labels:
+    dana.io/parent-capp: capp-with-https
+  name: capp-with-https.dev
+  namespace: capp-tests
+spec:
+  tls:
+    secretName: secure-knativedm-capp-with-https
