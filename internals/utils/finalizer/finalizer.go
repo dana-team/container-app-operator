@@ -18,14 +18,18 @@ func HandleResourceDeletion(ctx context.Context, capp rcsv1alpha1.Capp, log logr
 			if err := finalizeService(capp, resource_managers); err != nil {
 				return err, false
 			}
-			controllerutil.RemoveFinalizer(&capp, FinalizerCleanupCapp)
-			if err := r.Update(ctx, &capp); err != nil {
-				return err, false
-			}
-			return nil, true
+			return RemoveFinalizer(ctx, capp, log, r), true
 		}
 	}
 	return nil, false
+}
+
+func RemoveFinalizer(ctx context.Context, capp rcsv1alpha1.Capp, log logr.Logger, r client.Client) error {
+	controllerutil.RemoveFinalizer(&capp, FinalizerCleanupCapp)
+	if err := r.Update(ctx, &capp); err != nil {
+		return err
+	}
+	return nil
 }
 
 func finalizeService(capp rcsv1alpha1.Capp, resource_managers []rmanagers.ResourceManager) error {

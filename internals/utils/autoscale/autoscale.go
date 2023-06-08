@@ -3,8 +3,6 @@ package autoscale
 import (
 	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"k8s.io/utils/strings/slices"
-
-	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 )
 
 const (
@@ -31,9 +29,9 @@ var TargetDefaultValues = map[string]string{
 
 var KPAMetrics = []string{"rps", "concurrency"}
 
-//  This function takes a Capp and a Knative Service and sets the autoscaler annotations based on the Capp's ScaleMetric.
+// SetAutoScaler takes a Capp and a Knative Service and sets the autoscaler annotations based on the Capp's ScaleMetric.
 // Returns a map of the autoscaler annotations that were set.
-func SetAutoScaler(capp rcsv1alpha1.Capp, knativeService knativev1.Service) map[string]string {
+func SetAutoScaler(capp rcsv1alpha1.Capp) map[string]string {
 	scaleMetric := capp.Spec.ScaleMetric
 	autoScaleAnnotations := make(map[string]string)
 	if scaleMetric == "" {
@@ -45,7 +43,6 @@ func SetAutoScaler(capp rcsv1alpha1.Capp, knativeService knativev1.Service) map[
 	autoScaleAnnotations[KnativeAutoscaleMaxKey] = DefaultValues[KnativeAutoscaleMaxKey]
 	autoScaleAnnotations[KnativeAutoscaleMinKey] = DefaultValues[KnativeAutoscaleMinKey]
 
-	knativeService.Spec.Template.ObjectMeta.Annotations = autoScaleAnnotations
 	return autoScaleAnnotations
 }
 

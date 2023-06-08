@@ -17,7 +17,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -63,12 +62,12 @@ func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	return ctrl.Result{}, nil
 }
 
-func (r *CappReconciler) findCappFromKnative(knativeService client.Object) []reconcile.Request {
+func (r *CappReconciler) findCappFromKnative(ctx context.Context, knativeService client.Object) []reconcile.Request {
 	cappList := &rcsv1alpha1.CappList{}
 	listOps := &client.ListOptions{
 		Namespace: knativeService.GetNamespace(),
 	}
-	err := r.List(context.TODO(), cappList, listOps)
+	err := r.List(ctx, cappList, listOps)
 	if err != nil {
 		return []reconcile.Request{}
 	}
@@ -90,7 +89,7 @@ func (r *CappReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&rcsv1alpha1.Capp{}).
 		Watches(
-			&source.Kind{Type: &knativev1.Service{}},
+			&knativev1.Service{},
 			handler.EnqueueRequestsFromMapFunc(r.findCappFromKnative),
 			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
 		).

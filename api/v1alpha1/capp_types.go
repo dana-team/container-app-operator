@@ -34,7 +34,7 @@ type CappSpec struct {
 
 type RouteSpec struct {
 	Hostname string `json:"hostname,omitempty"`
-	Https    bool   `json:"https,omitempty"`
+	TlsEnabled    bool   `json:"tlsEnabled,omitempty"`
 	//TrafficTarget knativev1.TrafficTarget `json:"trafficTarget,omitempty"`
 }
 
