@@ -39,6 +39,7 @@ func (k KnativeServiceManager) prepareResource(capp rcsv1alpha1.Capp) knativev1.
 			ConfigurationSpec: capp.Spec.ConfigurationSpec,
 		},
 	}
+  
 	knativeService.Spec.ConfigurationSpec.Template.Spec.TimeoutSeconds = capp.Spec.RouteSpec.RouteTimeoutSeconds
 	knativeService.Spec.Template.ObjectMeta.Annotations = autoscale_utils.SetAutoScaler(capp)
 	return knativeService
