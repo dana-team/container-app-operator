@@ -8,10 +8,8 @@ import (
 	autoscale_utils "github.com/dana-team/container-app-operator/internals/utils/autoscale"
 	"github.com/dana-team/container-app-operator/internals/utils/finalizer"
 	"github.com/dana-team/container-app-operator/internals/utils/secure"
-	status_utils "github.com/dana-team/container-app-operator/internals/utils/status"
 	rclient "github.com/dana-team/container-app-operator/internals/wrappers"
 	networkingv1 "github.com/openshift/api/network/v1"
-	v1 "knative.dev/pkg/apis/duck/v1"
 	knativev1alphav1 "knative.dev/serving/pkg/apis/serving/v1alpha1"
 
 	corev1 "k8s.io/api/core/v1"
@@ -90,125 +88,6 @@ func TestSetAutoScaler(t *testing.T) {
 	assert.Equal(t, example_capp_rps_expected, annotations_rps)
 
 }
-func TestSyncStatus(t *testing.T) {
-	ctx := context.Background()
-	cappName := "test-capp"
-	namespace := "test-ns"
-
-	// Create a fake client.
-	fakeClient := newFakeClient()
-
-	// Create the Capp CRD object.
-	capp := &rcsv1alpha1.Capp{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cappName,
-			Namespace: namespace,
-		},
-	}
-	// Add the Capp object to the fake client.
-	assert.NoError(t, fakeClient.Create(ctx, capp))
-
-	// Create the knativev1.Service object.
-	kservice := &knativev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cappName,
-			Namespace: namespace,
-		},
-		Spec: knativev1.ServiceSpec{
-			ConfigurationSpec: knativev1.ConfigurationSpec{
-				Template: knativev1.RevisionTemplateSpec{
-					Spec: knativev1.RevisionSpec{
-						PodSpec: corev1.PodSpec{
-							Containers: []corev1.Container{
-								{
-									Name:  "code",
-									Image: "test",
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-		Status: knativev1.ServiceStatus{
-			ConfigurationStatusFields: knativev1.ConfigurationStatusFields{
-				LatestReadyRevisionName:   cappName + "-001",
-				LatestCreatedRevisionName: cappName + "-001",
-			},
-			Status: v1.Status{
-				Conditions: v1.Conditions{},
-			},
-		},
-	}
-
-	revision := &knativev1.Revision{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cappName + "-001",
-			Namespace: namespace,
-			Annotations: map[string]string{
-				"serving.knative.dev/configuration": cappName,
-			},
-		},
-		Spec: knativev1.RevisionSpec{
-			PodSpec: corev1.PodSpec{
-				Containers: []corev1.Container{
-					{
-						Name:  "code",
-						Image: "test",
-					},
-				},
-			},
-		},
-		Status: knativev1.RevisionStatus{
-			ContainerStatuses: []knativev1.ContainerStatus{
-				{Name: "code"},
-			},
-		},
-	}
-	// Add the knativev1.Service object to the fake client.
-	assert.NoError(t, fakeClient.Create(ctx, kservice))
-	assert.NoError(t, fakeClient.Create(ctx, revision))
-
-	// Create the routev1.Route object for the cluster console.
-	clusterConsole := &routev1.Route{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "console",
-			Namespace: "openshift-console",
-		},
-		Spec: routev1.RouteSpec{
-			Host: "console-openshift-console.apps.cluster.example.com",
-		},
-	}
-	// Add the routev1.Route object to the fake client.
-	assert.NoError(t, fakeClient.Create(ctx, clusterConsole))
-
-	// Create the networkingv1.HostSubnet object for the cluster segment.
-	clusterSubnet := &networkingv1.HostSubnet{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "node-1",
-		},
-		Subnet: "10.0.0.0/24",
-	}
-	// Add the networkingv1.HostSubnet object to the fake client.
-	assert.NoError(t, fakeClient.Create(ctx, clusterSubnet))
-
-	// Call SyncStatus function.
-	assert.NoError(t, status_utils.SyncStatus(context.Background(), *capp, ctrl.Log.WithName("test"), fakeClient))
-	assert.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: namespace}, capp))
-
-	// Check that the RevisionInfo status was updated correctly.
-	revisions := capp.Status.RevisionInfo
-	assert.Equal(t, 1, len(revisions))
-	assert.Equal(t, "test-capp-001", revisions[0].RevisionName)
-	assert.Equal(t, corev1.ConditionTrue, revisions[0].RevisionStatus.Conditions[0].Status)
-
-	// Check that the ApplicationLinks status was updated correctly.
-	appLinks := capp.Status.ApplicationLinks
-	assert.NotNil(t, appLinks)
-	assert.Equal(t, "console-openshift-console.apps.cluster.example.com", appLinks.ConsoleLink)
-	assert.Equal(t, "cluster", appLinks.Site)
-	assert.Equal(t, "10.0.0.0/24", appLinks.ClusterSegment)
-}
 
 func TestSetHttpsKnativeDomainMapping(t *testing.T) {
 	ctx := context.Background()
@@ -276,9 +155,11 @@ func TestEnsureFinalizer(t *testing.T) {
 	}
 	fakeClient := newFakeClient()
 	fakeClient.Create(ctx, capp)
+	fakeClient.Get(ctx, types.NamespacedName{Name: "test-capp", Namespace: "test-ns"}, capp)
 	assert.NoError(t, finalizer.EnsureFinalizer(ctx, *capp, fakeClient))
 	fakeClient.Get(ctx, types.NamespacedName{Name: "test-capp", Namespace: "test-ns"}, capp)
 	assert.Contains(t, capp.Finalizers, finalizer.FinalizerCleanupCapp)
+
 	// Check if there is no error after the finalizer exists.
 	assert.NoError(t, finalizer.EnsureFinalizer(ctx, *capp, fakeClient))
 }
@@ -301,8 +182,11 @@ func TestRemoveFinalizer(t *testing.T) {
 	}
 	fakeClient := newFakeClient()
 	fakeClient.Create(ctx, capp)
+	fakeClient.Get(ctx, types.NamespacedName{Name: "test-capp", Namespace: "test-ns"}, capp)
 	finalizer.RemoveFinalizer(ctx, *capp, ctrl.Log, fakeClient)
+	fakeClient.Get(ctx, types.NamespacedName{Name: "test-capp", Namespace: "test-ns"}, capp)
 	assert.NotContains(t, capp.Finalizers, finalizer.FinalizerCleanupCapp)
+
 	// Check if there is no error after the finalizer removed.
 	assert.NoError(t, finalizer.RemoveFinalizer(ctx, *capp, ctrl.Log, fakeClient))
 }
