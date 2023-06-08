@@ -12,7 +12,7 @@ import (
 
 const TlsSecretPrefix = "secure-knativedm-"
 
-//  This function takes a Capp, Knative Domain Mapping and a ResourceBaseManager Client and sets the Knative Domain Mapping Tls based on the Capp's Https field.
+// SetHttpsKnativeDomainMapping takes a Capp, Knative Domain Mapping and a ResourceBaseManager Client and sets the Knative Domain Mapping Tls based on the Capp's Https field.
 func SetHttpsKnativeDomainMapping(capp rcsv1alpha1.Capp, knativeDomainMapping *knativev1alphav1.DomainMapping, resourceManager rclient.ResourceBaseManager) {
 	isHttps := capp.Spec.RouteSpec.Https
 	if isHttps {

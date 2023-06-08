@@ -29,7 +29,7 @@ var TargetDefaultValues = map[string]string{
 
 var KPAMetrics = []string{"rps", "concurrency"}
 
-//  This function takes a Capp and a Knative Service and sets the autoscaler annotations based on the Capp's ScaleMetric.
+// SetAutoScaler takes a Capp and a Knative Service and sets the autoscaler annotations based on the Capp's ScaleMetric.
 // Returns a map of the autoscaler annotations that were set.
 func SetAutoScaler(capp rcsv1alpha1.Capp) map[string]string {
 	scaleMetric := capp.Spec.ScaleMetric

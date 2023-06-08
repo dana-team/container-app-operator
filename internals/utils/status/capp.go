@@ -4,7 +4,6 @@ package status_utils
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 	"strings"
 
@@ -69,7 +68,6 @@ func buildRevisionsStatus(ctx context.Context, capp rcsv1alpha1.Capp, knativeSer
 	revisionsInfo := []rcsv1alpha1.RevisionInfo{}
 	requirement, err := labels.NewRequirement(KnativeLabelKey, selection.Equals, []string{capp.Name})
 	if err != nil {
-		fmt.Print("sahar \n", requirement)
 		return revisionsInfo, err
 	}
 	labelSelector := labels.NewSelector().Add(*requirement)
