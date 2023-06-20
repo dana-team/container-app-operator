@@ -94,7 +94,7 @@ func TestSetHttpsKnativeDomainMapping(t *testing.T) {
 	capp := rcsv1alpha1.Capp{
 		Spec: rcsv1alpha1.CappSpec{
 			RouteSpec: rcsv1alpha1.RouteSpec{
-				Https: true,
+				TlsEnabled: true,
 			},
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -145,7 +145,7 @@ func TestEnsureFinalizer(t *testing.T) {
 	capp := &rcsv1alpha1.Capp{
 		Spec: rcsv1alpha1.CappSpec{
 			RouteSpec: rcsv1alpha1.RouteSpec{
-				Https: true,
+				TlsEnabled: true,
 			},
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -169,7 +169,7 @@ func TestRemoveFinalizer(t *testing.T) {
 	capp := &rcsv1alpha1.Capp{
 		Spec: rcsv1alpha1.CappSpec{
 			RouteSpec: rcsv1alpha1.RouteSpec{
-				Https: true,
+				TlsEnabled: true,
 			},
 		},
 		ObjectMeta: metav1.ObjectMeta{
