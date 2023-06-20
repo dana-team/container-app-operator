@@ -7944,7 +7944,10 @@ spec:
                 properties:
                   hostname:
                     type: string
-                  https:
+                  routeTimeoutSeconds:
+                    format: int64
+                    type: integer
+                  tlsEnabled:
                     type: boolean
                 type: object
               scaleMetric:
