@@ -33,8 +33,7 @@ type CappReconciler struct {
 //+kubebuilder:rbac:groups=rcs.dana.io,resources=capps,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=rcs.dana.io,resources=capps/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=rcs.dana.io,resources=capps/finalizers,verbs=update
-//+kubebuilder:rbac:groups=serving.knative.dev,resources=services,verbs=get;list;watch
-
+//+kubebuilder:rbac:groups=serving.knative.dev,resources=services;domainmappings,verbs=get;list;watch;update;create
 func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	r.Log = log.FromContext(ctx)
 	capp := rcsv1alpha1.Capp{}
