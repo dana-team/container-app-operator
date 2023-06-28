@@ -24,38 +24,92 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// CappSpec defines the desired state of Capp
+// CappSpec defines the desired state of Capp.
 type CappSpec struct {
-	ScaleMetric       string                      `json:"scaleMetric,omitempty"`
-	Site              string                      `json:"site,omitempty"`
+	// ScaleMetric defines which metric type is watched by the Autoscaler.
+	// Possible values examples: "concurrency", "rps", "cpu", "memory".
+	// +optional
+	ScaleMetric string `json:"scaleMetric,omitempty"`
+
+	// Site defines where to deploy the Capp.
+	// It can be a specific cluster or a placement name.
+	// +optional
+	Site string `json:"site,omitempty"`
+
+	// ConfigurationSpec holds the desired state of the Configuration (from the client).
 	ConfigurationSpec knativev1.ConfigurationSpec `json:"configurationSpec"`
-	RouteSpec         RouteSpec                   `json:"routeSpec,omitempty"`
+
+	// RouteSpec defines the route specification for the Capp.
+	// +optional
+	RouteSpec RouteSpec `json:"routeSpec,omitempty"`
 }
 
+// RouteSpec defines the route specification for the Capp.
 type RouteSpec struct {
+	// Hostname is a custom DNS name for the Capp route.
+	// +optional
 	Hostname string `json:"hostname,omitempty"`
-	TlsEnabled    bool   `json:"tlsEnabled,omitempty"`
+
+	// TlsEnabled determines whether to enable TLS for the Capp route.
+	// +optional
+	TlsEnabled bool `json:"tlsEnabled,omitempty"`
+
+	// TrafficTarget holds a single entry of the routing table for the Capp route.
+	// +optional
+	TrafficTarget knativev1.TrafficTarget `json:"trafficTarget,omitempty"`
+
+	// RouteTimeoutSeconds is the maximum duration in seconds
+	// that the request instance is allowed to respond to a request.
+	// +optional
 	RouteTimeoutSeconds *int64 `json:"routeTimeoutSeconds,omitempty"`
-	//TrafficTarget knativev1.TrafficTarget `json:"trafficTarget,omitempty"`
 }
 
+// ApplicationLinks contains relevant information about
+// the cluster that the Capp is deployed in.
 type ApplicationLinks struct {
-	ConsoleLink    string `json:"consoleLink,omitempty"`
-	Site           string `json:"site,omitempty"`
+	// ConsoleLink holds a link for the Openshift cluster console.
+	// +optional
+	ConsoleLink string `json:"consoleLink,omitempty"`
+
+	// Site holds the cluster name that the Capp is deployed on.
+	// +optional
+	Site string `json:"site,omitempty"`
+
+	// ClusterSegment holds the segment of the cluster
+	// that the Capp is deployed on.
+	// +optional
 	ClusterSegment string `json:"clusterSegment,omitempty"`
 }
 
+// RevisionInfo shows the revision information.
 type RevisionInfo struct {
+	// RevisionStatus communicates the observed state of the Revision (from the controller).
+	// +optional
 	RevisionStatus knativev1.RevisionStatus `json:"RevisionsStatus,omitempty"`
-	RevisionName   string                   `json:"name,omitempty"`
+
+	// RevisionName is the name of the revision.
+	// +optional
+	RevisionName string `json:"name,omitempty"`
 }
 
-// CappStatus defines the observed state of Capp
+// CappStatus defines the observed state of Capp.
 type CappStatus struct {
-	ApplicationLinks    ApplicationLinks        `json:"applicationLinks,omitempty"`
+	// ApplicationLinks contains relevant information about
+	// the cluster that the Capp is deployed in.
+	// +optional
+	ApplicationLinks ApplicationLinks `json:"applicationLinks,omitempty"`
+
+	// KnativeObjectStatus represents the Status stanza of the Service resource.
+	// +optional
 	KnativeObjectStatus knativev1.ServiceStatus `json:"knativeObjectStatus,omitempty"`
-	RevisionInfo        []RevisionInfo          `json:"Revisions,omitempty"`
-	Conditions          []metav1.Condition      `json:"conditions,omitempty"`
+
+	// RevisionInfo shows the revision information.
+	// +optional
+	RevisionInfo []RevisionInfo `json:"Revisions,omitempty"`
+
+	// Conditions contain details about the current state of the Capp.
+	// +optional
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -64,18 +118,23 @@ type CappStatus struct {
 // +kubebuilder:printcolumn:name="AutoScale Type",type="string",JSONPath=".spec.scaleMetric",description="autoscale metric"
 //+kubebuilder:subresource:status
 
-// Capp is the Schema for the capps API
+// Capp is the Schema for the capps API.
 type Capp struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   CappSpec   `json:"spec,omitempty"`
+	// CappSpec defines the desired state of Capp.
+	// +optional
+	Spec CappSpec `json:"spec,omitempty"`
+
+	// CappStatus defines the observed state of Capp.
+	// +optional
 	Status CappStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 
-// CappList contains a list of Capp
+// CappList contains a list of Capp.
 type CappList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
