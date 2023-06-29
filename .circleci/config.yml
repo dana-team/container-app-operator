@@ -49,10 +49,13 @@ jobs:
     docker:
       - image: cimg/base:stable
     steps:
-      # Replace this with steps to deploy to users
+      - checkout 
       - run:
           name: deploy
-          command: '#e.g. ./deploy.sh'
+          command: 
+             docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD;
+             docker build . --tag=$DOCKER_USERNAME/container-app-operator:$CIRCLE_BRANCH; 
+             docker push $DOCKER_USERNAME/container-app-operator:$CIRCLE_BRANCH;
 workflows:
   build-and-test:
     jobs:
@@ -60,8 +63,8 @@ workflows:
       - build-go-executables:
           requires:
             - test-go
-    # - deploy:
-    #     requires:
-    #       - build-go-executables
+      - deploy:
+          requires:
+            - build-go-executables
 
 
