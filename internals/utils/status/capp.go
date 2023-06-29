@@ -4,7 +4,6 @@ package status_utils
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 	"strings"
 
@@ -22,11 +21,14 @@ import (
 
 var openshiftConsoleKey = types.NamespacedName{Namespace: "openshift-console", Name: "console"}
 
+const (
+	KnativeLabelKey = "serving.knative.dev/configuration"
+)
+
 // This function builds the ApplicationLinks status of the Capp  by getting the console route and the cluster segment. It returns a pointer to the ApplicationLinks struct.
 func buildApplicationLinks(ctx context.Context, capp rcsv1alpha1.Capp, log logr.Logger, r client.Client) (*rcsv1alpha1.ApplicationLinks, error) {
-	consoleRoute := routev1.Route{}
-	if err := r.Get(ctx, openshiftConsoleKey, &consoleRoute); err != nil {
-		log.Error(err, "Cant get console route")
+	console, err := getClusterConsole(ctx, capp, log, r)
+	if err != nil {
 		return nil, err
 	}
 	segment, err := getClusterSegment(ctx, capp, log, r)
@@ -34,17 +36,27 @@ func buildApplicationLinks(ctx context.Context, capp rcsv1alpha1.Capp, log logr.
 		return nil, err
 	}
 	applicationLinks := rcsv1alpha1.ApplicationLinks{
-		ConsoleLink:    consoleRoute.Spec.Host,
-		Site:           strings.Split(consoleRoute.Spec.Host, ".")[2],
+		ConsoleLink:    console,
+		Site:           strings.Split(console, ".")[2],
 		ClusterSegment: segment,
 	}
 	return &applicationLinks, nil
+}
+
+func getClusterConsole(ctx context.Context, capp rcsv1alpha1.Capp, log logr.Logger, r client.Client) (string, error) {
+	consoleRoute := routev1.Route{}
+	if err := r.Get(ctx, openshiftConsoleKey, &consoleRoute); err != nil {
+		log.Error(err, "Cant get console route")
+		return "", err
+	}
+	return consoleRoute.Spec.Host, nil
 }
 
 // This function gets the cluster segment from the list of host subnets.
 func getClusterSegment(ctx context.Context, capp rcsv1alpha1.Capp, log logr.Logger, r client.Client) (string, error) {
 	hostsubnets := networkingv1.HostSubnetList{}
 	if err := r.List(ctx, &hostsubnets); err != nil {
+		log.Error(err, "")
 		return "", err
 	}
 	return hostsubnets.Items[0].Subnet, nil
@@ -54,9 +66,8 @@ func getClusterSegment(ctx context.Context, capp rcsv1alpha1.Capp, log logr.Logg
 func buildRevisionsStatus(ctx context.Context, capp rcsv1alpha1.Capp, knativeService knativev1.Service, log logr.Logger, r client.Client) ([]rcsv1alpha1.RevisionInfo, error) {
 	knativeRevisions := knativev1.RevisionList{}
 	revisionsInfo := []rcsv1alpha1.RevisionInfo{}
-	requirement, err := labels.NewRequirement("serving.knative.dev/configuration", selection.Equals, []string{capp.Name})
+	requirement, err := labels.NewRequirement(KnativeLabelKey, selection.Equals, []string{capp.Name})
 	if err != nil {
-		fmt.Print("sahar \n", requirement)
 		return revisionsInfo, err
 	}
 	labelSelector := labels.NewSelector().Add(*requirement)

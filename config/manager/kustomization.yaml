@@ -12,5 +12,5 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 images:
 - name: controller
-  newName: sahar2339/capp-operator
-  newTag: v1
+  newName: danateam/container-app-operator
+  newTag: latest
