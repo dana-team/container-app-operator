@@ -22,5 +22,5 @@ spec:
             resources: {}
   routeSpec:
     hostname: capp-with-https.dev
-    https: true
+    tlsEnabled: true
   scaleMetric: cpu
