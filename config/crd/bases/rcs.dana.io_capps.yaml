@@ -31,7 +31,7 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: Capp is the Schema for the capps API
+        description: Capp is the Schema for the capps API.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -46,7 +46,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: CappSpec defines the desired state of Capp
+            description: CappSpec defines the desired state of Capp.
             properties:
               configurationSpec:
                 description: ConfigurationSpec holds the desired state of the Configuration
@@ -7941,27 +7941,88 @@ spec:
                     type: object
                 type: object
               routeSpec:
+                description: RouteSpec defines the route specification for the Capp.
                 properties:
                   hostname:
+                    description: Hostname is a custom DNS name for the Capp route.
                     type: string
                   routeTimeoutSeconds:
+                    description: RouteTimeoutSeconds is the maximum duration in seconds
+                      that the request instance is allowed to respond to a request.
                     format: int64
                     type: integer
                   tlsEnabled:
+                    description: TlsEnabled determines whether to enable TLS for the
+                      Capp route.
                     type: boolean
+                  trafficTarget:
+                    description: TrafficTarget holds a single entry of the routing
+                      table for the Capp route.
+                    properties:
+                      configurationName:
+                        description: ConfigurationName of a configuration to whose
+                          latest revision we will send this portion of traffic. When
+                          the "status.latestReadyRevisionName" of the referenced configuration
+                          changes, we will automatically migrate traffic from the
+                          prior "latest ready" revision to the new one.  This field
+                          is never set in Route's status, only its spec.  This is
+                          mutually exclusive with RevisionName.
+                        type: string
+                      latestRevision:
+                        description: LatestRevision may be optionally provided to
+                          indicate that the latest ready Revision of the Configuration
+                          should be used for this traffic target.  When provided LatestRevision
+                          must be true if RevisionName is empty; it must be false
+                          when RevisionName is non-empty.
+                        type: boolean
+                      percent:
+                        description: 'Percent indicates that percentage based routing
+                          should be used and the value indicates the percent of traffic
+                          that is be routed to this Revision or Configuration. `0`
+                          (zero) mean no traffic, `100` means all traffic. When percentage
+                          based routing is being used the follow rules apply: - the
+                          sum of all percent values must equal 100 - when not specified,
+                          the implied value for `percent` is zero for that particular
+                          Revision or Configuration'
+                        format: int64
+                        type: integer
+                      revisionName:
+                        description: RevisionName of a specific revision to which
+                          to send this portion of traffic.  This is mutually exclusive
+                          with ConfigurationName.
+                        type: string
+                      tag:
+                        description: Tag is optionally used to expose a dedicated
+                          url for referencing this target exclusively.
+                        type: string
+                      url:
+                        description: URL displays the URL for accessing named traffic
+                          targets. URL is displayed in status, and is disallowed on
+                          spec. URL must contain a scheme (e.g. http://) and a hostname,
+                          but may not contain anything else (e.g. basic auth, url
+                          path, etc.)
+                        type: string
+                    type: object
                 type: object
               scaleMetric:
+                description: 'ScaleMetric defines which metric type is watched by
+                  the Autoscaler. Possible values examples: "concurrency", "rps",
+                  "cpu", "memory".'
                 type: string
               site:
+                description: Site defines where to deploy the Capp. It can be a specific
+                  cluster or a placement name.
                 type: string
             required:
             - configurationSpec
             type: object
           status:
-            description: CappStatus defines the observed state of Capp
+            description: CappStatus defines the observed state of Capp.
             properties:
               Revisions:
+                description: RevisionInfo shows the revision information.
                 items:
+                  description: RevisionInfo shows the revision information.
                   properties:
                     RevisionsStatus:
                       description: RevisionStatus communicates the observed state
@@ -8070,19 +8131,30 @@ spec:
                           type: integer
                       type: object
                     name:
+                      description: RevisionName is the name of the revision.
                       type: string
                   type: object
                 type: array
               applicationLinks:
+                description: ApplicationLinks contains relevant information about
+                  the cluster that the Capp is deployed in.
                 properties:
                   clusterSegment:
+                    description: ClusterSegment holds the segment of the cluster that
+                      the Capp is deployed on.
                     type: string
                   consoleLink:
+                    description: ConsoleLink holds a link for the Openshift cluster
+                      console.
                     type: string
                   site:
+                    description: Site holds the cluster name that the Capp is deployed
+                      on.
                     type: string
                 type: object
               conditions:
+                description: Conditions contain details about the current state of
+                  the Capp.
                 items:
                   description: "Condition contains details for one aspect of the current
                     state of this API Resource. --- This struct is intended for direct
@@ -8151,8 +8223,8 @@ spec:
                   type: object
                 type: array
               knativeObjectStatus:
-                description: ServiceStatus represents the Status stanza of the Service
-                  resource.
+                description: KnativeObjectStatus represents the Status stanza of the
+                  Service resource.
                 properties:
                   address:
                     description: Address holds the information needed for a Route
