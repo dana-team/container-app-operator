@@ -53,9 +53,9 @@ jobs:
       - run:
           name: deploy
           command: 
-            docker login -u ${DOCKER_USERNAME} -p ${DOCKER_PASSWORD};
-            docker bulid --tag="danateam/container-app-operator:$CIRCLE_BRANCH" . ;
-            docker push danateam/container-app-operator:$CIRCLE_BRANCH;
+             docker login -u ${DOCKER_USERNAME} -p ${DOCKER_PASSWORD}
+             docker bulid --tag="danateam/container-app-operator:$CIRCLE_BRANCH" . 
+             docker push danateam/container-app-operator:$CIRCLE_BRANCH
 workflows:
   build-and-test:
     jobs:
