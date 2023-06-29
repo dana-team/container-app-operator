@@ -54,8 +54,8 @@ jobs:
           name: deploy
           command: 
              docker login -u ${DOCKER_USERNAME} -p ${DOCKER_PASSWORD};
-             docker build . --tag="danateam/container-app-operator:$CIRCLE_BRANCH"; 
-             docker push danateam/container-app-operator:$CIRCLE_BRANCH;
+             docker build . --tag="${DOCKER_USERNAME}/container-app-operator:$CIRCLE_BRANCH"; 
+             docker push ${DOCKER_USERNAME}/container-app-operator:$CIRCLE_BRANCH;
 workflows:
   build-and-test:
     jobs:
