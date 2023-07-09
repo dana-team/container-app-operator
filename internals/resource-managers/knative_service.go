@@ -22,7 +22,7 @@ type KnativeServiceManager struct {
 	Log       logr.Logger
 }
 
-func (k KnativeServiceManager) prepareResource(capp rcsv1alpha1.Capp) knativev1.Service {
+func (k KnativeServiceManager) prepareResource(capp rcsv1alpha1.Capp, ctx context.Context) knativev1.Service {
 	knativeService := knativev1.Service{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
@@ -39,6 +39,11 @@ func (k KnativeServiceManager) prepareResource(capp rcsv1alpha1.Capp) knativev1.
 			ConfigurationSpec: capp.Spec.ConfigurationSpec,
 		},
 	}
+
+	knativeService.Spec.Template.Spec.EnableServiceLinks = new(bool)
+	knativeService.Spec.ConfigurationSpec.SetDefaults(ctx)
+	knativeService.Spec.RouteSpec.SetDefaults(ctx)
+	knativeService.Spec.Template.Spec.SetDefaults(ctx)
 	knativeService.Spec.ConfigurationSpec.Template.Spec.TimeoutSeconds = capp.Spec.RouteSpec.RouteTimeoutSeconds
 	knativeService.Spec.Template.ObjectMeta.Annotations = autoscale_utils.SetAutoScaler(capp)
 	return knativeService
@@ -54,7 +59,7 @@ func (k KnativeServiceManager) CleanUp(capp rcsv1alpha1.Capp) error {
 }
 
 func (k KnativeServiceManager) CreateOrUpdateObject(capp rcsv1alpha1.Capp) error {
-	knativeServiceFromCapp := k.prepareResource(capp)
+	knativeServiceFromCapp := k.prepareResource(capp, k.Ctx)
 	knativeService := knativev1.Service{}
 	resourceManager := rclient.ResourceBaseManager{Ctx: k.Ctx, K8sclient: k.K8sclient, Log: k.Log}
 	if err := k.K8sclient.Get(k.Ctx, types.NamespacedName{Namespace: capp.Namespace, Name: capp.Name}, &knativeService); err != nil {
