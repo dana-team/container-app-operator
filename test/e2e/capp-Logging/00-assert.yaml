@@ -1,0 +1,51 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 120  # Timeout waiting for the state
+---
+apiVersion: logging.banzaicloud.io/v1beta1
+kind: Flow
+metadata:
+  name: capp-with-elastic-logs-flow
+  namespace: capp-tests
+spec:
+  filters:
+    - tag_normaliser: {}
+    - parser:
+        parse:
+          type: nginx
+        remove_key_name_field: true
+        reserve_data: true
+  localOutputRefs:
+    - capp-with-elastic-logs-output
+  match:
+    - select:
+        labels:
+          serving.knative.dev/configuration: capp-with-elastic-logs
+status:
+  active: true
+---
+apiVersion: logging.banzaicloud.io/v1beta1
+kind: Output
+metadata:
+  name: capp-with-elastic-logs-output
+  namespace: capp-tests
+spec:
+  elasticsearch:
+    buffer:
+      timekey: 1m
+      timekey_use_utc: true
+      timekey_wait: 30s
+    port: 9200
+    scheme: http
+    ssl_version: TLSv1_2
+    host: 20.76.217.187
+    user: elastic
+    ssl_verify: false
+    index_name: main
+    password:
+      valueFrom:
+        secretKeyRef:
+          key: elastic
+          name: quickstart-es-elastic-user
+status:
+  active: true

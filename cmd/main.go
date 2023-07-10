@@ -18,6 +18,7 @@ package main
 
 import (
 	"flag"
+	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
 	"os"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -56,8 +57,8 @@ func init() {
 	utilruntime.Must(knativev1.AddToScheme(scheme))
 	utilruntime.Must(knativev1alphav1.AddToScheme(scheme))
 	utilruntime.Must(routev1.AddToScheme(scheme))
-
 	utilruntime.Must(rcsv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(loggingv1beta1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
