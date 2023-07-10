@@ -45,7 +45,9 @@ func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	}
 	resourceManagers := []rmanagers.ResourceManager{
 		rmanagers.KnativeDomainMappingManager{Ctx: ctx, Log: r.Log, K8sclient: r.Client},
-		rmanagers.KnativeServiceManager{Ctx: ctx, Log: r.Log, K8sclient: r.Client}}
+		rmanagers.KnativeServiceManager{Ctx: ctx, Log: r.Log, K8sclient: r.Client},
+		rmanagers.FlowManager{Ctx: ctx, Log: r.Log, K8sclient: r.Client},
+		rmanagers.OutputManager{Ctx: ctx, Log: r.Log, K8sclient: r.Client}}
 	err, deleted := finalizer_utils.HandleResourceDeletion(ctx, capp, r.Log, r.Client, resourceManagers)
 	if err != nil {
 		return ctrl.Result{}, err
