@@ -1,0 +1,46 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+timeout: 20
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: capp-tests
+---
+apiVersion: rcs.dana.io/v1alpha1
+kind: Capp
+metadata:
+  name: capp-with-splunk-logs
+  namespace: capp-tests
+spec:
+  configurationSpec:
+    template:
+      metadata:
+        creationTimestamp: null
+      spec:
+        containers:
+          - env:
+              - name: APP_NAME
+                value: capp-with-splunk-logs
+            image: 'sahar2339/example-python-app:v1-flask'
+            name: capp-with-splunk-logs
+            resources: {}
+  routeSpec:
+    hostname: laber-test.apps.ocp-waystar.os-pub.com
+    https: true
+  logSpec:
+    type: splunk
+    host: 74.234.208.141
+    index: main
+    hecTokenSecretName: splunk-token
+    sslVerify: false
+  scaleMetric: rps
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: quickstart-es-elastic-user
+  namespace: capp-tests
+data:
+  elastic: K0ZZY0w2RjdEaWxMSEx0ZWpfRm0=
+type: Opaque

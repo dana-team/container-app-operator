@@ -42,6 +42,9 @@ type CappSpec struct {
 	// RouteSpec defines the route specification for the Capp.
 	// +optional
 	RouteSpec RouteSpec `json:"routeSpec,omitempty"`
+
+	// LogSpec defines the configuration for shipping Capp logs.
+	LogSpec LogSpec `json:"logSpec,omitempty"`
 }
 
 // RouteSpec defines the route specification for the Capp.
@@ -62,6 +65,40 @@ type RouteSpec struct {
 	// that the request instance is allowed to respond to a request.
 	// +optional
 	RouteTimeoutSeconds *int64 `json:"routeTimeoutSeconds,omitempty"`
+}
+
+// LogSpec defines the configuration for shipping Capp logs.
+type LogSpec struct {
+	// Type defines where to send the Capp logs
+	// Possible values : "elastic" and "splunk".
+	// +optional
+	Type string `json:"type,omitempty"`
+
+	// Host defines Elasticsearch or Splunk host.
+	// +optional
+	Host string `json:"host,omitempty"`
+
+	// SSLVerify determines whether to skip ssl verification.
+	// +optional
+	SSLVerify bool `json:"sslVerify,omitempty"`
+
+	// Index defines the index name to write events to.
+	// +optional
+	Index string `json:"index,omitempty"`
+
+	// UserName defines a User for authentication.
+	// +optional
+	UserName string `json:"username,omitempty"`
+
+	// PasswordSecretName defines the name of the secret
+	// containing the password for authentication.
+	// +optional
+	PasswordSecretName string `json:"passwordSecretName,omitempty"`
+
+	// HecTokenSecretName defines the name of the secret
+	// containing the Splunk Hec token.
+	// +optional
+	HecTokenSecretName string `json:"hecTokenSecretName,omitempty"`
 }
 
 // ApplicationLinks contains relevant information about
