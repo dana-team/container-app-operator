@@ -1,12 +1,19 @@
-# capp-operaor
-// TODO(user): Add simple overview of use/purpose
+## What is RCS?
+RCS is an open-source implementation of Container-as-a-Service. It utilizes [Knative](https://github.com/knative) and [OCM](https://github.com/open-cluster-management-io) to create and manage workloads across multiple clusters, providing cloud-like features and technologies to offline environment users. RCS offers an auto cluster schedule based on cluster usage and availability, requires low configuration, and provides an auto-scaler template based on a single metric. With RCS, users can manage multiple revisions and custom DNS names, among other features. Overall, RCS aims to simplify and streamline the management of containerized applications, making it easier for developers to focus on writing code.
+
+## What is Knative?
+Knative is an open-source project used by RCS to build, deploy, and manage serverless workloads across multiple clusters. It provides a platform-agnostic solution for running serverless deployments, allowing RCS users to manage workloads with ease.
+
 
 ## Description
-// TODO(user): An in-depth paragraph about your project and overview of use
 
-## Getting Started
-You’ll need a Kubernetes cluster to run against. You can use [KIND](https://sigs.k8s.io/kind) to get a local cluster for testing, or run against a remote cluster.
-**Note:** Your controller will automatically use the current context in your kubeconfig file (i.e. whatever cluster `kubectl cluster-info` shows).
+### How does it work ?
+
+The `CappReconciler` takes `Capp` resource created by the `ManifestWork` agent on the managed cluster and "Translate" it to knative objects such as `Knative service`, `Knative Domainmapping` with configured `AutoScale` and `TLS` options.
+
+
+![Architecture](materials/architecture.png)
+
 
 ### Running on the cluster
 1. Install Instances of Custom Resources:
@@ -40,30 +47,6 @@ UnDeploy the controller to the cluster:
 ```sh
 make undeploy
 ```
-
-## Contributing
-// TODO(user): Add detailed information on how you would like others to contribute to this project
-
-### How it works
-This project aims to follow the Kubernetes [Operator pattern](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/)
-
-It uses [Controllers](https://kubernetes.io/docs/concepts/architecture/controller/) 
-which provides a reconcile function responsible for synchronizing resources untile the desired state is reached on the cluster 
-
-### Test It Out
-1. Install the CRDs into the cluster:
-
-```sh
-make install
-```
-
-2. Run your controller (this will run in the foreground, so switch to a new terminal if you want to leave it running):
-
-```sh
-make run
-```
-
-**NOTE:** You can also run this in one step by running: `make install run`
 
 ### Modifying the API definitions
 If you are editing the API definitions, generate the manifests such as CRs or CRDs using:

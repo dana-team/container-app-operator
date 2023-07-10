@@ -1,11 +1,11 @@
 apiVersion: kuttl.dev/v1beta1
 kind: TestStep
-timeout: 20
+timeout: 120
 ---
 apiVersion: rcs.dana.io/v1alpha1
 kind: Capp
 metadata:
-  name: capp-with-https
+  name: capp-with-timeout
   namespace: capp-tests
 spec:
   configurationSpec:
@@ -16,11 +16,10 @@ spec:
         containers:
           - env:
               - name: APP_NAME
-                value: capp-with-https
+                value: capp-with-timeout
             image: 'sahar2339/example-python-app:v1-flask'
-            name: capp-with-https
+            name: capp-with-timeout
             resources: {}
   routeSpec:
-    hostname: capp-with-https.dev
-    https: true
+    routeTimeoutSeconds: 5
   scaleMetric: cpu

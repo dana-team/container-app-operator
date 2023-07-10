@@ -58,6 +58,10 @@ vet: ## Run go vet against code.
 test: manifests generate fmt vet envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./... -coverprofile cover.out
 
+.PHONY: test-e2e
+test-e2e: install-kuttl
+	kubectl kuttl test ./test/e2e
+
 ##@ Build
 
 .PHONY: build
@@ -155,3 +159,16 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
 $(ENVTEST): $(LOCALBIN)
 	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+
+KUTTL_BINARY_INSTALLATION ?= "https://github.com/kudobuilder/kuttl/releases/download/v0.15.0/kuttl_0.15.0_linux_x86_64.tar.gz"
+KUTTL_TAR_FILE_NAME ?= kuttl_0.15.0_linux_x86_64.tar.gz
+KUTTL_LOCATION ?= /usr/local/bin/kubectl-kuttl
+
+.PHONY: install-kuttl
+install-kuttl:
+	@if ! test -f "$(KUTTL_LOCATION)"; then \
+		curl -LO $(KUTTL_BINARY_INSTALLATION); \
+		tar -xvf $(KUTTL_TAR_FILE_NAME); \
+		sudo mv kubectl-kuttl /usr/local/bin/; \
+		rm -rf $(KUTTL_TAR_FILE_NAME); \
+	fi
