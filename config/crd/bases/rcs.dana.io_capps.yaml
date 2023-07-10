@@ -7940,6 +7940,34 @@ spec:
                         type: object
                     type: object
                 type: object
+              logSpec:
+                description: LogSpec defines the configuration for shipping Capp logs.
+                properties:
+                  hecTokenSecretName:
+                    description: HecTokenSecretName defines the name of the secret
+                      containing the Splunk Hec token.
+                    type: string
+                  host:
+                    description: Host defines Elasticsearch or Splunk host.
+                    type: string
+                  index:
+                    description: Index defines the index name to write events to.
+                    type: string
+                  passwordSecretName:
+                    description: PasswordSecretName defines the name of the secret
+                      containing the password for authentication.
+                    type: string
+                  sslVerify:
+                    description: SSLVerify determines whether to skip ssl verification.
+                    type: boolean
+                  type:
+                    description: 'Type defines where to send the Capp logs Possible
+                      values : "elastic" and "splunk".'
+                    type: string
+                  username:
+                    description: UserName defines a User for authentication.
+                    type: string
+                type: object
               routeSpec:
                 description: RouteSpec defines the route specification for the Capp.
                 properties:
