@@ -18,8 +18,9 @@ package main
 
 import (
 	"flag"
-	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
 	"os"
+
+	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -31,8 +32,8 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 
+	utils "github.com/dana-team/container-app-operator/internals/utils"
 	"github.com/go-logr/zapr"
-	networkingv1 "github.com/openshift/api/network/v1"
 	"go.elastic.co/ecszap"
 	"go.uber.org/zap"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -53,13 +54,15 @@ var (
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-	utilruntime.Must(networkingv1.AddToScheme(scheme))
 	utilruntime.Must(knativev1.AddToScheme(scheme))
-	utilruntime.Must(knativev1alphav1.AddToScheme(scheme))
-	utilruntime.Must(routev1.AddToScheme(scheme))
-	utilruntime.Must(rcsv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(loggingv1beta1.AddToScheme(scheme))
+	utilruntime.Must(knativev1alphav1.AddToScheme(scheme))
+	utilruntime.Must(rcsv1alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
+}
+
+func initOpenshiftSchemes() {
+	utilruntime.Must(routev1.AddToScheme(scheme))
 }
 
 func main() {
@@ -92,9 +95,20 @@ func main() {
 		os.Exit(1)
 	}
 
+	onOpenshift, err := utils.IsOnOpenshift(mgr.GetConfig())
+	if err != nil {
+		setupLog.Error(err, "failed to check if we run on Openshift")
+		os.Exit(1)
+	}
+
+	if onOpenshift {
+		initOpenshiftSchemes()
+	}
+
 	if err = (&controllers.CappReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:      mgr.GetClient(),
+		Scheme:      mgr.GetScheme(),
+		OnOpenshift: onOpenshift,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Capp")
 		os.Exit(1)

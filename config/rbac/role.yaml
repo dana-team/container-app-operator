@@ -6,6 +6,26 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
+  - logging.banzaicloud.io
+  resources:
+  - flows
+  verbs:
+  - create
+  - get
+  - list
+  - update
+  - watch
+- apiGroups:
+  - logging.banzaicloud.io
+  resources:
+  - outputs
+  verbs:
+  - create
+  - get
+  - list
+  - update
+  - watch
+- apiGroups:
   - rcs.dana.io
   resources:
   - capps
@@ -32,10 +52,42 @@ rules:
   - patch
   - update
 - apiGroups:
+  - route.openshift.io
+  resources:
+  - routes
+  verbs:
+  - create
+  - get
+  - list
+  - update
+  - watch
+- apiGroups:
+  - serving.knative.dev
+  resources:
+  - domainmappings
+  verbs:
+  - create
+  - get
+  - list
+  - update
+  - watch
+- apiGroups:
+  - serving.knative.dev
+  resources:
+  - revisions
+  verbs:
+  - create
+  - get
+  - list
+  - update
+  - watch
+- apiGroups:
   - serving.knative.dev
   resources:
   - services
   verbs:
+  - create
   - get
   - list
+  - update
   - watch

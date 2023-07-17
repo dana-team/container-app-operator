@@ -1,10 +1,6 @@
 apiVersion: rcs.dana.io/v1alpha1
 kind: Capp
 metadata:
-  creationTimestamp: "2023-04-04T12:57:58Z"
-  finalizers:
-  - dana.io/capp-cleanup
-  generation: 1
   name: koki
 spec:
   configurationSpec:
@@ -22,4 +18,3 @@ spec:
   routeSpec:
     hostname: rbacqwegen.dev
   scaleMetric: cpu
-  site: ocp-nikola
