@@ -27,13 +27,20 @@ import (
 type CappReconciler struct {
 	Log logr.Logger
 	client.Client
-	Scheme *runtime.Scheme
+	Scheme      *runtime.Scheme
+	OnOpenshift bool
 }
 
 // +kubebuilder:rbac:groups=rcs.dana.io,resources=capps,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=rcs.dana.io,resources=capps/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=rcs.dana.io,resources=capps/finalizers,verbs=update
-// +kubebuilder:rbac:groups=serving.knative.dev,resources=services;domainmappings,verbs=get;list;watch;update;create
+// +kubebuilder:rbac:groups=serving.knative.dev,resources=services,verbs=get;list;watch;update;create
+// +kubebuilder:rbac:groups=serving.knative.dev,resources=domainmappings,verbs=get;list;watch;update;create
+// +kubebuilder:rbac:groups=serving.knative.dev,resources=revisions,verbs=get;list;watch;update;create
+// +kubebuilder:rbac:groups=logging.banzaicloud.io,resources=flows,verbs=get;list;watch;update;create
+// +kubebuilder:rbac:groups=logging.banzaicloud.io,resources=outputs,verbs=get;list;watch;update;create
+// +kubebuilder:rbac:groups=route.openshift.io,resources=routes,verbs=get;list;watch;update;create
+
 func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	r.Log = log.FromContext(ctx)
 	capp := rcsv1alpha1.Capp{}
@@ -104,7 +111,7 @@ func (r *CappReconciler) SyncApplication(ctx context.Context, capp rcsv1alpha1.C
 			return err
 		}
 	}
-	if err := status_utils.SyncStatus(ctx, capp, r.Log, r.Client); err != nil {
+	if err := status_utils.SyncStatus(ctx, capp, r.Log, r.Client, r.OnOpenshift); err != nil {
 		return err
 	}
 	return nil

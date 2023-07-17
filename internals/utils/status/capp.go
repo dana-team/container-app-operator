@@ -4,16 +4,17 @@ package status_utils
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"strings"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 
 	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/go-logr/logr"
-	networkingv1 "github.com/openshift/api/network/v1"
 	routev1 "github.com/openshift/api/route/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -26,19 +27,22 @@ const (
 )
 
 // This function builds the ApplicationLinks status of the Capp  by getting the console route and the cluster segment. It returns a pointer to the ApplicationLinks struct.
-func buildApplicationLinks(ctx context.Context, capp rcsv1alpha1.Capp, log logr.Logger, r client.Client) (*rcsv1alpha1.ApplicationLinks, error) {
-	console, err := getClusterConsole(ctx, capp, log, r)
-	if err != nil {
-		return nil, err
-	}
+func buildApplicationLinks(ctx context.Context, capp rcsv1alpha1.Capp, log logr.Logger, r client.Client, onOpenshift bool) (*rcsv1alpha1.ApplicationLinks, error) {
 	segment, err := getClusterSegment(ctx, capp, log, r)
 	if err != nil {
 		return nil, err
 	}
 	applicationLinks := rcsv1alpha1.ApplicationLinks{
-		ConsoleLink:    console,
-		Site:           strings.Split(console, ".")[2],
 		ClusterSegment: segment,
+	}
+	if onOpenshift {
+		console, err := getClusterConsole(ctx, capp, log, r)
+		if err != nil {
+			return nil, err
+		}
+		applicationLinks.ConsoleLink = console
+		applicationLinks.Site = strings.Split(console, ".")[2]
+
 	}
 	return &applicationLinks, nil
 }
@@ -54,12 +58,18 @@ func getClusterConsole(ctx context.Context, capp rcsv1alpha1.Capp, log logr.Logg
 
 // This function gets the cluster segment from the list of host subnets.
 func getClusterSegment(ctx context.Context, capp rcsv1alpha1.Capp, log logr.Logger, r client.Client) (string, error) {
-	hostsubnets := networkingv1.HostSubnetList{}
-	if err := r.List(ctx, &hostsubnets); err != nil {
-		log.Error(err, "")
+	nodes := corev1.NodeList{}
+	if err := r.List(ctx, &nodes); err != nil {
 		return "", err
 	}
-	return hostsubnets.Items[0].Subnet, nil
+	for _, address := range nodes.Items[0].Status.Addresses {
+		if address.Type == "InternalIP" {
+			ipSegments := strings.Split(address.Address, ".")
+			ip := fmt.Sprintf("%s.%s.%s.0/24", ipSegments[0], ipSegments[1], ipSegments[2])
+			return ip, nil
+		}
+	}
+	return "", nil
 }
 
 // This function builds the RevisionInfo status of the Capp CRD by getting the list of revisions associated with the Knative service. It returns a slice of RevisionInfo structs.
@@ -89,13 +99,13 @@ func buildRevisionsStatus(ctx context.Context, capp rcsv1alpha1.Capp, knativeSer
 
 // This is the main function that synchronizes the status of the Capp CRD with the Knative service and revisions associated with it.
 // It gets the Capp CRD, builds the ApplicationLinks and RevisionInfo statuses, and updates the status of the Capp CRD if it has changed.
-func SyncStatus(ctx context.Context, capp rcsv1alpha1.Capp, log logr.Logger, r client.Client) error {
+func SyncStatus(ctx context.Context, capp rcsv1alpha1.Capp, log logr.Logger, r client.Client, onOpenshift bool) error {
 	cappObject := rcsv1alpha1.Capp{}
 	if err := r.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: capp.Name}, &cappObject); err != nil {
 		return err
 	}
 
-	applicationLinks, err := buildApplicationLinks(ctx, capp, log, r)
+	applicationLinks, err := buildApplicationLinks(ctx, capp, log, r, onOpenshift)
 	if err != nil {
 		return err
 	}
