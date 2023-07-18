@@ -1,0 +1,12 @@
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: klusterlet-work-sa-capp-target-binding
+subjects:
+  - kind: ServiceAccount
+    name: klusterlet-work-sa
+    namespace: open-cluster-management-agent
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: klusterlet-work-sa-capp-target
