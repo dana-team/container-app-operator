@@ -1,0 +1,43 @@
+name: Pre Merge E2E test
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, reopened, synchronize]
+
+jobs:
+  e2e-tests:
+    name: E2e-tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 'stable'
+      - uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.26.1'
+      - name: Install oc
+        uses: redhat-actions/oc-installer@v1
+        with:
+          oc_version: '4.6'
+      - name: Login to cluster
+        env:
+          USERNAME: ${{ secrets.username }}
+          PASSWORD: ${{ secrets.password }}
+          API_ENDPOINT: ${{ secrets.api_endpoint }}
+        run: oc login "$API_ENDPOINT" -u "$USERNAME" -p "$PASSWORD" --insecure-skip-tls-verify
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: build docker image
+        run: make docker-build docker-push IMG=danateam/container-app-operator:test-${GITHUB_REF##*/}
+      - name: deploy to cluster
+        run: make install deploy IMG=danateam/container-app-operator:test-${GITHUB_REF##*/}
+      - name: e2e-test
+        run: make test-e2e
