@@ -133,6 +133,12 @@ func (o OutputManager) CleanUp(capp rcsv1alpha1.Capp) error {
 	outputName := capp.GetName() + "-output"
 	resourceManager := rclient.ResourceBaseManager{Ctx: o.Ctx, K8sclient: o.K8sclient, Log: o.Log}
 	output := loggingv1beta1.Output{}
+	if err := o.K8sclient.Get(o.Ctx, types.NamespacedName{Namespace: capp.Namespace, Name: outputName}, &output); err != nil {
+		if errors.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
 	if err := resourceManager.DeleteResource(&output, outputName, capp.Namespace); err != nil {
 		return err
 	}

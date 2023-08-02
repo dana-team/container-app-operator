@@ -66,6 +66,12 @@ func (f FlowManager) CleanUp(capp rcsv1alpha1.Capp) error {
 	flowName := capp.GetName() + "-flow"
 	resourceManager := rclient.ResourceBaseManager{Ctx: f.Ctx, K8sclient: f.K8sclient, Log: f.Log}
 	flow := loggingv1beta1.Flow{}
+	if err := f.K8sclient.Get(f.Ctx, types.NamespacedName{Namespace: capp.Namespace, Name: flowName}, &flow); err != nil {
+		if errors.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
 	if err := resourceManager.DeleteResource(&flow, flowName, capp.Namespace); err != nil {
 		return err
 	}
