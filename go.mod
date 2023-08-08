@@ -1,8 +1,9 @@
 module github.com/dana-team/container-app-operator
 
-go 1.19
+go 1.20
 
 require (
+	github.com/cisco-open/operator-tools v0.29.0
 	github.com/go-logr/logr v1.2.4
 	github.com/go-logr/zapr v1.2.4
 	github.com/kube-logging/logging-operator/pkg/sdk v0.9.1
@@ -24,7 +25,6 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blendle/zapdriver v1.3.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
-	github.com/cisco-open/operator-tools v0.29.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/emicklei/go-restful/v3 v3.9.0 // indirect
 	github.com/evanphx/json-patch v5.6.0+incompatible // indirect
