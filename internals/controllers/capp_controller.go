@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -42,31 +43,33 @@ type CappReconciler struct {
 // +kubebuilder:rbac:groups=route.openshift.io,resources=routes,verbs=get;list;watch;update;create
 
 func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	r.Log = log.FromContext(ctx)
+	logger := log.FromContext(ctx).WithValues("CappName", req.Name, "CappNamespace", req.Namespace)
+	logger.Info("Starting Reconcile")
 	capp := rcsv1alpha1.Capp{}
 	if err := r.Client.Get(ctx, req.NamespacedName, &capp); err != nil {
 		if errors.IsNotFound(err) {
+			logger.Info(fmt.Sprintf("Didn't find Capp: %s, from the namespace: %s", capp.Name, capp.Namespace))
 			return ctrl.Result{}, nil
 		}
-		return ctrl.Result{}, err
+		return ctrl.Result{}, fmt.Errorf("failed to get Capp: %s", err.Error())
 	}
 	resourceManagers := []rmanagers.ResourceManager{
-		rmanagers.KnativeDomainMappingManager{Ctx: ctx, Log: r.Log, K8sclient: r.Client},
-		rmanagers.KnativeServiceManager{Ctx: ctx, Log: r.Log, K8sclient: r.Client},
-		rmanagers.FlowManager{Ctx: ctx, Log: r.Log, K8sclient: r.Client},
-		rmanagers.OutputManager{Ctx: ctx, Log: r.Log, K8sclient: r.Client}}
-	err, deleted := finalizer_utils.HandleResourceDeletion(ctx, capp, r.Log, r.Client, resourceManagers)
+		rmanagers.KnativeDomainMappingManager{Ctx: ctx, Log: logger, K8sclient: r.Client},
+		rmanagers.KnativeServiceManager{Ctx: ctx, Log: logger, K8sclient: r.Client},
+		rmanagers.FlowManager{Ctx: ctx, Log: logger, K8sclient: r.Client},
+		rmanagers.OutputManager{Ctx: ctx, Log: logger, K8sclient: r.Client}}
+	err, deleted := finalizer_utils.HandleResourceDeletion(ctx, capp, logger, r.Client, resourceManagers)
 	if err != nil {
-		return ctrl.Result{}, err
+		return ctrl.Result{}, fmt.Errorf("failed to handle Capp deletion: %s", err.Error())
 	}
 	if deleted {
 		return ctrl.Result{}, nil
 	}
 	if err := finalizer_utils.EnsureFinalizer(ctx, capp, r.Client); err != nil {
-		return ctrl.Result{}, err
+		return ctrl.Result{}, fmt.Errorf("failed to ensure finalizer in Capp: %s", err.Error())
 	}
-	if err := r.SyncApplication(ctx, capp, resourceManagers); err != nil {
-		return ctrl.Result{}, err
+	if err := r.SyncApplication(ctx, capp, resourceManagers, logger); err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to sync Capp: %s", err.Error())
 	}
 	return ctrl.Result{}, nil
 }
@@ -105,13 +108,13 @@ func (r *CappReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *CappReconciler) SyncApplication(ctx context.Context, capp rcsv1alpha1.Capp, resourceManagers []rmanagers.ResourceManager) error {
+func (r *CappReconciler) SyncApplication(ctx context.Context, capp rcsv1alpha1.Capp, resourceManagers []rmanagers.ResourceManager, logger logr.Logger) error {
 	for _, manager := range resourceManagers {
 		if err := manager.CreateOrUpdateObject(capp); err != nil {
 			return err
 		}
 	}
-	if err := status_utils.SyncStatus(ctx, capp, r.Log, r.Client, r.OnOpenshift); err != nil {
+	if err := status_utils.SyncStatus(ctx, capp, logger, r.Client, r.OnOpenshift); err != nil {
 		return err
 	}
 	return nil

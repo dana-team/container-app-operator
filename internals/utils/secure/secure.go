@@ -1,6 +1,8 @@
 package secure
 
 import (
+	"fmt"
+
 	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	rclient "github.com/dana-team/container-app-operator/internals/wrappers"
 	knativev1alphav1 "knative.dev/serving/pkg/apis/serving/v1alpha1"
@@ -18,9 +20,11 @@ func SetHttpsKnativeDomainMapping(capp rcsv1alpha1.Capp, knativeDomainMapping *k
 	if isHttps {
 		tlsSecret := corev1.Secret{}
 		if err := resourceManager.K8sclient.Get(resourceManager.Ctx, types.NamespacedName{Name: TlsSecretPrefix + capp.Name, Namespace: capp.Namespace}, &tlsSecret); err != nil {
-			if !errors.IsNotFound(err) {
-				resourceManager.Log.Error(err, "unable to get resource")
+			if errors.IsNotFound(err) {
+				resourceManager.Log.Error(err, fmt.Sprintf("the tls secret %s for DomainMapping does not exist", TlsSecretPrefix+capp.Name))
+				return
 			}
+			resourceManager.Log.Error(err, fmt.Sprintf("unable to get tls secret %s for DomainMapping", TlsSecretPrefix+capp.Name))
 		} else {
 			knativeDomainMapping.Spec.TLS = &knativev1alphav1.SecretTLS{
 				SecretName: TlsSecretPrefix + capp.Name,

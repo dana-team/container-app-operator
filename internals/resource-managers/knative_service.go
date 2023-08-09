@@ -2,6 +2,7 @@ package resourceprepares
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 
 	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
@@ -53,7 +54,7 @@ func (k KnativeServiceManager) CleanUp(capp rcsv1alpha1.Capp) error {
 	resourceManager := rclient.ResourceBaseManager{Ctx: k.Ctx, K8sclient: k.K8sclient, Log: k.Log}
 	kservice := knativev1.Service{}
 	if err := resourceManager.DeleteResource(&kservice, capp.Name, capp.Namespace); err != nil {
-		return err
+		return fmt.Errorf("unable to delete KnativeService of Capp: %s", err.Error())
 	}
 	return nil
 }
@@ -65,7 +66,7 @@ func (k KnativeServiceManager) CreateOrUpdateObject(capp rcsv1alpha1.Capp) error
 	if err := k.K8sclient.Get(k.Ctx, types.NamespacedName{Namespace: capp.Namespace, Name: capp.Name}, &knativeService); err != nil {
 		if errors.IsNotFound(err) {
 			if err := resourceManager.CreateResource(&knativeServiceFromCapp); err != nil {
-				return err
+				return fmt.Errorf("unable to create KnativeService for Capp: %s", err.Error())
 			}
 		} else {
 			return err
@@ -75,7 +76,7 @@ func (k KnativeServiceManager) CreateOrUpdateObject(capp rcsv1alpha1.Capp) error
 	if !reflect.DeepEqual(knativeService.Spec, knativeServiceFromCapp.Spec) {
 		knativeService.Spec = knativeServiceFromCapp.Spec
 		if err := resourceManager.UpdateResource(&knativeService); err != nil {
-			return err
+			return fmt.Errorf("unable to update KnativeService of Capp: %s", err.Error())
 		}
 	}
 
