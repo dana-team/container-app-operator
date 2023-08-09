@@ -6,6 +6,7 @@ import (
 	"reflect"
 
 	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	"github.com/dana-team/container-app-operator/internals/utils"
 	autoscale_utils "github.com/dana-team/container-app-operator/internals/utils/autoscale"
 	rclient "github.com/dana-team/container-app-operator/internals/wrappers"
 	"github.com/go-logr/logr"
@@ -17,6 +18,10 @@ import (
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 )
 
+const (
+	danaAnnotationsPrefix = "dana.io"
+)
+
 type KnativeServiceManager struct {
 	Ctx       context.Context
 	K8sclient client.Client
@@ -24,27 +29,30 @@ type KnativeServiceManager struct {
 }
 
 func (k KnativeServiceManager) prepareResource(capp rcsv1alpha1.Capp, ctx context.Context) knativev1.Service {
+	knativeServiceAnnotations := utils.FilterKeysWithoutPrefix(capp.Annotations, danaAnnotationsPrefix)
+	knativeServiceAnnotations[CappResourceKey] = capp.Name
+	knativeServiceLabels := utils.FilterKeysWithoutPrefix(capp.Labels, danaAnnotationsPrefix)
+	knativeServiceLabels[CappResourceKey] = capp.Name
+
 	knativeService := knativev1.Service{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      capp.Name,
-			Namespace: capp.Namespace,
-			Labels: map[string]string{
-				CappResourceKey: capp.Name,
-			},
-			Annotations: map[string]string{
-				CappResourceKey: capp.Name,
-			},
+			Name:        capp.Name,
+			Namespace:   capp.Namespace,
+			Labels:      knativeServiceLabels,
+			Annotations: knativeServiceAnnotations,
 		},
 		Spec: knativev1.ServiceSpec{
 			ConfigurationSpec: capp.Spec.ConfigurationSpec,
 		},
 	}
 
+	// Set defaults
 	knativeService.Spec.Template.Spec.EnableServiceLinks = new(bool)
 	knativeService.Spec.ConfigurationSpec.SetDefaults(ctx)
 	knativeService.Spec.RouteSpec.SetDefaults(ctx)
 	knativeService.Spec.Template.Spec.SetDefaults(ctx)
+
 	knativeService.Spec.ConfigurationSpec.Template.Spec.TimeoutSeconds = capp.Spec.RouteSpec.RouteTimeoutSeconds
 	knativeService.Spec.Template.ObjectMeta.Annotations = autoscale_utils.SetAutoScaler(capp)
 	return knativeService
