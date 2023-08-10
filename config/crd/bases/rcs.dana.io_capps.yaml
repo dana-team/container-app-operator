@@ -7983,6 +7983,10 @@ spec:
                     description: TlsEnabled determines whether to enable TLS for the
                       Capp route.
                     type: boolean
+                  tlsSecret:
+                    description: TlsSecret defines the name of the secret which holds
+                      the tls certification.
+                    type: string
                   trafficTarget:
                     description: TrafficTarget holds a single entry of the routing
                       table for the Capp route.
