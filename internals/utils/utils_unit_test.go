@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	"github.com/dana-team/container-app-operator/internals/utils"
 	autoscale_utils "github.com/dana-team/container-app-operator/internals/utils/autoscale"
 	"github.com/dana-team/container-app-operator/internals/utils/finalizer"
 	"github.com/dana-team/container-app-operator/internals/utils/secure"
@@ -189,4 +190,19 @@ func TestRemoveFinalizer(t *testing.T) {
 
 	// Check if there is no error after the finalizer removed.
 	assert.NoError(t, finalizer.RemoveFinalizer(ctx, *capp, ctrl.Log, fakeClient))
+}
+
+func TestFilterKeysWithoutPrefix(t *testing.T) {
+	object := map[string]string{
+		"prefix_key1": "value1",
+		"key2":        "value2",
+		"prefix_key3": "value3",
+	}
+	prefix := "prefix_"
+	expected := map[string]string{
+		"prefix_key1": "value1",
+		"prefix_key3": "value3",
+	}
+
+	assert.Equal(t, expected, utils.FilterKeysWithoutPrefix(object, prefix))
 }
