@@ -57,6 +57,10 @@ type RouteSpec struct {
 	// +optional
 	TlsEnabled bool `json:"tlsEnabled,omitempty"`
 
+	// TlsSecret defines the name of the secret which holds the tls certification.
+	// +optional
+	TlsSecret string `json:"tlsSecret,omitempty"`
+
 	// TrafficTarget holds a single entry of the routing table for the Capp route.
 	// +optional
 	TrafficTarget knativev1.TrafficTarget `json:"trafficTarget,omitempty"`
