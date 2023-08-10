@@ -30,7 +30,6 @@ type KnativeServiceManager struct {
 
 func (k KnativeServiceManager) prepareResource(capp rcsv1alpha1.Capp, ctx context.Context) knativev1.Service {
 	knativeServiceAnnotations := utils.FilterKeysWithoutPrefix(capp.Annotations, danaAnnotationsPrefix)
-	knativeServiceAnnotations[CappResourceKey] = capp.Name
 	knativeServiceLabels := utils.FilterKeysWithoutPrefix(capp.Labels, danaAnnotationsPrefix)
 	knativeServiceLabels[CappResourceKey] = capp.Name
 
