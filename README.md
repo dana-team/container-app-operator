@@ -1,77 +1,82 @@
-## What is RCS?
-RCS is an open-source implementation of Container-as-a-Service. It utilizes [Knative](https://github.com/knative) and [OCM](https://github.com/open-cluster-management-io) to create and manage workloads across multiple clusters, providing cloud-like features and technologies to offline environment users. RCS offers an auto cluster schedule based on cluster usage and availability, requires low configuration, and provides an auto-scaler template based on a single metric. With RCS, users can manage multiple revisions and custom DNS names, among other features. Overall, RCS aims to simplify and streamline the management of containerized applications, making it easier for developers to focus on writing code.
+# container-app-operator
 
-## What is Knative?
-Knative is an open-source project used by RCS to build, deploy, and manage serverless workloads across multiple clusters. It provides a platform-agnostic solution for running serverless deployments, allowing RCS users to manage workloads with ease.
+The `container-app-operator` is an operator that reconciles `Capp` CRs.
 
+`Capp` (or ContainerApp) provides a higher-level abstraction for deploying containerized workload, making it easier for end-users to deploy workloads on Kubernetes without being knowledgeable in Kubernetes concepts, while adhering to the standards required by the infrastructure and platform teams without any extra burden on the users.
 
-## Description
+The operator uses open-source projects, such as [`Knative Serving`](https://github.com/knative/serving) and [`logging-operator`](https://github.com/kube-logging/logging-operator) to create an abstraction for containerized workloads.
 
-### How does it work ?
+## Run Container Service
 
-The `CappReconciler` takes `Capp` resource created by the `ManifestWork` agent on the managed cluster and "Translate" it to knative objects such as `Knative service`, `Knative Domainmapping` with configured `AutoScale` and `TLS` options.
+The `container-app-operator` project can work as a standalone solution, but is mostly used together with the [`rcs-ocm-deployer` project](https://github.com/dana-team/rcs-ocm-deployer), which allows deploying `Capp` workloads in a multi-cluster set-up, using the `OCM` (Open Cluster Management) open-source project.
 
+## High Level Architecture
 
-![Architecture](materials/architecture.png)
+![Architecture](images/capp-architecture.svg)
 
+1. The `capp controller` reconciles the `Capp` CRs in the cluster and creates (if needed) a `Knative Service` (`ksvc`) CR, a `DommainMapping` CR, and `Flow` & `Output` CRs for every Capp.
 
-### Running on the cluster
-1. Install Instances of Custom Resources:
+2. The `knative controller` reconciles the `ksvc` CRs in the cluster and controls the lifecycle an autoscaler and pods relevant to the `ksvc`.
 
-```sh
-kubectl apply -f config/samples/
+3. The `logging-operator controller` reconciles the `Flow` and `Output` CRs in the cluster and collects logs from the pods' `stdout` and sends them to a pre-existing `Elasticsearch` or `Splunk` index.
+
+## Feature Highlights
+
+- [x] Support for autoscaler (`HPA` or `KPA`) according to the chosen `scaleMetric` (`concurrency`, `rps`, `cpu`, `memory`) with default setting of `autoscaling.knative.dev/activation-scale: "3"`.
+- [x] Support for HTTP/HTTPS `DomainMapping` for accessing applications via `Ingress`/`Route`.
+- [x] Support for all `Knative Serving` configurations.
+- [x] Support for exporting logs to `Elasticsearch` and `Splunk` indexes.
+
+## Getting Started
+
+### Prerequisites
+
+1. A Kubernetes cluster (you can [use KinD](https://kind.sigs.k8s.io/docs/user/quick-start/)).
+
+2. `Knative Serving` installed on the cluster (you can [use the quickstart](https://knative.dev/docs/getting-started/quickstart-install/))
+
+3. `Logging Operator` installed on the cluster (you can [use the Helm Chart](https://kube-logging.dev/docs/install/#deploy-logging-operator-with-helm))
+
+### Deploying the controller
+
+```bash
+$ make deploy IMG=ghcr.io/dana-team/container-app-operator:<release>
 ```
 
-2. Build and push your image to the location specified by `IMG`:
-	
-```sh
-make docker-build docker-push IMG=<some-registry>/capp-operaor:tag
-```
-	
-3. Deploy the controller to the cluster with the image specified by `IMG`:
+#### Build your own image
 
-```sh
-make deploy IMG=<some-registry>/capp-operaor:tag
+```bash
+$ make docker-build docker-push IMG=<registry>/container-app-operator:<tag>
 ```
 
-### Uninstall CRDs
-To delete the CRDs from the cluster:
+## Example Capp
 
-```sh
-make uninstall
+```yaml
+apiVersion: rcs.dana.io/v1alpha1
+kind: Capp
+metadata:
+  name: capp-sample
+  namespace: capp-sample
+spec:
+  configurationSpec:
+    template:
+      spec:
+        containers:
+          - env:
+              - name: APP_NAME
+                value: capp-env-var
+            image: 'quay.io/danateamorg/example-python-app:v1-flask'
+            name: capp-sample
+  routeSpec:
+    hostname: capp.dev
+    tlsEnabled: true
+    tlsSecret: cappTlsSecretName
+  logSpec:
+    type: elastic
+    host: 10.11.12.13
+    index: main
+    username: elastic
+    passwordSecretName: es-elastic-user
+    sslVerify: false
+  scaleMetric: cpu
 ```
-
-### Undeploy controller
-UnDeploy the controller to the cluster:
-
-```sh
-make undeploy
-```
-
-### Modifying the API definitions
-If you are editing the API definitions, generate the manifests such as CRs or CRDs using:
-
-```sh
-make manifests
-```
-
-**NOTE:** Run `make --help` for more information on all potential `make` targets
-
-More information can be found via the [Kubebuilder Documentation](https://book.kubebuilder.io/introduction.html)
-
-## License
-
-Copyright 2023.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-
