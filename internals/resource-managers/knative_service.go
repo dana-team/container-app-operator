@@ -16,6 +16,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
+
+	"k8s.io/client-go/tools/record"
 )
 
 const (
@@ -26,6 +28,7 @@ type KnativeServiceManager struct {
 	Ctx       context.Context
 	K8sclient client.Client
 	Log       logr.Logger
+	EventRecorder record.EventRecorder
 }
 
 func (k KnativeServiceManager) prepareResource(capp rcsv1alpha1.Capp, ctx context.Context) knativev1.Service {
@@ -73,6 +76,7 @@ func (k KnativeServiceManager) CreateOrUpdateObject(capp rcsv1alpha1.Capp) error
 	if err := k.K8sclient.Get(k.Ctx, types.NamespacedName{Namespace: capp.Namespace, Name: capp.Name}, &knativeService); err != nil {
 		if errors.IsNotFound(err) {
 			if err := resourceManager.CreateResource(&knativeServiceFromCapp); err != nil {
+				k.EventRecorder.Event(&capp, eventTypeError, eventCappKnativeServiceCreationFailed, fmt.Sprintf("Failed to create KnativeService %s for Capp %s", knativeService.Name, capp.Name))
 				return fmt.Errorf("unable to create KnativeService for Capp: %s", err.Error())
 			}
 		} else {

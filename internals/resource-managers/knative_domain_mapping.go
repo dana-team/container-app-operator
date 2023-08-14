@@ -19,6 +19,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
+	"k8s.io/client-go/tools/record"
 )
 
 const CappResourceKey = "dana.io/parent-capp"
@@ -27,6 +28,7 @@ type KnativeDomainMappingManager struct {
 	Ctx       context.Context
 	K8sclient client.Client
 	Log       logr.Logger
+	EventRecorder record.EventRecorder
 }
 
 // PrepareKnativeDomainMapping creates a new DomainMapping for a Knative service.
@@ -54,7 +56,7 @@ func (k KnativeDomainMappingManager) prepareResource(capp rcsv1alpha1.Capp) knat
 		},
 	}
 	resourceManager := rclient.ResourceBaseManager{Ctx: k.Ctx, K8sclient: k.K8sclient, Log: k.Log}
-	secure_utils.SetHttpsKnativeDomainMapping(capp, knativeDomainMapping, resourceManager)
+	secure_utils.SetHttpsKnativeDomainMapping(capp, knativeDomainMapping, resourceManager, k.EventRecorder)
 	return *knativeDomainMapping
 }
 
@@ -84,6 +86,7 @@ func (k KnativeDomainMappingManager) CreateOrUpdateObject(capp rcsv1alpha1.Capp)
 	if err := k.K8sclient.Get(k.Ctx, types.NamespacedName{Namespace: capp.Namespace, Name: capp.Spec.RouteSpec.Hostname}, &knativeDomainMapping); err != nil {
 		if errors.IsNotFound(err) {
 			if err := resourceManager.CreateResource(&knativeDomainMappingFromCapp); err != nil {
+				k.EventRecorder.Event(&capp, eventTypeError, eventCappDomainMappingCreationFailed, fmt.Sprintf("Failed to create DomainMapping %s for Capp %s", capp.Spec.RouteSpec.Hostname, capp.Name))
 				return fmt.Errorf("unable to create DomainMapping: %s", err.Error())
 			}
 		} else {

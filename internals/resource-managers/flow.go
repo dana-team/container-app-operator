@@ -13,12 +13,15 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"k8s.io/client-go/tools/record"
 )
+
 
 type FlowManager struct {
 	Ctx       context.Context
 	K8sclient client.Client
 	Log       logr.Logger
+	EventRecorder record.EventRecorder
 }
 
 // prepareResource prepares a flow resource based on the provided capp.
@@ -87,9 +90,11 @@ func (f FlowManager) CreateOrUpdateObject(capp rcsv1alpha1.Capp) error {
 		case errors.IsNotFound(err):
 			logger.Error(err, fmt.Sprintf("didn't find existing flow"))
 			if err := resourceManager.CreateResource(&generatedFlow); err != nil {
+				f.EventRecorder.Event(&capp, eventTypeError, eventCappFlowCreationFailed, fmt.Sprintf("Failed to create flow %s for Capp %s", flowName, capp.Name))
 				return fmt.Errorf("failed to create flow %s: %s", flowName, err.Error())
 			}
 			logger.Info("Created flow successfully")
+			f.EventRecorder.Event(&capp, eventTypeNormal, eventCappFlowCreated, fmt.Sprintf("Created flow %s for Capp %s", flowName, capp.Name))
 		case err != nil:
 			return fmt.Errorf("failed to fetch existing flow %s: %s", flowName, err.Error())
 		}
