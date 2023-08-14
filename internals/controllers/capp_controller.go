@@ -7,6 +7,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"k8s.io/client-go/tools/record"
 
 	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	rmanagers "github.com/dana-team/container-app-operator/internals/resource-managers"
@@ -30,6 +31,7 @@ type CappReconciler struct {
 	client.Client
 	Scheme      *runtime.Scheme
 	OnOpenshift bool
+	EventRecorder record.EventRecorder
 }
 
 // +kubebuilder:rbac:groups=rcs.dana.io,resources=capps,verbs=get;list;watch;create;update;patch;delete
@@ -54,10 +56,10 @@ func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, fmt.Errorf("failed to get Capp: %s", err.Error())
 	}
 	resourceManagers := []rmanagers.ResourceManager{
-		rmanagers.KnativeDomainMappingManager{Ctx: ctx, Log: logger, K8sclient: r.Client},
-		rmanagers.KnativeServiceManager{Ctx: ctx, Log: logger, K8sclient: r.Client},
-		rmanagers.FlowManager{Ctx: ctx, Log: logger, K8sclient: r.Client},
-		rmanagers.OutputManager{Ctx: ctx, Log: logger, K8sclient: r.Client}}
+		rmanagers.KnativeDomainMappingManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder},
+		rmanagers.KnativeServiceManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder},
+		rmanagers.FlowManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder},
+		rmanagers.OutputManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder}}
 	err, deleted := finalizer_utils.HandleResourceDeletion(ctx, capp, logger, r.Client, resourceManagers)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to handle Capp deletion: %s", err.Error())

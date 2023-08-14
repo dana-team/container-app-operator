@@ -15,12 +15,14 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"k8s.io/client-go/tools/record"
 )
 
 type OutputManager struct {
 	Ctx       context.Context
 	K8sclient client.Client
 	Log       logr.Logger
+	EventRecorder record.EventRecorder
 }
 
 const (
@@ -155,9 +157,11 @@ func (o OutputManager) CreateOrUpdateObject(capp rcsv1alpha1.Capp) error {
 			logger.Error(err, "didn't find existing output")
 			if err := resourceManager.CreateResource(&generatedOutput); err != nil {
 				logger.Error(err, "failed to create output")
+				o.EventRecorder.Event(&capp, eventTypeError, eventCappOutputCreationFailed, fmt.Sprintf("Failed to create output %s for Capp %s", outputName, capp.Name))
 				return err
 			}
 			logger.Info("Created output successfully")
+			o.EventRecorder.Event(&capp, eventTypeNormal, eventCappOutputCreated, fmt.Sprintf("Created output %s for Capp %s", outputName, capp.Name))
 		case err != nil:
 			logger.Error(err, "failed to fetch existing output")
 			return err
