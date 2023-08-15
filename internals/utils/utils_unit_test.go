@@ -15,6 +15,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/scale/scheme"
+	"k8s.io/client-go/tools/record"
 
 	routev1 "github.com/openshift/api/route/v1"
 	"github.com/stretchr/testify/assert"
@@ -68,22 +69,20 @@ func TestSetAutoScaler(t *testing.T) {
 		},
 	}
 	example_capp_cpu_expected := map[string]string{
-		"autoscaling.knative.dev/class":     "hpa.autoscaling.knative.dev",
-		"autoscaling.knative.dev/metric":    "cpu",
-		"autoscaling.knative.dev/max-scale": "10",
-		"autoscaling.knative.dev/min-scale": "2",
-		"autoscaling.knative.dev/target":    "80",
+		"autoscaling.knative.dev/activation-scale": "3",
+		"autoscaling.knative.dev/class":            "hpa.autoscaling.knative.dev",
+		"autoscaling.knative.dev/metric":           "cpu",
+		"autoscaling.knative.dev/target":           "80",
 	}
 	annotations_cpu := autoscale_utils.SetAutoScaler(example_capp)
 	assert.Equal(t, example_capp_cpu_expected, annotations_cpu)
 
 	example_capp.Spec.ScaleMetric = "rps"
 	example_capp_rps_expected := map[string]string{
-		"autoscaling.knative.dev/class":     "kpa.autoscaling.knative.dev",
-		"autoscaling.knative.dev/max-scale": "10",
-		"autoscaling.knative.dev/min-scale": "2",
-		"autoscaling.knative.dev/metric":    "rps",
-		"autoscaling.knative.dev/target":    "200",
+		"autoscaling.knative.dev/activation-scale": "3",
+		"autoscaling.knative.dev/class":            "kpa.autoscaling.knative.dev",
+		"autoscaling.knative.dev/metric":           "rps",
+		"autoscaling.knative.dev/target":           "200",
 	}
 	annotations_rps := autoscale_utils.SetAutoScaler(example_capp)
 	assert.Equal(t, example_capp_rps_expected, annotations_rps)
@@ -96,6 +95,8 @@ func TestSetHttpsKnativeDomainMapping(t *testing.T) {
 		Spec: rcsv1alpha1.CappSpec{
 			RouteSpec: rcsv1alpha1.RouteSpec{
 				TlsEnabled: true,
+				Hostname:   "test-dm",
+				TlsSecret:  "secure-knativedm-test-capp",
 			},
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -135,7 +136,7 @@ func TestSetHttpsKnativeDomainMapping(t *testing.T) {
 	}
 
 	// Call the function being tested
-	secure.SetHttpsKnativeDomainMapping(capp, knativeDomainMapping, resourceManager)
+	secure.SetHttpsKnativeDomainMapping(capp, knativeDomainMapping, resourceManager, &record.FakeRecorder{})
 
 	// Check that the tls secret was set correctly
 	assert.Equal(t, "secure-knativedm-test-capp", knativeDomainMapping.Spec.TLS.SecretName)
