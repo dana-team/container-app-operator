@@ -32,10 +32,15 @@ The `container-app-operator` project can work as a standalone solution, but is m
 ### Prerequisites
 
 1. A Kubernetes cluster (you can [use KinD](https://kind.sigs.k8s.io/docs/user/quick-start/)).
-2. Run `make prereq`. It will make sure you have the following:
-   1. `Knative Serving` installed on the cluster (you can also [use the quickstart](https://knative.dev/docs/getting-started/quickstart-install/))
 
-   2. `Logging Operator` installed on the cluster (you can also [use the Helm Chart](https://kube-logging.dev/docs/install/#deploy-logging-operator-with-helm))
+2. `Knative Serving` installed on the cluster (you can [use the quickstart](https://knative.dev/docs/getting-started/quickstart-install/))
+
+3. `Logging Operator` installed on the cluster (you can [use the Helm Chart](https://kube-logging.dev/docs/install/#deploy-logging-operator-with-helm))
+   
+`Knative Serving` and `Logging Operator` can also be installed by running:
+```console
+$ make prereq
+```
 
 ### Deploying the controller
 
