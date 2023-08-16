@@ -50,7 +50,7 @@ func buildApplicationLinks(ctx context.Context, capp rcsv1alpha1.Capp, log logr.
 func getClusterConsole(ctx context.Context, capp rcsv1alpha1.Capp, log logr.Logger, r client.Client) (string, error) {
 	consoleRoute := routev1.Route{}
 	if err := r.Get(ctx, openshiftConsoleKey, &consoleRoute); err != nil {
-		log.Error(err, "Cant get console route")
+		log.Error(err, "can't get console route")
 		return "", err
 	}
 	return consoleRoute.Spec.Host, nil
@@ -122,7 +122,7 @@ func SyncStatus(ctx context.Context, capp rcsv1alpha1.Capp, log logr.Logger, r c
 	if !reflect.DeepEqual(applicationLinks, cappObject.Status.ApplicationLinks) {
 		cappObject.Status.ApplicationLinks = *applicationLinks
 		if err := r.Status().Update(ctx, &cappObject); err != nil {
-			log.Error(err, "Cant update capp status")
+			log.Error(err, "can't update capp status")
 			return err
 		}
 	}

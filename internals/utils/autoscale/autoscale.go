@@ -6,19 +6,12 @@ import (
 )
 
 const (
-	KnativeMetricKey          = "autoscaling.knative.dev/metric"
-	KnativeAutoscaleClassKey  = "autoscaling.knative.dev/class"
-	KnativeAutoscaleTargetKey = "autoscaling.knative.dev/target"
-	KnativeAutoscaleMinKey    = "autoscaling.knative.dev/min-scale"
-	KnativeAutoscaleMaxKey    = "autoscaling.knative.dev/max-scale"
-	KnativeAutoscaleWindowKey = "autoscaling.knative.dev/window"
+	KnativeMetricKey            = "autoscaling.knative.dev/metric"
+	KnativeAutoscaleClassKey    = "autoscaling.knative.dev/class"
+	KnativeAutoscaleTargetKey   = "autoscaling.knative.dev/target"
+	KnativeActivationScaleKey   = "autoscaling.knative.dev/activation-scale"
+	KnativeActivationScaleValue = "3"
 )
-
-var DefaultValues = map[string]string{
-	KnativeAutoscaleWindowKey: "60s",
-	KnativeAutoscaleMinKey:    "2",
-	KnativeAutoscaleMaxKey:    "10",
-}
 
 var TargetDefaultValues = map[string]string{
 	"rps":         "200",
@@ -40,8 +33,7 @@ func SetAutoScaler(capp rcsv1alpha1.Capp) map[string]string {
 	autoScaleAnnotations[KnativeAutoscaleClassKey] = getAutoScaleClassByMetric(scaleMetric)
 	autoScaleAnnotations[KnativeMetricKey] = scaleMetric
 	autoScaleAnnotations[KnativeAutoscaleTargetKey] = TargetDefaultValues[scaleMetric]
-	autoScaleAnnotations[KnativeAutoscaleMaxKey] = DefaultValues[KnativeAutoscaleMaxKey]
-	autoScaleAnnotations[KnativeAutoscaleMinKey] = DefaultValues[KnativeAutoscaleMinKey]
+	autoScaleAnnotations[KnativeActivationScaleKey] = KnativeActivationScaleValue
 
 	return autoScaleAnnotations
 }

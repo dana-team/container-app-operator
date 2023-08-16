@@ -23,4 +23,14 @@ spec:
   routeSpec:
     hostname: capp-with-https.dev
     tlsEnabled: true
+    tlsSecret: secure-knativedm-capp-with-https
   scaleMetric: cpu
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: secure-knativedm-capp-with-https
+  namespace: capp-tests
+type: Opaque
+data:
+  extra: YmFyCg==

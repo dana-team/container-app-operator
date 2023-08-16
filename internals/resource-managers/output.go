@@ -2,6 +2,7 @@ package resourceprepares
 
 import (
 	"context"
+	"fmt"
 	"github.com/cisco-open/operator-tools/pkg/secret"
 	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	rclient "github.com/dana-team/container-app-operator/internals/wrappers"
@@ -14,13 +15,14 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
+	"k8s.io/client-go/tools/record"
 )
 
 type OutputManager struct {
 	Ctx       context.Context
 	K8sclient client.Client
 	Log       logr.Logger
+	EventRecorder record.EventRecorder
 }
 
 const (
@@ -134,7 +136,7 @@ func (o OutputManager) CleanUp(capp rcsv1alpha1.Capp) error {
 	resourceManager := rclient.ResourceBaseManager{Ctx: o.Ctx, K8sclient: o.K8sclient, Log: o.Log}
 	output := loggingv1beta1.Output{}
 	if err := resourceManager.DeleteResource(&output, outputName, capp.Namespace); err != nil {
-		return err
+		return fmt.Errorf("unable to delete output %s: %s ", outputName, err.Error())
 	}
 	return nil
 }
@@ -143,33 +145,34 @@ func (o OutputManager) CleanUp(capp rcsv1alpha1.Capp) error {
 // It returns an error if any operation fails.
 func (o OutputManager) CreateOrUpdateObject(capp rcsv1alpha1.Capp) error {
 	outputName := capp.GetName() + "-output"
-	logger := log.FromContext(o.Ctx).WithValues("CappName", capp.Name, "CappNamespace", capp.Namespace, "outputName", outputName)
+	logger := o.Log.WithValues("OutputName", outputName, "OutputNamespace", capp.Namespace)
 	if capp.Spec.LogSpec.Type == LogTypeElastic || capp.Spec.LogSpec.Type == LogTypeSplunk {
 		generatedOutput := o.prepareResource(capp)
 		// get instance of current output
 		currentOutput := loggingv1beta1.Output{}
 		resourceManager := rclient.ResourceBaseManager{Ctx: o.Ctx, K8sclient: o.K8sclient, Log: o.Log}
-		logger.Info("trying to fetch existing output")
+		logger.Info("Trying to fetch existing output")
 		switch err := o.K8sclient.Get(o.Ctx, types.NamespacedName{Namespace: capp.Namespace, Name: outputName}, &currentOutput); {
 		case errors.IsNotFound(err):
 			logger.Error(err, "didn't find existing output")
 			if err := resourceManager.CreateResource(&generatedOutput); err != nil {
 				logger.Error(err, "failed to create output")
+				o.EventRecorder.Event(&capp, eventTypeError, eventCappOutputCreationFailed, fmt.Sprintf("Failed to create output %s for Capp %s", outputName, capp.Name))
 				return err
 			}
-			logger.Info("created output successfully")
+			logger.Info("Created output successfully")
+			o.EventRecorder.Event(&capp, eventTypeNormal, eventCappOutputCreated, fmt.Sprintf("Created output %s for Capp %s", outputName, capp.Name))
 		case err != nil:
 			logger.Error(err, "failed to fetch existing output")
 			return err
 		}
 		if !reflect.DeepEqual(currentOutput.Spec, generatedOutput.Spec) {
 			currentOutput.Spec = generatedOutput.Spec
-			logger.Info("trying to update the current")
+			logger.Info("Trying to update the current")
 			if err := resourceManager.UpdateResource(&currentOutput); err != nil {
-				logger.Error(err, "failed to update the current output")
-				return err
+				return fmt.Errorf("failed to update the current output %s: %s ", currentOutput.Name, err.Error())
 			}
-			logger.Info("current output successfully updated")
+			logger.Info("Current output successfully updated")
 		}
 	}
 	return nil
