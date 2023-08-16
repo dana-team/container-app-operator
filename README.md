@@ -20,6 +20,10 @@ The `container-app-operator` project can work as a standalone solution, but is m
 
 3. The `logging-operator controller` reconciles the `Flow` and `Output` CRs in the cluster and collects logs from the pods' `stdout` and sends them to a pre-existing `Elasticsearch` or `Splunk` index.
 
+`Knative Serving` and `Logging Operator` can also be installed by running:
+```bash
+$ make prereq
+```
 ## Feature Highlights
 
 - [x] Support for autoscaler (`HPA` or `KPA`) according to the chosen `scaleMetric` (`concurrency`, `rps`, `cpu`, `memory`) with default setting of `autoscaling.knative.dev/activation-scale: "3"`.
