@@ -19,7 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
-const CappResourceKey = "dana.io/parent-capp"
+const CappResourceKey = "rcs.dana.io/parent-capp"
 
 func newScheme() *runtime.Scheme {
 	s := runtime.NewScheme()
