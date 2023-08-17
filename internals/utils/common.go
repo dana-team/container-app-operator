@@ -38,3 +38,15 @@ func FilterKeysWithoutPrefix(object map[string]string, prefix string) map[string
 
 	return result
 }
+
+// MergeMaps merges two string-string maps by combining their key-value pairs into a new map.
+func MergeMaps(m1 map[string]string, m2 map[string]string) map[string]string {
+	merged := make(map[string]string)
+	for k, v := range m1 {
+		merged[k] = v
+	}
+	for key, value := range m2 {
+		merged[key] = value
+	}
+	return merged
+}

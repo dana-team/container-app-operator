@@ -21,13 +21,13 @@ import (
 )
 
 const (
-	danaAnnotationsPrefix = "dana.io"
+	danaAnnotationsPrefix = "rcs.dana.io"
 )
 
 type KnativeServiceManager struct {
-	Ctx       context.Context
-	K8sclient client.Client
-	Log       logr.Logger
+	Ctx           context.Context
+	K8sclient     client.Client
+	Log           logr.Logger
 	EventRecorder record.EventRecorder
 }
 
@@ -39,9 +39,11 @@ func (k KnativeServiceManager) prepareResource(capp rcsv1alpha1.Capp, ctx contex
 	knativeService := knativev1.Service{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        capp.Name,
-			Namespace:   capp.Namespace,
-			Labels:      knativeServiceLabels,
+			Name:      capp.Name,
+			Namespace: capp.Namespace,
+			Labels: map[string]string{
+				CappResourceKey: capp.Name,
+			},
 			Annotations: knativeServiceAnnotations,
 		},
 		Spec: knativev1.ServiceSpec{
@@ -56,7 +58,8 @@ func (k KnativeServiceManager) prepareResource(capp rcsv1alpha1.Capp, ctx contex
 	knativeService.Spec.Template.Spec.SetDefaults(ctx)
 
 	knativeService.Spec.ConfigurationSpec.Template.Spec.TimeoutSeconds = capp.Spec.RouteSpec.RouteTimeoutSeconds
-	knativeService.Spec.Template.ObjectMeta.Annotations = autoscale_utils.SetAutoScaler(capp)
+	knativeService.Spec.Template.ObjectMeta.Annotations = utils.MergeMaps(knativeServiceAnnotations, autoscale_utils.SetAutoScaler(capp))
+	knativeService.Spec.Template.ObjectMeta.Labels = knativeServiceLabels
 	return knativeService
 }
 

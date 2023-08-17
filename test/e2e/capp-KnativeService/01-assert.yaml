@@ -6,19 +6,24 @@ apiVersion: serving.knative.dev/v1
 kind: Service
 metadata:
   annotations:
-    rcs.dana.io/parent-capp: capp-with-timeout
-  name: capp-with-timeout
+    rcs.dana.io/parent-capp: capp-with-labels
+  name: capp-with-labels
   namespace: capp-tests
   labels:
-    rcs.dana.io/parent-capp: capp-with-timeout
+    rcs.dana.io/parent-capp: capp-with-labels
 spec:
   template:
+    metadata:
+      labels: 
+        rcs.dana.io/version: "0.1"
+      annotations: 
+        rcs.dana.io/version: "0.1"
     spec:
       containerConcurrency: 0
       containers:
         - env:
             - name: APP_NAME
-              value: capp-with-timeout
+              value: capp
           image: 'sahar2339/example-python-app:v1-flask'
-          name: capp-with-timeout
+          name: capp
       timeoutSeconds: 5

@@ -22,12 +22,12 @@ import (
 	"k8s.io/client-go/tools/record"
 )
 
-const CappResourceKey = "dana.io/parent-capp"
+const CappResourceKey = "rcs.dana.io/parent-capp"
 
 type KnativeDomainMappingManager struct {
-	Ctx       context.Context
-	K8sclient client.Client
-	Log       logr.Logger
+	Ctx           context.Context
+	K8sclient     client.Client
+	Log           logr.Logger
 	EventRecorder record.EventRecorder
 }
 
