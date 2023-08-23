@@ -127,7 +127,8 @@ undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/confi
 install-knative: ## Install knative controller on the kind cluster
 	wget -O $(LOCALBIN)/kn-quickstart $(KNATIVE_URL)
 	chmod +x $(LOCALBIN)/kn-quickstart
-	(yes no || true) | $(LOCALBIN)/kn-quickstart kind -n kind
+	@CLUSTER_NAME=$$(kubectl config current-context | awk -F '-' '{ print $$2}'); \
+	(yes no || true) | $(LOCALBIN)/kn-quickstart kind -n $$CLUSTER_NAME
 
 .PHONY: install-helm
 install-helm: ## Install helm on the local machine
@@ -148,6 +149,9 @@ prereq: install install-knative install-helm install-logging  ## Install every p
 LOCALBIN ?= $(shell pwd)/bin
 $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
+
+KNATIVE_URL ?= https://github.com/knative-extensions/kn-plugin-quickstart/releases/download/knative-v1.11.0/kn-quickstart-linux-amd64
+HELM_URL ?= https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
 
 ## Tool Binaries
 KUSTOMIZE ?= $(LOCALBIN)/kustomize
