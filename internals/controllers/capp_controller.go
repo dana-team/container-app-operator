@@ -114,10 +114,5 @@ func (r *CappReconciler) SyncApplication(ctx context.Context, capp rcsv1alpha1.C
 	if err := status_utils.SyncStatus(ctx, capp, r.Log, r.Client, r.OnOpenshift); err != nil {
 		return err
 	}
-	if capp.Spec.LogSpec != (rcsv1alpha1.LogSpec{}) {
-		if err := status_utils.SyncLoggingStatus(ctx, capp, r.Log, r.Client); err != nil {
-			return err
-		}
-	}
 	return nil
 }

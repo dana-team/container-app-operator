@@ -7,15 +7,18 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
-
+	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/go-logr/logr"
 	routev1 "github.com/openshift/api/route/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -119,6 +122,31 @@ func SyncStatus(ctx context.Context, capp rcsv1alpha1.Capp, log logr.Logger, r c
 	}
 	cappObject.Status.KnativeObjectStatus = kservice.Status
 	cappObject.Status.RevisionInfo = RevisionsStatus
+	if cappObject.Spec.LogSpec != (rcsv1alpha1.LogSpec{}) {
+		flow := &loggingv1beta1.Flow{}
+		if err := r.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: capp.Name + "-flow"}, flow); err != nil {
+			return err
+		}
+
+		output := &loggingv1beta1.Output{}
+		if err := r.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: capp.Name + "-output"}, output); err != nil {
+			return err
+		}
+		cappObject.Status.LoggingStatus.Flow = flow.Status
+		cappObject.Status.LoggingStatus.Output = output.Status
+		problems := "True"
+		reason := "Ready"
+		if flow.Status.ProblemsCount != 0 || output.Status.ProblemsCount != 0 {
+			problems = "False"
+		}
+		condition := metav1.Condition{
+			Type:               "LoggingIsReady",
+			Status:             metav1.ConditionStatus(problems),
+			LastTransitionTime: metav1.Time{Time: time.Now()},
+			Reason:             reason,
+		}
+		meta.SetStatusCondition(&cappObject.Status.LoggingStatus.Conditions, condition)
+	}
 	if !reflect.DeepEqual(applicationLinks, cappObject.Status.ApplicationLinks) {
 		cappObject.Status.ApplicationLinks = *applicationLinks
 		if err := r.Status().Update(ctx, &cappObject); err != nil {
