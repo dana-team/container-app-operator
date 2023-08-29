@@ -100,6 +100,36 @@ func buildRevisionsStatus(ctx context.Context, capp rcsv1alpha1.Capp, knativeSer
 	return revisionsInfo, nil
 }
 
+// This function builds the Logging status of the Capp CRD by getting the flow and output bundled to the Capp and adding their status. It also creates a condition in accordance with their situation. 
+func buildLoggingStatus(ctx context.Context, capp rcsv1alpha1.Capp, knativeService knativev1.Service, log logr.Logger, r client.Client) (rcsv1alpha1.LoggingStatus, error) {
+		loggingStatus := rcsv1alpha1.LoggingStatus{}
+		flow := &loggingv1beta1.Flow{}
+		if err := r.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: capp.Name + "-flow"}, flow); err != nil {
+			return loggingStatus, err
+		}
+
+		output := &loggingv1beta1.Output{}
+		if err := r.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: capp.Name + "-output"}, output); err != nil {
+			return loggingStatus, err
+		}
+		loggingStatus.Flow = flow.Status
+		loggingStatus.Output = output.Status
+		problems := "True"
+		reason := "Ready"
+		if flow.Status.ProblemsCount != 0 || output.Status.ProblemsCount != 0 {
+			reason = "LoggingResourceInvalid"
+			problems = "False"
+		}
+		condition := metav1.Condition{
+			Type:               "LoggingIsReady",
+			Status:             metav1.ConditionStatus(problems),
+			LastTransitionTime: metav1.Time{Time: time.Now()},
+			Reason:             reason,
+		}
+		meta.SetStatusCondition(&loggingStatus.Conditions, condition)
+		return loggingStatus, nil
+	}
+
 // This is the main function that synchronizes the status of the Capp CRD with the Knative service and revisions associated with it.
 // It gets the Capp CRD, builds the ApplicationLinks and RevisionInfo statuses, and updates the status of the Capp CRD if it has changed.
 func SyncStatus(ctx context.Context, capp rcsv1alpha1.Capp, log logr.Logger, r client.Client, onOpenshift bool) error {
@@ -123,29 +153,11 @@ func SyncStatus(ctx context.Context, capp rcsv1alpha1.Capp, log logr.Logger, r c
 	cappObject.Status.KnativeObjectStatus = kservice.Status
 	cappObject.Status.RevisionInfo = RevisionsStatus
 	if cappObject.Spec.LogSpec != (rcsv1alpha1.LogSpec{}) {
-		flow := &loggingv1beta1.Flow{}
-		if err := r.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: capp.Name + "-flow"}, flow); err != nil {
+		loggingStatus, err := buildLoggingStatus(ctx, capp, *kservice, log, r)
+		if err != nil {
 			return err
 		}
-
-		output := &loggingv1beta1.Output{}
-		if err := r.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: capp.Name + "-output"}, output); err != nil {
-			return err
-		}
-		cappObject.Status.LoggingStatus.Flow = flow.Status
-		cappObject.Status.LoggingStatus.Output = output.Status
-		problems := "True"
-		reason := "Ready"
-		if flow.Status.ProblemsCount != 0 || output.Status.ProblemsCount != 0 {
-			problems = "False"
-		}
-		condition := metav1.Condition{
-			Type:               "LoggingIsReady",
-			Status:             metav1.ConditionStatus(problems),
-			LastTransitionTime: metav1.Time{Time: time.Now()},
-			Reason:             reason,
-		}
-		meta.SetStatusCondition(&cappObject.Status.LoggingStatus.Conditions, condition)
+		cappObject.Status.LoggingStatus = loggingStatus
 	}
 	if !reflect.DeepEqual(applicationLinks, cappObject.Status.ApplicationLinks) {
 		cappObject.Status.ApplicationLinks = *applicationLinks
