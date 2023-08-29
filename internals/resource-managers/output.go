@@ -13,15 +13,15 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"k8s.io/client-go/tools/record"
 )
 
 type OutputManager struct {
-	Ctx       context.Context
-	K8sclient client.Client
-	Log       logr.Logger
+	Ctx           context.Context
+	K8sclient     client.Client
+	Log           logr.Logger
 	EventRecorder record.EventRecorder
 }
 
@@ -42,6 +42,7 @@ const (
 // It constructs the Elasticsearch output which is returned as an OutputSpec.
 func createElasticsearchOutput(logSpec rcsv1alpha1.LogSpec) loggingv1beta1.OutputSpec {
 	protocol := "http"
+	falseVar := false
 	if logSpec.SSLVerify {
 		protocol = "https"
 	}
@@ -50,7 +51,7 @@ func createElasticsearchOutput(logSpec rcsv1alpha1.LogSpec) loggingv1beta1.Outpu
 			Host:       logSpec.Host,
 			Port:       ElasticPort,
 			Scheme:     protocol,
-			SslVerify:  &logSpec.SSLVerify,
+			SslVerify:  &falseVar,
 			SslVersion: ElasticSSLVersion,
 			User:       logSpec.UserName,
 			Password: &secret.Secret{
