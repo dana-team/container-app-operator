@@ -39,8 +39,19 @@ spec:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: quickstart-es-elastic-user
+  name: splunk-single-standalone-secrets
   namespace: capp-tests
 data:
-  elastic: K0ZZY0w2RjdEaWxMSEx0ZWpfRm0=
+  hec_token: ODVhZTc2YmYtYjYyMS00MDk5LWIyYzMtOGI5OTk3NTA0OTgy
+  password: QWExMjM0NTYh
+  username: bGFiZXI=
+type: Opaque
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: splunk-token
+  namespace: capp-tests
+data:
+  SplunkHecToken: ODVhZTc2YmYtYjYyMS00MDk5LWIyYzMtOGI5OTk3NTA0OTgy
 type: Opaque
