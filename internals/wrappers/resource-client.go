@@ -10,21 +10,21 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const CappResourceKey = "dana.io/parent-capp"
+const CappResourceKey = "rcs.dana.io/parent-capp"
 
-type ResourceManager interface {
+type ResourceManagerClient interface {
 	CreateResource(resource client.Object) error
 	UpdateResource(resource client.Object, oldResource client.Object) error
 	DeleteResource(resource client.Object, name string, namespace string) error
 }
 
-type ResourceBaseManager struct {
+type ResourceBaseManagerClient struct {
 	Ctx       context.Context
 	K8sclient client.Client
 	Log       logr.Logger
 }
 
-func (r ResourceBaseManager) CreateResource(resource client.Object) error {
+func (r ResourceBaseManagerClient) CreateResource(resource client.Object) error {
 
 	if err := r.K8sclient.Create(r.Ctx, resource); err != nil {
 		r.Log.Error(err, fmt.Sprintf("unable to create %s %s ", resource.GetObjectKind().GroupVersionKind().Kind, resource.GetName()))
@@ -33,7 +33,7 @@ func (r ResourceBaseManager) CreateResource(resource client.Object) error {
 	return nil
 }
 
-func (r ResourceBaseManager) UpdateResource(resource client.Object) error {
+func (r ResourceBaseManagerClient) UpdateResource(resource client.Object) error {
 	if err := r.K8sclient.Update(r.Ctx, resource); err != nil {
 		if errors.IsConflict(err) {
 			r.Log.Info(fmt.Sprintf("newer resource version exists for %s %s ", resource.GetObjectKind().GroupVersionKind().Kind, resource.GetName()))
@@ -46,7 +46,7 @@ func (r ResourceBaseManager) UpdateResource(resource client.Object) error {
 	return nil
 }
 
-func (r ResourceBaseManager) DeleteResource(resource client.Object, name string, namespace string) error {
+func (r ResourceBaseManagerClient) DeleteResource(resource client.Object, name string, namespace string) error {
 	if err := r.K8sclient.Get(r.Ctx, types.NamespacedName{Name: name, Namespace: namespace}, resource); err != nil {
 		if !errors.IsNotFound(err) {
 			r.Log.Error(err, "unable to get resource")

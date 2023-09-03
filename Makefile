@@ -123,12 +123,35 @@ deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
 	$(KUSTOMIZE) build config/default | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
 
+.PHONY: install-knative
+install-knative: ## Install knative controller on the kind cluster
+	wget -O $(LOCALBIN)/kn-quickstart $(KNATIVE_URL)
+	chmod +x $(LOCALBIN)/kn-quickstart
+	@CLUSTER_NAME=$$(kubectl config current-context | awk -F '-' '{ print $$2}'); \
+	(yes no || true) | $(LOCALBIN)/kn-quickstart kind -n $$CLUSTER_NAME
+
+.PHONY: install-helm
+install-helm: ## Install helm on the local machine
+	wget -O $(LOCALBIN)/get-helm.sh $(HELM_URL)
+	chmod 700 $(LOCALBIN)/get-helm.sh
+	$(LOCALBIN)/get-helm.sh
+
+.PHONY: install-logging
+install-logging: ## Install logging operator on the kind cluster
+	helm upgrade --install --wait --create-namespace --namespace logging logging-operator oci://ghcr.io/kube-logging/helm-charts/logging-operator --set logging.enabled=true 
+
+.PHONY: prereq
+prereq: install install-knative install-helm install-logging  ## Install every prerequisite needed to develop on container-app-operator.
+
 ##@ Build Dependencies
 
 ## Location to install dependencies to
 LOCALBIN ?= $(shell pwd)/bin
 $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
+
+KNATIVE_URL ?= https://github.com/knative-extensions/kn-plugin-quickstart/releases/download/knative-v1.11.0/kn-quickstart-linux-amd64
+HELM_URL ?= https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
 
 ## Tool Binaries
 KUSTOMIZE ?= $(LOCALBIN)/kustomize

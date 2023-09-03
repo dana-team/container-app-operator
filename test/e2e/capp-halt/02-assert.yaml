@@ -1,0 +1,26 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 20  # Timeout waiting for the state
+---
+apiVersion: rcs.dana.io/v1alpha1
+kind: Capp
+metadata:
+  name: capp-halt
+  namespace: capp-tests
+status:
+  enabledStatus:
+    currentState: true
+---
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: capp-halt
+  namespace: capp-tests
+spec:
+  template:
+    spec:
+      containerConcurrency: 0
+      containers:
+        - env:
+            - name: APP_NAME
+              value: capp-halt

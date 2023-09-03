@@ -7,4 +7,19 @@ import (
 type ResourceManager interface {
 	CreateOrUpdateObject(capp rcsv1alpha1.Capp) error
 	CleanUp(capp rcsv1alpha1.Capp) error
+	isNeeded(capp rcsv1alpha1.Capp) bool
 }
+
+const (
+	eventTypeNormal                       = "Normal"
+	eventTypeWarning                      = "Warning"
+	eventTypeError                        = "Error"
+	eventCappFlowCreationFailed           = "FlowCreationFailed"
+	eventCappFlowCreated                  = "FlowCreated"
+	eventCappDomainMappingCreationFailed  = "DomainMappingCreationFailed"
+	eventCappKnativeServiceCreationFailed = "KnativeServiceCreationFailed"
+	eventCappOutputCreationFailed         = "OutputCreationFailed"
+	eventCappOutputCreated                = "OutputCreated"
+	eventCappHalted                       = "CappHalted"
+	eventCappResumed                      = "CappResumed"
+)

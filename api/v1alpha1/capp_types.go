@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 )
@@ -45,6 +46,10 @@ type CappSpec struct {
 
 	// LogSpec defines the configuration for shipping Capp logs.
 	LogSpec LogSpec `json:"logSpec,omitempty"`
+
+	// LogSpec defines if Capp is paused
+	// +kubebuilder:default:=true
+	Enabled bool `json:"enabled,omitempty"`
 }
 
 // RouteSpec defines the route specification for the Capp.
@@ -56,6 +61,10 @@ type RouteSpec struct {
 	// TlsEnabled determines whether to enable TLS for the Capp route.
 	// +optional
 	TlsEnabled bool `json:"tlsEnabled,omitempty"`
+
+	// TlsSecret defines the name of the secret which holds the tls certification.
+	// +optional
+	TlsSecret string `json:"tlsSecret,omitempty"`
 
 	// TrafficTarget holds a single entry of the routing table for the Capp route.
 	// +optional
@@ -129,6 +138,32 @@ type RevisionInfo struct {
 	RevisionName string `json:"name,omitempty"`
 }
 
+type EnabledStatus struct {
+	// CurrentState is actual enabled state of the capp
+	// +kubebuilder:default:=false
+	// +optional
+	CurrentState bool `json:"currentState,omitempty"`
+
+	// LastEnabledChange the last time the enabled state of capp changed
+	// +optional
+	LastEnabeldChange metav1.Time `json:"LastEnabeldChange,omitempty"`
+}
+
+// LoggingStatus defines the state of the flow and output linked to the capp.
+type LoggingStatus struct {
+	// Flow represents the Status of the Flow used by the Capp.
+	// +optional
+	Flow loggingv1beta1.FlowStatus `json:"flow,omitempty"`
+
+	// Output represents the Status of the Output used by the Capp.
+	// +optional
+	Output loggingv1beta1.OutputStatus `json:"output,omitempty"`
+
+	// Conditions contain details about the current state of the Output and Flow used by the Capp.
+	// +optional
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
+}
+
 // CappStatus defines the observed state of Capp.
 type CappStatus struct {
 	// ApplicationLinks contains relevant information about
@@ -143,6 +178,14 @@ type CappStatus struct {
 	// RevisionInfo shows the revision information.
 	// +optional
 	RevisionInfo []RevisionInfo `json:"Revisions,omitempty"`
+
+	// EnabledStatus shows the current capp  halt state
+	// +optional
+	EnabledStatus EnabledStatus `json:"enabledStatus,omitempty"`
+
+	// LoggingStatus defines the state of the flow and output linked to the capp.
+	// +optional
+	LoggingStatus LoggingStatus `json:"loggingStatus,omitempty"`
 
 	// Conditions contain details about the current state of the Capp.
 	// +optional

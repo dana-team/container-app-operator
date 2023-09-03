@@ -5,7 +5,7 @@ timeout: 20
 apiVersion: rcs.dana.io/v1alpha1
 kind: Capp
 metadata:
-  name: capp-with-https
+  name: capp-halt
   namespace: capp-tests
 spec:
   configurationSpec:
@@ -16,21 +16,11 @@ spec:
         containers:
           - env:
               - name: APP_NAME
-                value: capp-with-https
+                value: capp-halt
             image: 'sahar2339/example-python-app:v1-flask'
-            name: capp-with-https
+            name: capp-halt
             resources: {}
   routeSpec:
-    hostname: capp-with-https.dev
-    tlsEnabled: true
-    tlsSecret: secure-knativedm-capp-with-https
+    hostname: rbacqwegen.dev
   scaleMetric: cpu
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: secure-knativedm-capp-with-https
-  namespace: capp-tests
-type: Opaque
-data:
-  extra: YmFyCg==
+  enabled: true

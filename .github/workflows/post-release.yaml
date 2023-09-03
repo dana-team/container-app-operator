@@ -1,0 +1,28 @@
+name: Post release publish
+on:
+
+  release:
+    types: [published]
+env:
+  REGISTRY: ghcr.io
+  REPOSITORY_NAME: ${{ github.repository }}
+  DANA_ORG: dana-team
+
+jobs:
+  build-and-push-image:
+    name: Build and push image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+    - name: Log in to the Container registry
+      uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    - name: Build and push docker image
+      run: make docker-build docker-push IMG=${{ env.REGISTRY }}/dana-team/${{ env.REPOSITORY_NAME }}:${GITHUB_REF##*/}

@@ -1,12 +1,16 @@
 apiVersion: kuttl.dev/v1beta1
 kind: TestStep
-timeout: 20
+timeout: 120
 ---
 apiVersion: rcs.dana.io/v1alpha1
 kind: Capp
 metadata:
-  name: capp-with-https
+  name: capp-with-labels
   namespace: capp-tests
+  labels:
+    rcs.dana.io/version: "0.1"
+  annotations:
+    rcs.dana.io/version: "0.1"
 spec:
   configurationSpec:
     template:
@@ -16,21 +20,12 @@ spec:
         containers:
           - env:
               - name: APP_NAME
-                value: capp-with-https
+                value: capp
             image: 'sahar2339/example-python-app:v1-flask'
-            name: capp-with-https
+            name: capp
             resources: {}
   routeSpec:
-    hostname: capp-with-https.dev
-    tlsEnabled: true
-    tlsSecret: secure-knativedm-capp-with-https
+    routeTimeoutSeconds: 5
   scaleMetric: cpu
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: secure-knativedm-capp-with-https
-  namespace: capp-tests
-type: Opaque
-data:
-  extra: YmFyCg==
+
+  
