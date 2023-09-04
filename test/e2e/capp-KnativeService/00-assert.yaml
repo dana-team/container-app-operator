@@ -5,10 +5,12 @@ timeout: 120  # Timeout waiting for the state
 apiVersion: serving.knative.dev/v1
 kind: Service
 metadata:
+  annotations:
+    dana.io/parent-capp: capp-with-timeout
   name: capp-with-timeout
   namespace: capp-tests
   labels:
-    rcs.dana.io/parent-capp: capp-with-timeout
+    dana.io/parent-capp: capp-with-timeout
 spec:
   template:
     spec:

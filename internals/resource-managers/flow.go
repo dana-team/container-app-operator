@@ -69,7 +69,6 @@ func (f FlowManager) CleanUp(capp rcsv1alpha1.Capp) error {
 	resourceManager := rclient.ResourceBaseManagerClient{Ctx: f.Ctx, K8sclient: f.K8sclient, Log: f.Log}
 	flow := loggingv1beta1.Flow{}
 	if err := resourceManager.DeleteResource(&flow, flowName, capp.Namespace); err != nil {
-
 		return fmt.Errorf("unable to delete flow %s: %s", flowName, err.Error())
 	}
 	return nil
@@ -85,6 +84,7 @@ func (f FlowManager) isNeeded(capp rcsv1alpha1.Capp) bool {
 func (f FlowManager) CreateOrUpdateObject(capp rcsv1alpha1.Capp) error {
 	flowName := capp.GetName() + "-flow"
 	logger := f.Log.WithValues("FlowName", flowName, "FlowNamespace", capp.Namespace)
+
 	if f.isNeeded(capp) {
 		generatedFlow := f.prepareResource(capp)
 		// get instance of current flow
@@ -94,6 +94,7 @@ func (f FlowManager) CreateOrUpdateObject(capp rcsv1alpha1.Capp) error {
 		switch err := f.K8sclient.Get(f.Ctx, types.NamespacedName{Namespace: capp.Namespace, Name: flowName}, &currentFlow); {
 		case errors.IsNotFound(err):
 			logger.Info("didn't find flow")
+
 			if err := resourceManager.CreateResource(&generatedFlow); err != nil {
 				f.EventRecorder.Event(&capp, eventTypeError, eventCappFlowCreationFailed, fmt.Sprintf("Failed to create flow %s for Capp %s", flowName, capp.Name))
 				return fmt.Errorf("failed to create flow %s: %s", flowName, err.Error())

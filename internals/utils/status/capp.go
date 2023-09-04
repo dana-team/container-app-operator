@@ -9,6 +9,7 @@ import (
 	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -21,10 +22,8 @@ func CreateEnabledStatus(enabledStatus *rcsv1alpha1.EnabledStatus, enabledFromSp
 	}
 }
 
-// SyncStatus synchronizes the status of the  Custom Resource Definition (CRD)
-// with the associated Knative service and its revisions.
-// It retrieves the Capp CRD, constructs ApplicationLinks and RevisionInfo statuses,
-// and updates the Capp CRD status if any changes have occurred.
+// This is the main function that synchronizes the status of the Capp CRD with the Knative service and revisions associated with it.
+// It gets the Capp CRD, builds the ApplicationLinks and RevisionInfo statuses, and updates the status of the Capp CRD if it has changed.
 func SyncStatus(ctx context.Context, capp rcsv1alpha1.Capp, log logr.Logger, r client.Client, onOpenshift bool) error {
 	cappObject := rcsv1alpha1.Capp{}
 	if err := r.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: capp.Name}, &cappObject); err != nil {
@@ -40,6 +39,9 @@ func SyncStatus(ctx context.Context, capp rcsv1alpha1.Capp, log logr.Logger, r c
 	if err != nil {
 		return err
 	}
+
+	cappObject.Status.KnativeObjectStatus = knativeObjectStatus
+	cappObject.Status.RevisionInfo = revisionInfo
 	if cappObject.Spec.LogSpec != (rcsv1alpha1.LogSpec{}) {
 		loggingStatus, err := buildLoggingStatus(ctx, capp, log, r)
 		if err != nil {

@@ -5,6 +5,11 @@ timeout: 120  # Timeout waiting for the state
 apiVersion: serving.knative.dev/v1
 kind: Service
 metadata:
+<<<<<<< HEAD
+=======
+  annotations:
+    rcs.dana.io/parent-capp: capp-with-labels
+>>>>>>> d0c06005e9644db890b7358c1628ada5c21ecd7a
   name: capp-with-labels
   namespace: capp-tests
   labels:
@@ -14,7 +19,11 @@ spec:
     metadata:
       labels: 
         rcs.dana.io/version: "0.1"
+<<<<<<< HEAD
       annotations:
+=======
+      annotations: 
+>>>>>>> d0c06005e9644db890b7358c1628ada5c21ecd7a
         rcs.dana.io/version: "0.1"
     spec:
       containerConcurrency: 0
