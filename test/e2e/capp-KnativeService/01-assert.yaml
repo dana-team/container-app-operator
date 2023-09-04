@@ -5,19 +5,18 @@ timeout: 120  # Timeout waiting for the state
 apiVersion: serving.knative.dev/v1
 kind: Service
 metadata:
-  annotations:
-    dana.io/parent-capp: capp-with-labels
   name: capp-with-labels
   namespace: capp-tests
   labels:
-    dana.io/parent-capp: capp-with-labels
+    rcs.dana.io/parent-capp: capp-with-labels
 spec:
   template:
     metadata:
-      labels: 
+      labels:
         rcs.dana.io/version: "0.1"
       annotations:
         rcs.dana.io/version: "0.1"
+
     spec:
       containerConcurrency: 0
       containers:

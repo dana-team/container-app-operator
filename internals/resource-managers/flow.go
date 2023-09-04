@@ -65,11 +65,15 @@ func (f FlowManager) prepareResource(capp rcsv1alpha1.Capp) loggingv1beta1.Flow 
 // CleanUp deletes the flow resource associated with the Capp object.
 // The flow resource is deleted by calling the DeleteResource method of the resourceManager object.
 func (f FlowManager) CleanUp(capp rcsv1alpha1.Capp) error {
-	flowName := capp.GetName() + "-flow"
-	resourceManager := rclient.ResourceBaseManagerClient{Ctx: f.Ctx, K8sclient: f.K8sclient, Log: f.Log}
-	flow := loggingv1beta1.Flow{}
-	if err := resourceManager.DeleteResource(&flow, flowName, capp.Namespace); err != nil {
-		return fmt.Errorf("unable to delete flow %s: %s", flowName, err.Error())
+
+	if f.isNeeded(capp) {
+		flowName := capp.GetName() + "-flow"
+		resourceManager := rclient.ResourceBaseManagerClient{Ctx: f.Ctx, K8sclient: f.K8sclient, Log: f.Log}
+		flow := loggingv1beta1.Flow{}
+		if err := resourceManager.DeleteResource(&flow, flowName, capp.Namespace); err != nil {
+			return fmt.Errorf("unable to delete flow %s: %s", flowName, err.Error())
+		}
+
 	}
 	return nil
 }

@@ -133,12 +133,16 @@ func (o OutputManager) prepareResource(capp rcsv1alpha1.Capp) loggingv1beta1.Out
 // CleanUp deletes the output resource associated with the Capp object.
 // The output resource is deleted by calling the DeleteResource method of the resourceManager object.
 func (o OutputManager) CleanUp(capp rcsv1alpha1.Capp) error {
-	outputName := capp.GetName() + "-output"
-	resourceManager := rclient.ResourceBaseManagerClient{Ctx: o.Ctx, K8sclient: o.K8sclient, Log: o.Log}
-	output := loggingv1beta1.Output{}
-	if err := resourceManager.DeleteResource(&output, outputName, capp.Namespace); err != nil {
-		return fmt.Errorf("unable to delete output %s: %s ", outputName, err.Error())
+	if o.isNeeded(capp) {
+
+		outputName := capp.GetName() + "-output"
+		resourceManager := rclient.ResourceBaseManagerClient{Ctx: o.Ctx, K8sclient: o.K8sclient, Log: o.Log}
+		output := loggingv1beta1.Output{}
+		if err := resourceManager.DeleteResource(&output, outputName, capp.Namespace); err != nil {
+			return fmt.Errorf("unable to delete output %s: %s ", outputName, err.Error())
+		}
 	}
+
 	return nil
 }
 
