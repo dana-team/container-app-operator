@@ -6,8 +6,8 @@ apiVersion: serving.knative.dev/v1beta1
 kind: DomainMapping
 metadata:
   annotations:
-    rcs.dana.io/parent-capp: capp-with-hostname
+    dana.io/parent-capp: capp-with-hostname
   labels:
-    rcs.dana.io/parent-capp: capp-with-hostname
+    dana.io/parent-capp: capp-with-hostname
   name: rbacqwegen.dev
   namespace: capp-tests

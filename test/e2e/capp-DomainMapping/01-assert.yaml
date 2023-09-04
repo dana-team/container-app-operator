@@ -6,9 +6,9 @@ apiVersion: serving.knative.dev/v1beta1
 kind: DomainMapping
 metadata:
   annotations:
-    rcs.dana.io/parent-capp: capp-with-https
+    dana.io/parent-capp: capp-with-https
   labels:
-    rcs.dana.io/parent-capp: capp-with-https
+    dana.io/parent-capp: capp-with-https
   name: capp-with-https.dev
   namespace: capp-tests
 spec:
