@@ -144,7 +144,10 @@ func (o OutputManager) CleanUp(capp rcsv1alpha1.Capp) error {
 
 // isNeeded responsible to determine if resource logging operator is needed.
 func (o OutputManager) isNeeded(capp rcsv1alpha1.Capp) bool {
-	return capp.Spec.LogSpec.Type == LogTypeElastic || capp.Spec.LogSpec.Type == LogTypeSplunk
+	if capp.Spec.LogSpec != (rcsv1alpha1.LogSpec{}) {
+		return capp.Spec.LogSpec.Type == LogTypeElastic || capp.Spec.LogSpec.Type == LogTypeSplunk
+	}
+	return false
 }
 
 // CreateOrUpdateObject creates or updates an output object based on the provided capp.

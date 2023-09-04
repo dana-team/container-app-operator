@@ -76,7 +76,10 @@ func (f FlowManager) CleanUp(capp rcsv1alpha1.Capp) error {
 
 // isNeeded responsible to determine if resource logging operator flow is needed.
 func (f FlowManager) isNeeded(capp rcsv1alpha1.Capp) bool {
-	return capp.Spec.LogSpec.Type == LogTypeElastic || capp.Spec.LogSpec.Type == LogTypeSplunk
+	if capp.Spec.LogSpec != (rcsv1alpha1.LogSpec{}) {
+		return capp.Spec.LogSpec.Type == LogTypeElastic || capp.Spec.LogSpec.Type == LogTypeSplunk
+	}
+	return false
 }
 
 // CreateOrUpdateObject creates or updates a flow object based on the provided capp.
