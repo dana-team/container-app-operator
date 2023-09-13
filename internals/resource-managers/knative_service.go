@@ -81,15 +81,15 @@ func (k KnativeServiceManager) CleanUp(capp rcsv1alpha1.Capp) error {
 	return nil
 }
 
-// isNeeded responsible to determine if resource knative service is needed.
-func (k KnativeServiceManager) isNeeded(capp rcsv1alpha1.Capp) bool {
+// isRequired determines if a Knative service (ksvc) is required based on the Capp's spec.
+func (k KnativeServiceManager) isRequired(capp rcsv1alpha1.Capp) bool {
 	return capp.Spec.Enabled
 }
 
 // isResumed determines if a given Capp resource has resumed its operation.
 func isResumed(capp rcsv1alpha1.Capp) bool {
-	return !capp.Status.EnabledStatus.CurrentState && capp.Spec.Enabled &&
-		!capp.Status.EnabledStatus.LastEnabeldChange.IsZero()
+	return !capp.Status.EnabledStatus.IsEnabled && capp.Spec.Enabled &&
+		!capp.Status.EnabledStatus.LastChange.IsZero()
 }
 
 // CreateOrUpdateObject ensures a KnativeService resource exists based on the provided Capp.
@@ -99,7 +99,7 @@ func (k KnativeServiceManager) CreateOrUpdateObject(capp rcsv1alpha1.Capp) error
 	knativeServiceFromCapp := k.prepareResource(capp, k.Ctx)
 	knativeService := knativev1.Service{}
 	resourceManager := rclient.ResourceBaseManagerClient{Ctx: k.Ctx, K8sclient: k.K8sclient, Log: k.Log}
-	if !k.isNeeded(capp) {
+	if !k.isRequired(capp) {
 		k.Log.Info("halting Capp")
 		k.EventRecorder.Event(&capp, eventTypeNormal, eventCappHalted,
 			fmt.Sprintf("Capp %s halted", capp.Name))

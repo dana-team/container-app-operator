@@ -8261,15 +8261,15 @@ spec:
               enabledStatus:
                 description: EnabledStatus shows the current capp  halt state
                 properties:
-                  LastEnabeldChange:
+                  isEnabled:
+                    default: false
+                    description: IsEnabled is actual enabled state of the capp
+                    type: boolean
+                  lastChange:
                     description: LastEnabledChange the last time the enabled state
                       of capp changed
                     format: date-time
                     type: string
-                  currentState:
-                    default: false
-                    description: CurrentState is actual enabled state of the capp
-                    type: boolean
                 type: object
               knativeObjectStatus:
                 description: KnativeObjectStatus represents the Status stanza of the

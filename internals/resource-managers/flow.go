@@ -66,7 +66,7 @@ func (f FlowManager) prepareResource(capp rcsv1alpha1.Capp) loggingv1beta1.Flow 
 // The flow resource is deleted by calling the DeleteResource method of the resourceManager object.
 func (f FlowManager) CleanUp(capp rcsv1alpha1.Capp) error {
 
-	if f.isNeeded(capp) {
+	if f.isRequired(capp) {
 		flowName := capp.GetName() + "-flow"
 		resourceManager := rclient.ResourceBaseManagerClient{Ctx: f.Ctx, K8sclient: f.K8sclient, Log: f.Log}
 		flow := loggingv1beta1.Flow{}
@@ -78,8 +78,8 @@ func (f FlowManager) CleanUp(capp rcsv1alpha1.Capp) error {
 	return nil
 }
 
-// isNeeded responsible to determine if resource logging operator flow is needed.
-func (f FlowManager) isNeeded(capp rcsv1alpha1.Capp) bool {
+// isRequired responsible to determine if resource logging operator flow is required.
+func (f FlowManager) isRequired(capp rcsv1alpha1.Capp) bool {
 	if capp.Spec.LogSpec != (rcsv1alpha1.LogSpec{}) {
 		return capp.Spec.LogSpec.Type == LogTypeElastic || capp.Spec.LogSpec.Type == LogTypeSplunk
 	}
@@ -92,7 +92,7 @@ func (f FlowManager) CreateOrUpdateObject(capp rcsv1alpha1.Capp) error {
 	flowName := capp.GetName() + "-flow"
 	logger := f.Log.WithValues("FlowName", flowName, "FlowNamespace", capp.Namespace)
 
-	if f.isNeeded(capp) {
+	if f.isRequired(capp) {
 		generatedFlow := f.prepareResource(capp)
 		// get instance of current flow
 		currentFlow := loggingv1beta1.Flow{}

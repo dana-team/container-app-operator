@@ -133,12 +133,11 @@ func (o OutputManager) prepareResource(capp rcsv1alpha1.Capp) loggingv1beta1.Out
 // CleanUp deletes the output resource associated with the Capp object.
 // The output resource is deleted by calling the DeleteResource method of the resourceManager object.
 func (o OutputManager) CleanUp(capp rcsv1alpha1.Capp) error {
-	if o.isNeeded(capp) {
-
+	if o.isRequired(capp) {
 		outputName := capp.GetName() + "-output"
 		resourceManager := rclient.ResourceBaseManagerClient{Ctx: o.Ctx, K8sclient: o.K8sclient, Log: o.Log}
-		output := loggingv1beta1.Output{}
-		if err := resourceManager.DeleteResource(&output, outputName, capp.Namespace); err != nil {
+		outputObject := loggingv1beta1.Output{}
+		if err := resourceManager.DeleteResource(&outputObject, outputName, capp.Namespace); err != nil {
 			return fmt.Errorf("unable to delete output %s: %s ", outputName, err.Error())
 		}
 	}
@@ -146,8 +145,8 @@ func (o OutputManager) CleanUp(capp rcsv1alpha1.Capp) error {
 	return nil
 }
 
-// isNeeded responsible to determine if resource logging operator is needed.
-func (o OutputManager) isNeeded(capp rcsv1alpha1.Capp) bool {
+// isRequired responsible to determine if resource logging operator is required.
+func (o OutputManager) isRequired(capp rcsv1alpha1.Capp) bool {
 	if capp.Spec.LogSpec != (rcsv1alpha1.LogSpec{}) {
 		return capp.Spec.LogSpec.Type == LogTypeElastic || capp.Spec.LogSpec.Type == LogTypeSplunk
 	}
@@ -159,7 +158,7 @@ func (o OutputManager) isNeeded(capp rcsv1alpha1.Capp) bool {
 func (o OutputManager) CreateOrUpdateObject(capp rcsv1alpha1.Capp) error {
 	outputName := capp.GetName() + "-output"
 	logger := o.Log.WithValues("OutputName", outputName, "OutputNamespace", capp.Namespace)
-	if o.isNeeded(capp) {
+	if o.isRequired(capp) {
 		generatedOutput := o.prepareResource(capp)
 		// get instance of current output
 		currentOutput := loggingv1beta1.Output{}

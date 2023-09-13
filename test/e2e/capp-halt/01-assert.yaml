@@ -9,4 +9,4 @@ metadata:
   namespace: capp-tests
 status:
   enabledStatus:
-    currentState: false
+    isEnabled: false

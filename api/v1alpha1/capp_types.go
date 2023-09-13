@@ -139,14 +139,14 @@ type RevisionInfo struct {
 }
 
 type EnabledStatus struct {
-	// CurrentState is actual enabled state of the capp
+	// IsEnabled is actual enabled state of the capp
 	// +kubebuilder:default:=false
 	// +optional
-	CurrentState bool `json:"currentState,omitempty"`
+	IsEnabled bool `json:"isEnabled,omitempty"`
 
 	// LastEnabledChange the last time the enabled state of capp changed
 	// +optional
-	LastEnabeldChange metav1.Time `json:"LastEnabeldChange,omitempty"`
+	LastChange metav1.Time `json:"lastChange,omitempty"`
 }
 
 // LoggingStatus defines the state of the flow and output linked to the capp.

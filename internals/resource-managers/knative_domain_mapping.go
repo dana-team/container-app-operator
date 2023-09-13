@@ -72,8 +72,8 @@ func (k KnativeDomainMappingManager) CleanUp(capp rcsv1alpha1.Capp) error {
 	return nil
 }
 
-// isNeeded responsible to determine if resource knative domain mapping is needed.
-func (k KnativeDomainMappingManager) isNeeded(capp rcsv1alpha1.Capp) bool {
+// responsible to determine if resource knative domain mapping is required.
+func (k KnativeDomainMappingManager) isRequired(capp rcsv1alpha1.Capp) bool {
 	return capp.Spec.RouteSpec.Hostname != ""
 }
 
@@ -82,13 +82,13 @@ func (k KnativeDomainMappingManager) CreateOrUpdateObject(capp rcsv1alpha1.Capp)
 		k.Log.Error(err, fmt.Sprintf("failed to handle irrelevant DomainMappings"))
 		return err
 	}
-	if k.isNeeded(capp) {
-		knativeDomainMappingFromCapp := k.prepareResource(capp)
+	if k.isRequired(capp) {
+		cappDomainMapping := k.prepareResource(capp)
 		knativeDomainMapping := knativev1alphav1.DomainMapping{}
 		resourceManager := rclient.ResourceBaseManagerClient{Ctx: k.Ctx, K8sclient: k.K8sclient, Log: k.Log}
 		if err := k.K8sclient.Get(k.Ctx, types.NamespacedName{Namespace: capp.Namespace, Name: capp.Spec.RouteSpec.Hostname}, &knativeDomainMapping); err != nil {
 			if errors.IsNotFound(err) {
-				if err := resourceManager.CreateResource(&knativeDomainMappingFromCapp); err != nil {
+				if err := resourceManager.CreateResource(&cappDomainMapping); err != nil {
 					k.EventRecorder.Event(&capp, eventTypeError, eventCappDomainMappingCreationFailed, fmt.Sprintf("Failed to create DomainMapping %s for Capp %s", capp.Spec.RouteSpec.Hostname, capp.Name))
 					return fmt.Errorf("unable to create DomainMapping: %s", err.Error())
 				}
@@ -97,8 +97,8 @@ func (k KnativeDomainMappingManager) CreateOrUpdateObject(capp rcsv1alpha1.Capp)
 			}
 			return nil
 		}
-		if !reflect.DeepEqual(knativeDomainMapping.Spec, knativeDomainMappingFromCapp.Spec) {
-			knativeDomainMapping.Spec = knativeDomainMappingFromCapp.Spec
+		if !reflect.DeepEqual(knativeDomainMapping.Spec, cappDomainMapping.Spec) {
+			knativeDomainMapping.Spec = cappDomainMapping.Spec
 			if err := resourceManager.UpdateResource(&knativeDomainMapping); err != nil {
 				return fmt.Errorf("unable to update DomainMapping: %s", err.Error())
 			}

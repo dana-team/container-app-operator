@@ -7,10 +7,11 @@ kind: Service
 metadata:
   name: capp-with-timeout
   namespace: capp-tests
-  labels:
-    rcs.dana.io/parent-capp: capp-with-timeout
 spec:
   template:
+    metadata:
+        labels:
+          rcs.dana.io/parent-capp: capp-with-timeout
     spec:
       containerConcurrency: 0
       containers:

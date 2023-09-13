@@ -12,6 +12,11 @@ import (
 	"strings"
 )
 
+const (
+	OpenShiftConsoleNamespace = "openshift-console"
+	ConsoleName               = "console"
+)
+
 // This function builds the ApplicationLinks status of the Capp  by getting the console route and the cluster segment.
 // It returns a pointer to the ApplicationLinks struct.
 func buildApplicationLinks(ctx context.Context, log logr.Logger,
@@ -37,7 +42,7 @@ func buildApplicationLinks(ctx context.Context, log logr.Logger,
 
 // getClusterConsole responsible to return the cluster console url
 func getClusterConsole(ctx context.Context, log logr.Logger, r client.Client) (string, error) {
-	openshiftConsoleKey := types.NamespacedName{Namespace: "openshift-console", Name: "console"}
+	openshiftConsoleKey := types.NamespacedName{Namespace: OpenShiftConsoleNamespace, Name: ConsoleName}
 	consoleRoute := routev1.Route{}
 	if err := r.Get(ctx, openshiftConsoleKey, &consoleRoute); err != nil {
 		log.Error(err, "can't get console route")

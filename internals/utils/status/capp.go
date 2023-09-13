@@ -16,9 +16,9 @@ import (
 
 // CreateEnabledStatus responsible to change The enabled status by identfying changes in the spec
 func CreateEnabledStatus(enabledStatus *rcsv1alpha1.EnabledStatus, enabledFromSpec bool) {
-	if enabledFromSpec != enabledStatus.CurrentState {
-		enabledStatus.CurrentState = enabledFromSpec
-		enabledStatus.LastEnabeldChange = metav1.Now()
+	if enabledFromSpec != enabledStatus.IsEnabled {
+		enabledStatus.IsEnabled = enabledFromSpec
+		enabledStatus.LastChange = metav1.Now()
 	}
 }
 

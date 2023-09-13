@@ -13,6 +13,7 @@ import (
 
 const (
 	KnativeLabelKey = "serving.knative.dev/configuration"
+	ClientListLimit = 100
 )
 
 // This function builds the RevisionInfo status of the Capp CRD by getting the list of revisions associated with the Knative service.
@@ -28,7 +29,7 @@ func buildRevisionsStatus(ctx context.Context, capp rcsv1alpha1.Capp,
 	labelSelector := labels.NewSelector().Add(*requirement)
 	listOptions := client.ListOptions{
 		LabelSelector: labelSelector,
-		Limit:         100,
+		Limit:         ClientListLimit,
 	}
 	if err := r.List(ctx, &knativeRevisions, &listOptions); err != nil {
 		return revisionsInfo, err

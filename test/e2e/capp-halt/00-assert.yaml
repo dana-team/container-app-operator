@@ -9,7 +9,7 @@ metadata:
   namespace: capp-tests
 status:
   enabledStatus:
-    currentState: true
+    isEnabled: true
 ---
 apiVersion: serving.knative.dev/v1
 kind: Service
