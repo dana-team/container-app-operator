@@ -18,6 +18,6 @@ func DoesResourceExists(k8sClient client.Client, obj client.Object) bool {
 	} else if err != nil {
 		Fail(fmt.Sprintf("The function failed with error: \n %s", err.Error()))
 	}
-	return false
+	return true
 
 }
