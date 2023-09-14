@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	mock "github.com/dana-team/container-app-operator/test/k8s_tests/mocks"
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -15,17 +16,14 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 	knativev1alphav1 "knative.dev/serving/pkg/apis/serving/v1alpha1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrl "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
-	"testing"
 	"time"
-
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var (
-	k8sClient client.Client
-	nsName    = "capp-e2e-tests"
+	K8sClient client.Client
 )
 
 func newScheme() *runtime.Scheme {
@@ -41,51 +39,35 @@ func newScheme() *runtime.Scheme {
 	return s
 }
 
-func TestE2e(t *testing.T) {
-	RegisterFailHandler(Fail)
-
-	SetDefaultEventuallyTimeout(time.Second * 2)
-	RunSpecs(t, "Capp Suite")
-}
-
-var _ = BeforeSuite(func() {
+var _ = SynchronizedBeforeSuite(func() {
 	// Get the cluster configuration.
-	// get the k8sClient or die
+	// get the K8sClient or die
 	config, err := config.GetConfig()
 	if err != nil {
 		Fail(fmt.Sprintf("Couldn't get kubeconfig %v", err))
 	}
+
 	// Create the client using the controller-runtime
-	k8sClient, err = ctrl.New(config, ctrl.Options{Scheme: newScheme()})
+	K8sClient, err = ctrl.New(config, ctrl.Options{Scheme: newScheme()})
 	Expect(err).NotTo(HaveOccurred())
 
 	namespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: nsName,
+			Name: mock.NsName,
 		},
 	}
 
-	Expect(k8sClient.Create(context.Background(), namespace)).To(Succeed())
-})
+	Expect(K8sClient.Create(context.Background(), namespace)).To(Succeed())
+}, func() {})
 
-var _ = AfterSuite(func() {
+var _ = SynchronizedAfterSuite(func() {}, func() {
 	namespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: nsName,
+			Name: mock.NsName,
 		},
 	}
-	Expect(k8sClient.Delete(context.Background(), namespace)).To(Succeed())
+	Expect(K8sClient.Delete(context.Background(), namespace)).To(Succeed())
 	Eventually(func() error {
-		return k8sClient.Get(context.Background(), client.ObjectKey{Name: nsName}, namespace)
+		return K8sClient.Get(context.Background(), client.ObjectKey{Name: mock.NsName}, namespace)
 	}, time.Minute, 5*time.Second).Should(HaveOccurred(), "The namespace should be deleted")
-})
-
-var _ = Describe("Validate Suite acted correctly ", func() {
-
-	It("should have created a namespace", func() {
-		ns := &corev1.Namespace{}
-		err := k8sClient.Get(context.TODO(), client.ObjectKey{Name: nsName}, ns)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(ns).NotTo(BeNil())
-	})
 })
