@@ -8,7 +8,8 @@ import (
 )
 
 var (
-	NsName = "capp-e2e-tests"
+	NsName         = "capp-e2e-tests"
+	RPSScaleMetric = "rps"
 )
 
 func CreateBaseCapp() *rcsv1alpha1.Capp {
@@ -37,7 +38,7 @@ func CreateBaseCapp() *rcsv1alpha1.Capp {
 											Value: "capp-default-test",
 										},
 									},
-									Image:     "sahar2339/example-python-app:v1-flask",
+									Image:     "quay.io/danateamorg/example-python-app:v1-flask",
 									Name:      "capp-default-test",
 									Resources: corev1.ResourceRequirements{},
 								},

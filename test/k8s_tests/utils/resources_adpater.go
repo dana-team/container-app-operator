@@ -8,8 +8,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// DoesResourceExists checks if a given Kubernetes object exists in the cluster.
-func DoesResourceExists(k8sClient client.Client, obj client.Object) bool {
+// DoesResourceExist checks if a given Kubernetes object exists in the cluster.
+func DoesResourceExist(k8sClient client.Client, obj client.Object) bool {
 	copyObject := obj.DeepCopyObject().(client.Object)
 	key := client.ObjectKeyFromObject(copyObject)
 	err := k8sClient.Get(context.Background(), key, copyObject)

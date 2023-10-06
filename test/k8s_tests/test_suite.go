@@ -23,7 +23,12 @@ import (
 )
 
 var (
-	K8sClient client.Client
+	k8sClient client.Client
+)
+
+const (
+	TimeoutNameSpace = time.Minute
+	NsFetchInterval  = 5 * time.Second
 )
 
 func newScheme() *runtime.Scheme {
@@ -41,14 +46,14 @@ func newScheme() *runtime.Scheme {
 
 var _ = SynchronizedBeforeSuite(func() {
 	// Get the cluster configuration.
-	// get the K8sClient or die
+	// get the k8sClient or die
 	config, err := config.GetConfig()
 	if err != nil {
 		Fail(fmt.Sprintf("Couldn't get kubeconfig %v", err))
 	}
 
 	// Create the client using the controller-runtime
-	K8sClient, err = ctrl.New(config, ctrl.Options{Scheme: newScheme()})
+	k8sClient, err = ctrl.New(config, ctrl.Options{Scheme: newScheme()})
 	Expect(err).NotTo(HaveOccurred())
 
 	namespace := &corev1.Namespace{
@@ -57,7 +62,7 @@ var _ = SynchronizedBeforeSuite(func() {
 		},
 	}
 
-	Expect(K8sClient.Create(context.Background(), namespace)).To(Succeed())
+	Expect(k8sClient.Create(context.Background(), namespace)).To(Succeed())
 }, func() {})
 
 var _ = SynchronizedAfterSuite(func() {}, func() {
@@ -66,8 +71,8 @@ var _ = SynchronizedAfterSuite(func() {}, func() {
 			Name: mock.NsName,
 		},
 	}
-	Expect(K8sClient.Delete(context.Background(), namespace)).To(Succeed())
+	Expect(k8sClient.Delete(context.Background(), namespace)).To(Succeed())
 	Eventually(func() error {
-		return K8sClient.Get(context.Background(), client.ObjectKey{Name: mock.NsName}, namespace)
-	}, time.Minute, 5*time.Second).Should(HaveOccurred(), "The namespace should be deleted")
+		return k8sClient.Get(context.Background(), client.ObjectKey{Name: mock.NsName}, namespace)
+	}, TimeoutNameSpace, NsFetchInterval).Should(HaveOccurred(), "The namespace should be deleted")
 })

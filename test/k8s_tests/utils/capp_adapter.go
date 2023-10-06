@@ -4,7 +4,6 @@ import (
 	"context"
 	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	. "github.com/onsi/gomega"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"math/rand"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"time"
@@ -15,6 +14,7 @@ const RandStrLength = 10
 
 var seededRand *rand.Rand = rand.New(rand.NewSource(time.Now().UnixNano()))
 
+// generateRandomString returns a random string of the specified length using characters from the charset.
 func generateRandomString(length int) string {
 	b := make([]byte, length)
 	for i := range b {
@@ -47,15 +47,7 @@ func DeleteCapp(k8sClient client.Client, capp *rcsv1alpha1.Capp) {
 
 // GetCapp fetch existing and return an instance of Capp.
 func GetCapp(k8sClient client.Client, name string, namespace string) *rcsv1alpha1.Capp {
-	capp := &rcsv1alpha1.Capp{
-		Spec: rcsv1alpha1.CappSpec{
-			RouteSpec: rcsv1alpha1.RouteSpec{},
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-capp",
-			Namespace: "test-ns",
-		},
-	}
+	capp := &rcsv1alpha1.Capp{}
 	Eventually(func() error {
 		return k8sClient.Get(context.Background(), client.ObjectKey{Name: name, Namespace: namespace}, capp)
 	}, 16*time.Second, 2*time.Second).Should(Succeed(), "Should fetch capp")
