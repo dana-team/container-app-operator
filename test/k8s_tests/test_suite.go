@@ -5,6 +5,7 @@ import (
 	"fmt"
 	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	mock "github.com/dana-team/container-app-operator/test/k8s_tests/mocks"
+	utilst "github.com/dana-team/container-app-operator/test/k8s_tests/utils"
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -56,6 +57,8 @@ var _ = SynchronizedBeforeSuite(func() {
 	k8sClient, err = ctrl.New(config, ctrl.Options{Scheme: newScheme()})
 	Expect(err).NotTo(HaveOccurred())
 
+	cleanUp()
+
 	namespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: mock.NsName,
@@ -66,13 +69,21 @@ var _ = SynchronizedBeforeSuite(func() {
 }, func() {})
 
 var _ = SynchronizedAfterSuite(func() {}, func() {
+	cleanUp()
+})
+
+// cleanUp make sure the test environment is clean
+func cleanUp() {
 	namespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: mock.NsName,
 		},
 	}
-	Expect(k8sClient.Delete(context.Background(), namespace)).To(Succeed())
-	Eventually(func() error {
-		return k8sClient.Get(context.Background(), client.ObjectKey{Name: mock.NsName}, namespace)
-	}, TimeoutNameSpace, NsFetchInterval).Should(HaveOccurred(), "The namespace should be deleted")
-})
+	if utilst.DoesResourceExist(k8sClient, namespace) {
+		Expect(k8sClient.Delete(context.Background(), namespace)).To(Succeed())
+		Eventually(func() error {
+			return k8sClient.Get(context.Background(), client.ObjectKey{Name: mock.NsName}, namespace)
+		}, TimeoutNameSpace, NsFetchInterval).Should(HaveOccurred(), "The namespace should be deleted")
+	}
+
+}
