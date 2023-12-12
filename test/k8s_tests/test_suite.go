@@ -66,6 +66,10 @@ var _ = SynchronizedBeforeSuite(func() {
 	}
 
 	Expect(k8sClient.Create(context.Background(), namespace)).To(Succeed())
+	Eventually(func() bool {
+		return utilst.DoesResourceExist(k8sClient, namespace)
+	}, TimeoutNameSpace, NsFetchInterval).Should(BeTrue(), "The namespace should be created")
+
 }, func() {})
 
 var _ = SynchronizedAfterSuite(func() {}, func() {

@@ -1,14 +1,11 @@
 package k8s_tests
 
 import (
-	"context"
 	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	mock "github.com/dana-team/container-app-operator/test/k8s_tests/mocks"
 	utilst "github.com/dana-team/container-app-operator/test/k8s_tests/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	corev1 "k8s.io/api/core/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"testing"
 	"time"
 )
@@ -24,16 +21,6 @@ func TestE2e(t *testing.T) {
 	SetDefaultEventuallyTimeout(time.Second * 2)
 	RunSpecs(t, "Capp Suite")
 }
-
-var _ = Describe("Validate Suite acted correctly ", func() {
-
-	It("Should have created a namespace", func() {
-		ns := &corev1.Namespace{}
-		err := k8sClient.Get(context.Background(), client.ObjectKey{Name: mock.NsName}, ns)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(ns).NotTo(BeNil())
-	})
-})
 
 var _ = Describe("Validate Capp adapter", func() {
 
