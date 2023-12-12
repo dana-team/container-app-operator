@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	TimeoutCapp          = 16 * time.Second
+	TimeoutCapp          = 60 * time.Second
 	CappCreationInterval = 2 * time.Second
 )
 
