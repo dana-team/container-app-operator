@@ -5,13 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="8d60f801-4e18-421f-956a-6c392b266ce0" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/container-app-operator.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/kubernetes-settings.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.circleci/config.yml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.github/workflows/pre-submit.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/pre-submit.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/go.mod" beforeDir="false" afterPath="$PROJECT_DIR$/go.mod" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -107,12 +102,12 @@
       <window_info anchor="bottom" id="TODO" />
       <window_info anchor="bottom" id="File Transfer" />
       <window_info anchor="bottom" id="Find" show_stripe_button="false" weight="0.3300926" />
-      <window_info anchor="bottom" id="Terminal" order="0" weight="0.33635497" />
-      <window_info anchor="bottom" id="Version Control" order="1" weight="0.32967556" />
-      <window_info anchor="bottom" id="Problems View" order="2" weight="0.33635497" />
-      <window_info anchor="bottom" id="Services" order="4" weight="0.33635497" />
-      <window_info active="true" anchor="bottom" id="Debug" order="5" visible="true" weight="0.46230915" />
-      <window_info active="true" anchor="bottom" id="Run" order="6" visible="true" weight="0.33635497" />
+      <window_info anchor="bottom" id="Version Control" order="0" weight="0.33635497" />
+      <window_info active="true" anchor="bottom" id="Terminal" order="1" visible="true" weight="0.33635497" />
+      <window_info anchor="bottom" id="Problems View" order="3" weight="0.33635497" />
+      <window_info anchor="bottom" id="Services" order="5" weight="0.33635497" />
+      <window_info active="true" anchor="bottom" id="Debug" order="6" visible="true" weight="0.46230915" />
+      <window_info anchor="bottom" id="Run" order="7" weight="0.33635497" />
       <window_info anchor="right" id="Endpoints" />
       <window_info anchor="right" id="make" side_tool="true" />
       <window_info anchor="right" id="documentation.v2" side_tool="true" />
