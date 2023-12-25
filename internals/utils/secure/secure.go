@@ -14,12 +14,12 @@ import (
 )
 
 const (
-	eventTypeWarning = "Warning"
+	eventTypeWarning        = "Warning"
 	eventCappSecretNotFound = "SecretNotFound"
 )
 
 // SetHttpsKnativeDomainMapping takes a Capp, Knative Domain Mapping and a ResourceBaseManager Client and sets the Knative Domain Mapping Tls based on the Capp's Https field.
-func SetHttpsKnativeDomainMapping(capp rcsv1alpha1.Capp, knativeDomainMapping *knativev1alphav1.DomainMapping, resourceManager rclient.ResourceBaseManager, eventRecorder record.EventRecorder) {
+func SetHttpsKnativeDomainMapping(capp rcsv1alpha1.Capp, knativeDomainMapping *knativev1alphav1.DomainMapping, resourceManager rclient.ResourceBaseManagerClient, eventRecorder record.EventRecorder) {
 	isHttps := capp.Spec.RouteSpec.TlsEnabled
 	if isHttps {
 		tlsSecret := corev1.Secret{}

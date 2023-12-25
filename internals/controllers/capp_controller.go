@@ -6,8 +6,8 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"k8s.io/client-go/tools/record"
+	ctrl "sigs.k8s.io/controller-runtime"
 
 	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	rmanagers "github.com/dana-team/container-app-operator/internals/resource-managers"
@@ -29,20 +29,22 @@ import (
 type CappReconciler struct {
 	Log logr.Logger
 	client.Client
-	Scheme      *runtime.Scheme
-	OnOpenshift bool
+	Scheme        *runtime.Scheme
+	OnOpenshift   bool
 	EventRecorder record.EventRecorder
 }
 
 // +kubebuilder:rbac:groups=rcs.dana.io,resources=capps,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=rcs.dana.io,resources=capps/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=rcs.dana.io,resources=capps/finalizers,verbs=update
-// +kubebuilder:rbac:groups=serving.knative.dev,resources=services,verbs=get;list;watch;update;create
-// +kubebuilder:rbac:groups=serving.knative.dev,resources=domainmappings,verbs=get;list;watch;update;create
+// +kubebuilder:rbac:groups=serving.knative.dev,resources=services,verbs=get;list;watch;update;create;delete
+// +kubebuilder:rbac:groups=serving.knative.dev,resources=domainmappings,verbs=get;list;watch;update;create;delete
 // +kubebuilder:rbac:groups=serving.knative.dev,resources=revisions,verbs=get;list;watch;update;create
 // +kubebuilder:rbac:groups=logging.banzaicloud.io,resources=flows,verbs=get;list;watch;update;create
 // +kubebuilder:rbac:groups=logging.banzaicloud.io,resources=outputs,verbs=get;list;watch;update;create
 // +kubebuilder:rbac:groups=route.openshift.io,resources=routes,verbs=get;list;watch;update;create
+// +kubebuilder:rbac:groups="",resources=nodes,verbs=get;list;watch;
+// +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;
 
 func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx).WithValues("CappName", req.Name, "CappNamespace", req.Namespace)

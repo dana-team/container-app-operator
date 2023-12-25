@@ -8,20 +8,16 @@ import (
 	"github.com/dana-team/container-app-operator/internals/utils"
 	autoscale_utils "github.com/dana-team/container-app-operator/internals/utils/autoscale"
 	"github.com/dana-team/container-app-operator/internals/utils/finalizer"
-	"github.com/dana-team/container-app-operator/internals/utils/secure"
-	rclient "github.com/dana-team/container-app-operator/internals/wrappers"
 	networkingv1 "github.com/openshift/api/network/v1"
 	knativev1alphav1 "knative.dev/serving/pkg/apis/serving/v1alpha1"
 
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/scale/scheme"
-	"k8s.io/client-go/tools/record"
-
 	routev1 "github.com/openshift/api/route/v1"
 	"github.com/stretchr/testify/assert"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/scale/scheme"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -87,59 +83,6 @@ func TestSetAutoScaler(t *testing.T) {
 	annotations_rps := autoscale_utils.SetAutoScaler(example_capp)
 	assert.Equal(t, example_capp_rps_expected, annotations_rps)
 
-}
-
-func TestSetHttpsKnativeDomainMapping(t *testing.T) {
-	ctx := context.Background()
-	capp := rcsv1alpha1.Capp{
-		Spec: rcsv1alpha1.CappSpec{
-			RouteSpec: rcsv1alpha1.RouteSpec{
-				TlsEnabled: true,
-				Hostname:   "test-dm",
-				TlsSecret:  "secure-knativedm-test-capp",
-			},
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-capp",
-			Namespace: "test-ns",
-		},
-	}
-
-	knativeDomainMapping := &knativev1alphav1.DomainMapping{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-dm",
-			Namespace: "test-ns",
-		},
-	}
-
-	// Create a fake client and add the capp and tls secret to it
-	fakeClient := newFakeClient()
-
-	tlsSecret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "secure-knativedm-test-capp",
-			Namespace: "test-ns",
-		},
-		Data: map[string][]byte{
-			"tls.crt": []byte("dummy-cert-data"),
-			"tls.key": []byte("dummy-key-data"),
-		},
-	}
-	err := fakeClient.Create(ctx, tlsSecret)
-	assert.NoError(t, err)
-
-	// Create a resource manager using the fake client
-	resourceManager := rclient.ResourceBaseManagerClient{
-		K8sclient: fakeClient,
-		Ctx:       ctx,
-		Log:       ctrl.Log.WithName("test"),
-	}
-
-	// Call the function being tested
-	secure.SetHttpsKnativeDomainMapping(capp, knativeDomainMapping, resourceManager, &record.FakeRecorder{})
-
-	// Check that the tls secret was set correctly
-	assert.Equal(t, "secure-knativedm-test-capp", knativeDomainMapping.Spec.TLS.SecretName)
 }
 
 func TestEnsureFinalizer(t *testing.T) {

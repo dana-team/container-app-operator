@@ -46,6 +46,10 @@ type CappSpec struct {
 
 	// LogSpec defines the configuration for shipping Capp logs.
 	LogSpec LogSpec `json:"logSpec,omitempty"`
+
+	// LogSpec defines if Capp is paused
+	// +kubebuilder:default:=true
+	Enabled bool `json:"enabled,omitempty"`
 }
 
 // RouteSpec defines the route specification for the Capp.
@@ -134,6 +138,17 @@ type RevisionInfo struct {
 	RevisionName string `json:"name,omitempty"`
 }
 
+type EnabledStatus struct {
+	// IsEnabled is actual enabled state of the capp
+	// +kubebuilder:default:=false
+	// +optional
+	IsEnabled bool `json:"isEnabled,omitempty"`
+
+	// LastEnabledChange the last time the enabled state of capp changed
+	// +optional
+	LastChange metav1.Time `json:"lastChange,omitempty"`
+}
+
 // LoggingStatus defines the state of the flow and output linked to the capp.
 type LoggingStatus struct {
 	// Flow represents the Status of the Flow used by the Capp.
@@ -163,6 +178,10 @@ type CappStatus struct {
 	// RevisionInfo shows the revision information.
 	// +optional
 	RevisionInfo []RevisionInfo `json:"Revisions,omitempty"`
+
+	// EnabledStatus shows the current capp  halt state
+	// +optional
+	EnabledStatus EnabledStatus `json:"enabledStatus,omitempty"`
 
 	// LoggingStatus defines the state of the flow and output linked to the capp.
 	// +optional

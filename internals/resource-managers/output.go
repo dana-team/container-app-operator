@@ -133,13 +133,24 @@ func (o OutputManager) prepareResource(capp rcsv1alpha1.Capp) loggingv1beta1.Out
 // CleanUp deletes the output resource associated with the Capp object.
 // The output resource is deleted by calling the DeleteResource method of the resourceManager object.
 func (o OutputManager) CleanUp(capp rcsv1alpha1.Capp) error {
-	outputName := capp.GetName() + "-output"
-	resourceManager := rclient.ResourceBaseManager{Ctx: o.Ctx, K8sclient: o.K8sclient, Log: o.Log}
-	output := loggingv1beta1.Output{}
-	if err := resourceManager.DeleteResource(&output, outputName, capp.Namespace); err != nil {
-		return fmt.Errorf("unable to delete output %s: %s ", outputName, err.Error())
+	if o.isRequired(capp) {
+		outputName := capp.GetName() + "-output"
+		resourceManager := rclient.ResourceBaseManagerClient{Ctx: o.Ctx, K8sclient: o.K8sclient, Log: o.Log}
+		outputObject := loggingv1beta1.Output{}
+		if err := resourceManager.DeleteResource(&outputObject, outputName, capp.Namespace); err != nil {
+			return fmt.Errorf("unable to delete output %s: %s ", outputName, err.Error())
+		}
 	}
+
 	return nil
+}
+
+// isRequired responsible to determine if resource logging operator is required.
+func (o OutputManager) isRequired(capp rcsv1alpha1.Capp) bool {
+	if capp.Spec.LogSpec != (rcsv1alpha1.LogSpec{}) {
+		return capp.Spec.LogSpec.Type == LogTypeElastic || capp.Spec.LogSpec.Type == LogTypeSplunk
+	}
+	return false
 }
 
 // CreateOrUpdateObject creates or updates an output object based on the provided capp.
@@ -147,11 +158,11 @@ func (o OutputManager) CleanUp(capp rcsv1alpha1.Capp) error {
 func (o OutputManager) CreateOrUpdateObject(capp rcsv1alpha1.Capp) error {
 	outputName := capp.GetName() + "-output"
 	logger := o.Log.WithValues("OutputName", outputName, "OutputNamespace", capp.Namespace)
-	if capp.Spec.LogSpec.Type == LogTypeElastic || capp.Spec.LogSpec.Type == LogTypeSplunk {
+	if o.isRequired(capp) {
 		generatedOutput := o.prepareResource(capp)
 		// get instance of current output
 		currentOutput := loggingv1beta1.Output{}
-		resourceManager := rclient.ResourceBaseManager{Ctx: o.Ctx, K8sclient: o.K8sclient, Log: o.Log}
+		resourceManager := rclient.ResourceBaseManagerClient{Ctx: o.Ctx, K8sclient: o.K8sclient, Log: o.Log}
 		logger.Info("Trying to fetch existing output")
 		switch err := o.K8sclient.Get(o.Ctx, types.NamespacedName{Namespace: capp.Namespace, Name: outputName}, &currentOutput); {
 		case errors.IsNotFound(err):

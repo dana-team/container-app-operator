@@ -38,7 +38,7 @@ func CreateBaseCapp() *rcsv1alpha1.Capp {
 											Value: "capp-default-test",
 										},
 									},
-									Image:     "quay.io/danateamorg/example-python-app:v1-flask",
+									Image:     "ghcr.io/knative/autoscale-go:latest",
 									Name:      "capp-default-test",
 									Resources: corev1.ResourceRequirements{},
 								},

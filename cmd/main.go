@@ -106,9 +106,9 @@ func main() {
 	}
 
 	if err = (&controllers.CappReconciler{
-		Client:      mgr.GetClient(),
-		Scheme:      mgr.GetScheme(),
-		OnOpenshift: onOpenshift,
+		Client:        mgr.GetClient(),
+		Scheme:        mgr.GetScheme(),
+		OnOpenshift:   onOpenshift,
 		EventRecorder: mgr.GetEventRecorderFor("container-app_controller"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Capp")

@@ -11,16 +11,15 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"k8s.io/client-go/tools/record"
 )
 
-
 type FlowManager struct {
-	Ctx       context.Context
-	K8sclient client.Client
-	Log       logr.Logger
+	Ctx           context.Context
+	K8sclient     client.Client
+	Log           logr.Logger
 	EventRecorder record.EventRecorder
 }
 
@@ -66,13 +65,25 @@ func (f FlowManager) prepareResource(capp rcsv1alpha1.Capp) loggingv1beta1.Flow 
 // CleanUp deletes the flow resource associated with the Capp object.
 // The flow resource is deleted by calling the DeleteResource method of the resourceManager object.
 func (f FlowManager) CleanUp(capp rcsv1alpha1.Capp) error {
-	flowName := capp.GetName() + "-flow"
-	resourceManager := rclient.ResourceBaseManager{Ctx: f.Ctx, K8sclient: f.K8sclient, Log: f.Log}
-	flow := loggingv1beta1.Flow{}
-	if err := resourceManager.DeleteResource(&flow, flowName, capp.Namespace); err != nil {
-		return fmt.Errorf("unable to delete flow %s: %s", flowName, err.Error())
+
+	if f.isRequired(capp) {
+		flowName := capp.GetName() + "-flow"
+		resourceManager := rclient.ResourceBaseManagerClient{Ctx: f.Ctx, K8sclient: f.K8sclient, Log: f.Log}
+		flow := loggingv1beta1.Flow{}
+		if err := resourceManager.DeleteResource(&flow, flowName, capp.Namespace); err != nil {
+			return fmt.Errorf("unable to delete flow %s: %s", flowName, err.Error())
+		}
+
 	}
 	return nil
+}
+
+// isRequired responsible to determine if resource logging operator flow is required.
+func (f FlowManager) isRequired(capp rcsv1alpha1.Capp) bool {
+	if capp.Spec.LogSpec != (rcsv1alpha1.LogSpec{}) {
+		return capp.Spec.LogSpec.Type == LogTypeElastic || capp.Spec.LogSpec.Type == LogTypeSplunk
+	}
+	return false
 }
 
 // CreateOrUpdateObject creates or updates a flow object based on the provided capp.
@@ -80,15 +91,17 @@ func (f FlowManager) CleanUp(capp rcsv1alpha1.Capp) error {
 func (f FlowManager) CreateOrUpdateObject(capp rcsv1alpha1.Capp) error {
 	flowName := capp.GetName() + "-flow"
 	logger := f.Log.WithValues("FlowName", flowName, "FlowNamespace", capp.Namespace)
-	if capp.Spec.LogSpec.Type == LogTypeElastic || capp.Spec.LogSpec.Type == LogTypeSplunk {
+
+	if f.isRequired(capp) {
 		generatedFlow := f.prepareResource(capp)
 		// get instance of current flow
 		currentFlow := loggingv1beta1.Flow{}
-		resourceManager := rclient.ResourceBaseManager{Ctx: f.Ctx, K8sclient: f.K8sclient, Log: f.Log}
+		resourceManager := rclient.ResourceBaseManagerClient{Ctx: f.Ctx, K8sclient: f.K8sclient, Log: f.Log}
 		logger.Info("Trying to fetch existing flow")
 		switch err := f.K8sclient.Get(f.Ctx, types.NamespacedName{Namespace: capp.Namespace, Name: flowName}, &currentFlow); {
 		case errors.IsNotFound(err):
-			logger.Error(err, fmt.Sprintf("didn't find existing flow"))
+			logger.Info("didn't find flow")
+
 			if err := resourceManager.CreateResource(&generatedFlow); err != nil {
 				f.EventRecorder.Event(&capp, eventTypeError, eventCappFlowCreationFailed, fmt.Sprintf("Failed to create flow %s for Capp %s", flowName, capp.Name))
 				return fmt.Errorf("failed to create flow %s: %s", flowName, err.Error())
