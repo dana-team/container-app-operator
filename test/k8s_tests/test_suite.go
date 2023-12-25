@@ -45,7 +45,7 @@ func newScheme() *runtime.Scheme {
 	return s
 }
 
-var _ = BeforeSuite(func() {
+var _ = SynchronizedBeforeSuite(func() {
 	// Get the cluster configuration.
 	// get the k8sClient or die
 	config, err := config.GetConfig()
@@ -70,9 +70,9 @@ var _ = BeforeSuite(func() {
 		return utilst.DoesResourceExist(k8sClient, namespace)
 	}, TimeoutNameSpace, NsFetchInterval).Should(BeTrue(), "The namespace should be created")
 
-})
+}, func() {})
 
-var _ = AfterSuite(func() {
+var _ = SynchronizedAfterSuite(func() {}, func() {
 	cleanUp()
 })
 

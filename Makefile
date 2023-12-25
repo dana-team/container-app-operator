@@ -61,7 +61,7 @@ test: manifests generate fmt vet envtest ## Run tests.
 .PHONY: test-e2e
 test-e2e: ginkgo
 	go clean -testcache
-	$(LOCALBIN)/ginkgo ./test/k8s_tests/...
+	$(LOCALBIN)/ginkgo -p ./test/k8s_tests/...
 
 ##@ Build Dependencies
 
