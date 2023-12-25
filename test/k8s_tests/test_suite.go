@@ -28,7 +28,9 @@ var (
 )
 
 const (
+
 	TimeoutNameSpace = 5 * time.Minute
+
 	NsFetchInterval  = 5 * time.Second
 )
 
