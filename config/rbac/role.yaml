@@ -6,6 +6,22 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
+  - ""
+  resources:
+  - nodes
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - logging.banzaicloud.io
   resources:
   - flows
@@ -67,6 +83,7 @@ rules:
   - domainmappings
   verbs:
   - create
+  - delete
   - get
   - list
   - update
@@ -87,6 +104,7 @@ rules:
   - services
   verbs:
   - create
+  - delete
   - get
   - list
   - update

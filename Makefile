@@ -56,11 +56,14 @@ vet: ## Run go vet against code.
 
 .PHONY: test
 test: manifests generate fmt vet envtest ## Run tests.
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./... -coverprofile cover.out
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./internals/... -coverprofile cover.out
 
 .PHONY: test-e2e
-test-e2e: install-kuttl
-	kubectl kuttl test ./test/e2e
+test-e2e: ginkgo
+	go clean -testcache
+	$(LOCALBIN)/ginkgo ./test/k8s_tests/...
+
+##@ Build Dependencies
 
 ##@ Build
 
@@ -143,12 +146,15 @@ install-logging: ## Install logging operator on the kind cluster
 .PHONY: prereq
 prereq: install install-knative install-helm install-logging  ## Install every prerequisite needed to develop on container-app-operator.
 
+
 ##@ Build Dependencies
 
 ## Location to install dependencies to
 LOCALBIN ?= $(shell pwd)/bin
 $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
+
+GINKGO ?= $(LOCALBIN)/ginkgo
 
 KNATIVE_URL ?= https://github.com/knative-extensions/kn-plugin-quickstart/releases/download/knative-v1.11.0/kn-quickstart-linux-amd64
 HELM_URL ?= https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
@@ -172,6 +178,12 @@ $(KUSTOMIZE): $(LOCALBIN)
 	fi
 	test -s $(LOCALBIN)/kustomize || { curl -Ss $(KUSTOMIZE_INSTALL_SCRIPT) --output install_kustomize.sh && bash install_kustomize.sh $(subst v,,$(KUSTOMIZE_VERSION)) $(LOCALBIN); rm install_kustomize.sh; }
 
+.PHONY: ginkgo
+ginkgo: $(GINKGO) ## Download envtest-setup locally if necessary.
+$(GINKGO): $(LOCALBIN)
+	test -s $(LOCALBIN)/ginkgo || GOBIN=$(LOCALBIN) go install github.com/onsi/ginkgo/v2/ginkgo@latest
+
+
 .PHONY: controller-gen
 controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary. If wrong version is installed, it will be overwritten.
 $(CONTROLLER_GEN): $(LOCALBIN)
@@ -187,11 +199,4 @@ KUTTL_BINARY_INSTALLATION ?= "https://github.com/kudobuilder/kuttl/releases/down
 KUTTL_TAR_FILE_NAME ?= kuttl_0.15.0_linux_x86_64.tar.gz
 KUTTL_LOCATION ?= /usr/local/bin/kubectl-kuttl
 
-.PHONY: install-kuttl
-install-kuttl:
-	@if ! test -f "$(KUTTL_LOCATION)"; then \
-		curl -LO $(KUTTL_BINARY_INSTALLATION); \
-		tar -xvf $(KUTTL_TAR_FILE_NAME); \
-		sudo mv kubectl-kuttl /usr/local/bin/; \
-		rm -rf $(KUTTL_TAR_FILE_NAME); \
-	fi
+
