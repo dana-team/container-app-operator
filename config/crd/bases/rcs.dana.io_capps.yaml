@@ -7940,10 +7940,6 @@ spec:
                         type: object
                     type: object
                 type: object
-              enabled:
-                default: true
-                description: LogSpec defines if Capp is paused
-                type: boolean
               logSpec:
                 description: LogSpec defines the configuration for shipping Capp logs.
                 properties:
@@ -8258,19 +8254,6 @@ spec:
                   - type
                   type: object
                 type: array
-              enabledStatus:
-                description: EnabledStatus shows the current capp  halt state
-                properties:
-                  isEnabled:
-                    default: false
-                    description: IsEnabled is actual enabled state of the capp
-                    type: boolean
-                  lastChange:
-                    description: LastEnabledChange the last time the enabled state
-                      of capp changed
-                    format: date-time
-                    type: string
-                type: object
               knativeObjectStatus:
                 description: KnativeObjectStatus represents the Status stanza of the
                   Service resource.
@@ -8511,6 +8494,18 @@ spec:
                       problemsCount:
                         type: integer
                     type: object
+                type: object
+              stateStatus:
+                description: StateStatus shows the current capp state
+                properties:
+                  lastChange:
+                    description: LastChange is the last time the state of capp changed
+                    format: date-time
+                    type: string
+                  state:
+                    default: running
+                    description: State is actual enabled state of the capp
+                    type: string
                 type: object
             type: object
         type: object

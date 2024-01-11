@@ -2,6 +2,7 @@ package status_utils
 
 import (
 	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	"github.com/dana-team/container-app-operator/internals/utils"
 	"github.com/go-logr/logr"
 	"golang.org/x/net/context"
 	"k8s.io/apimachinery/pkg/labels"
@@ -49,7 +50,7 @@ func buildKnativeStatus(ctx context.Context, kubeClient client.Client, logger lo
 	capp rcsv1alpha1.Capp) (knativev1.ServiceStatus, []rcsv1alpha1.RevisionInfo, error) {
 	KnativeObjectStatus := knativev1.ServiceStatus{}
 	RevisionInfo := []rcsv1alpha1.RevisionInfo{}
-	if capp.Spec.Enabled {
+	if !utils.DoesHaltAnnotationExist(capp.Annotations) {
 		kservice := &knativev1.Service{}
 		if err := kubeClient.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: capp.Name}, kservice); err != nil {
 			return KnativeObjectStatus, RevisionInfo, err

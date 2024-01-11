@@ -22,6 +22,7 @@ import (
 
 const (
 	danaAnnotationsPrefix = "rcs.dana.io"
+	capHaltState          = "halted"
 )
 
 type KnativeServiceManager struct {
@@ -83,13 +84,13 @@ func (k KnativeServiceManager) CleanUp(capp rcsv1alpha1.Capp) error {
 
 // isRequired determines if a Knative service (ksvc) is required based on the Capp's spec.
 func (k KnativeServiceManager) isRequired(capp rcsv1alpha1.Capp) bool {
-	return capp.Spec.Enabled
+	return !utils.DoesHaltAnnotationExist(capp.Annotations)
 }
 
 // isResumed determines if a given Capp resource has resumed its operation.
 func isResumed(capp rcsv1alpha1.Capp) bool {
-	return !capp.Status.EnabledStatus.IsEnabled && capp.Spec.Enabled &&
-		!capp.Status.EnabledStatus.LastChange.IsZero()
+	return capp.Status.StateStatus.State == capHaltState && !utils.DoesHaltAnnotationExist(capp.Annotations) &&
+		!capp.Status.StateStatus.LastChange.IsZero()
 }
 
 // CreateOrUpdateObject ensures a KnativeService resource exists based on the provided Capp.
