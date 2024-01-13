@@ -1,5 +1,4 @@
-name: Pre Merge E2E test
-
+name: pre-merge
 on:
   pull_request:
     branches:
@@ -76,5 +75,5 @@ jobs:
         run: make prereq
       - name: Deploy to cluster
         run: make install deploy IMG=${IMAGE_REGISTRY}/container-app-operator:test-${GITHUB_REF##*/}
-      - name: E2e-test
+      - name: Run e2e tests
         run: make test-e2e

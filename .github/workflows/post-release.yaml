@@ -1,12 +1,10 @@
-name: Post release publish
+name: post-release
 on:
-
   release:
     types: [published]
 env:
   REGISTRY: ghcr.io
   REPOSITORY_NAME: ${{ github.repository }}
-  DANA_ORG: dana-team
 
 jobs:
   build-and-push-image:

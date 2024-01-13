@@ -6,12 +6,12 @@ import (
 
 	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/dana-team/container-app-operator/internals/utils"
-	autoscale_utils "github.com/dana-team/container-app-operator/internals/utils/autoscale"
+	autoscaleutils "github.com/dana-team/container-app-operator/internals/utils/autoscale"
 	"github.com/dana-team/container-app-operator/internals/utils/finalizer"
 	"github.com/dana-team/container-app-operator/internals/utils/secure"
 	rclient "github.com/dana-team/container-app-operator/internals/wrappers"
 	networkingv1 "github.com/openshift/api/network/v1"
-	knativev1alphav1 "knative.dev/serving/pkg/apis/serving/v1alpha1"
+	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/scale/scheme"
@@ -32,10 +32,10 @@ func newScheme() *runtime.Scheme {
 	s := runtime.NewScheme()
 	_ = corev1.AddToScheme(s)
 	_ = rcsv1alpha1.AddToScheme(s)
-	_ = knativev1alphav1.AddToScheme(s)
+	_ = knativev1beta1.AddToScheme(s)
 	_ = knativev1.AddToScheme(s)
-	_ = networkingv1.AddToScheme(s)
-	_ = routev1.AddToScheme(s)
+	_ = networkingv1.Install(s)
+	_ = routev1.Install(s)
 	_ = scheme.AddToScheme(s)
 	return s
 }
@@ -74,7 +74,7 @@ func TestSetAutoScaler(t *testing.T) {
 		"autoscaling.knative.dev/metric":           "cpu",
 		"autoscaling.knative.dev/target":           "80",
 	}
-	annotations_cpu := autoscale_utils.SetAutoScaler(example_capp)
+	annotations_cpu := autoscaleutils.SetAutoScaler(example_capp)
 	assert.Equal(t, example_capp_cpu_expected, annotations_cpu)
 
 	example_capp.Spec.ScaleMetric = "rps"
@@ -84,7 +84,7 @@ func TestSetAutoScaler(t *testing.T) {
 		"autoscaling.knative.dev/metric":           "rps",
 		"autoscaling.knative.dev/target":           "200",
 	}
-	annotations_rps := autoscale_utils.SetAutoScaler(example_capp)
+	annotations_rps := autoscaleutils.SetAutoScaler(example_capp)
 	assert.Equal(t, example_capp_rps_expected, annotations_rps)
 
 }
@@ -105,7 +105,7 @@ func TestSetHttpsKnativeDomainMapping(t *testing.T) {
 		},
 	}
 
-	knativeDomainMapping := &knativev1alphav1.DomainMapping{
+	knativeDomainMapping := &knativev1beta1.DomainMapping{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-dm",
 			Namespace: "test-ns",

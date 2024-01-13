@@ -14,7 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/scale/scheme"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
-	knativev1alphav1 "knative.dev/serving/pkg/apis/serving/v1alpha1"
+	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
@@ -24,7 +24,7 @@ const CappResourceKey = "rcs.dana.io/parent-capp"
 func newScheme() *runtime.Scheme {
 	s := runtime.NewScheme()
 	_ = rcsv1alpha1.AddToScheme(s)
-	_ = knativev1alphav1.AddToScheme(s)
+	_ = knativev1beta1.AddToScheme(s)
 	_ = knativev1.AddToScheme(s)
 	_ = scheme.AddToScheme(s)
 	return s
@@ -35,7 +35,7 @@ func newFakeClient() client.Client {
 	return fake.NewClientBuilder().WithScheme(scheme).Build()
 }
 
-func genrateBaseCapp() rcsv1alpha1.Capp {
+func generateBaseCapp() rcsv1alpha1.Capp {
 	capp := rcsv1alpha1.Capp{
 		Spec: rcsv1alpha1.CappSpec{
 			RouteSpec: rcsv1alpha1.RouteSpec{},
@@ -51,7 +51,7 @@ func genrateBaseCapp() rcsv1alpha1.Capp {
 func TestCleanUpKnativeSerivce(t *testing.T) {
 	fakeClient := newFakeClient()
 	ctx := context.Background()
-	capp := genrateBaseCapp()
+	capp := generateBaseCapp()
 	kService := knativev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-capp",
@@ -72,14 +72,14 @@ func TestCleanUpKnativeSerivce(t *testing.T) {
 func TestCleanUpDomainMapping(t *testing.T) {
 	fakeClient := newFakeClient()
 	ctx := context.Background()
-	capp := genrateBaseCapp()
+	capp := generateBaseCapp()
 	capp.Spec.RouteSpec.Hostname = "test-dm"
-	domainMapping := knativev1alphav1.DomainMapping{
+	domainMapping := knativev1beta1.DomainMapping{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-dm",
 			Namespace: "test-ns",
 		},
-		Spec: knativev1alphav1.DomainMappingSpec{},
+		Spec: knativev1beta1.DomainMappingSpec{},
 	}
 	fakeClient.Create(ctx, &capp)
 	fakeClient.Create(ctx, &domainMapping)
@@ -92,9 +92,9 @@ func TestCleanUpDomainMapping(t *testing.T) {
 func TestDommainMappingHostname(t *testing.T) {
 	fakeClient := newFakeClient()
 	ctx := context.Background()
-	capp := genrateBaseCapp()
+	capp := generateBaseCapp()
 	capp.Spec.RouteSpec.Hostname = "dma.dev"
-	domainMapping := knativev1alphav1.DomainMapping{
+	domainMapping := knativev1beta1.DomainMapping{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "dma.dev",
 			Namespace: "test-ns",
@@ -105,7 +105,7 @@ func TestDommainMappingHostname(t *testing.T) {
 				CappResourceKey: capp.Name,
 			},
 		},
-		Spec: knativev1alphav1.DomainMappingSpec{},
+		Spec: knativev1beta1.DomainMappingSpec{},
 	}
 	fakeClient.Create(ctx, &capp)
 	fakeClient.Create(ctx, &domainMapping)
