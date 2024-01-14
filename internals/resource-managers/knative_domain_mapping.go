@@ -6,7 +6,7 @@ import (
 	"reflect"
 
 	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
-	secure_utils "github.com/dana-team/container-app-operator/internals/utils/secure"
+	secureutils "github.com/dana-team/container-app-operator/internals/utils/secure"
 	rclient "github.com/dana-team/container-app-operator/internals/wrappers"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -14,7 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
-	knativev1alphav1 "knative.dev/serving/pkg/apis/serving/v1alpha1"
+	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"k8s.io/apimachinery/pkg/labels"
@@ -34,8 +34,8 @@ type KnativeDomainMappingManager struct {
 // PrepareKnativeDomainMapping creates a new DomainMapping for a Knative service.
 // Takes a context.Context object, and a rcsv1alpha1.Capp object as input.
 // Returns a knativev1alphav1.DomainMapping object.
-func (k KnativeDomainMappingManager) prepareResource(capp rcsv1alpha1.Capp) knativev1alphav1.DomainMapping {
-	knativeDomainMapping := &knativev1alphav1.DomainMapping{
+func (k KnativeDomainMappingManager) prepareResource(capp rcsv1alpha1.Capp) knativev1beta1.DomainMapping {
+	knativeDomainMapping := &knativev1beta1.DomainMapping{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      capp.Spec.RouteSpec.Hostname,
@@ -47,7 +47,7 @@ func (k KnativeDomainMappingManager) prepareResource(capp rcsv1alpha1.Capp) knat
 				CappResourceKey: capp.Name,
 			},
 		},
-		Spec: knativev1alphav1.DomainMappingSpec{
+		Spec: knativev1beta1.DomainMappingSpec{
 			Ref: duckv1.KReference{
 				APIVersion: knativev1.SchemeGroupVersion.String(),
 				Name:       capp.Name,
@@ -56,7 +56,7 @@ func (k KnativeDomainMappingManager) prepareResource(capp rcsv1alpha1.Capp) knat
 		},
 	}
 	resourceManager := rclient.ResourceBaseManagerClient{Ctx: k.Ctx, K8sclient: k.K8sclient, Log: k.Log}
-	secure_utils.SetHttpsKnativeDomainMapping(capp, knativeDomainMapping, resourceManager, k.EventRecorder)
+	secureutils.SetHttpsKnativeDomainMapping(capp, knativeDomainMapping, resourceManager, k.EventRecorder)
 	return *knativeDomainMapping
 }
 
@@ -65,7 +65,7 @@ func (k KnativeDomainMappingManager) CleanUp(capp rcsv1alpha1.Capp) error {
 		return nil
 	}
 	resourceManager := rclient.ResourceBaseManagerClient{Ctx: k.Ctx, K8sclient: k.K8sclient, Log: k.Log}
-	DomainMapping := knativev1alphav1.DomainMapping{}
+	DomainMapping := knativev1beta1.DomainMapping{}
 	if err := resourceManager.DeleteResource(&DomainMapping, capp.Spec.RouteSpec.Hostname, capp.Namespace); err != nil {
 		return fmt.Errorf("unable to delete DomainMapping %s: %s", capp.Spec.RouteSpec.Hostname, err.Error())
 	}
@@ -84,7 +84,7 @@ func (k KnativeDomainMappingManager) CreateOrUpdateObject(capp rcsv1alpha1.Capp)
 	}
 	if k.isRequired(capp) {
 		cappDomainMapping := k.prepareResource(capp)
-		knativeDomainMapping := knativev1alphav1.DomainMapping{}
+		knativeDomainMapping := knativev1beta1.DomainMapping{}
 		resourceManager := rclient.ResourceBaseManagerClient{Ctx: k.Ctx, K8sclient: k.K8sclient, Log: k.Log}
 		if err := k.K8sclient.Get(k.Ctx, types.NamespacedName{Namespace: capp.Namespace, Name: capp.Spec.RouteSpec.Hostname}, &knativeDomainMapping); err != nil {
 			if errors.IsNotFound(err) {
@@ -118,14 +118,14 @@ func (k KnativeDomainMappingManager) HandleIrrelevantDomainMapping(capp rcsv1alp
 	listOptions := client.ListOptions{
 		LabelSelector: labelSelector,
 	}
-	knativeDomainMappings := knativev1alphav1.DomainMappingList{}
+	knativeDomainMappings := knativev1beta1.DomainMappingList{}
 	if err := k.K8sclient.List(k.Ctx, &knativeDomainMappings, &listOptions); err != nil {
 		return fmt.Errorf("unable to list DomainMappings of Capp %s: %s", capp.Name, err.Error())
 	}
 	resourceManager := rclient.ResourceBaseManagerClient{Ctx: k.Ctx, K8sclient: k.K8sclient, Log: k.Log}
 	for _, domainMapping := range knativeDomainMappings.Items {
 		if domainMapping.Name != capp.Spec.RouteSpec.Hostname {
-			DomainMapping := knativev1alphav1.DomainMapping{}
+			DomainMapping := knativev1beta1.DomainMapping{}
 			if err := resourceManager.DeleteResource(&DomainMapping, domainMapping.Name, capp.Namespace); err != nil {
 				logger.Error(err, fmt.Sprintf("unable to delete irrelevant DomainMapping %s of Capp %s", domainMapping.Name, capp.Name))
 				return err

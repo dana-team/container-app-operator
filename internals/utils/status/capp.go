@@ -7,6 +7,7 @@ package status_utils
 import (
 	"context"
 	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	"github.com/dana-team/container-app-operator/internals/utils"
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -14,15 +15,23 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// CreateEnabledStatus responsible to change The enabled status by identfying changes in the spec
-func CreateEnabledStatus(enabledStatus *rcsv1alpha1.EnabledStatus, enabledFromSpec bool) {
-	if enabledFromSpec != enabledStatus.IsEnabled {
-		enabledStatus.IsEnabled = enabledFromSpec
-		enabledStatus.LastChange = metav1.Now()
+const (
+	cappHaltState    = "halted"
+	cappRunningState = "running"
+)
+
+// CreateStateStatus changes the state status by identifying changes in the manifest
+func CreateStateStatus(stateStatus *rcsv1alpha1.StateStatus, cappAnnotations map[string]string) {
+	cappStateToBool := map[string]bool{cappHaltState: true, cappRunningState: false}
+	boolToCappState := map[bool]string{false: cappRunningState, true: cappHaltState}
+	isHalted := utils.DoesHaltAnnotationExist(cappAnnotations)
+	if isHalted != cappStateToBool[stateStatus.State] || stateStatus.State == "" {
+		stateStatus.State = boolToCappState[isHalted]
+		stateStatus.LastChange = metav1.Now()
 	}
 }
 
-// This is the main function that synchronizes the status of the Capp CRD with the Knative service and revisions associated with it.
+// SyncStatus is the main function that synchronizes the status of the Capp CRD with the Knative service and revisions associated with it.
 // It gets the Capp CRD, builds the ApplicationLinks and RevisionInfo statuses, and updates the status of the Capp CRD if it has changed.
 func SyncStatus(ctx context.Context, capp rcsv1alpha1.Capp, log logr.Logger, r client.Client, onOpenshift bool) error {
 	cappObject := rcsv1alpha1.Capp{}
@@ -50,7 +59,7 @@ func SyncStatus(ctx context.Context, capp rcsv1alpha1.Capp, log logr.Logger, r c
 		cappObject.Status.LoggingStatus = loggingStatus
 	}
 
-	CreateEnabledStatus(&cappObject.Status.EnabledStatus, capp.Spec.Enabled)
+	CreateStateStatus(&cappObject.Status.StateStatus, capp.Annotations)
 	cappObject.Status.KnativeObjectStatus = knativeObjectStatus
 	cappObject.Status.RevisionInfo = revisionInfo
 	cappObject.Status.ApplicationLinks = *applicationLinks

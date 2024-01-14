@@ -2,6 +2,8 @@ apiVersion: rcs.dana.io/v1alpha1
 kind: Capp
 metadata:
   name: koki
+  "annotations": {
+  }
 spec:
   configurationSpec:
     template:
@@ -9,12 +11,12 @@ spec:
         creationTimestamp: null
       spec:
         containers:
-        - env:
-          - name: APP_NAME
-            value: capp-with-cluster
-          image: sahar2339/example-python-app:v1-flask
-          name: capp-with-cluster
-          resources: {}
+          - env:
+              - name: APP_NAME
+                value: capp-with-cluster
+            image: ghcr.io/knative/autoscale-go:latest
+            name: capp-with-cluster
+            resources: { }
   routeSpec:
     hostname: rbacqwegen.dev
   scaleMetric: cpu

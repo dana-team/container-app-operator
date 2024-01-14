@@ -28,10 +28,9 @@ var (
 )
 
 const (
-
 	TimeoutNameSpace = 5 * time.Minute
 
-	NsFetchInterval  = 5 * time.Second
+	NsFetchInterval = 5 * time.Second
 )
 
 func newScheme() *runtime.Scheme {
