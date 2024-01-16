@@ -46,6 +46,6 @@ var _ = Describe("Validate Capp adapter", func() {
 		utilst.DeleteCapp(k8sClient, assertionCapp)
 		Eventually(func() bool {
 			return utilst.DoesResourceExist(k8sClient, assertionCapp)
-		}, TimeoutCapp, CappCreationInterval).Should(BeFalse(), "Should not find a resource.")
+		}, TimeoutCapp, CappCreationInterval).ShouldNot(BeTrue(), "Should not find a resource.")
 	})
 })

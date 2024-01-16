@@ -3,8 +3,10 @@ package mocks
 import (
 	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
+	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
 )
 
 var (
@@ -49,6 +51,27 @@ func CreateBaseCapp() *rcsv1alpha1.Capp {
 			},
 			RouteSpec: rcsv1alpha1.RouteSpec{},
 			LogSpec:   rcsv1alpha1.LogSpec{},
+		},
+	}
+}
+
+func CreateSecretObject(secretName string) *v1.Secret {
+	return &v1.Secret{
+		TypeMeta: metav1.TypeMeta{},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretName,
+			Namespace: NsName,
+		},
+		Type: "Opaque",
+		Data: map[string][]byte{"extra": []byte("YmFyCg==")},
+	}
+}
+
+func CreateDomainMappingObject(domainMappingName string) *knativev1beta1.DomainMapping {
+	return &knativev1beta1.DomainMapping{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      domainMappingName,
+			Namespace: NsName,
 		},
 	}
 }
