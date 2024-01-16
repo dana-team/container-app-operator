@@ -8,10 +8,6 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-const (
-	cappHaltAnnotation = "capp.dana.io/state"
-)
-
 // IsOnOpenshift returns true if the cluster has the openshift config group
 func IsOnOpenshift(config *rest.Config) (bool, error) {
 	dc, err := discovery.NewDiscoveryClientForConfig(config)
@@ -28,16 +24,6 @@ func IsOnOpenshift(config *rest.Config) (bool, error) {
 		}
 	}
 	return false, nil
-}
-
-// DoesHaltAnnotationExist checks if capp halt annotation exists in annotations
-func DoesHaltAnnotationExist(annotations map[string]string) bool {
-	for annotation := range annotations {
-		if annotation == cappHaltAnnotation {
-			return true
-		}
-	}
-	return false
 }
 
 // FilterKeysWithoutPrefix removes keys from a map if they don't start with a given prefix

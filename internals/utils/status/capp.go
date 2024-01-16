@@ -7,7 +7,6 @@ package status_utils
 import (
 	"context"
 	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
-	"github.com/dana-team/container-app-operator/internals/utils"
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -16,17 +15,13 @@ import (
 )
 
 const (
-	cappHaltState    = "halted"
-	cappRunningState = "running"
+	cappEnabledState = "enabled"
 )
 
 // CreateStateStatus changes the state status by identifying changes in the manifest
-func CreateStateStatus(stateStatus *rcsv1alpha1.StateStatus, cappAnnotations map[string]string) {
-	cappStateToBool := map[string]bool{cappHaltState: true, cappRunningState: false}
-	boolToCappState := map[bool]string{false: cappRunningState, true: cappHaltState}
-	isHalted := utils.DoesHaltAnnotationExist(cappAnnotations)
-	if isHalted != cappStateToBool[stateStatus.State] || stateStatus.State == "" {
-		stateStatus.State = boolToCappState[isHalted]
+func CreateStateStatus(stateStatus *rcsv1alpha1.StateStatus, cappStateFromSpec string) {
+	if cappStateFromSpec != stateStatus.State || stateStatus.State == "" {
+		stateStatus.State = cappStateFromSpec
 		stateStatus.LastChange = metav1.Now()
 	}
 }
@@ -59,7 +54,7 @@ func SyncStatus(ctx context.Context, capp rcsv1alpha1.Capp, log logr.Logger, r c
 		cappObject.Status.LoggingStatus = loggingStatus
 	}
 
-	CreateStateStatus(&cappObject.Status.StateStatus, capp.Annotations)
+	CreateStateStatus(&cappObject.Status.StateStatus, capp.Spec.State)
 	cappObject.Status.KnativeObjectStatus = knativeObjectStatus
 	cappObject.Status.RevisionInfo = revisionInfo
 	cappObject.Status.ApplicationLinks = *applicationLinks
