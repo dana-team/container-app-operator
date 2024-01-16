@@ -37,6 +37,13 @@ type CappSpec struct {
 	// +optional
 	Site string `json:"site,omitempty"`
 
+	// State defines the state of capp
+	// Possible values examples: "enabled", "disabled".
+	// +optional
+	// +kubebuilder:default:="enabled"
+	// +kubebuilder:validation:Enum=enabled;disabled
+	State string `json:"state,omitempty"`
+
 	// ConfigurationSpec holds the desired state of the Configuration (from the client).
 	ConfigurationSpec knativev1.ConfigurationSpec `json:"configurationSpec"`
 
@@ -136,7 +143,6 @@ type RevisionInfo struct {
 
 type StateStatus struct {
 	// State is actual enabled state of the capp
-	// +kubebuilder:default:="running"
 	// +optional
 	State string `json:"state,omitempty"`
 

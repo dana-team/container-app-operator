@@ -22,7 +22,8 @@ import (
 
 const (
 	danaAnnotationsPrefix = "rcs.dana.io"
-	capHaltState          = "halted"
+	cappDisabledState     = "disabled"
+	cappEnabledState      = "enabled"
 )
 
 type KnativeServiceManager struct {
@@ -84,12 +85,12 @@ func (k KnativeServiceManager) CleanUp(capp rcsv1alpha1.Capp) error {
 
 // isRequired determines if a Knative service (ksvc) is required based on the Capp's spec.
 func (k KnativeServiceManager) isRequired(capp rcsv1alpha1.Capp) bool {
-	return !utils.DoesHaltAnnotationExist(capp.Annotations)
+	return capp.Spec.State == cappEnabledState
 }
 
-// isResumed determines if a given Capp resource has resumed its operation.
-func isResumed(capp rcsv1alpha1.Capp) bool {
-	return capp.Status.StateStatus.State == capHaltState && !utils.DoesHaltAnnotationExist(capp.Annotations) &&
+// isResumed checks whether the state changed from disabled to enabled.
+func (k KnativeServiceManager) isResumed(capp rcsv1alpha1.Capp) bool {
+	return capp.Status.StateStatus.State == cappDisabledState && k.isRequired(capp) &&
 		!capp.Status.StateStatus.LastChange.IsZero()
 }
 
@@ -102,8 +103,8 @@ func (k KnativeServiceManager) CreateOrUpdateObject(capp rcsv1alpha1.Capp) error
 	resourceManager := rclient.ResourceBaseManagerClient{Ctx: k.Ctx, K8sclient: k.K8sclient, Log: k.Log}
 	if !k.isRequired(capp) {
 		k.Log.Info("halting Capp")
-		k.EventRecorder.Event(&capp, eventTypeNormal, eventCappHalted,
-			fmt.Sprintf("Capp %s halted", capp.Name))
+		k.EventRecorder.Event(&capp, eventTypeNormal, eventCappDisabled,
+			fmt.Sprintf("Capp %s state changed to disabled", capp.Name))
 		return k.CleanUp(capp)
 	} else {
 		if err := k.K8sclient.Get(k.Ctx, types.NamespacedName{Namespace: capp.Namespace, Name: capp.Name},
@@ -115,10 +116,10 @@ func (k KnativeServiceManager) CreateOrUpdateObject(capp rcsv1alpha1.Capp) error
 							knativeService.Name, capp.Name))
 					return fmt.Errorf("unable to create KnativeService for Capp: %s", err.Error())
 				}
-				if isResumed(capp) {
+				if k.isResumed(capp) {
 					k.Log.Info("Capp resumed")
-					k.EventRecorder.Event(&capp, eventTypeNormal, eventCappResumed,
-						fmt.Sprintf("Capp %s is active", capp.Name))
+					k.EventRecorder.Event(&capp, eventTypeNormal, eventCappEnabled,
+						fmt.Sprintf("Capp %s state changed to enabled", capp.Name))
 				}
 			} else {
 				return err
