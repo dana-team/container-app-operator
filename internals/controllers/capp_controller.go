@@ -45,6 +45,8 @@ type CappReconciler struct {
 // +kubebuilder:rbac:groups=route.openshift.io,resources=routes,verbs=get;list;watch;update;create
 // +kubebuilder:rbac:groups="",resources=nodes,verbs=get;list;watch;
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;
+// +kubebuilder:rbac:groups="",resources=events,verbs=get;list;watch;update;create;
+// +kubebuilder:rbac:groups="events.k8s.io",resources=events,verbs=get;list;watch;update;create;
 
 func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx).WithValues("CappName", req.Name, "CappNamespace", req.Namespace)
