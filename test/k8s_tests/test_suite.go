@@ -16,7 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
-	knativev1alphav1 "knative.dev/serving/pkg/apis/serving/v1alpha1"
+	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrl "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -38,10 +38,10 @@ func newScheme() *runtime.Scheme {
 	_ = corev1.AddToScheme(s)
 	_ = rcsv1alpha1.AddToScheme(s)
 	_ = loggingv1beta1.AddToScheme(s)
-	_ = knativev1alphav1.AddToScheme(s)
+	_ = knativev1beta1.AddToScheme(s)
 	_ = knativev1.AddToScheme(s)
-	_ = networkingv1.AddToScheme(s)
-	_ = routev1.AddToScheme(s)
+	_ = networkingv1.Install(s)
+	_ = routev1.Install(s)
 	_ = scheme.AddToScheme(s)
 	return s
 }
