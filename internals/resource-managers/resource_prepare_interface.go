@@ -12,7 +12,6 @@ type ResourceManager interface {
 
 const (
 	eventTypeNormal                       = "Normal"
-	eventTypeWarning                      = "Warning"
 	eventTypeError                        = "Error"
 	eventCappFlowCreationFailed           = "FlowCreationFailed"
 	eventCappFlowCreated                  = "FlowCreated"
@@ -20,6 +19,6 @@ const (
 	eventCappKnativeServiceCreationFailed = "KnativeServiceCreationFailed"
 	eventCappOutputCreationFailed         = "OutputCreationFailed"
 	eventCappOutputCreated                = "OutputCreated"
-	eventCappHalted                       = "CappHalted"
-	eventCappResumed                      = "CappResumed"
+	eventCappDisabled                     = "CappDisabled"
+	eventCappEnabled                      = "CappEnabled"
 )
