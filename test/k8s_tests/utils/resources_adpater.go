@@ -79,3 +79,8 @@ func GenerateRouteHostname() string {
 func GenerateSecretName() string {
 	return generateName(RouteTlsSecret)
 }
+
+// UpdateSecret updates an existing Secret instance.
+func UpdateSecret(k8sClient client.Client, secret *v1.Secret) {
+	Expect(k8sClient.Update(context.Background(), secret)).To(Succeed())
+}

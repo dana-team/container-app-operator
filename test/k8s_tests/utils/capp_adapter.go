@@ -11,11 +11,12 @@ import (
 const (
 	TimeoutCapp          = 30 * time.Second
 	CappCreationInterval = 2 * time.Second
+	CappName             = "capp-default-test"
 )
 
 // CreateCapp creates a new Capp instance with a unique name and returns it.
 func CreateCapp(k8sClient client.Client, capp *rcsv1alpha1.Capp) *rcsv1alpha1.Capp {
-	cappName := generateName(capp.Name)
+	cappName := GenerateCappName()
 	newCapp := capp.DeepCopy()
 	newCapp.Name = cappName
 	Expect(k8sClient.Create(context.Background(), newCapp)).To(Succeed())
@@ -35,6 +36,12 @@ func UpdateCapp(k8sClient client.Client, capp *rcsv1alpha1.Capp) {
 func DeleteCapp(k8sClient client.Client, capp *rcsv1alpha1.Capp) {
 	Expect(k8sClient.Delete(context.Background(), capp)).To(Succeed())
 
+}
+
+// GenerateCappName generates a new secret name by calling
+// generateName with the predefined RouteTlsSecret as the baseName.
+func GenerateCappName() string {
+	return generateName(CappName)
 }
 
 // GetCapp fetch existing and return an instance of Capp.
