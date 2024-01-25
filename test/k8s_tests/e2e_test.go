@@ -1,7 +1,6 @@
 package k8s_tests
 
 import (
-	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	mock "github.com/dana-team/container-app-operator/test/k8s_tests/mocks"
 	utilst "github.com/dana-team/container-app-operator/test/k8s_tests/utils"
 	. "github.com/onsi/ginkgo/v2"
@@ -27,10 +26,9 @@ var _ = Describe("Validate Capp adapter", func() {
 	It("Should succeed all adapter functions", func() {
 		baseCapp := mock.CreateBaseCapp()
 		desiredCapp := utilst.CreateCapp(k8sClient, baseCapp)
-		assertionCapp := &rcsv1alpha1.Capp{}
 
 		By("Checks unique creation of Capp")
-		assertionCapp = utilst.GetCapp(k8sClient, desiredCapp.Name, desiredCapp.Namespace)
+		assertionCapp := utilst.GetCapp(k8sClient, desiredCapp.Name, desiredCapp.Namespace)
 		Expect(assertionCapp.Name).ShouldNot(Equal(baseCapp.Name))
 
 		By("Checks if Capp Updated successfully")

@@ -79,7 +79,7 @@ func (k KnativeDomainMappingManager) isRequired(capp rcsv1alpha1.Capp) bool {
 
 func (k KnativeDomainMappingManager) CreateOrUpdateObject(capp rcsv1alpha1.Capp) error {
 	if err := k.HandleIrrelevantDomainMapping(capp); err != nil {
-		k.Log.Error(err, fmt.Sprintf("failed to handle irrelevant DomainMappings"))
+		k.Log.Error(err, "failed to handle irrelevant DomainMappings")
 		return err
 	}
 	if k.isRequired(capp) {
