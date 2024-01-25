@@ -61,8 +61,8 @@ func TestCleanUpKnativeSerivce(t *testing.T) {
 			ConfigurationSpec: capp.Spec.ConfigurationSpec,
 		},
 	}
-	fakeClient.Create(ctx, &capp)
-	fakeClient.Create(ctx, &kService)
+	assert.NoError(t, fakeClient.Create(ctx, &capp), "Expected no error when creating capp")
+	assert.NoError(t, fakeClient.Create(ctx, &kService), "Expected no error when creating knative service")
 	knativeManager := resourceprepares.KnativeServiceManager{Ctx: ctx, Log: logr.Logger{}, K8sclient: fakeClient}
 	assert.NoError(t, knativeManager.CleanUp(capp), "Expected no error when calling clean up.")
 	err := fakeClient.Get(ctx, types.NamespacedName{Name: "test-capp", Namespace: "test-ns"}, &kService)
@@ -81,8 +81,8 @@ func TestCleanUpDomainMapping(t *testing.T) {
 		},
 		Spec: knativev1beta1.DomainMappingSpec{},
 	}
-	fakeClient.Create(ctx, &capp)
-	fakeClient.Create(ctx, &domainMapping)
+	assert.NoError(t, fakeClient.Create(ctx, &capp), "Expected no error when creating capp")
+	assert.NoError(t, fakeClient.Create(ctx, &domainMapping), "Expected no error when creating knative")
 	knativeManager := resourceprepares.KnativeServiceManager{Ctx: ctx, Log: logr.Logger{}, K8sclient: fakeClient}
 	assert.NoError(t, knativeManager.CleanUp(capp), "Expected no error when calling clean up.")
 	err := fakeClient.Get(ctx, types.NamespacedName{Name: "test-capp", Namespace: "test-ns"}, &domainMapping)
@@ -107,10 +107,10 @@ func TestDommainMappingHostname(t *testing.T) {
 		},
 		Spec: knativev1beta1.DomainMappingSpec{},
 	}
-	fakeClient.Create(ctx, &capp)
-	fakeClient.Create(ctx, &domainMapping)
+	assert.NoError(t, fakeClient.Create(ctx, &capp))
+	assert.NoError(t, fakeClient.Create(ctx, &domainMapping))
 	capp.Spec.RouteSpec.Hostname = "dmc.dev"
-	fakeClient.Update(ctx, &capp)
+	assert.NoError(t, fakeClient.Update(ctx, &capp))
 	knativeManager := resourceprepares.KnativeDomainMappingManager{Ctx: ctx, Log: logr.Logger{}, K8sclient: fakeClient}
 	assert.NoError(t, knativeManager.HandleIrrelevantDomainMapping(capp), "Expected no error when calling Handling DomainMapping hostname.")
 	err := fakeClient.Get(ctx, types.NamespacedName{Name: "dma.dev", Namespace: "test-ns"}, &domainMapping)
