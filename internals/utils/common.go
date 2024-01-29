@@ -15,6 +15,9 @@ func IsOnOpenshift(config *rest.Config) (bool, error) {
 		return false, err
 	}
 	apiGroups, err := dc.ServerGroups()
+	if err != nil {
+		return false, err
+	}
 	kind := schema.GroupVersionKind{Group: "config.openshift.io", Version: "v1", Kind: "ClusterVersion"}
 	for _, apiGroup := range apiGroups.Groups {
 		for _, supportedVersion := range apiGroup.Versions {

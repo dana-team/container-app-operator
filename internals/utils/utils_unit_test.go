@@ -45,19 +45,6 @@ func newFakeClient() client.Client {
 	return fake.NewClientBuilder().WithScheme(scheme).Build()
 }
 
-func genrateBaseCapp() rcsv1alpha1.Capp {
-	capp := rcsv1alpha1.Capp{
-		Spec: rcsv1alpha1.CappSpec{
-			RouteSpec: rcsv1alpha1.RouteSpec{},
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-capp",
-			Namespace: "test-ns",
-		},
-	}
-	return capp
-}
-
 func TestSetAutoScaler(t *testing.T) {
 	example_capp := rcsv1alpha1.Capp{
 		TypeMeta: metav1.TypeMeta{},
@@ -156,10 +143,10 @@ func TestEnsureFinalizer(t *testing.T) {
 		},
 	}
 	fakeClient := newFakeClient()
-	fakeClient.Create(ctx, capp)
-	fakeClient.Get(ctx, types.NamespacedName{Name: "test-capp", Namespace: "test-ns"}, capp)
+	assert.NoError(t, fakeClient.Create(ctx, capp), "Expected no error when creating capp")
+	assert.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: "test-capp", Namespace: "test-ns"}, capp))
 	assert.NoError(t, finalizer.EnsureFinalizer(ctx, *capp, fakeClient))
-	fakeClient.Get(ctx, types.NamespacedName{Name: "test-capp", Namespace: "test-ns"}, capp)
+	assert.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: "test-capp", Namespace: "test-ns"}, capp))
 	assert.Contains(t, capp.Finalizers, finalizer.FinalizerCleanupCapp)
 
 	// Check if there is no error after the finalizer exists.
@@ -183,10 +170,10 @@ func TestRemoveFinalizer(t *testing.T) {
 		},
 	}
 	fakeClient := newFakeClient()
-	fakeClient.Create(ctx, capp)
-	fakeClient.Get(ctx, types.NamespacedName{Name: "test-capp", Namespace: "test-ns"}, capp)
-	finalizer.RemoveFinalizer(ctx, *capp, ctrl.Log, fakeClient)
-	fakeClient.Get(ctx, types.NamespacedName{Name: "test-capp", Namespace: "test-ns"}, capp)
+	assert.NoError(t, fakeClient.Create(ctx, capp))
+	assert.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: "test-capp", Namespace: "test-ns"}, capp))
+	assert.NoError(t, finalizer.RemoveFinalizer(ctx, *capp, ctrl.Log, fakeClient), "Expected no error when removing finalizer")
+	assert.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: "test-capp", Namespace: "test-ns"}, capp))
 	assert.NotContains(t, capp.Finalizers, finalizer.FinalizerCleanupCapp)
 
 	// Check if there is no error after the finalizer removed.
