@@ -2,20 +2,17 @@ package mocks
 
 import (
 	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
-	"github.com/dana-team/container-app-operator/test/k8s_tests/utils"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
-	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
 )
 
 var (
+	CappName       = "capp-default-test"
 	NsName         = "capp-e2e-tests"
 	RPSScaleMetric = "rps"
 	SecretKey      = "extra"
 	SecretValue    = "YmFyCg=="
-	passEnvName    = "PASSWORD"
 )
 
 func CreateBaseCapp() *rcsv1alpha1.Capp {
@@ -25,7 +22,7 @@ func CreateBaseCapp() *rcsv1alpha1.Capp {
 			APIVersion: "rcs.dana.io/v1alpha1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      utils.CappName,
+			Name:      CappName,
 			Namespace: NsName,
 		},
 		Spec: rcsv1alpha1.CappSpec{
@@ -59,8 +56,8 @@ func CreateBaseCapp() *rcsv1alpha1.Capp {
 	}
 }
 
-func CreateSecretObject(secretName string) *v1.Secret {
-	return &v1.Secret{
+func CreateSecretObject(secretName string) *corev1.Secret {
+	return &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      secretName,
@@ -68,48 +65,5 @@ func CreateSecretObject(secretName string) *v1.Secret {
 		},
 		Type: "Opaque",
 		Data: map[string][]byte{SecretKey: []byte(SecretValue)},
-	}
-}
-
-func CreateDomainMappingObject(domainMappingName string) *knativev1beta1.DomainMapping {
-	return &knativev1beta1.DomainMapping{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      domainMappingName,
-			Namespace: NsName,
-		},
-	}
-}
-
-func CreateRevisionObject(revisionName string) *knativev1.Revision {
-	return &knativev1.Revision{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      revisionName,
-			Namespace: NsName,
-		},
-	}
-}
-
-func CreateKnativeServiceObject(knativeServiceName string) *knativev1.Service {
-	return &knativev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      knativeServiceName,
-			Namespace: NsName,
-		},
-	}
-}
-
-func CreateEnvVarObject(refName string) *[]corev1.EnvVar {
-	return &[]corev1.EnvVar{
-		{
-			Name: passEnvName,
-			ValueFrom: &corev1.EnvVarSource{
-				SecretKeyRef: &corev1.SecretKeySelector{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: refName,
-					},
-					Key: SecretKey,
-				},
-			},
-		},
 	}
 }

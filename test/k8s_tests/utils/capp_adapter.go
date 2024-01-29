@@ -3,6 +3,7 @@ package utils
 import (
 	"context"
 	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	mock "github.com/dana-team/container-app-operator/test/k8s_tests/mocks"
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"time"
@@ -11,7 +12,6 @@ import (
 const (
 	TimeoutCapp          = 30 * time.Second
 	CappCreationInterval = 2 * time.Second
-	CappName             = "capp-default-test"
 )
 
 // CreateCapp creates a new Capp instance with a unique name and returns it.
@@ -41,7 +41,7 @@ func DeleteCapp(k8sClient client.Client, capp *rcsv1alpha1.Capp) {
 // GenerateCappName generates a new secret name by calling
 // generateName with the predefined RouteTlsSecret as the baseName.
 func GenerateCappName() string {
-	return generateName(CappName)
+	return generateName(mock.CappName)
 }
 
 // GetCapp fetch existing and return an instance of Capp.

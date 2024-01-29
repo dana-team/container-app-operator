@@ -6,7 +6,7 @@ import (
 
 	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/dana-team/container-app-operator/internals/utils"
-	autoscale_utils "github.com/dana-team/container-app-operator/internals/utils/autoscale"
+	autoscaleutils "github.com/dana-team/container-app-operator/internals/utils/autoscale"
 	"github.com/dana-team/container-app-operator/internals/utils/finalizer"
 	networkingv1 "github.com/openshift/api/network/v1"
 	knativev1alphav1 "knative.dev/serving/pkg/apis/serving/v1alpha1"
@@ -30,32 +30,19 @@ func newScheme() *runtime.Scheme {
 	_ = rcsv1alpha1.AddToScheme(s)
 	_ = knativev1alphav1.AddToScheme(s)
 	_ = knativev1.AddToScheme(s)
-	_ = networkingv1.AddToScheme(s)
-	_ = routev1.AddToScheme(s)
+	_ = networkingv1.Install(s)
+	_ = routev1.Install(s)
 	_ = scheme.AddToScheme(s)
 	return s
 }
 
 func newFakeClient() client.Client {
-	scheme := newScheme()
-	return fake.NewClientBuilder().WithScheme(scheme).Build()
-}
-
-func genrateBaseCapp() rcsv1alpha1.Capp {
-	capp := rcsv1alpha1.Capp{
-		Spec: rcsv1alpha1.CappSpec{
-			RouteSpec: rcsv1alpha1.RouteSpec{},
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-capp",
-			Namespace: "test-ns",
-		},
-	}
-	return capp
+	Scheme := newScheme()
+	return fake.NewClientBuilder().WithScheme(Scheme).Build()
 }
 
 func TestSetAutoScaler(t *testing.T) {
-	example_capp := rcsv1alpha1.Capp{
+	exampleCapp := rcsv1alpha1.Capp{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test",
@@ -64,24 +51,24 @@ func TestSetAutoScaler(t *testing.T) {
 			ScaleMetric: "cpu",
 		},
 	}
-	example_capp_cpu_expected := map[string]string{
+	exampleCappCpuExpected := map[string]string{
 		"autoscaling.knative.dev/activation-scale": "3",
 		"autoscaling.knative.dev/class":            "hpa.autoscaling.knative.dev",
 		"autoscaling.knative.dev/metric":           "cpu",
 		"autoscaling.knative.dev/target":           "80",
 	}
-	annotations_cpu := autoscale_utils.SetAutoScaler(example_capp)
-	assert.Equal(t, example_capp_cpu_expected, annotations_cpu)
+	annotationsCpu := autoscaleutils.SetAutoScaler(exampleCapp)
+	assert.Equal(t, exampleCappCpuExpected, annotationsCpu)
 
-	example_capp.Spec.ScaleMetric = "rps"
-	example_capp_rps_expected := map[string]string{
+	exampleCapp.Spec.ScaleMetric = "rps"
+	exampleCappRpsExpected := map[string]string{
 		"autoscaling.knative.dev/activation-scale": "3",
 		"autoscaling.knative.dev/class":            "kpa.autoscaling.knative.dev",
 		"autoscaling.knative.dev/metric":           "rps",
 		"autoscaling.knative.dev/target":           "200",
 	}
-	annotations_rps := autoscale_utils.SetAutoScaler(example_capp)
-	assert.Equal(t, example_capp_rps_expected, annotations_rps)
+	annotationsRps := autoscaleutils.SetAutoScaler(exampleCapp)
+	assert.Equal(t, exampleCappRpsExpected, annotationsRps)
 
 }
 
