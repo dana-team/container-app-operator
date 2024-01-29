@@ -8,6 +8,7 @@ import (
 	"strconv"
 )
 
+// GetNextRevisionName generates the name for the next revision based on the current revision name.
 func GetNextRevisionName(currentRevision string) string {
 	re := regexp.MustCompile(`(\d+)$`)
 	match := re.FindStringSubmatch(currentRevision)
