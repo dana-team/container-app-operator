@@ -77,7 +77,7 @@ func main() {
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
-	flag.BoolVar(&ecsLogging, "ecs-logging", false, "Display controller logs in ecs format.")
+	flag.BoolVar(&ecsLogging, "ecs-logging", true, "Display controller logs in ecs format.")
 
 	flag.Parse()
 
