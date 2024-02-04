@@ -2,15 +2,11 @@ package utils_test
 
 import (
 	"context"
-	"testing"
-
 	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/dana-team/container-app-operator/internals/utils"
 	autoscaleutils "github.com/dana-team/container-app-operator/internals/utils/autoscale"
 	"github.com/dana-team/container-app-operator/internals/utils/finalizer"
 	networkingv1 "github.com/openshift/api/network/v1"
-	knativev1alphav1 "knative.dev/serving/pkg/apis/serving/v1alpha1"
-
 	routev1 "github.com/openshift/api/route/v1"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
@@ -19,9 +15,11 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/scale/scheme"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
+	knativev1alphav1 "knative.dev/serving/pkg/apis/serving/v1alpha1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"testing"
 )
 
 func newScheme() *runtime.Scheme {
