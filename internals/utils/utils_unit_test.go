@@ -2,8 +2,6 @@ package utils_test
 
 import (
 	"context"
-	"testing"
-
 	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/dana-team/container-app-operator/internals/utils"
 	autoscaleutils "github.com/dana-team/container-app-operator/internals/utils/autoscale"
@@ -11,21 +9,20 @@ import (
 	"github.com/dana-team/container-app-operator/internals/utils/secure"
 	rclient "github.com/dana-team/container-app-operator/internals/wrappers"
 	networkingv1 "github.com/openshift/api/network/v1"
-	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
-
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/scale/scheme"
-	"k8s.io/client-go/tools/record"
-
 	routev1 "github.com/openshift/api/route/v1"
 	"github.com/stretchr/testify/assert"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/scale/scheme"
+	"k8s.io/client-go/tools/record"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
+	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"testing"
 )
 
 func newScheme() *runtime.Scheme {
@@ -46,7 +43,7 @@ func newFakeClient() client.Client {
 }
 
 func TestSetAutoScaler(t *testing.T) {
-	example_capp := rcsv1alpha1.Capp{
+	exampleCapp := rcsv1alpha1.Capp{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test",
@@ -55,22 +52,22 @@ func TestSetAutoScaler(t *testing.T) {
 			ScaleMetric: "cpu",
 		},
 	}
-	example_capp_cpu_expected := map[string]string{
+	exampleCappCpuExpected := map[string]string{
 		"autoscaling.knative.dev/class":  "hpa.autoscaling.knative.dev",
 		"autoscaling.knative.dev/metric": "cpu",
 		"autoscaling.knative.dev/target": "80",
 	}
-	annotations_cpu := autoscaleutils.SetAutoScaler(example_capp)
-	assert.Equal(t, example_capp_cpu_expected, annotations_cpu)
+	annotationsCpu := autoscaleutils.SetAutoScaler(exampleCapp)
+	assert.Equal(t, exampleCappCpuExpected, annotationsCpu)
 
-	example_capp.Spec.ScaleMetric = "rps"
-	example_capp_rps_expected := map[string]string{
+	exampleCapp.Spec.ScaleMetric = "rps"
+	exampleCappRpsExpected := map[string]string{
 		"autoscaling.knative.dev/class":  "kpa.autoscaling.knative.dev",
 		"autoscaling.knative.dev/metric": "rps",
 		"autoscaling.knative.dev/target": "200",
 	}
-	annotations_rps := autoscaleutils.SetAutoScaler(example_capp)
-	assert.Equal(t, example_capp_rps_expected, annotations_rps)
+	annotationsRps := autoscaleutils.SetAutoScaler(exampleCapp)
+	assert.Equal(t, exampleCappRpsExpected, annotationsRps)
 
 }
 

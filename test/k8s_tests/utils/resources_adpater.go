@@ -5,7 +5,7 @@ import (
 	"fmt"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
 	"math/rand"
@@ -64,7 +64,7 @@ func GetDomainMapping(k8sClient client.Client, name string, namespace string) *k
 }
 
 // CreateSecret creates a new secret.
-func CreateSecret(k8sClient client.Client, secret *v1.Secret) {
+func CreateSecret(k8sClient client.Client, secret *corev1.Secret) {
 	Expect(k8sClient.Create(context.Background(), secret)).To(Succeed())
 }
 
@@ -81,6 +81,6 @@ func GenerateSecretName() string {
 }
 
 // UpdateSecret updates an existing Secret instance.
-func UpdateSecret(k8sClient client.Client, secret *v1.Secret) {
+func UpdateSecret(k8sClient client.Client, secret *corev1.Secret) {
 	Expect(k8sClient.Update(context.Background(), secret)).To(Succeed())
 }

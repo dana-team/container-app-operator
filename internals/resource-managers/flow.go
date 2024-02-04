@@ -8,6 +8,7 @@ import (
 	"github.com/go-logr/logr"
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
 	"github.com/kube-logging/logging-operator/pkg/sdk/logging/model/filter"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -103,11 +104,11 @@ func (f FlowManager) CreateOrUpdateObject(capp rcsv1alpha1.Capp) error {
 			logger.Info("didn't find flow")
 
 			if err := resourceManager.CreateResource(&generatedFlow); err != nil {
-				f.EventRecorder.Event(&capp, eventTypeError, eventCappFlowCreationFailed, fmt.Sprintf("Failed to create flow %s for Capp %s", flowName, capp.Name))
+				f.EventRecorder.Event(&capp, corev1.EventTypeWarning, eventCappFlowCreationFailed, fmt.Sprintf("Failed to create flow %s for Capp %s", flowName, capp.Name))
 				return fmt.Errorf("failed to create flow %s: %s", flowName, err.Error())
 			}
 			logger.Info("Created flow successfully")
-			f.EventRecorder.Event(&capp, eventTypeNormal, eventCappFlowCreated, fmt.Sprintf("Created flow %s for Capp %s", flowName, capp.Name))
+			f.EventRecorder.Event(&capp, corev1.EventTypeNormal, eventCappFlowCreated, fmt.Sprintf("Created flow %s for Capp %s", flowName, capp.Name))
 		case err != nil:
 			return fmt.Errorf("failed to fetch existing flow %s: %s", flowName, err.Error())
 		}
