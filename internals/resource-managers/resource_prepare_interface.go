@@ -11,6 +11,8 @@ type ResourceManager interface {
 }
 
 const (
+	eventTypeNormal                       = "Normal"
+	eventTypeError                        = "Error"
 	eventCappFlowCreationFailed           = "FlowCreationFailed"
 	eventCappFlowCreated                  = "FlowCreated"
 	eventCappDomainMappingCreationFailed  = "DomainMappingCreationFailed"

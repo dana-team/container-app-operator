@@ -6,9 +6,11 @@ import (
 )
 
 const (
-	KnativeMetricKey          = "autoscaling.knative.dev/metric"
-	KnativeAutoscaleClassKey  = "autoscaling.knative.dev/class"
-	KnativeAutoscaleTargetKey = "autoscaling.knative.dev/target"
+	KnativeMetricKey            = "autoscaling.knative.dev/metric"
+	KnativeAutoscaleClassKey    = "autoscaling.knative.dev/class"
+	KnativeAutoscaleTargetKey   = "autoscaling.knative.dev/target"
+	KnativeActivationScaleKey   = "autoscaling.knative.dev/activation-scale"
+	KnativeActivationScaleValue = "3"
 )
 
 var TargetDefaultValues = map[string]string{
@@ -31,6 +33,7 @@ func SetAutoScaler(capp rcsv1alpha1.Capp) map[string]string {
 	autoScaleAnnotations[KnativeAutoscaleClassKey] = getAutoScaleClassByMetric(scaleMetric)
 	autoScaleAnnotations[KnativeMetricKey] = scaleMetric
 	autoScaleAnnotations[KnativeAutoscaleTargetKey] = TargetDefaultValues[scaleMetric]
+	autoScaleAnnotations[KnativeActivationScaleKey] = KnativeActivationScaleValue
 
 	return autoScaleAnnotations
 }
