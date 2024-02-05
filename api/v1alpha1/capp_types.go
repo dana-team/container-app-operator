@@ -125,11 +125,6 @@ type ApplicationLinks struct {
 	// Site holds the cluster name that the Capp is deployed on.
 	// +optional
 	Site string `json:"site,omitempty"`
-
-	// ClusterSegment holds the segment of the cluster
-	// that the Capp is deployed on.
-	// +optional
-	ClusterSegment string `json:"clusterSegment,omitempty"`
 }
 
 // RevisionInfo shows the revision information.
