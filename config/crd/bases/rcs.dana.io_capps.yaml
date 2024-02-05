@@ -8593,10 +8593,6 @@ spec:
                 description: ApplicationLinks contains relevant information about
                   the cluster that the Capp is deployed in.
                 properties:
-                  clusterSegment:
-                    description: ClusterSegment holds the segment of the cluster that
-                      the Capp is deployed on.
-                    type: string
                   consoleLink:
                     description: ConsoleLink holds a link for the Openshift cluster
                       console.
