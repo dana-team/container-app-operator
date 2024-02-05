@@ -9,7 +9,7 @@ import (
 	"github.com/go-logr/logr"
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
 	"github.com/kube-logging/logging-operator/pkg/sdk/logging/model/output"
-	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -56,8 +56,8 @@ func createElasticsearchOutput(logSpec rcsv1alpha1.LogSpec) loggingv1beta1.Outpu
 			User:       logSpec.UserName,
 			Password: &secret.Secret{
 				ValueFrom: &secret.ValueFrom{
-					SecretKeyRef: &corev1.SecretKeySelector{
-						LocalObjectReference: corev1.LocalObjectReference{Name: logSpec.PasswordSecretName},
+					SecretKeyRef: &v1.SecretKeySelector{
+						LocalObjectReference: v1.LocalObjectReference{Name: logSpec.PasswordSecretName},
 						Key:                  "elastic",
 					},
 				},
@@ -88,8 +88,8 @@ func createSplunkHecOutput(logSpec rcsv1alpha1.LogSpec) loggingv1beta1.OutputSpe
 			InsecureSSL: &insecureSSL,
 			HecToken: &secret.Secret{
 				ValueFrom: &secret.ValueFrom{
-					SecretKeyRef: &corev1.SecretKeySelector{
-						LocalObjectReference: corev1.LocalObjectReference{Name: logSpec.HecTokenSecretName},
+					SecretKeyRef: &v1.SecretKeySelector{
+						LocalObjectReference: v1.LocalObjectReference{Name: logSpec.HecTokenSecretName},
 						Key:                  "SplunkHecToken",
 					},
 				},
@@ -169,11 +169,11 @@ func (o OutputManager) CreateOrUpdateObject(capp rcsv1alpha1.Capp) error {
 			logger.Error(err, "didn't find existing output")
 			if err := resourceManager.CreateResource(&generatedOutput); err != nil {
 				logger.Error(err, "failed to create output")
-				o.EventRecorder.Event(&capp, corev1.EventTypeWarning, eventCappOutputCreationFailed, fmt.Sprintf("Failed to create output %s for Capp %s", outputName, capp.Name))
+				o.EventRecorder.Event(&capp, eventTypeError, eventCappOutputCreationFailed, fmt.Sprintf("Failed to create output %s for Capp %s", outputName, capp.Name))
 				return err
 			}
 			logger.Info("Created output successfully")
-			o.EventRecorder.Event(&capp, corev1.EventTypeNormal, eventCappOutputCreated, fmt.Sprintf("Created output %s for Capp %s", outputName, capp.Name))
+			o.EventRecorder.Event(&capp, eventTypeNormal, eventCappOutputCreated, fmt.Sprintf("Created output %s for Capp %s", outputName, capp.Name))
 		case err != nil:
 			logger.Error(err, "failed to fetch existing output")
 			return err

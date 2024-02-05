@@ -3,22 +3,23 @@ package resourceprepares
 import (
 	"context"
 	"fmt"
+	"reflect"
+
 	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	secureutils "github.com/dana-team/container-app-operator/internals/utils/secure"
 	rclient "github.com/dana-team/container-app-operator/internals/wrappers"
 	"github.com/go-logr/logr"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
-	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
+	"k8s.io/client-go/tools/record"
 )
 
 const CappResourceKey = "rcs.dana.io/parent-capp"
@@ -88,7 +89,7 @@ func (k KnativeDomainMappingManager) CreateOrUpdateObject(capp rcsv1alpha1.Capp)
 		if err := k.K8sclient.Get(k.Ctx, types.NamespacedName{Namespace: capp.Namespace, Name: capp.Spec.RouteSpec.Hostname}, &knativeDomainMapping); err != nil {
 			if errors.IsNotFound(err) {
 				if err := resourceManager.CreateResource(&cappDomainMapping); err != nil {
-					k.EventRecorder.Event(&capp, corev1.EventTypeWarning, eventCappDomainMappingCreationFailed, fmt.Sprintf("Failed to create DomainMapping %s for Capp %s", capp.Spec.RouteSpec.Hostname, capp.Name))
+					k.EventRecorder.Event(&capp, eventTypeError, eventCappDomainMappingCreationFailed, fmt.Sprintf("Failed to create DomainMapping %s for Capp %s", capp.Spec.RouteSpec.Hostname, capp.Name))
 					return fmt.Errorf("unable to create DomainMapping: %s", err.Error())
 				}
 			} else {

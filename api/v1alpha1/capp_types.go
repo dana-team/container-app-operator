@@ -30,6 +30,8 @@ type CappSpec struct {
 	// ScaleMetric defines which metric type is watched by the Autoscaler.
 	// Possible values examples: "concurrency", "rps", "cpu", "memory".
 	// +optional
+	// +kubebuilder:default:="concurrency"
+	// +kubebuilder:validation:Enum=cpu;memory;rps;concurrency
 	ScaleMetric string `json:"scaleMetric,omitempty"`
 
 	// Site defines where to deploy the Capp.
