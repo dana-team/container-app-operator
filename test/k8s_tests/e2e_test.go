@@ -14,6 +14,7 @@ import (
 const (
 	TimeoutCapp          = 60 * time.Second
 	CappCreationInterval = 2 * time.Second
+	UnsupportedScaleMetric = "storage"
 	EnabledState         = "enabled"
 	DisabledState        = "disabled"
 )
