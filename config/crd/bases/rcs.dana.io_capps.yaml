@@ -8451,9 +8451,15 @@ spec:
                     type: object
                 type: object
               scaleMetric:
+                default: concurrency
                 description: 'ScaleMetric defines which metric type is watched by
                   the Autoscaler. Possible values examples: "concurrency", "rps",
                   "cpu", "memory".'
+                enum:
+                - cpu
+                - memory
+                - rps
+                - concurrency
                 type: string
               site:
                 description: Site defines where to deploy the Capp. It can be a specific
@@ -8593,10 +8599,6 @@ spec:
                 description: ApplicationLinks contains relevant information about
                   the cluster that the Capp is deployed in.
                 properties:
-                  clusterSegment:
-                    description: ClusterSegment holds the segment of the cluster that
-                      the Capp is deployed on.
-                    type: string
                   consoleLink:
                     description: ConsoleLink holds a link for the Openshift cluster
                       console.

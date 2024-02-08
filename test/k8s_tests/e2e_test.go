@@ -2,12 +2,13 @@ package k8s_tests
 
 import (
 	_ "github.com/dana-team/container-app-operator/api/v1alpha1"
+	"context"
+	"testing"
+	"time"
 	mock "github.com/dana-team/container-app-operator/test/k8s_tests/mocks"
 	utilst "github.com/dana-team/container-app-operator/test/k8s_tests/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"testing"
-	"time"
 )
 
 const (
@@ -23,6 +24,19 @@ func TestE2e(t *testing.T) {
 	SetDefaultEventuallyTimeout(time.Second * 2)
 	RunSpecs(t, "Capp Suite")
 }
+
+var _ = Describe("Validate capp creation", func() {
+	It("Should validate capp spec", func() {
+		baseCapp := mock.CreateBaseCapp()
+		By("Creating Capp with no scale metric")
+		desiredCapp := utilst.CreateCapp(k8sClient, baseCapp)
+		Expect(desiredCapp.Spec.ScaleMetric).ShouldNot(Equal(nil))
+
+		By("Creating Capp with unsupported scale metric")
+		baseCapp.Spec.ScaleMetric = UnsupportedScaleMetric
+		Expect(k8sClient.Create(context.Background(), baseCapp)).ShouldNot(Equal(nil))
+	})
+})
 
 var _ = Describe("Validate Capp adapter", func() {
 

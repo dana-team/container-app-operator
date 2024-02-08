@@ -29,7 +29,8 @@ import (
 type CappSpec struct {
 	// ScaleMetric defines which metric type is watched by the Autoscaler.
 	// Possible values examples: "concurrency", "rps", "cpu", "memory".
-	// +optional
+	// +kubebuilder:default:="concurrency"
+	// +kubebuilder:validation:Enum=cpu;memory;rps;concurrency
 	ScaleMetric string `json:"scaleMetric,omitempty"`
 
 	// Site defines where to deploy the Capp.
@@ -123,11 +124,6 @@ type ApplicationLinks struct {
 	// Site holds the cluster name that the Capp is deployed on.
 	// +optional
 	Site string `json:"site,omitempty"`
-
-	// ClusterSegment holds the segment of the cluster
-	// that the Capp is deployed on.
-	// +optional
-	ClusterSegment string `json:"clusterSegment,omitempty"`
 }
 
 // RevisionInfo shows the revision information.
