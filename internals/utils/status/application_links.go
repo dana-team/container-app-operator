@@ -18,8 +18,7 @@ const (
 
 // This function builds the ApplicationLinks status of the Capp  by getting the console route.
 // It returns a pointer to the ApplicationLinks struct.
-func buildApplicationLinks(ctx context.Context, log logr.Logger,
-	r client.Client, onOpenshift bool) (*rcsv1alpha1.ApplicationLinks, error) {
+func buildApplicationLinks(ctx context.Context, log logr.Logger, r client.Client, onOpenshift bool) (*rcsv1alpha1.ApplicationLinks, error) {
 	applicationLinks := rcsv1alpha1.ApplicationLinks{}
 	if onOpenshift {
 		console, err := getClusterConsole(ctx, log, r)

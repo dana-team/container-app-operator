@@ -20,10 +20,8 @@ import (
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
+	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
 )
-
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 // CappSpec defines the desired state of Capp.
 type CappSpec struct {
@@ -147,7 +145,7 @@ type StateStatus struct {
 	LastChange metav1.Time `json:"lastChange,omitempty"`
 }
 
-// LoggingStatus defines the state of the flow and output linked to the capp.
+// LoggingStatus defines the state of the Flow and Output objects linked to the Capp.
 type LoggingStatus struct {
 	// Flow represents the Status of the Flow used by the Capp.
 	// +optional
@@ -160,6 +158,13 @@ type LoggingStatus struct {
 	// Conditions contain details about the current state of the Output and Flow used by the Capp.
 	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
+}
+
+// RouteStatus shows the state of the DomainMapping object linked to the Capp.
+type RouteStatus struct {
+	// DomainMappingObjectStatus is the status of the underlying DomainMapping object
+	// +optional
+	DomainMappingObjectStatus knativev1beta1.DomainMappingStatus `json:"domainMappingObjectStatus,omitempty"`
 }
 
 // CappStatus defines the observed state of Capp.
@@ -177,13 +182,17 @@ type CappStatus struct {
 	// +optional
 	RevisionInfo []RevisionInfo `json:"Revisions,omitempty"`
 
-	// StateStatus shows the current capp state
+	// StateStatus shows the current Capp state
 	// +optional
 	StateStatus StateStatus `json:"stateStatus,omitempty"`
 
-	// LoggingStatus defines the state of the flow and output linked to the capp.
+	// LoggingStatus defines the state of the Flow and Output objects linked to the Capp.
 	// +optional
 	LoggingStatus LoggingStatus `json:"loggingStatus,omitempty"`
+
+	// RouteStatus shows the state of the DomainMapping object linked to the Capp.
+	// +optional
+	RouteStatus RouteStatus `json:"routeStatus,omitempty"`
 
 	// Conditions contain details about the current state of the Capp.
 	// +optional

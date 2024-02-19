@@ -39,20 +39,25 @@ func SyncStatus(ctx context.Context, capp rcsv1alpha1.Capp, log logr.Logger, r c
 		return err
 	}
 
-	knativeObjectStatus, revisionInfo, err := buildKnativeStatus(ctx, r, log, capp)
+	knativeObjectStatus, revisionInfo, err := buildKnativeStatus(ctx, r, capp)
 	if err != nil {
 		return err
 	}
 
 	cappObject.Status.KnativeObjectStatus = knativeObjectStatus
 	cappObject.Status.RevisionInfo = revisionInfo
-	if cappObject.Spec.LogSpec != (rcsv1alpha1.LogSpec{}) {
-		loggingStatus, err := buildLoggingStatus(ctx, capp, log, r)
-		if err != nil {
-			return err
-		}
-		cappObject.Status.LoggingStatus = loggingStatus
+
+	loggingStatus, err := buildLoggingStatus(ctx, capp, log, r)
+	if err != nil {
+		return err
 	}
+	cappObject.Status.LoggingStatus = loggingStatus
+
+	routeStatus, err := buildRouteStatus(ctx, r, capp)
+	if err != nil {
+		return err
+	}
+	cappObject.Status.RouteStatus = routeStatus
 
 	CreateStateStatus(&cappObject.Status.StateStatus, capp.Spec.State)
 	cappObject.Status.KnativeObjectStatus = knativeObjectStatus
