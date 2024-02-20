@@ -8819,8 +8819,8 @@ spec:
                     type: string
                 type: object
               loggingStatus:
-                description: LoggingStatus defines the state of the flow and output
-                  linked to the capp.
+                description: LoggingStatus defines the state of the Flow and Output
+                  objects linked to the Capp.
                 properties:
                   conditions:
                     description: Conditions contain details about the current state
@@ -8922,8 +8922,90 @@ spec:
                         type: integer
                     type: object
                 type: object
+              routeStatus:
+                description: RouteStatus shows the state of the DomainMapping object
+                  linked to the Capp.
+                properties:
+                  domainMappingObjectStatus:
+                    description: Flow represents the Status of the Flow used by the
+                      Capp.
+                    properties:
+                      address:
+                        description: Address holds the information needed for a DomainMapping
+                          to be the target of an event.
+                        properties:
+                          CACerts:
+                            description: CACerts is the Certification Authority (CA)
+                              certificates in PEM format according to https://www.rfc-editor.org/rfc/rfc7468.
+                            type: string
+                          audience:
+                            description: Audience is the OIDC audience for this address.
+                            type: string
+                          name:
+                            description: Name is the name of the address.
+                            type: string
+                          url:
+                            type: string
+                        type: object
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        description: Annotations is additional Status fields for the
+                          Resource to save some additional State as well as convey
+                          more information to the user. This is roughly akin to Annotations
+                          on any k8s resource, just the reconciler conveying richer
+                          information outwards.
+                        type: object
+                      conditions:
+                        description: Conditions the latest available observations
+                          of a resource's current state.
+                        items:
+                          description: 'Condition defines a readiness condition for
+                            a Knative resource. See: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties'
+                          properties:
+                            lastTransitionTime:
+                              description: LastTransitionTime is the last time the
+                                condition transitioned from one status to another.
+                                We use VolatileTime in place of metav1.Time to exclude
+                                this from creating equality.Semantic differences (all
+                                other things held constant).
+                              type: string
+                            message:
+                              description: A human readable message indicating details
+                                about the transition.
+                              type: string
+                            reason:
+                              description: The reason for the condition's last transition.
+                              type: string
+                            severity:
+                              description: Severity with which to treat failures of
+                                this type of condition. When this is not specified,
+                                it defaults to Error.
+                              type: string
+                            status:
+                              description: Status of the condition, one of True, False,
+                                Unknown.
+                              type: string
+                            type:
+                              description: Type of condition.
+                              type: string
+                          required:
+                          - status
+                          - type
+                          type: object
+                        type: array
+                      observedGeneration:
+                        description: ObservedGeneration is the 'Generation' of the
+                          Service that was last processed by the controller.
+                        format: int64
+                        type: integer
+                      url:
+                        description: URL is the URL of this DomainMapping.
+                        type: string
+                    type: object
+                type: object
               stateStatus:
-                description: StateStatus shows the current capp state
+                description: StateStatus shows the current Capp state
                 properties:
                   lastChange:
                     description: LastChange is the last time the state of capp changed
