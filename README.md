@@ -22,10 +22,11 @@ The `container-app-operator` project can work as a standalone solution, but is m
 
 ## Feature Highlights
 
-- [x] Support for autoscaler (`HPA` or `KPA`) according to the chosen `scaleMetric` (`concurrency`, `rps`, `cpu`, `memory`) with default setting of `autoscaling.knative.dev/activation-scale: "3"`.
+- [x] Support for autoscaler (`HPA` or `KPA`) according to the chosen `scaleMetric` (`concurrency`, `rps`, `cpu`, `memory`) with default settings.
 - [x] Support for HTTP/HTTPS `DomainMapping` for accessing applications via `Ingress`/`Route`.
 - [x] Support for all `Knative Serving` configurations.
 - [x] Support for exporting logs to `Elasticsearch` and `Splunk` indexes.
+- [x] Support for changing the state of `Capp` from `enabled` (workload is in running state) to `disabled` (workload is not in running state).
 
 ## Getting Started
 
@@ -83,5 +84,6 @@ spec:
     username: elastic
     passwordSecretName: es-elastic-user
     sslVerify: false
-  scaleMetric: cpu
+  scaleMetric: concurrency
+  state: enabled
 ```
