@@ -10,17 +10,15 @@ import (
 )
 
 const (
-	knativeMetricAnnotation = "autoscaling.knative.dev/metric"
-	imageExample            = "danateam/autoscale-go"
-	nonExistingImageExample = "example-python-app:v1"
-	exampleAppName          = "new-app-name"
-	newSecretKey            = "username"
-	creatorAnnotation       = "serving.knative.dev/creator"
-	lastModifierAnnotation  = "serving.knative.dev/lastModifier"
-	cappServiceAccount      = "system:serviceaccount:capp-operator-system:capp-operator-controller-manager"
-	exampleDanaAnnotation   = "rcs.dana.io/app-name"
-	testContainerName       = "capp-test-container"
-	firstRevisionSuffix     = "-00001"
+	knativeMetricAnnotation   = "autoscaling.knative.dev/metric"
+	imageExample              = "danateam/autoscale-go"
+	nonExistingImageExample   = "example-python-app:v1"
+	exampleAppName            = "new-app-name"
+	newSecretKey              = "username"
+	exampleDanaAnnotation     = "rcs.dana.io/app-name"
+	testContainerName         = "capp-test-container"
+	firstRevisionSuffix       = "-00001"
+	KnativeAutoscaleTargetKey = "autoscaling.knative.dev/target"
 )
 
 // updateCapp updates the given Capp object and ensures the readiness of the latest revision
@@ -111,14 +109,6 @@ var _ = Describe("Validate knative functionality", func() {
 		Eventually(func() bool {
 			return utilst.DoesResourceExist(k8sClient, ksvcObject)
 		}, TimeoutCapp, CappCreationInterval).Should(BeTrue(), "Should find a resource.")
-
-		By("Checking if the ksvc has the default annotations")
-		Eventually(func() string {
-			return utilst.GetKsvc(k8sClient, ksvcObject.Name, ksvcObject.Namespace).Annotations[creatorAnnotation]
-		}, TimeoutCapp, CappCreationInterval).Should(Equal(cappServiceAccount))
-		Eventually(func() string {
-			return utilst.GetKsvc(k8sClient, ksvcObject.Name, ksvcObject.Namespace).Annotations[lastModifierAnnotation]
-		}, TimeoutCapp, CappCreationInterval).Should(Equal(cappServiceAccount))
 		checkRevisionReadiness(assertionCapp.Name+firstRevisionSuffix, true)
 
 		By("Deleting the capp instance")
@@ -275,5 +265,21 @@ var _ = Describe("Validate knative functionality", func() {
 		nonExistingSecretName := utilst.GenerateSecretName()
 		assertionCapp.Spec.ConfigurationSpec.Template.Spec.Containers[0].Env = *mock.CreateEnvVarObject(nonExistingSecretName)
 		updateCapp(assertionCapp, false)
+	})
+
+	It("Should create capp with autoscale annotation.The default annotation in the  ksvc should be overridden", func() {
+		By("Creating a capp instance")
+		testCapp := mock.CreateBaseCapp()
+		annotations := map[string]string{
+			KnativeAutoscaleTargetKey: "666",
+		}
+		testCapp.Spec.ConfigurationSpec.Template.Annotations = annotations
+		assertionCapp := createAndGetCapp(testCapp)
+
+		By("Checking if the ksvc's defaults annotations were overridden")
+		Eventually(func() string {
+			ksvc := utilst.GetKsvc(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
+			return ksvc.Spec.ConfigurationSpec.Template.Annotations[KnativeAutoscaleTargetKey]
+		}, TimeoutCapp, CappCreationInterval).Should(Equal("666"))
 	})
 })

@@ -53,3 +53,15 @@ func MergeMaps(m1 map[string]string, m2 map[string]string) map[string]string {
 	}
 	return merged
 }
+
+// FilterMap returns a new map containing only the key-value pairs
+// where the key contains the specified substring.
+func FilterMap(originalMap map[string]string, substring string) map[string]string {
+	filteredMap := make(map[string]string)
+	for key, value := range originalMap {
+		if strings.Contains(key, substring) {
+			filteredMap[key] = value
+		}
+	}
+	return filteredMap
+}

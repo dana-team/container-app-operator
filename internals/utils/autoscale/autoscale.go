@@ -2,6 +2,7 @@ package autoscale
 
 import (
 	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	"github.com/dana-team/container-app-operator/internals/utils"
 	"k8s.io/utils/strings/slices"
 )
 
@@ -9,6 +10,7 @@ const (
 	KnativeMetricKey          = "autoscaling.knative.dev/metric"
 	KnativeAutoscaleClassKey  = "autoscaling.knative.dev/class"
 	KnativeAutoscaleTargetKey = "autoscaling.knative.dev/target"
+	AutoScalerSubString       = "autoscaling"
 )
 
 var TargetDefaultValues = map[string]string{
@@ -28,9 +30,11 @@ func SetAutoScaler(capp rcsv1alpha1.Capp) map[string]string {
 	if scaleMetric == "" {
 		return autoScaleAnnotations
 	}
+	givenAutoScaleAnnotation := utils.FilterMap(capp.Spec.ConfigurationSpec.Template.Annotations, AutoScalerSubString)
 	autoScaleAnnotations[KnativeAutoscaleClassKey] = getAutoScaleClassByMetric(scaleMetric)
 	autoScaleAnnotations[KnativeMetricKey] = scaleMetric
 	autoScaleAnnotations[KnativeAutoscaleTargetKey] = TargetDefaultValues[scaleMetric]
+	autoScaleAnnotations = utils.MergeMaps(autoScaleAnnotations, givenAutoScaleAnnotation)
 
 	return autoScaleAnnotations
 }
