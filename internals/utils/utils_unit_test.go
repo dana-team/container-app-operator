@@ -167,12 +167,12 @@ func TestRemoveFinalizer(t *testing.T) {
 	fakeClient := newFakeClient()
 	assert.NoError(t, fakeClient.Create(ctx, capp))
 	assert.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: "test-capp", Namespace: "test-ns"}, capp))
-	assert.NoError(t, finalizer.RemoveFinalizer(ctx, *capp, ctrl.Log, fakeClient), "Expected no error when removing finalizer")
+	assert.NoError(t, finalizer.RemoveFinalizer(ctx, *capp, fakeClient), "Expected no error when removing finalizer")
 	assert.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: "test-capp", Namespace: "test-ns"}, capp))
 	assert.NotContains(t, capp.Finalizers, finalizer.FinalizerCleanupCapp)
 
 	// Check if there is no error after the finalizer removed.
-	assert.NoError(t, finalizer.RemoveFinalizer(ctx, *capp, ctrl.Log, fakeClient))
+	assert.NoError(t, finalizer.RemoveFinalizer(ctx, *capp, fakeClient))
 }
 
 func TestFilterKeysWithoutPrefix(t *testing.T) {

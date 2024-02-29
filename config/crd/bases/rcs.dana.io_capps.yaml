@@ -8927,8 +8927,8 @@ spec:
                   linked to the Capp.
                 properties:
                   domainMappingObjectStatus:
-                    description: Flow represents the Status of the Flow used by the
-                      Capp.
+                    description: DomainMappingObjectStatus is the status of the underlying
+                      DomainMapping object
                     properties:
                       address:
                         description: Address holds the information needed for a DomainMapping

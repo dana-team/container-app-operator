@@ -16,7 +16,6 @@ import (
 	"k8s.io/client-go/scale/scheme"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 	knativev1alphav1 "knative.dev/serving/pkg/apis/serving/v1alpha1"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"testing"
@@ -113,12 +112,12 @@ func TestRemoveFinalizer(t *testing.T) {
 	fakeClient := newFakeClient()
 	assert.NoError(t, fakeClient.Create(ctx, capp), "Expected not error when creating capp")
 	assert.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: "test-capp", Namespace: "test-ns"}, capp))
-	assert.NoError(t, finalizer.RemoveFinalizer(ctx, *capp, ctrl.Log, fakeClient), "Expected no error when removing finalizers")
+	assert.NoError(t, finalizer.RemoveFinalizer(ctx, *capp, fakeClient), "Expected no error when removing finalizers")
 	assert.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: "test-capp", Namespace: "test-ns"}, capp))
 	assert.NotContains(t, capp.Finalizers, finalizer.FinalizerCleanupCapp)
 
 	// Check if there is no error after the finalizer removed.
-	assert.NoError(t, finalizer.RemoveFinalizer(ctx, *capp, ctrl.Log, fakeClient))
+	assert.NoError(t, finalizer.RemoveFinalizer(ctx, *capp, fakeClient))
 }
 
 func TestFilterKeysWithoutPrefix(t *testing.T) {

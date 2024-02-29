@@ -1,22 +1,22 @@
 package k8s_tests
 
 import (
-	_ "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"context"
-	"testing"
-	"time"
+	_ "github.com/dana-team/container-app-operator/api/v1alpha1"
 	mock "github.com/dana-team/container-app-operator/test/k8s_tests/mocks"
 	utilst "github.com/dana-team/container-app-operator/test/k8s_tests/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"testing"
+	"time"
 )
 
 const (
-	TimeoutCapp          = 60 * time.Second
-	CappCreationInterval = 2 * time.Second
+	TimeoutCapp            = 60 * time.Second
+	CappCreationInterval   = 2 * time.Second
 	UnsupportedScaleMetric = "storage"
-	EnabledState         = "enabled"
-	DisabledState        = "disabled"
+	EnabledState           = "enabled"
+	DisabledState          = "disabled"
 )
 
 func TestE2e(t *testing.T) {

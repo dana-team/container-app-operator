@@ -64,7 +64,7 @@ func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		rmanagers.KnativeServiceManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder},
 		rmanagers.FlowManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder},
 		rmanagers.OutputManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder}}
-	err, deleted := finalizer_utils.HandleResourceDeletion(ctx, capp, logger, r.Client, resourceManagers)
+	err, deleted := finalizer_utils.HandleResourceDeletion(ctx, capp, r.Client, resourceManagers)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to handle Capp deletion: %s", err.Error())
 	}
