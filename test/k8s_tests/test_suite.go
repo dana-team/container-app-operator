@@ -24,7 +24,8 @@ import (
 )
 
 var (
-	k8sClient client.Client
+	k8sClient       client.Client
+	targetAutoScale map[string]string
 )
 
 const (
@@ -58,6 +59,8 @@ var _ = SynchronizedBeforeSuite(func() {
 	k8sClient, err = ctrl.New(config, ctrl.Options{Scheme: newScheme()})
 	Expect(err).NotTo(HaveOccurred())
 
+	targetAutoScale = map[string]string{"rps": "22", "cpu": "88", "memory": "7", "concurrency": "11"}
+
 	cleanUp()
 
 	namespace := &corev1.Namespace{
@@ -65,6 +68,8 @@ var _ = SynchronizedBeforeSuite(func() {
 			Name: mock.NsName,
 		},
 	}
+	autoScaleConfigMap := mock.CreateConfigMapObject(mock.ControllerNS, mock.AutoScaleCM, targetAutoScale)
+	utilst.CreateConfigMap(k8sClient, autoScaleConfigMap)
 
 	Expect(k8sClient.Create(context.Background(), namespace)).To(Succeed())
 	Eventually(func() bool {
@@ -83,6 +88,16 @@ func cleanUp() {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: mock.NsName,
 		},
+	}
+	configMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{
+		Name:      mock.AutoScaleCM,
+		Namespace: mock.ControllerNS,
+	}}
+	if utilst.DoesResourceExist(k8sClient, configMap) {
+		Expect(k8sClient.Delete(context.Background(), configMap)).To(Succeed())
+		Eventually(func() error {
+			return k8sClient.Get(context.Background(), client.ObjectKey{Name: mock.AutoScaleCM, Namespace: mock.ControllerNS}, configMap)
+		}, TimeoutNameSpace, NsFetchInterval).Should(HaveOccurred(), "The autoscale configMap should be deleted")
 	}
 	if utilst.DoesResourceExist(k8sClient, namespace) {
 		Expect(k8sClient.Delete(context.Background(), namespace)).To(Succeed())

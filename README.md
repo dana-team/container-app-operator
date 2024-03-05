@@ -55,6 +55,28 @@ $ make deploy IMG=ghcr.io/dana-team/container-app-operator:<release>
 $ make docker-build docker-push IMG=<registry>/container-app-operator:<tag>
 ```
 
+### Change target autoscaler default values
+To change the target values a `configMap` with the name `autoscale-default` in the namespace `capp-operator-system` needs to be created.
+
+The `configMap` should contain the scale metric types as keys and for the value the desired target values.
+
+The `configMap` will affect the `ksvc` autoscale target value annotation `autoscaling.knative.dev/target`.
+
+#### Example
+
+```yaml
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: autoscale-defaults
+  namespace: capp-operator-system
+data:
+  rps: "200"
+  cpu: "80"
+  memory: "70"
+  concurrency: "10"
+```
+
 ## Example Capp
 
 ```yaml

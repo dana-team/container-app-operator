@@ -7,12 +7,14 @@ import (
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 )
 
-var (
+const (
 	CappName       = "capp-default-test"
 	NsName         = "capp-e2e-tests"
 	RPSScaleMetric = "rps"
 	SecretKey      = "extra"
 	SecretValue    = "YmFyCg=="
+	ControllerNS   = "capp-operator-system"
+	AutoScaleCM    = "autoscale-defaults"
 )
 
 func CreateBaseCapp() *rcsv1alpha1.Capp {
@@ -65,5 +67,16 @@ func CreateSecretObject(secretName string) *corev1.Secret {
 		},
 		Type: "Opaque",
 		Data: map[string][]byte{SecretKey: []byte(SecretValue)},
+	}
+}
+
+func CreateConfigMapObject(namespace string, name string, data map[string]string) *corev1.ConfigMap {
+	return &corev1.ConfigMap{
+		TypeMeta: metav1.TypeMeta{},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Data: data,
 	}
 }
