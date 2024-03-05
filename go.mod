@@ -12,7 +12,7 @@ require (
 	github.com/openshift/api v0.0.0-20240112192513-412e126bd40b
 	github.com/stretchr/testify v1.9.0
 	go.elastic.co/ecszap v1.0.2
-	go.uber.org/zap v1.26.0
+	go.uber.org/zap v1.27.0
 	golang.org/x/net v0.20.0
 	k8s.io/api v0.29.2
 	k8s.io/apimachinery v0.29.2
