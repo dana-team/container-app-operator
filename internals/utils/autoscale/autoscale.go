@@ -24,16 +24,20 @@ var KPAMetrics = []string{"rps", "concurrency"}
 
 // SetAutoScaler takes a Capp and a Knative Service and sets the autoscaler annotations based on the Capp's ScaleMetric.
 // Returns a map of the autoscaler annotations that were set.
-func SetAutoScaler(capp rcsv1alpha1.Capp) map[string]string {
+func SetAutoScaler(capp rcsv1alpha1.Capp, defaults map[string]string) map[string]string {
 	scaleMetric := capp.Spec.ScaleMetric
 	autoScaleAnnotations := make(map[string]string)
+	autoScaleDefaults := defaults
 	if scaleMetric == "" {
 		return autoScaleAnnotations
+	}
+	if len(defaults) == 0 {
+		autoScaleDefaults = TargetDefaultValues
 	}
 	givenAutoScaleAnnotation := utils.FilterMap(capp.Spec.ConfigurationSpec.Template.Annotations, AutoScalerSubString)
 	autoScaleAnnotations[KnativeAutoscaleClassKey] = getAutoScaleClassByMetric(scaleMetric)
 	autoScaleAnnotations[KnativeMetricKey] = scaleMetric
-	autoScaleAnnotations[KnativeAutoscaleTargetKey] = TargetDefaultValues[scaleMetric]
+	autoScaleAnnotations[KnativeAutoscaleTargetKey] = autoScaleDefaults[scaleMetric]
 	autoScaleAnnotations = utils.MergeMaps(autoScaleAnnotations, givenAutoScaleAnnotation)
 
 	return autoScaleAnnotations

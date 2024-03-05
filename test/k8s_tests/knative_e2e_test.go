@@ -23,6 +23,7 @@ const (
 
 // updateCapp updates the given Capp object and ensures the readiness of the latest revision
 // if shouldRevisionBeReady is true. It also checks and asserts the state of the LatestReadyRevision.
+
 func updateCapp(capp *rcsv1alpha1.Capp, shouldRevisionBeReady bool) {
 	latestReadyRevisionBeforeUpdate := capp.Status.KnativeObjectStatus.ConfigurationStatusFields.LatestReadyRevisionName
 	nextRevisionName := utilst.GetNextRevisionName(latestReadyRevisionBeforeUpdate)
@@ -43,6 +44,7 @@ func updateCapp(capp *rcsv1alpha1.Capp, shouldRevisionBeReady bool) {
 }
 
 // checkRevisionReadiness checks the readiness of the specified revision and asserts its state based on shouldBeReady flag.
+
 func checkRevisionReadiness(revisionName string, shouldBeReady bool) {
 	By("Checking if the revision was created successfully")
 	revisionObject := mock.CreateRevisionObject(revisionName)
@@ -281,5 +283,17 @@ var _ = Describe("Validate knative functionality", func() {
 			ksvc := utilst.GetKsvc(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
 			return ksvc.Spec.ConfigurationSpec.Template.Annotations[KnativeAutoscaleTargetKey]
 		}, TimeoutCapp, CappCreationInterval).Should(Equal("666"))
+	})
+
+	It("Should check the default ksvc annotation is equal to the configMap concurrency value", func() {
+		By("Creating a capp instance")
+		testCapp := mock.CreateBaseCapp()
+		assertionCapp := createAndGetCapp(testCapp)
+
+		By("Checking if the ksvc's annotation is equal to the configMap")
+		Eventually(func() string {
+			ksvc := utilst.GetKsvc(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
+			return ksvc.Spec.ConfigurationSpec.Template.Annotations[KnativeAutoscaleTargetKey]
+		}, TimeoutCapp, CappCreationInterval).Should(Equal(targetAutoScale["concurrency"]))
 	})
 })

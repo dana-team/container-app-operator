@@ -22,6 +22,8 @@ const (
 	danaAnnotationsPrefix = "rcs.dana.io"
 	cappDisabledState     = "disabled"
 	cappEnabledState      = "enabled"
+	DefaultAutoScaleCM    = "autoscale-defaults"
+	CappNS                = "capp-operator-system"
 )
 
 type KnativeServiceManager struct {
@@ -59,8 +61,13 @@ func (k KnativeServiceManager) prepareResource(capp rcsv1alpha1.Capp, ctx contex
 	knativeService.Spec.Template.Spec.SetDefaults(ctx)
 
 	knativeService.Spec.ConfigurationSpec.Template.Spec.TimeoutSeconds = capp.Spec.RouteSpec.RouteTimeoutSeconds
+
+	defaulCM := corev1.ConfigMap{}
+	if err := k.K8sclient.Get(k.Ctx, types.NamespacedName{Namespace: CappNS, Name: DefaultAutoScaleCM}, &defaulCM); err != nil {
+		k.Log.Error(err, fmt.Sprintf("could not fetch configMap: %q", CappNS))
+	}
 	knativeService.Spec.Template.ObjectMeta.Annotations = utils.MergeMaps(knativeServiceAnnotations,
-		autoscaleutils.SetAutoScaler(capp))
+		autoscaleutils.SetAutoScaler(capp, defaulCM.Data))
 	knativeService.Spec.Template.ObjectMeta.Labels = knativeServiceLabels
 	return knativeService
 }
