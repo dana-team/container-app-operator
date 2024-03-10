@@ -25,7 +25,6 @@ type ResourceBaseManagerClient struct {
 }
 
 func (r ResourceBaseManagerClient) CreateResource(resource client.Object) error {
-
 	if err := r.K8sclient.Create(r.Ctx, resource); err != nil {
 		r.Log.Error(err, fmt.Sprintf("unable to create %s %s ", resource.GetObjectKind().GroupVersionKind().Kind, resource.GetName()))
 		return err

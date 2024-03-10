@@ -2,6 +2,7 @@ package k8s_tests
 
 import (
 	"fmt"
+
 	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	mock "github.com/dana-team/container-app-operator/test/k8s_tests/mocks"
 	utilst "github.com/dana-team/container-app-operator/test/k8s_tests/utils"
@@ -87,7 +88,6 @@ func testMetricAnnotation(metricType string) {
 }
 
 var _ = Describe("Validate knative functionality", func() {
-
 	It("Should create a ksvc with cpu metric annotation when creating a capp with cpu scale metric", func() {
 		testMetricAnnotation("cpu")
 	})

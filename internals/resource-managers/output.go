@@ -3,6 +3,8 @@ package resourceprepares
 import (
 	"context"
 	"fmt"
+	"reflect"
+
 	"github.com/cisco-open/operator-tools/pkg/secret"
 	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	rclient "github.com/dana-team/container-app-operator/internals/wrappers"
@@ -14,7 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
-	"reflect"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -133,32 +135,32 @@ func (o OutputManager) prepareResource(capp rcsv1alpha1.Capp) loggingv1beta1.Out
 // CleanUp deletes the output resource associated with the Capp object.
 // The output resource is deleted by calling the DeleteResource method of the resourceManager object.
 func (o OutputManager) CleanUp(capp rcsv1alpha1.Capp) error {
-	if o.isRequired(capp) {
+	if o.IsRequired(capp) {
 		outputName := capp.GetName() + "-output"
 		resourceManager := rclient.ResourceBaseManagerClient{Ctx: o.Ctx, K8sclient: o.K8sclient, Log: o.Log}
 		outputObject := loggingv1beta1.Output{}
 		if err := resourceManager.DeleteResource(&outputObject, outputName, capp.Namespace); err != nil {
-			return fmt.Errorf("unable to delete output %s: %s ", outputName, err.Error())
+			return fmt.Errorf("unable to delete output %q: %w ", outputName, err)
 		}
 	}
 
 	return nil
 }
 
-// isRequired responsible to determine if resource logging operator is required.
-func (o OutputManager) isRequired(capp rcsv1alpha1.Capp) bool {
+// IsRequired is responsible to determine if resource logging operator is required.
+func (o OutputManager) IsRequired(capp rcsv1alpha1.Capp) bool {
 	if capp.Spec.LogSpec != (rcsv1alpha1.LogSpec{}) {
 		return capp.Spec.LogSpec.Type == LogTypeElastic || capp.Spec.LogSpec.Type == LogTypeSplunk
 	}
 	return false
 }
 
-// CreateOrUpdateObject creates or updates an output object based on the provided capp.
+// CreateOrUpdateObject creates or updates an output object based on the provided Capp.
 // It returns an error if any operation fails.
 func (o OutputManager) CreateOrUpdateObject(capp rcsv1alpha1.Capp) error {
 	outputName := capp.GetName() + "-output"
 	logger := o.Log.WithValues("OutputName", outputName, "OutputNamespace", capp.Namespace)
-	if o.isRequired(capp) {
+	if o.IsRequired(capp) {
 		generatedOutput := o.prepareResource(capp)
 		// get instance of current output
 		currentOutput := loggingv1beta1.Output{}
@@ -182,7 +184,7 @@ func (o OutputManager) CreateOrUpdateObject(capp rcsv1alpha1.Capp) error {
 			currentOutput.Spec = generatedOutput.Spec
 			logger.Info("Trying to update the current")
 			if err := resourceManager.UpdateResource(&currentOutput); err != nil {
-				return fmt.Errorf("failed to update the current output %s: %s ", currentOutput.Name, err.Error())
+				return fmt.Errorf("failed to update the current output %q: %w ", currentOutput.Name, err)
 			}
 			logger.Info("Current output successfully updated")
 		}

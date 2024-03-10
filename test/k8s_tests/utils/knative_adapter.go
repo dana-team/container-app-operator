@@ -2,10 +2,12 @@ package utils
 
 import (
 	"fmt"
-	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 	"regexp"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strconv"
+
+	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // GetNextRevisionName generates the name for the next revision based on the current revision name.

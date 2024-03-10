@@ -7,9 +7,9 @@ require (
 	github.com/go-logr/logr v1.4.1
 	github.com/go-logr/zapr v1.3.0
 	github.com/kube-logging/logging-operator/pkg/sdk v0.11.0
-	github.com/onsi/ginkgo/v2 v2.15.0
+	github.com/onsi/ginkgo/v2 v2.16.0
 	github.com/onsi/gomega v1.31.1
-	github.com/openshift/api v0.0.0-20240112192513-412e126bd40b
+	github.com/openshift/api v0.0.0-20240308181712-f608b5d33c00
 	github.com/stretchr/testify v1.9.0
 	go.elastic.co/ecszap v1.0.2
 	go.uber.org/zap v1.27.0

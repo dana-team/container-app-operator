@@ -6,9 +6,7 @@ import (
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 )
 
-var (
-	PassEnvName = "PASSWORD"
-)
+var PassEnvName = "PASSWORD"
 
 func CreateRevisionObject(revisionName string) *knativev1.Revision {
 	return &knativev1.Revision{

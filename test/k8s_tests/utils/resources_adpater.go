@@ -3,14 +3,16 @@ package utils
 import (
 	"context"
 	"fmt"
+	"math/rand"
+	"time"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
-	"math/rand"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"time"
 )
 
 const (

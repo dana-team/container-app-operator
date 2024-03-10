@@ -10,7 +10,6 @@ import (
 )
 
 var _ = Describe("Validate DomainMapping functionality", func() {
-
 	It("Should create, update and delete DomainMapping when creating, updating and deleting a Capp instance", func() {
 		By("Creating a capp with a route")
 		routeCapp := mock.CreateBaseCapp()
@@ -27,6 +26,9 @@ var _ = Describe("Validate DomainMapping functionality", func() {
 		By("Checking if the RouteStatus of the Capp was updated successfully")
 		Eventually(func() string {
 			capp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
+			if capp.Status.RouteStatus.DomainMappingObjectStatus.URL == nil {
+				return ""
+			}
 			return capp.Status.RouteStatus.DomainMappingObjectStatus.URL.Host
 		}, TimeoutCapp, CappCreationInterval).Should(Equal(routeHostname))
 
@@ -38,6 +40,9 @@ var _ = Describe("Validate DomainMapping functionality", func() {
 
 		Eventually(func() string {
 			capp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
+			if capp.Status.RouteStatus.DomainMappingObjectStatus.URL == nil {
+				return ""
+			}
 			return capp.Status.RouteStatus.DomainMappingObjectStatus.URL.Host
 		}, TimeoutCapp, CappCreationInterval).Should(Equal(updatedRouteHostname))
 

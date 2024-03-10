@@ -3,8 +3,9 @@ package resourceprepares
 import (
 	"context"
 	"fmt"
+	"reflect"
+
 	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
-	secureutils "github.com/dana-team/container-app-operator/internals/utils/secure"
 	rclient "github.com/dana-team/container-app-operator/internals/wrappers"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -17,11 +18,14 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
-	"reflect"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const CappResourceKey = "rcs.dana.io/parent-capp"
+const (
+	CappResourceKey         = "rcs.dana.io/parent-capp"
+	eventCappSecretNotFound = "SecretNotFound"
+)
 
 type KnativeDomainMappingManager struct {
 	Ctx           context.Context
@@ -55,7 +59,7 @@ func (k KnativeDomainMappingManager) prepareResource(capp rcsv1alpha1.Capp) knat
 		},
 	}
 	resourceManager := rclient.ResourceBaseManagerClient{Ctx: k.Ctx, K8sclient: k.K8sclient, Log: k.Log}
-	secureutils.SetHttpsKnativeDomainMapping(capp, knativeDomainMapping, resourceManager, k.EventRecorder)
+	k.setHttpsKnativeDomainMapping(capp, knativeDomainMapping, resourceManager)
 	return *knativeDomainMapping
 }
 
@@ -66,13 +70,13 @@ func (k KnativeDomainMappingManager) CleanUp(capp rcsv1alpha1.Capp) error {
 	resourceManager := rclient.ResourceBaseManagerClient{Ctx: k.Ctx, K8sclient: k.K8sclient, Log: k.Log}
 	DomainMapping := knativev1beta1.DomainMapping{}
 	if err := resourceManager.DeleteResource(&DomainMapping, capp.Spec.RouteSpec.Hostname, capp.Namespace); err != nil {
-		return fmt.Errorf("unable to delete DomainMapping %s: %s", capp.Spec.RouteSpec.Hostname, err.Error())
+		return fmt.Errorf("unable to delete DomainMapping %q: %w", capp.Spec.RouteSpec.Hostname, err)
 	}
 	return nil
 }
 
-// responsible to determine if resource knative domain mapping is required.
-func (k KnativeDomainMappingManager) isRequired(capp rcsv1alpha1.Capp) bool {
+// IsRequired is responsible to determine if resource knative domain mapping is required.
+func (k KnativeDomainMappingManager) IsRequired(capp rcsv1alpha1.Capp) bool {
 	return capp.Spec.RouteSpec.Hostname != ""
 }
 
@@ -81,7 +85,7 @@ func (k KnativeDomainMappingManager) CreateOrUpdateObject(capp rcsv1alpha1.Capp)
 		k.Log.Error(err, "failed to handle irrelevant DomainMappings")
 		return err
 	}
-	if k.isRequired(capp) {
+	if k.IsRequired(capp) {
 		cappDomainMapping := k.prepareResource(capp)
 		knativeDomainMapping := knativev1beta1.DomainMapping{}
 		resourceManager := rclient.ResourceBaseManagerClient{Ctx: k.Ctx, K8sclient: k.K8sclient, Log: k.Log}
@@ -89,7 +93,7 @@ func (k KnativeDomainMappingManager) CreateOrUpdateObject(capp rcsv1alpha1.Capp)
 			if errors.IsNotFound(err) {
 				if err := resourceManager.CreateResource(&cappDomainMapping); err != nil {
 					k.EventRecorder.Event(&capp, corev1.EventTypeWarning, eventCappDomainMappingCreationFailed, fmt.Sprintf("Failed to create DomainMapping %s for Capp %s", capp.Spec.RouteSpec.Hostname, capp.Name))
-					return fmt.Errorf("unable to create DomainMapping: %s", err.Error())
+					return fmt.Errorf("unable to create DomainMapping: %w", err)
 				}
 			} else {
 				return err
@@ -99,11 +103,10 @@ func (k KnativeDomainMappingManager) CreateOrUpdateObject(capp rcsv1alpha1.Capp)
 		if !reflect.DeepEqual(knativeDomainMapping.Spec, cappDomainMapping.Spec) {
 			knativeDomainMapping.Spec = cappDomainMapping.Spec
 			if err := resourceManager.UpdateResource(&knativeDomainMapping); err != nil {
-				return fmt.Errorf("unable to update DomainMapping: %s", err.Error())
+				return fmt.Errorf("unable to update DomainMapping: %w", err)
 			}
 		}
 	}
-
 	return nil
 }
 
@@ -111,7 +114,7 @@ func (k KnativeDomainMappingManager) HandleIrrelevantDomainMapping(capp rcsv1alp
 	logger := k.Log
 	requirement, err := labels.NewRequirement(CappResourceKey, selection.Equals, []string{capp.Name})
 	if err != nil {
-		return fmt.Errorf("unable to create label requirement for Capp %s: %s", capp.Name, err.Error())
+		return fmt.Errorf("unable to create label requirement for Capp: %w", err)
 	}
 	labelSelector := labels.NewSelector().Add(*requirement)
 	listOptions := client.ListOptions{
@@ -119,17 +122,38 @@ func (k KnativeDomainMappingManager) HandleIrrelevantDomainMapping(capp rcsv1alp
 	}
 	knativeDomainMappings := knativev1beta1.DomainMappingList{}
 	if err := k.K8sclient.List(k.Ctx, &knativeDomainMappings, &listOptions); err != nil {
-		return fmt.Errorf("unable to list DomainMappings of Capp %s: %s", capp.Name, err.Error())
+		return fmt.Errorf("unable to list DomainMappings of Capp %q: %w", capp.Name, err)
 	}
 	resourceManager := rclient.ResourceBaseManagerClient{Ctx: k.Ctx, K8sclient: k.K8sclient, Log: k.Log}
 	for _, domainMapping := range knativeDomainMappings.Items {
 		if domainMapping.Name != capp.Spec.RouteSpec.Hostname {
 			DomainMapping := knativev1beta1.DomainMapping{}
 			if err := resourceManager.DeleteResource(&DomainMapping, domainMapping.Name, capp.Namespace); err != nil {
-				logger.Error(err, fmt.Sprintf("unable to delete irrelevant DomainMapping %s of Capp %s", domainMapping.Name, capp.Name))
+				logger.Error(err, fmt.Sprintf("unable to delete irrelevant DomainMapping %q", domainMapping.Name))
 				return err
 			}
 		}
 	}
 	return nil
+}
+
+// SetHttpsKnativeDomainMapping takes a Capp, Knative Domain Mapping and
+// a ResourceBaseManager Client and sets the Knative Domain Mapping Tls based on the Capp's Https field.
+func (k KnativeDomainMappingManager) setHttpsKnativeDomainMapping(capp rcsv1alpha1.Capp, knativeDomainMapping *knativev1beta1.DomainMapping, resourceManager rclient.ResourceBaseManagerClient) {
+	isHttps := capp.Spec.RouteSpec.TlsEnabled
+	if isHttps {
+		tlsSecret := corev1.Secret{}
+		if err := resourceManager.K8sclient.Get(resourceManager.Ctx, types.NamespacedName{Name: capp.Spec.RouteSpec.TlsSecret, Namespace: capp.Namespace}, &tlsSecret); err != nil {
+			if errors.IsNotFound(err) {
+				resourceManager.Log.Error(err, fmt.Sprintf("the tls secret %s for DomainMapping does not exist", capp.Spec.RouteSpec.TlsSecret))
+				k.EventRecorder.Event(&capp, corev1.EventTypeWarning, eventCappSecretNotFound, fmt.Sprintf("Secret %s for DomainMapping %s does not exist", capp.Spec.RouteSpec.TlsSecret, knativeDomainMapping.Name))
+				return
+			}
+			resourceManager.Log.Error(err, fmt.Sprintf("unable to get tls secret %s for DomainMapping", capp.Spec.RouteSpec.TlsSecret))
+		} else {
+			knativeDomainMapping.Spec.TLS = &knativev1beta1.SecretTLS{
+				SecretName: capp.Spec.RouteSpec.TlsSecret,
+			}
+		}
+	}
 }
