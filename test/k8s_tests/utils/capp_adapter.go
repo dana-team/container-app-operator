@@ -2,11 +2,12 @@ package utils
 
 import (
 	"context"
+	"time"
+
 	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	mock "github.com/dana-team/container-app-operator/test/k8s_tests/mocks"
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"time"
 )
 
 const (
@@ -24,7 +25,6 @@ func CreateCapp(k8sClient client.Client, capp *rcsv1alpha1.Capp) *rcsv1alpha1.Ca
 		return GetCapp(k8sClient, newCapp.Name, newCapp.Namespace).Status.KnativeObjectStatus.ConfigurationStatusFields.LatestReadyRevisionName
 	}, TimeoutCapp, CappCreationInterval).ShouldNot(Equal(""), "Should fetch capp")
 	return newCapp
-
 }
 
 // UpdateCapp updates an existing Capp instance.
@@ -35,7 +35,6 @@ func UpdateCapp(k8sClient client.Client, capp *rcsv1alpha1.Capp) {
 // DeleteCapp deletes an existing Capp instance.
 func DeleteCapp(k8sClient client.Client, capp *rcsv1alpha1.Capp) {
 	Expect(k8sClient.Delete(context.Background(), capp)).To(Succeed())
-
 }
 
 // GenerateCappName generates a new secret name by calling

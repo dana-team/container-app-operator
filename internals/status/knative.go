@@ -1,4 +1,4 @@
-package status_utils
+package status
 
 import (
 	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
@@ -46,11 +46,11 @@ func buildRevisionsStatus(ctx context.Context, capp rcsv1alpha1.Capp, r client.C
 }
 
 // buildKnativeStatus responsible all the status related to the knative.
-func buildKnativeStatus(ctx context.Context, kubeClient client.Client, capp rcsv1alpha1.Capp) (knativev1.ServiceStatus, []rcsv1alpha1.RevisionInfo, error) {
+func buildKnativeStatus(ctx context.Context, kubeClient client.Client, capp rcsv1alpha1.Capp, isRequired bool) (knativev1.ServiceStatus, []rcsv1alpha1.RevisionInfo, error) {
 	knativeObjectStatus := knativev1.ServiceStatus{}
 	var revisionInfo []rcsv1alpha1.RevisionInfo
 
-	if capp.Spec.State == cappEnabledState {
+	if isRequired {
 		kservice := &knativev1.Service{}
 		if err := kubeClient.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: capp.Name}, kservice); err != nil {
 			return knativeObjectStatus, revisionInfo, err

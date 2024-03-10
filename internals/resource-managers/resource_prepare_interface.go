@@ -7,7 +7,7 @@ import (
 type ResourceManager interface {
 	CreateOrUpdateObject(capp rcsv1alpha1.Capp) error
 	CleanUp(capp rcsv1alpha1.Capp) error
-	isRequired(capp rcsv1alpha1.Capp) bool
+	IsRequired(capp rcsv1alpha1.Capp) bool
 }
 
 const (
@@ -19,4 +19,8 @@ const (
 	eventCappOutputCreated                = "OutputCreated"
 	eventCappDisabled                     = "CappDisabled"
 	eventCappEnabled                      = "CappEnabled"
+	DomainMapping                         = "domainMapping"
+	KnativeServing                        = "knativeServing"
+	Flow                                  = "flow"
+	Output                                = "output"
 )

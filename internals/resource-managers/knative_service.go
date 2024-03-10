@@ -3,9 +3,11 @@ package resourceprepares
 import (
 	"context"
 	"fmt"
+	"reflect"
+
 	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	"github.com/dana-team/container-app-operator/internals/autoscale"
 	"github.com/dana-team/container-app-operator/internals/utils"
-	autoscaleutils "github.com/dana-team/container-app-operator/internals/utils/autoscale"
 	rclient "github.com/dana-team/container-app-operator/internals/wrappers"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -14,7 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
-	"reflect"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -67,7 +69,7 @@ func (k KnativeServiceManager) prepareResource(capp rcsv1alpha1.Capp, ctx contex
 		k.Log.Error(err, fmt.Sprintf("could not fetch configMap: %q", CappNS))
 	}
 	knativeService.Spec.Template.ObjectMeta.Annotations = utils.MergeMaps(knativeServiceAnnotations,
-		autoscaleutils.SetAutoScaler(capp, defaulCM.Data))
+		autoscale.SetAutoScaler(capp, defaulCM.Data))
 	knativeService.Spec.Template.ObjectMeta.Labels = knativeServiceLabels
 	return knativeService
 }
@@ -83,19 +85,19 @@ func (k KnativeServiceManager) CleanUp(capp rcsv1alpha1.Capp) error {
 		if errors.IsNotFound(err) {
 			return nil
 		}
-		return fmt.Errorf("unable to delete KnativeService of Capp: %s", err.Error())
+		return fmt.Errorf("unable to delete KnativeService of Capp: %w", err)
 	}
 	return nil
 }
 
-// isRequired determines if a Knative service (ksvc) is required based on the Capp's spec.
-func (k KnativeServiceManager) isRequired(capp rcsv1alpha1.Capp) bool {
+// IsRequired determines if a Knative service (ksvc) is required based on the Capp's spec.
+func (k KnativeServiceManager) IsRequired(capp rcsv1alpha1.Capp) bool {
 	return capp.Spec.State == cappEnabledState
 }
 
 // isResumed checks whether the state changed from disabled to enabled.
 func (k KnativeServiceManager) isResumed(capp rcsv1alpha1.Capp) bool {
-	return capp.Status.StateStatus.State == cappDisabledState && k.isRequired(capp) &&
+	return capp.Status.StateStatus.State == cappDisabledState && k.IsRequired(capp) &&
 		!capp.Status.StateStatus.LastChange.IsZero()
 }
 
@@ -106,7 +108,7 @@ func (k KnativeServiceManager) CreateOrUpdateObject(capp rcsv1alpha1.Capp) error
 	knativeServiceFromCapp := k.prepareResource(capp, k.Ctx)
 	knativeService := knativev1.Service{}
 	resourceManager := rclient.ResourceBaseManagerClient{Ctx: k.Ctx, K8sclient: k.K8sclient, Log: k.Log}
-	if !k.isRequired(capp) {
+	if !k.IsRequired(capp) {
 		k.Log.Info("halting Capp")
 		k.EventRecorder.Event(&capp, corev1.EventTypeNormal, eventCappDisabled,
 			fmt.Sprintf("Capp %s state changed to disabled", capp.Name))
@@ -119,12 +121,12 @@ func (k KnativeServiceManager) CreateOrUpdateObject(capp rcsv1alpha1.Capp) error
 					k.EventRecorder.Event(&capp, corev1.EventTypeWarning, eventCappKnativeServiceCreationFailed,
 						fmt.Sprintf("Failed to create KnativeService %s for Capp %s",
 							knativeService.Name, capp.Name))
-					return fmt.Errorf("unable to create KnativeService for Capp: %s", err.Error())
+					return fmt.Errorf("unable to create KnativeService for Capp: %w", err)
 				}
 				if k.isResumed(capp) {
 					k.Log.Info("Capp resumed")
 					k.EventRecorder.Event(&capp, corev1.EventTypeNormal, eventCappEnabled,
-						fmt.Sprintf("Capp %s state changed to enabled", capp.Name))
+						fmt.Sprintf("Capp %q state changed to enabled", capp.Name))
 				}
 			} else {
 				return err
@@ -134,7 +136,7 @@ func (k KnativeServiceManager) CreateOrUpdateObject(capp rcsv1alpha1.Capp) error
 		if !reflect.DeepEqual(knativeService.Spec, knativeServiceFromCapp.Spec) {
 			knativeService.Spec = knativeServiceFromCapp.Spec
 			if err := resourceManager.UpdateResource(&knativeService); err != nil {
-				return fmt.Errorf("unable to update KnativeService of Capp: %s", err.Error())
+				return fmt.Errorf("unable to update KnativeService of Capp: %w", err)
 			}
 		}
 

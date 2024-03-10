@@ -3,6 +3,8 @@ package k8s_tests
 import (
 	"context"
 	"fmt"
+	"time"
+
 	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	mock "github.com/dana-team/container-app-operator/test/k8s_tests/mocks"
 	utilst "github.com/dana-team/container-app-operator/test/k8s_tests/utils"
@@ -20,7 +22,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrl "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
-	"time"
 )
 
 var (
@@ -75,7 +76,6 @@ var _ = SynchronizedBeforeSuite(func() {
 	Eventually(func() bool {
 		return utilst.DoesResourceExist(k8sClient, namespace)
 	}, TimeoutNameSpace, NsFetchInterval).Should(BeTrue(), "The namespace should be created")
-
 }, func() {})
 
 var _ = SynchronizedAfterSuite(func() {}, func() {
@@ -105,5 +105,4 @@ func cleanUp() {
 			return k8sClient.Get(context.Background(), client.ObjectKey{Name: mock.NsName}, namespace)
 		}, TimeoutNameSpace, NsFetchInterval).Should(HaveOccurred(), "The namespace should be deleted")
 	}
-
 }

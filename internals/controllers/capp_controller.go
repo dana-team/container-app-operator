@@ -3,6 +3,10 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"github.com/dana-team/container-app-operator/internals/status"
+	"time"
+
+	"github.com/dana-team/container-app-operator/internals/finalizer"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -11,8 +15,6 @@ import (
 
 	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	rmanagers "github.com/dana-team/container-app-operator/internals/resource-managers"
-	finalizer_utils "github.com/dana-team/container-app-operator/internals/utils/finalizer"
-	status_utils "github.com/dana-team/container-app-operator/internals/utils/status"
 	"k8s.io/apimachinery/pkg/types"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -24,6 +26,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
+
+const RequeueTime = 5 * time.Second
 
 // CappReconciler reconciles a Capp object
 type CappReconciler struct {
@@ -60,22 +64,29 @@ func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		}
 		return ctrl.Result{}, fmt.Errorf("failed to get Capp: %s", err.Error())
 	}
-	resourceManagers := []rmanagers.ResourceManager{
-		rmanagers.KnativeDomainMappingManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder},
-		rmanagers.KnativeServiceManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder},
-		rmanagers.FlowManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder},
-		rmanagers.OutputManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder}}
-	err, deleted := finalizer_utils.HandleResourceDeletion(ctx, capp, r.Client, resourceManagers)
+
+	resourceManagers := map[string]rmanagers.ResourceManager{
+		rmanagers.DomainMapping:  rmanagers.KnativeDomainMappingManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder},
+		rmanagers.KnativeServing: rmanagers.KnativeServiceManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder},
+		rmanagers.Flow:           rmanagers.FlowManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder},
+		rmanagers.Output:         rmanagers.OutputManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder},
+	}
+
+	err, deleted := finalizer.HandleResourceDeletion(ctx, capp, r.Client, resourceManagers)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to handle Capp deletion: %s", err.Error())
 	}
 	if deleted {
 		return ctrl.Result{}, nil
 	}
-	if err := finalizer_utils.EnsureFinalizer(ctx, capp, r.Client); err != nil {
+	if err := finalizer.EnsureFinalizer(ctx, capp, r.Client); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to ensure finalizer in Capp: %s", err.Error())
 	}
 	if err := r.SyncApplication(ctx, capp, resourceManagers, logger); err != nil {
+		if errors.IsConflict(err) {
+			logger.Info(fmt.Sprintf("Conflict detected requeuing: %s", err.Error()))
+			return ctrl.Result{RequeueAfter: RequeueTime}, nil
+		}
 		return ctrl.Result{}, fmt.Errorf("failed to sync Capp: %s", err.Error())
 	}
 	return ctrl.Result{}, nil
@@ -115,13 +126,15 @@ func (r *CappReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *CappReconciler) SyncApplication(ctx context.Context, capp rcsv1alpha1.Capp, resourceManagers []rmanagers.ResourceManager, logger logr.Logger) error {
+// SyncApplication manages the lifecycle of Capp.
+// It ensures all manifests are applied according to the specification and synchronizes the status accordingly.
+func (r *CappReconciler) SyncApplication(ctx context.Context, capp rcsv1alpha1.Capp, resourceManagers map[string]rmanagers.ResourceManager, logger logr.Logger) error {
 	for _, manager := range resourceManagers {
 		if err := manager.CreateOrUpdateObject(capp); err != nil {
 			return err
 		}
 	}
-	if err := status_utils.SyncStatus(ctx, capp, logger, r.Client, r.OnOpenshift); err != nil {
+	if err := status.SyncStatus(ctx, capp, logger, r.Client, r.OnOpenshift, resourceManagers); err != nil {
 		return err
 	}
 	return nil
