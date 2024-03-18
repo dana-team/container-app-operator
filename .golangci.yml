@@ -1,0 +1,29 @@
+# https://golangci-lint.run/usage/quick-start/
+run:
+  timeout: 12m
+  skip-dirs:
+    - images
+    - hack
+    - solutions
+    - vendor
+linters:
+  enable:
+    - asasalint
+    - bidichk
+    - bodyclose
+    - errcheck
+    - exportloopref
+    - goimports
+    - gosimple
+    - govet
+    - ineffassign
+    - misspell
+    - nakedret
+    - nosprintfhostport
+    - reassign
+    - rowserrcheck
+    - sqlclosecheck
+    - staticcheck
+    - typecheck
+    - unparam
+    - unused

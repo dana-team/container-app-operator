@@ -3,8 +3,9 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"github.com/dana-team/container-app-operator/internals/status"
 	"time"
+
+	"github.com/dana-team/container-app-operator/internals/status"
 
 	"github.com/dana-team/container-app-operator/internals/finalizer"
 
