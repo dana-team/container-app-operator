@@ -28,6 +28,7 @@ func buildRevisionsStatus(ctx context.Context, capp rcsv1alpha1.Capp, r client.C
 
 	labelSelector := labels.NewSelector().Add(*requirement)
 	listOptions := client.ListOptions{
+		Namespace:     capp.Namespace,
 		LabelSelector: labelSelector,
 		Limit:         ClientListLimit,
 	}
