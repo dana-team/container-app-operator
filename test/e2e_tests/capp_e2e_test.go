@@ -1,31 +1,15 @@
-package k8s_tests
+package e2e_tests
 
 import (
 	"context"
-	"testing"
-	"time"
 
 	_ "github.com/dana-team/container-app-operator/api/v1alpha1"
-	mock "github.com/dana-team/container-app-operator/test/k8s_tests/mocks"
-	utilst "github.com/dana-team/container-app-operator/test/k8s_tests/utils"
+	mock "github.com/dana-team/container-app-operator/test/e2e_tests/mocks"
+	"github.com/dana-team/container-app-operator/test/e2e_tests/testconsts"
+	utilst "github.com/dana-team/container-app-operator/test/e2e_tests/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
-
-const (
-	TimeoutCapp            = 60 * time.Second
-	CappCreationInterval   = 2 * time.Second
-	UnsupportedScaleMetric = "storage"
-	EnabledState           = "enabled"
-	DisabledState          = "disabled"
-)
-
-func TestE2e(t *testing.T) {
-	RegisterFailHandler(Fail)
-
-	SetDefaultEventuallyTimeout(time.Second * 2)
-	RunSpecs(t, "Capp Suite")
-}
 
 var _ = Describe("Validate capp creation", func() {
 	It("Should validate capp spec", func() {
@@ -35,7 +19,7 @@ var _ = Describe("Validate capp creation", func() {
 		Expect(desiredCapp.Spec.ScaleMetric).ShouldNot(Equal(nil))
 
 		By("Creating Capp with unsupported scale metric")
-		baseCapp.Spec.ScaleMetric = UnsupportedScaleMetric
+		baseCapp.Spec.ScaleMetric = testconsts.UnsupportedScaleMetric
 		Expect(k8sClient.Create(context.Background(), baseCapp)).ShouldNot(Equal(nil))
 	})
 })
@@ -56,13 +40,13 @@ var _ = Describe("Validate Capp adapter", func() {
 		Eventually(func() string {
 			assertionCapp = utilst.GetCapp(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
 			return assertionCapp.Spec.ScaleMetric
-		}, TimeoutCapp, CappCreationInterval).Should(Equal(mock.RPSScaleMetric), "Should fetch capp.")
+		}, testconsts.Timeout, testconsts.Interval).Should(Equal(mock.RPSScaleMetric), "Should fetch capp.")
 
 		By("Checks if deleted successfully")
 		utilst.DeleteCapp(k8sClient, assertionCapp)
 		Eventually(func() bool {
 			return utilst.DoesResourceExist(k8sClient, assertionCapp)
-		}, TimeoutCapp, CappCreationInterval).ShouldNot(BeTrue(), "Should not find a resource.")
+		}, testconsts.Timeout, testconsts.Interval).ShouldNot(BeTrue(), "Should not find a resource.")
 	})
 
 	It("Validate state functionality", func() {
@@ -74,46 +58,46 @@ var _ = Describe("Validate Capp adapter", func() {
 		Eventually(func() string {
 			capp := utilst.GetCapp(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
 			return capp.Status.StateStatus.State
-		}, TimeoutCapp, CappCreationInterval).Should(Equal(EnabledState))
+		}, testconsts.Timeout, testconsts.Interval).Should(Equal(testconsts.EnabledState))
 
 		By("Checking if the ksvc was created successfully")
 		ksvcObject := mock.CreateKnativeServiceObject(assertionCapp.Name)
 		Eventually(func() bool {
 			return utilst.DoesResourceExist(k8sClient, ksvcObject)
-		}, TimeoutCapp, CappCreationInterval).Should(BeTrue(), "Should find a resource.")
+		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "Should find a resource.")
 
 		By("Checking if the revision is ready")
-		revisionName := assertionCapp.Name + firstRevisionSuffix
+		revisionName := assertionCapp.Name + testconsts.FirstRevisionSuffix
 		checkRevisionReadiness(revisionName, true)
 
 		By("Updating the capp status to be disabled")
-		assertionCapp.Spec.State = DisabledState
+		assertionCapp.Spec.State = testconsts.DisabledState
 		utilst.UpdateCapp(k8sClient, assertionCapp)
 
 		By("Checking if the capp state is disabled")
 		Eventually(func() string {
 			capp := utilst.GetCapp(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
 			return capp.Status.StateStatus.State
-		}, TimeoutCapp, CappCreationInterval).Should(Equal(DisabledState))
+		}, testconsts.Timeout, testconsts.Interval).Should(Equal(testconsts.DisabledState))
 
 		By("Checking if the ksvc and the revision were deleted successfully")
 		Eventually(func() bool {
 			return utilst.DoesResourceExist(k8sClient, ksvcObject)
-		}, TimeoutCapp, CappCreationInterval).ShouldNot(BeTrue(), "Should not find a resource.")
+		}, testconsts.Timeout, testconsts.Interval).ShouldNot(BeTrue(), "Should not find a resource.")
 		Eventually(func() bool {
 			revision := mock.CreateRevisionObject(revisionName)
 			return utilst.DoesResourceExist(k8sClient, revision)
-		}, TimeoutCapp, CappCreationInterval).ShouldNot(BeTrue(), "Should not find a resource.")
+		}, testconsts.Timeout, testconsts.Interval).ShouldNot(BeTrue(), "Should not find a resource.")
 
 		By("Updating the capp status to be enabled")
 		assertionCapp = utilst.GetCapp(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
-		assertionCapp.Spec.State = EnabledState
+		assertionCapp.Spec.State = testconsts.EnabledState
 		utilst.UpdateCapp(k8sClient, assertionCapp)
 
 		By("Checking if the ksvc was recreated successfully")
 		Eventually(func() bool {
 			return utilst.DoesResourceExist(k8sClient, ksvcObject)
-		}, TimeoutCapp, CappCreationInterval).Should(BeTrue(), "Should find a resource.")
+		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "Should find a resource.")
 
 		By("Checking if the revision is ready")
 		checkRevisionReadiness(revisionName, true)

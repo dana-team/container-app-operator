@@ -50,7 +50,7 @@ func CreateOutputObject(outputName string) *loggingv1beta1.Output {
 	return &loggingv1beta1.Output{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      outputName,
-			Namespace: NsName,
+			Namespace: NSName,
 		},
 	}
 }
@@ -59,7 +59,7 @@ func CreateFlowObject(flowName string) *loggingv1beta1.Flow {
 	return &loggingv1beta1.Flow{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      flowName,
-			Namespace: NsName,
+			Namespace: NSName,
 		},
 	}
 }
@@ -69,7 +69,7 @@ func CreateElasticSecretObject() *corev1.Secret {
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      ElasticSecretName,
-			Namespace: NsName,
+			Namespace: NSName,
 		},
 		Type: "Opaque",
 		Data: map[string][]byte{ElasticUserName: []byte(SecretValue)},
@@ -81,7 +81,7 @@ func CreateSplunkSecretObject() *corev1.Secret {
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      SplunkSecretName,
-			Namespace: NsName,
+			Namespace: NSName,
 		},
 		Type: "Opaque",
 		Data: map[string][]byte{HecTokenKey: []byte(SplunkHecToken), UsernameKey: []byte(SplunkUserName), PasswordKey: []byte(SplunkPassword), SplunkHecTokenKey: []byte(SplunkHecToken)},

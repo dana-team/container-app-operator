@@ -1,18 +1,14 @@
-package k8s_tests
+package e2e_tests
 
 import (
 	"fmt"
 
-	mock "github.com/dana-team/container-app-operator/test/k8s_tests/mocks"
-	utilst "github.com/dana-team/container-app-operator/test/k8s_tests/utils"
+	"github.com/dana-team/container-app-operator/test/e2e_tests/testconsts"
+
+	mock "github.com/dana-team/container-app-operator/test/e2e_tests/mocks"
+	utilst "github.com/dana-team/container-app-operator/test/e2e_tests/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-)
-
-const (
-	outputSuffix = "-output"
-	flowSuffix   = "-flow"
-	testIndex    = "test"
 )
 
 // checkOutputIndexValue checks if the output index value matches the desired value based on the logger type.
@@ -22,12 +18,12 @@ func checkOutputIndexValue(logType string, outputName string, outputNamespace st
 		Eventually(func() string {
 			output := utilst.GetOutput(k8sClient, outputName, outputNamespace)
 			return output.Spec.ElasticsearchOutput.IndexName
-		}, TimeoutCapp, CappCreationInterval).Should(Equal(IndexDesiredValue))
+		}, testconsts.Timeout, testconsts.Interval).Should(Equal(IndexDesiredValue))
 	case mock.SplunkType:
 		Eventually(func() string {
 			output := utilst.GetOutput(k8sClient, outputName, outputNamespace)
 			return output.Spec.SplunkHecOutput.Index
-		}, TimeoutCapp, CappCreationInterval).Should(Equal(IndexDesiredValue))
+		}, testconsts.Timeout, testconsts.Interval).Should(Equal(IndexDesiredValue))
 	}
 }
 
@@ -38,15 +34,15 @@ func testCappWithLogger(logType string) {
 		createdCapp := utilst.CreateCappWithLogger(logType, k8sClient)
 
 		By("Checking if the output is reporting a problem when secret credentials secrert is missing")
-		outputName := createdCapp.Name + outputSuffix
+		outputName := createdCapp.Name + testconsts.OutputSuffix
 		outputObject := mock.CreateOutputObject(outputName)
 		Eventually(func() bool {
 			return utilst.DoesResourceExist(k8sClient, outputObject)
-		}, TimeoutCapp, CappCreationInterval).Should(BeTrue(), "Should find a resource.")
+		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "Should find a resource.")
 		Eventually(func() int {
 			output := utilst.GetOutput(k8sClient, outputName, createdCapp.Namespace)
 			return output.Status.ProblemsCount
-		}, TimeoutCapp, CappCreationInterval).Should(Equal(1))
+		}, testconsts.Timeout, testconsts.Interval).Should(Equal(1))
 
 		By(fmt.Sprintf("Creating a secret containing %s credentials", logType))
 		utilst.CreateCredentialsSecret(logType, k8sClient)
@@ -55,46 +51,46 @@ func testCappWithLogger(logType string) {
 		Eventually(func() bool {
 			output := utilst.GetOutput(k8sClient, outputName, createdCapp.Namespace)
 			return *output.Status.Active
-		}, TimeoutCapp, CappCreationInterval).Should(BeTrue())
+		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue())
 		Eventually(func() int {
 			output := utilst.GetOutput(k8sClient, outputName, createdCapp.Namespace)
 			return output.Status.ProblemsCount
-		}, TimeoutCapp, CappCreationInterval).Should(Equal(0))
+		}, testconsts.Timeout, testconsts.Interval).Should(Equal(0))
 
 		By("Checking if the flow was created successfully and active")
-		flowName := createdCapp.Name + flowSuffix
+		flowName := createdCapp.Name + testconsts.FlowSuffix
 		flowObject := mock.CreateFlowObject(flowName)
 		Eventually(func() bool {
 			return utilst.DoesResourceExist(k8sClient, flowObject)
-		}, TimeoutCapp, CappCreationInterval).Should(BeTrue(), "Should find a resource.")
+		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "Should find a resource.")
 		Eventually(func() bool {
 			flow := utilst.GetFlow(k8sClient, flowName, createdCapp.Namespace)
 			return *flow.Status.Active
-		}, TimeoutCapp, CappCreationInterval).Should(BeTrue())
+		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue())
 
 		By(fmt.Sprintf("Updating the capp %s logger index", logType))
 		toBeUpdatedCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-		toBeUpdatedCapp.Spec.LogSpec.Index = testIndex
+		toBeUpdatedCapp.Spec.LogSpec.Index = testconsts.TestIndex
 		utilst.UpdateCapp(k8sClient, toBeUpdatedCapp)
 
 		By("checking if the output index was updated")
-		checkOutputIndexValue(logType, outputName, createdCapp.Namespace, testIndex)
+		checkOutputIndexValue(logType, outputName, createdCapp.Namespace, testconsts.TestIndex)
 
 		By("Deleting the capp instance")
 		utilst.DeleteCapp(k8sClient, createdCapp)
 		Eventually(func() bool {
 			return utilst.DoesResourceExist(k8sClient, createdCapp)
-		}, TimeoutCapp, CappCreationInterval).ShouldNot(BeTrue(), "Should not find a resource.")
+		}, testconsts.Timeout, testconsts.Interval).ShouldNot(BeTrue(), "Should not find a resource.")
 
 		By("Checking if the output was deleted successfully")
 		Eventually(func() bool {
 			return utilst.DoesResourceExist(k8sClient, outputObject)
-		}, TimeoutCapp, CappCreationInterval).ShouldNot(BeTrue(), "Should not find a resource.")
+		}, testconsts.Timeout, testconsts.Interval).ShouldNot(BeTrue(), "Should not find a resource.")
 
 		By("Checking if the flow was deleted successfully")
 		Eventually(func() bool {
 			return utilst.DoesResourceExist(k8sClient, flowObject)
-		}, TimeoutCapp, CappCreationInterval).ShouldNot(BeTrue(), "Should not find a resource.")
+		}, testconsts.Timeout, testconsts.Interval).ShouldNot(BeTrue(), "Should not find a resource.")
 	})
 }
 

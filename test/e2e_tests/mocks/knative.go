@@ -12,7 +12,7 @@ func CreateRevisionObject(revisionName string) *knativev1.Revision {
 	return &knativev1.Revision{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      revisionName,
-			Namespace: NsName,
+			Namespace: NSName,
 		},
 	}
 }
@@ -37,7 +37,7 @@ func CreateKnativeServiceObject(knativeServiceName string) *knativev1.Service {
 	return &knativev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      knativeServiceName,
-			Namespace: NsName,
+			Namespace: NSName,
 		},
 	}
 }

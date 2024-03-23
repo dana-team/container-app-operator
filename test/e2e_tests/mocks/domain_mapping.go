@@ -9,7 +9,7 @@ func CreateDomainMappingObject(domainMappingName string) *knativev1beta1.DomainM
 	return &knativev1beta1.DomainMapping{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      domainMappingName,
-			Namespace: NsName,
+			Namespace: NSName,
 		},
 	}
 }
