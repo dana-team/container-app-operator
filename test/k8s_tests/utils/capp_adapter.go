@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	mock "github.com/dana-team/container-app-operator/test/k8s_tests/mocks"
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -16,7 +16,7 @@ const (
 )
 
 // CreateCapp creates a new Capp instance with a unique name and returns it.
-func CreateCapp(k8sClient client.Client, capp *rcsv1alpha1.Capp) *rcsv1alpha1.Capp {
+func CreateCapp(k8sClient client.Client, capp *cappv1alpha1.Capp) *cappv1alpha1.Capp {
 	cappName := GenerateCappName()
 	newCapp := capp.DeepCopy()
 	newCapp.Name = cappName
@@ -28,12 +28,12 @@ func CreateCapp(k8sClient client.Client, capp *rcsv1alpha1.Capp) *rcsv1alpha1.Ca
 }
 
 // UpdateCapp updates an existing Capp instance.
-func UpdateCapp(k8sClient client.Client, capp *rcsv1alpha1.Capp) {
+func UpdateCapp(k8sClient client.Client, capp *cappv1alpha1.Capp) {
 	Expect(k8sClient.Update(context.Background(), capp)).To(Succeed())
 }
 
 // DeleteCapp deletes an existing Capp instance.
-func DeleteCapp(k8sClient client.Client, capp *rcsv1alpha1.Capp) {
+func DeleteCapp(k8sClient client.Client, capp *cappv1alpha1.Capp) {
 	Expect(k8sClient.Delete(context.Background(), capp)).To(Succeed())
 }
 
@@ -44,8 +44,8 @@ func GenerateCappName() string {
 }
 
 // GetCapp fetch existing and return an instance of Capp.
-func GetCapp(k8sClient client.Client, name string, namespace string) *rcsv1alpha1.Capp {
-	capp := &rcsv1alpha1.Capp{}
+func GetCapp(k8sClient client.Client, name string, namespace string) *cappv1alpha1.Capp {
+	capp := &cappv1alpha1.Capp{}
 	GetResource(k8sClient, capp, name, namespace)
 	return capp
 }

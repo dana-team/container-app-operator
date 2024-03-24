@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	mock "github.com/dana-team/container-app-operator/test/k8s_tests/mocks"
 	utilst "github.com/dana-team/container-app-operator/test/k8s_tests/utils"
+	nfspvcv1alpha1 "github.com/dana-team/nfspvc-operator/api/v1alpha1"
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -37,8 +38,9 @@ const (
 
 func newScheme() *runtime.Scheme {
 	s := runtime.NewScheme()
+	_ = nfspvcv1alpha1.AddToScheme(s)
 	_ = corev1.AddToScheme(s)
-	_ = rcsv1alpha1.AddToScheme(s)
+	_ = cappv1alpha1.AddToScheme(s)
 	_ = loggingv1beta1.AddToScheme(s)
 	_ = knativev1beta1.AddToScheme(s)
 	_ = knativev1.AddToScheme(s)

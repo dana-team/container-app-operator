@@ -6,7 +6,7 @@ import (
 	"reflect"
 
 	"github.com/cisco-open/operator-tools/pkg/secret"
-	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	rclient "github.com/dana-team/container-app-operator/internals/wrappers"
 	"github.com/go-logr/logr"
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
@@ -42,7 +42,7 @@ const (
 
 // createElasticsearchOutput creates an Elasticsearch output object based on the provided logSpec.
 // It constructs the Elasticsearch output which is returned as an OutputSpec.
-func createElasticsearchOutput(logSpec rcsv1alpha1.LogSpec) loggingv1beta1.OutputSpec {
+func createElasticsearchOutput(logSpec cappv1alpha1.LogSpec) loggingv1beta1.OutputSpec {
 	protocol := "http"
 	falseVar := false
 	if logSpec.SSLVerify {
@@ -77,7 +77,7 @@ func createElasticsearchOutput(logSpec rcsv1alpha1.LogSpec) loggingv1beta1.Outpu
 
 // createSplunkHecOutput creates a splunk output object based on the provided logSpec.
 // It constructs the splunk output which is returned as an OutputSpec.
-func createSplunkHecOutput(logSpec rcsv1alpha1.LogSpec) loggingv1beta1.OutputSpec {
+func createSplunkHecOutput(logSpec cappv1alpha1.LogSpec) loggingv1beta1.OutputSpec {
 	protocol := "http"
 	if logSpec.SSLVerify {
 		protocol = "https"
@@ -110,13 +110,13 @@ func createSplunkHecOutput(logSpec rcsv1alpha1.LogSpec) loggingv1beta1.OutputSpe
 }
 
 // outputCreators is a map that associates log types with their corresponding output creation functions.
-var outputCreators = map[string]func(rcsv1alpha1.LogSpec) loggingv1beta1.OutputSpec{
+var outputCreators = map[string]func(cappv1alpha1.LogSpec) loggingv1beta1.OutputSpec{
 	LogTypeElastic: createElasticsearchOutput,
 	LogTypeSplunk:  createSplunkHecOutput,
 }
 
 // prepareResource prepares an output resource based on the provided capp.
-func (o OutputManager) prepareResource(capp rcsv1alpha1.Capp) loggingv1beta1.Output {
+func (o OutputManager) prepareResource(capp cappv1alpha1.Capp) loggingv1beta1.Output {
 	outputName := capp.GetName() + "-output"
 	if createFunc, ok := outputCreators[capp.Spec.LogSpec.Type]; ok {
 		outputSpec := createFunc(capp.Spec.LogSpec)
@@ -134,7 +134,7 @@ func (o OutputManager) prepareResource(capp rcsv1alpha1.Capp) loggingv1beta1.Out
 
 // CleanUp deletes the output resource associated with the Capp object.
 // The output resource is deleted by calling the DeleteResource method of the resourceManager object.
-func (o OutputManager) CleanUp(capp rcsv1alpha1.Capp) error {
+func (o OutputManager) CleanUp(capp cappv1alpha1.Capp) error {
 	if o.IsRequired(capp) {
 		outputName := capp.GetName() + "-output"
 		resourceManager := rclient.ResourceBaseManagerClient{Ctx: o.Ctx, K8sclient: o.K8sclient, Log: o.Log}
@@ -148,8 +148,8 @@ func (o OutputManager) CleanUp(capp rcsv1alpha1.Capp) error {
 }
 
 // IsRequired is responsible to determine if resource logging operator is required.
-func (o OutputManager) IsRequired(capp rcsv1alpha1.Capp) bool {
-	if capp.Spec.LogSpec != (rcsv1alpha1.LogSpec{}) {
+func (o OutputManager) IsRequired(capp cappv1alpha1.Capp) bool {
+	if capp.Spec.LogSpec != (cappv1alpha1.LogSpec{}) {
 		return capp.Spec.LogSpec.Type == LogTypeElastic || capp.Spec.LogSpec.Type == LogTypeSplunk
 	}
 	return false
@@ -157,7 +157,7 @@ func (o OutputManager) IsRequired(capp rcsv1alpha1.Capp) bool {
 
 // CreateOrUpdateObject creates or updates an output object based on the provided Capp.
 // It returns an error if any operation fails.
-func (o OutputManager) CreateOrUpdateObject(capp rcsv1alpha1.Capp) error {
+func (o OutputManager) CreateOrUpdateObject(capp cappv1alpha1.Capp) error {
 	outputName := capp.GetName() + "-output"
 	logger := o.Log.WithValues("OutputName", outputName, "OutputNamespace", capp.Namespace)
 	if o.IsRequired(capp) {

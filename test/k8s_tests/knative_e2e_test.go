@@ -3,7 +3,7 @@ package k8s_tests
 import (
 	"fmt"
 
-	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	mock "github.com/dana-team/container-app-operator/test/k8s_tests/mocks"
 	utilst "github.com/dana-team/container-app-operator/test/k8s_tests/utils"
 	. "github.com/onsi/ginkgo/v2"
@@ -25,7 +25,7 @@ const (
 // updateCapp updates the given Capp object and ensures the readiness of the latest revision
 // if shouldRevisionBeReady is true. It also checks and asserts the state of the LatestReadyRevision.
 
-func updateCapp(capp *rcsv1alpha1.Capp, shouldRevisionBeReady bool) {
+func updateCapp(capp *cappv1alpha1.Capp, shouldRevisionBeReady bool) {
 	latestReadyRevisionBeforeUpdate := capp.Status.KnativeObjectStatus.ConfigurationStatusFields.LatestReadyRevisionName
 	nextRevisionName := utilst.GetNextRevisionName(latestReadyRevisionBeforeUpdate)
 	utilst.UpdateCapp(k8sClient, capp)
@@ -67,7 +67,7 @@ func checkRevisionReadiness(revisionName string, shouldBeReady bool) {
 
 // createAndGetCapp creates a Capp using the provided testCapp object,
 // retrieves the created Capp and returns it for further use.
-func createAndGetCapp(testCapp *rcsv1alpha1.Capp) *rcsv1alpha1.Capp {
+func createAndGetCapp(testCapp *cappv1alpha1.Capp) *cappv1alpha1.Capp {
 	createdCapp := utilst.CreateCapp(k8sClient, testCapp)
 	assertionCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
 	return assertionCapp

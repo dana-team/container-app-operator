@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"reflect"
 
-	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/dana-team/container-app-operator/internals/autoscale"
 	"github.com/dana-team/container-app-operator/internals/utils"
 	rclient "github.com/dana-team/container-app-operator/internals/wrappers"
@@ -36,7 +36,7 @@ type KnativeServiceManager struct {
 }
 
 // prepareResource generates a Knative Service definition from a given Capp resource.
-func (k KnativeServiceManager) prepareResource(capp rcsv1alpha1.Capp, ctx context.Context) knativev1.Service {
+func (k KnativeServiceManager) prepareResource(capp cappv1alpha1.Capp, ctx context.Context) knativev1.Service {
 	knativeServiceAnnotations := utils.FilterKeysWithoutPrefix(capp.Annotations, danaAnnotationsPrefix)
 	knativeServiceLabels := utils.FilterKeysWithoutPrefix(capp.Labels, danaAnnotationsPrefix)
 	knativeServiceLabels[CappResourceKey] = capp.Name
@@ -61,8 +61,10 @@ func (k KnativeServiceManager) prepareResource(capp rcsv1alpha1.Capp, ctx contex
 	knativeService.Spec.ConfigurationSpec.SetDefaults(ctx)
 	knativeService.Spec.RouteSpec.SetDefaults(ctx)
 	knativeService.Spec.Template.Spec.SetDefaults(ctx)
-
 	knativeService.Spec.ConfigurationSpec.Template.Spec.TimeoutSeconds = capp.Spec.RouteSpec.RouteTimeoutSeconds
+
+	volumes := k.prepareVolumes(capp)
+	knativeService.Spec.Template.Spec.Volumes = append(knativeService.Spec.Template.Spec.Volumes, volumes...)
 
 	defaulCM := corev1.ConfigMap{}
 	if err := k.K8sclient.Get(k.Ctx, types.NamespacedName{Namespace: CappNS, Name: DefaultAutoScaleCM}, &defaulCM); err != nil {
@@ -74,11 +76,27 @@ func (k KnativeServiceManager) prepareResource(capp rcsv1alpha1.Capp, ctx contex
 	return knativeService
 }
 
+// prepareVolumes generates a list of volumes to be used in a Knative Service definition from a given Capp resource.
+func (k KnativeServiceManager) prepareVolumes(capp cappv1alpha1.Capp) []corev1.Volume {
+	volumes := make([]corev1.Volume, 0)
+	for _, nfsVolume := range capp.Spec.VolumesSpec.NFSVolumes {
+		volumes = append(volumes, corev1.Volume{
+			Name: nfsVolume.Name,
+			VolumeSource: corev1.VolumeSource{
+				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+					ClaimName: nfsVolume.Name,
+				},
+			},
+		})
+	}
+	return volumes
+}
+
 // CleanUp attempts to delete the associated KnativeService for a given Capp resource.
 // If the KnativeService is not found, the function completes without error.
 // If any other errors occur during the deletion process,
 // an error detailing the issue is returned.
-func (k KnativeServiceManager) CleanUp(capp rcsv1alpha1.Capp) error {
+func (k KnativeServiceManager) CleanUp(capp cappv1alpha1.Capp) error {
 	resourceManager := rclient.ResourceBaseManagerClient{Ctx: k.Ctx, K8sclient: k.K8sclient, Log: k.Log}
 	kservice := knativev1.Service{}
 	if err := resourceManager.DeleteResource(&kservice, capp.Name, capp.Namespace); err != nil {
@@ -91,12 +109,12 @@ func (k KnativeServiceManager) CleanUp(capp rcsv1alpha1.Capp) error {
 }
 
 // IsRequired determines if a Knative service (ksvc) is required based on the Capp's spec.
-func (k KnativeServiceManager) IsRequired(capp rcsv1alpha1.Capp) bool {
+func (k KnativeServiceManager) IsRequired(capp cappv1alpha1.Capp) bool {
 	return capp.Spec.State == cappEnabledState
 }
 
 // isResumed checks whether the state changed from disabled to enabled.
-func (k KnativeServiceManager) isResumed(capp rcsv1alpha1.Capp) bool {
+func (k KnativeServiceManager) isResumed(capp cappv1alpha1.Capp) bool {
 	return capp.Status.StateStatus.State == cappDisabledState && k.IsRequired(capp) &&
 		!capp.Status.StateStatus.LastChange.IsZero()
 }
@@ -104,7 +122,7 @@ func (k KnativeServiceManager) isResumed(capp rcsv1alpha1.Capp) bool {
 // CreateOrUpdateObject ensures a KnativeService resource exists based on the provided Capp.
 // If the Capp doesn't require a KnativeService, it triggers a cleanup.
 // Otherwise, it either creates a new KnativeService or updates an existing one based on the Capp's specifications.
-func (k KnativeServiceManager) CreateOrUpdateObject(capp rcsv1alpha1.Capp) error {
+func (k KnativeServiceManager) CreateOrUpdateObject(capp cappv1alpha1.Capp) error {
 	knativeServiceFromCapp := k.prepareResource(capp, k.Ctx)
 	knativeService := knativev1.Service{}
 	resourceManager := rclient.ResourceBaseManagerClient{Ctx: k.Ctx, K8sclient: k.K8sclient, Log: k.Log}

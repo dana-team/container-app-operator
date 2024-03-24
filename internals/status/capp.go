@@ -3,7 +3,7 @@ package status
 import (
 	"context"
 
-	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	rmanagers "github.com/dana-team/container-app-operator/internals/resource-managers"
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -13,7 +13,7 @@ import (
 )
 
 // CreateStateStatus changes the state status by identifying changes in the manifest
-func CreateStateStatus(stateStatus *rcsv1alpha1.StateStatus, cappStateFromSpec string) {
+func CreateStateStatus(stateStatus *cappv1alpha1.StateStatus, cappStateFromSpec string) {
 	if cappStateFromSpec != stateStatus.State || stateStatus.State == "" {
 		stateStatus.State = cappStateFromSpec
 		stateStatus.LastChange = metav1.Now()
@@ -22,8 +22,8 @@ func CreateStateStatus(stateStatus *rcsv1alpha1.StateStatus, cappStateFromSpec s
 
 // SyncStatus is the main function that synchronizes the status of the Capp CRD with the Knative service and revisions associated with it.
 // It gets the Capp CRD, builds the ApplicationLinks and RevisionInfo statuses, and updates the status of the Capp CRD if it has changed.
-func SyncStatus(ctx context.Context, capp rcsv1alpha1.Capp, log logr.Logger, r client.Client, onOpenshift bool, resourceManagers map[string]rmanagers.ResourceManager) error {
-	cappObject := rcsv1alpha1.Capp{}
+func SyncStatus(ctx context.Context, capp cappv1alpha1.Capp, log logr.Logger, r client.Client, onOpenshift bool, resourceManagers map[string]rmanagers.ResourceManager) error {
+	cappObject := cappv1alpha1.Capp{}
 	if err := r.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: capp.Name}, &cappObject); err != nil {
 		return err
 	}
@@ -55,6 +55,13 @@ func SyncStatus(ctx context.Context, capp rcsv1alpha1.Capp, log logr.Logger, r c
 		return err
 	}
 	cappObject.Status.RouteStatus = routeStatus
+
+	NFSPVCManager := resourceManagers[rmanagers.NFSPVC]
+	volumesStatus, err := buildVolumesStatus(ctx, r, capp, NFSPVCManager.IsRequired(capp))
+	if err != nil {
+		return err
+	}
+	cappObject.Status.VolumesStatus = volumesStatus
 
 	CreateStateStatus(&cappObject.Status.StateStatus, capp.Spec.State)
 	cappObject.Status.KnativeObjectStatus = knativeObjectStatus
