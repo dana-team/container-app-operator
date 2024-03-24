@@ -9,7 +9,7 @@ import (
 
 const (
 	CappName       = "capp-default-test"
-	NsName         = "capp-e2e-tests"
+	NSName         = "capp-e2e-tests"
 	RPSScaleMetric = "rps"
 	SecretKey      = "extra"
 	SecretValue    = "YmFyCg=="
@@ -25,7 +25,7 @@ func CreateBaseCapp() *rcsv1alpha1.Capp {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      CappName,
-			Namespace: NsName,
+			Namespace: NSName,
 		},
 		Spec: rcsv1alpha1.CappSpec{
 			ConfigurationSpec: knativev1.ConfigurationSpec{
@@ -63,7 +63,7 @@ func CreateSecretObject(secretName string) *corev1.Secret {
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      secretName,
-			Namespace: NsName,
+			Namespace: NSName,
 		},
 		Type: "Opaque",
 		Data: map[string][]byte{SecretKey: []byte(SecretValue)},

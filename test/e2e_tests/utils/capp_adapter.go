@@ -5,7 +5,7 @@ import (
 	"time"
 
 	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
-	mock "github.com/dana-team/container-app-operator/test/k8s_tests/mocks"
+	mock "github.com/dana-team/container-app-operator/test/e2e_tests/mocks"
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )

@@ -2,7 +2,7 @@ package utils
 
 import (
 	"github.com/dana-team/container-app-operator/api/v1alpha1"
-	mock "github.com/dana-team/container-app-operator/test/k8s_tests/mocks"
+	mock "github.com/dana-team/container-app-operator/test/e2e_tests/mocks"
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
