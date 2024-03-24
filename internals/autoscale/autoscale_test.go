@@ -3,18 +3,18 @@ package autoscale
 import (
 	"testing"
 
-	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestSetAutoScaler(t *testing.T) {
-	exampleCapp := rcsv1alpha1.Capp{
+	exampleCapp := cappv1alpha1.Capp{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test",
 		},
-		Spec: rcsv1alpha1.CappSpec{
+		Spec: cappv1alpha1.CappSpec{
 			ScaleMetric: "cpu",
 		},
 	}

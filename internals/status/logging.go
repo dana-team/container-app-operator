@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/go-logr/logr"
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -15,9 +15,9 @@ import (
 
 // buildLoggingStatus builds the Logging status of the Capp CRD by getting the Flow and Output objects
 // bundled to the Capp and adding their status. It also creates a condition in accordance with their situation.
-func buildLoggingStatus(ctx context.Context, capp rcsv1alpha1.Capp, log logr.Logger, r client.Client, isRequired bool) (rcsv1alpha1.LoggingStatus, error) {
+func buildLoggingStatus(ctx context.Context, capp cappv1alpha1.Capp, log logr.Logger, r client.Client, isRequired bool) (cappv1alpha1.LoggingStatus, error) {
 	logger := log.WithValues("FlowName", capp.Name+"-flow", "OutputName", capp.Name+"-output")
-	loggingStatus := rcsv1alpha1.LoggingStatus{}
+	loggingStatus := cappv1alpha1.LoggingStatus{}
 
 	if !isRequired {
 		return loggingStatus, nil

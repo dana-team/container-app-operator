@@ -1,7 +1,7 @@
 package autoscale
 
 import (
-	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/dana-team/container-app-operator/internals/utils"
 	"k8s.io/utils/strings/slices"
 )
@@ -24,7 +24,7 @@ var KPAMetrics = []string{"rps", "concurrency"}
 
 // SetAutoScaler takes a Capp and a Knative Service and sets the autoscaler annotations based on the Capp's ScaleMetric.
 // Returns a map of the autoscaler annotations that were set.
-func SetAutoScaler(capp rcsv1alpha1.Capp, defaults map[string]string) map[string]string {
+func SetAutoScaler(capp cappv1alpha1.Capp, defaults map[string]string) map[string]string {
 	scaleMetric := capp.Spec.ScaleMetric
 	autoScaleAnnotations := make(map[string]string)
 	autoScaleDefaults := defaults

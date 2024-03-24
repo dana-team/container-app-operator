@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"reflect"
 
-	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	rclient "github.com/dana-team/container-app-operator/internals/wrappers"
 	"github.com/go-logr/logr"
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
@@ -27,7 +27,7 @@ type FlowManager struct {
 }
 
 // prepareResource prepares a flow resource based on the provided capp.
-func (f FlowManager) prepareResource(capp rcsv1alpha1.Capp) loggingv1beta1.Flow {
+func (f FlowManager) prepareResource(capp cappv1alpha1.Capp) loggingv1beta1.Flow {
 	flowName := capp.GetName() + "-flow"
 	outputName := capp.GetName() + "-output"
 	flow := loggingv1beta1.Flow{
@@ -67,7 +67,7 @@ func (f FlowManager) prepareResource(capp rcsv1alpha1.Capp) loggingv1beta1.Flow 
 
 // CleanUp deletes the flow resource associated with the Capp object.
 // The flow resource is deleted by calling the DeleteResource method of the resourceManager object.
-func (f FlowManager) CleanUp(capp rcsv1alpha1.Capp) error {
+func (f FlowManager) CleanUp(capp cappv1alpha1.Capp) error {
 	if f.IsRequired(capp) {
 		flowName := capp.GetName() + "-flow"
 		resourceManager := rclient.ResourceBaseManagerClient{Ctx: f.Ctx, K8sclient: f.K8sclient, Log: f.Log}
@@ -81,8 +81,8 @@ func (f FlowManager) CleanUp(capp rcsv1alpha1.Capp) error {
 }
 
 // IsRequired is responsible to determine if resource logging operator flow is required.
-func (f FlowManager) IsRequired(capp rcsv1alpha1.Capp) bool {
-	if capp.Spec.LogSpec != (rcsv1alpha1.LogSpec{}) {
+func (f FlowManager) IsRequired(capp cappv1alpha1.Capp) bool {
+	if capp.Spec.LogSpec != (cappv1alpha1.LogSpec{}) {
 		return capp.Spec.LogSpec.Type == LogTypeElastic || capp.Spec.LogSpec.Type == LogTypeSplunk
 	}
 	return false
@@ -90,7 +90,7 @@ func (f FlowManager) IsRequired(capp rcsv1alpha1.Capp) bool {
 
 // CreateOrUpdateObject creates or updates a flow object based on the provided capp.
 // It returns an error if any operation fails.
-func (f FlowManager) CreateOrUpdateObject(capp rcsv1alpha1.Capp) error {
+func (f FlowManager) CreateOrUpdateObject(capp cappv1alpha1.Capp) error {
 	flowName := capp.GetName() + "-flow"
 	logger := f.Log.WithValues("FlowName", flowName, "FlowNamespace", capp.Namespace)
 

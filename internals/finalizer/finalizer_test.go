@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	networkingv1 "github.com/openshift/api/network/v1"
 	routev1 "github.com/openshift/api/route/v1"
 	"github.com/stretchr/testify/assert"
@@ -22,7 +22,7 @@ import (
 func newScheme() *runtime.Scheme {
 	s := runtime.NewScheme()
 	_ = corev1.AddToScheme(s)
-	_ = rcsv1alpha1.AddToScheme(s)
+	_ = cappv1alpha1.AddToScheme(s)
 	_ = knativev1beta1.AddToScheme(s)
 	_ = knativev1.AddToScheme(s)
 	_ = networkingv1.Install(s)
@@ -38,9 +38,9 @@ func newFakeClient() client.Client {
 
 func TestEnsureFinalizer(t *testing.T) {
 	ctx := context.Background()
-	capp := &rcsv1alpha1.Capp{
-		Spec: rcsv1alpha1.CappSpec{
-			RouteSpec: rcsv1alpha1.RouteSpec{
+	capp := &cappv1alpha1.Capp{
+		Spec: cappv1alpha1.CappSpec{
+			RouteSpec: cappv1alpha1.RouteSpec{
 				TlsEnabled: true,
 			},
 		},
@@ -62,9 +62,9 @@ func TestEnsureFinalizer(t *testing.T) {
 
 func TestRemoveFinalizer(t *testing.T) {
 	ctx := context.Background()
-	capp := &rcsv1alpha1.Capp{
-		Spec: rcsv1alpha1.CappSpec{
-			RouteSpec: rcsv1alpha1.RouteSpec{
+	capp := &cappv1alpha1.Capp{
+		Spec: cappv1alpha1.CappSpec{
+			RouteSpec: cappv1alpha1.RouteSpec{
 				TlsEnabled: true,
 			},
 		},
