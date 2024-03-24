@@ -1,7 +1,7 @@
 package mocks
 
 import (
-	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,8 +25,8 @@ var (
 	SplunkHecTokenKey = "SplunkHecToken"
 )
 
-func CreateElasticLogSpec() rcsv1alpha1.LogSpec {
-	return rcsv1alpha1.LogSpec{
+func CreateElasticLogSpec() cappv1alpha1.LogSpec {
+	return cappv1alpha1.LogSpec{
 		Type:               ElasticType,
 		Host:               ElasticHost,
 		SSLVerify:          false,
@@ -36,8 +36,8 @@ func CreateElasticLogSpec() rcsv1alpha1.LogSpec {
 	}
 }
 
-func CreateSplunkLogSpec() rcsv1alpha1.LogSpec {
-	return rcsv1alpha1.LogSpec{
+func CreateSplunkLogSpec() cappv1alpha1.LogSpec {
+	return cappv1alpha1.LogSpec{
 		Type:               SplunkType,
 		Host:               SplunkHost,
 		SSLVerify:          false,

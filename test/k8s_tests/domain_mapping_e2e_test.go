@@ -1,7 +1,7 @@
 package k8s_tests
 
 import (
-	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	mock "github.com/dana-team/container-app-operator/test/k8s_tests/mocks"
 	utilst "github.com/dana-team/container-app-operator/test/k8s_tests/utils"
 	. "github.com/onsi/ginkgo/v2"
@@ -117,12 +117,12 @@ var _ = Describe("Validate DomainMapping functionality", func() {
 
 		By("Removing the Route from the Capp and check the status")
 		toBeUpdatedCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-		toBeUpdatedCapp.Spec.RouteSpec = rcsv1alpha1.RouteSpec{}
+		toBeUpdatedCapp.Spec.RouteSpec = cappv1alpha1.RouteSpec{}
 		utilst.UpdateCapp(k8sClient, toBeUpdatedCapp)
 
-		Eventually(func() rcsv1alpha1.RouteStatus {
+		Eventually(func() cappv1alpha1.RouteStatus {
 			capp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
 			return capp.Status.RouteStatus
-		}, TimeoutCapp, CappCreationInterval).Should(Equal(rcsv1alpha1.RouteStatus{}))
+		}, TimeoutCapp, CappCreationInterval).Should(Equal(cappv1alpha1.RouteStatus{}))
 	})
 })

@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	rclient "github.com/dana-team/container-app-operator/internals/wrappers"
 	"github.com/go-logr/logr"
 	networkingv1 "github.com/openshift/api/network/v1"
@@ -25,7 +25,7 @@ import (
 func newScheme() *runtime.Scheme {
 	s := runtime.NewScheme()
 	_ = corev1.AddToScheme(s)
-	_ = rcsv1alpha1.AddToScheme(s)
+	_ = cappv1alpha1.AddToScheme(s)
 	_ = knativev1beta1.AddToScheme(s)
 	_ = knativev1.AddToScheme(s)
 	_ = networkingv1.Install(s)
@@ -41,9 +41,9 @@ func newFakeClient() client.Client {
 
 func TestSetHttpsKnativeDomainMapping(t *testing.T) {
 	ctx := context.Background()
-	capp := rcsv1alpha1.Capp{
-		Spec: rcsv1alpha1.CappSpec{
-			RouteSpec: rcsv1alpha1.RouteSpec{
+	capp := cappv1alpha1.Capp{
+		Spec: cappv1alpha1.CappSpec{
+			RouteSpec: cappv1alpha1.RouteSpec{
 				TlsEnabled: true,
 				Hostname:   "test-dm",
 				TlsSecret:  "secure-knativedm-test-capp",

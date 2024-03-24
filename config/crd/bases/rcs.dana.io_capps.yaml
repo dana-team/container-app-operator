@@ -8473,6 +8473,43 @@ spec:
                 - enabled
                 - disabled
                 type: string
+              volumesSpec:
+                description: VolumesSpec defines the volumes specification for the
+                  Capp.
+                properties:
+                  nfsVolumes:
+                    description: NFSVolumes is a list of NFS volumes to be mounted.
+                    items:
+                      description: NFSVolume defines the NFS volume specification
+                        for the Capp.
+                      properties:
+                        capacity:
+                          additionalProperties:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          description: Capacity is the capacity of the volume.
+                          type: object
+                        name:
+                          description: Name is the name of the volume.
+                          type: string
+                        path:
+                          description: Path is the exported path on the NFS server.
+                          type: string
+                        server:
+                          description: Server is the hostname or IP address of the
+                            NFS server.
+                          type: string
+                      required:
+                      - capacity
+                      - name
+                      - path
+                      - server
+                      type: object
+                    type: array
+                type: object
             required:
             - configurationSpec
             type: object
@@ -9014,6 +9051,34 @@ spec:
                   state:
                     description: State is actual enabled state of the capp
                     type: string
+                type: object
+              volumesStatus:
+                description: VolumesStatus shows the state of the Volumes objects
+                  linked to the Capp.
+                properties:
+                  nfsVolumesStatus:
+                    description: NFSVolumeStatus is the status of the underlying NFSVolume
+                      objects.
+                    items:
+                      properties:
+                        nfsPvcStatus:
+                          description: NFSPVCStatus is the status of the underlying
+                            NfsPvc object.
+                          properties:
+                            pvPhase:
+                              description: pvPhase indicates if a volume is available,
+                                bound to a claim, or released by a claim.
+                              type: string
+                            pvcPhase:
+                              description: pvcPhase represents the current phase of
+                                PersistentVolumeClaim.
+                              type: string
+                          type: object
+                        volumeName:
+                          description: VolumeName is the name of the volume.
+                          type: string
+                      type: object
+                    type: array
                 type: object
             type: object
         type: object
