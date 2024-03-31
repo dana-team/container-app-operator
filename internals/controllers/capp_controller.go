@@ -5,6 +5,14 @@ import (
 	"fmt"
 	"time"
 
+	"k8s.io/apimachinery/pkg/types"
+	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
+	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
 	"github.com/dana-team/container-app-operator/internals/status"
 
 	"github.com/dana-team/container-app-operator/internals/finalizer"
@@ -16,13 +24,6 @@ import (
 
 	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	rmanagers "github.com/dana-team/container-app-operator/internals/resource-managers"
-	"k8s.io/apimachinery/pkg/types"
-	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
-	"sigs.k8s.io/controller-runtime/pkg/builder"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -53,6 +54,43 @@ type CappReconciler struct {
 // +kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;
 // +kubebuilder:rbac:groups="",resources=events,verbs=get;list;watch;update;create;
 // +kubebuilder:rbac:groups="events.k8s.io",resources=events,verbs=get;list;watch;update;create;
+
+// SetupWithManager sets up the controller with the Manager.
+func (r *CappReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	return ctrl.NewControllerManagedBy(mgr).
+		For(&rcsv1alpha1.Capp{}).
+		Watches(
+			&knativev1.Service{},
+			handler.EnqueueRequestsFromMapFunc(r.findCappFromKnative),
+			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
+		).
+		Watches(
+			&knativev1beta1.DomainMapping{},
+			handler.EnqueueRequestsFromMapFunc(r.findCappFromDomainMapping),
+			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
+		).
+		Complete(r)
+}
+
+// findCappFromKnative maps Knative reconciliation requests to Capp reconciliation requests.
+func (r *CappReconciler) findCappFromKnative(ctx context.Context, knativeService client.Object) []reconcile.Request {
+	request := reconcile.Request{NamespacedName: types.NamespacedName{
+		Namespace: knativeService.GetNamespace(),
+		Name:      knativeService.GetName()}}
+
+	return []reconcile.Request{request}
+}
+
+// findCappFromDomainMapping maps DomainMapping reconciliation requests to Capp reconciliation requests.
+func (r *CappReconciler) findCappFromDomainMapping(ctx context.Context, domainMapping client.Object) []reconcile.Request {
+	labels := domainMapping.GetLabels()
+
+	request := reconcile.Request{NamespacedName: types.NamespacedName{
+		Namespace: domainMapping.GetNamespace(),
+		Name:      labels[rmanagers.CappResourceKey]}}
+
+	return []reconcile.Request{request}
+}
 
 func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx).WithValues("CappName", req.Name, "CappNamespace", req.Namespace)
@@ -91,40 +129,6 @@ func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, fmt.Errorf("failed to sync Capp: %s", err.Error())
 	}
 	return ctrl.Result{}, nil
-}
-
-func (r *CappReconciler) findCappFromKnative(ctx context.Context, knativeService client.Object) []reconcile.Request {
-	cappList := &rcsv1alpha1.CappList{}
-	listOps := &client.ListOptions{
-		Namespace: knativeService.GetNamespace(),
-	}
-	err := r.List(ctx, cappList, listOps)
-	if err != nil {
-		return []reconcile.Request{}
-	}
-
-	requests := make([]reconcile.Request, len(cappList.Items))
-	for i, item := range cappList.Items {
-		requests[i] = reconcile.Request{
-			NamespacedName: types.NamespacedName{
-				Name:      item.GetName(),
-				Namespace: item.GetNamespace(),
-			},
-		}
-	}
-	return requests
-}
-
-// SetupWithManager sets up the controller with the Manager.
-func (r *CappReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&rcsv1alpha1.Capp{}).
-		Watches(
-			&knativev1.Service{},
-			handler.EnqueueRequestsFromMapFunc(r.findCappFromKnative),
-			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
-		).
-		Complete(r)
 }
 
 // SyncApplication manages the lifecycle of Capp.

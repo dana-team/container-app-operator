@@ -10,8 +10,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const CappResourceKey = "rcs.dana.io/parent-capp"
-
 type ResourceManagerClient interface {
 	CreateResource(resource client.Object) error
 	UpdateResource(resource client.Object, oldResource client.Object) error
