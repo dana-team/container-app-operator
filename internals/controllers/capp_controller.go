@@ -22,7 +22,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	rmanagers "github.com/dana-team/container-app-operator/internals/resource-managers"
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -52,13 +52,14 @@ type CappReconciler struct {
 // +kubebuilder:rbac:groups="",resources=nodes,verbs=get;list;watch;
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;
 // +kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;
-// +kubebuilder:rbac:groups="",resources=events,verbs=get;list;watch;update;create;
-// +kubebuilder:rbac:groups="events.k8s.io",resources=events,verbs=get;list;watch;update;create;
+// +kubebuilder:rbac:groups="",resources=events,verbs=get;list;watch;update;create;patch;
+// +kubebuilder:rbac:groups="events.k8s.io",resources=events,verbs=get;list;watch;update;create;patch
+// +kubebuilder:rbac:groups="nfspvc.dana.io",resources=nfspvcs,verbs=get;list;watch;update;create;delete;
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *CappReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&rcsv1alpha1.Capp{}).
+		For(&cappv1alpha1.Capp{}).
 		Watches(
 			&knativev1.Service{},
 			handler.EnqueueRequestsFromMapFunc(r.findCappFromKnative),
@@ -95,7 +96,7 @@ func (r *CappReconciler) findCappFromDomainMapping(ctx context.Context, domainMa
 func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx).WithValues("CappName", req.Name, "CappNamespace", req.Namespace)
 	logger.Info("Starting Reconcile")
-	capp := rcsv1alpha1.Capp{}
+	capp := cappv1alpha1.Capp{}
 	if err := r.Client.Get(ctx, req.NamespacedName, &capp); err != nil {
 		if errors.IsNotFound(err) {
 			logger.Info(fmt.Sprintf("Didn't find Capp: %s, from the namespace: %s", capp.Name, capp.Namespace))
@@ -109,6 +110,7 @@ func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		rmanagers.KnativeServing: rmanagers.KnativeServiceManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder},
 		rmanagers.Flow:           rmanagers.FlowManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder},
 		rmanagers.Output:         rmanagers.OutputManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder},
+		rmanagers.NFSPVC:         rmanagers.NFSPVCManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder},
 	}
 
 	err, deleted := finalizer.HandleResourceDeletion(ctx, capp, r.Client, resourceManagers)
@@ -133,7 +135,7 @@ func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 // SyncApplication manages the lifecycle of Capp.
 // It ensures all manifests are applied according to the specification and synchronizes the status accordingly.
-func (r *CappReconciler) SyncApplication(ctx context.Context, capp rcsv1alpha1.Capp, resourceManagers map[string]rmanagers.ResourceManager, logger logr.Logger) error {
+func (r *CappReconciler) SyncApplication(ctx context.Context, capp cappv1alpha1.Capp, resourceManagers map[string]rmanagers.ResourceManager, logger logr.Logger) error {
 	for _, manager := range resourceManagers {
 		if err := manager.CreateOrUpdateObject(capp); err != nil {
 			return err

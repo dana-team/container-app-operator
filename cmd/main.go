@@ -20,9 +20,10 @@ import (
 	"flag"
 	"os"
 
-	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/dana-team/container-app-operator/internals/controllers"
 	"github.com/dana-team/container-app-operator/internals/utils"
+	nfspvcv1alpha1 "github.com/dana-team/nfspvc-operator/api/v1alpha1"
 	"github.com/go-logr/zapr"
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
 	routev1 "github.com/openshift/api/route/v1"
@@ -52,7 +53,8 @@ func init() {
 	utilruntime.Must(knativev1.AddToScheme(scheme))
 	utilruntime.Must(loggingv1beta1.AddToScheme(scheme))
 	utilruntime.Must(knativev1beta1.AddToScheme(scheme))
-	utilruntime.Must(rcsv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(cappv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(nfspvcv1alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 

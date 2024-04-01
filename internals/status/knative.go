@@ -1,7 +1,7 @@
 package status
 
 import (
-	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"golang.org/x/net/context"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
@@ -17,9 +17,9 @@ const (
 
 // This function builds the RevisionInfo status of the Capp CRD by getting the list of revisions associated with the Knative service.
 // It returns a slice of RevisionInfo structs.
-func buildRevisionsStatus(ctx context.Context, capp rcsv1alpha1.Capp, r client.Client) ([]rcsv1alpha1.RevisionInfo, error) {
+func buildRevisionsStatus(ctx context.Context, capp cappv1alpha1.Capp, r client.Client) ([]cappv1alpha1.RevisionInfo, error) {
 	knativeRevisions := knativev1.RevisionList{}
-	var revisionsInfo []rcsv1alpha1.RevisionInfo
+	var revisionsInfo []cappv1alpha1.RevisionInfo
 
 	requirement, err := labels.NewRequirement(KnativeLabelKey, selection.Equals, []string{capp.Name})
 	if err != nil {
@@ -37,7 +37,7 @@ func buildRevisionsStatus(ctx context.Context, capp rcsv1alpha1.Capp, r client.C
 		return revisionsInfo, err
 	}
 	for _, revision := range knativeRevisions.Items {
-		revisionsInfo = append(revisionsInfo, rcsv1alpha1.RevisionInfo{
+		revisionsInfo = append(revisionsInfo, cappv1alpha1.RevisionInfo{
 			RevisionName:   revision.Name,
 			RevisionStatus: revision.Status,
 		})
@@ -47,9 +47,9 @@ func buildRevisionsStatus(ctx context.Context, capp rcsv1alpha1.Capp, r client.C
 }
 
 // buildKnativeStatus responsible all the status related to the knative.
-func buildKnativeStatus(ctx context.Context, kubeClient client.Client, capp rcsv1alpha1.Capp, isRequired bool) (knativev1.ServiceStatus, []rcsv1alpha1.RevisionInfo, error) {
+func buildKnativeStatus(ctx context.Context, kubeClient client.Client, capp cappv1alpha1.Capp, isRequired bool) (knativev1.ServiceStatus, []cappv1alpha1.RevisionInfo, error) {
 	knativeObjectStatus := knativev1.ServiceStatus{}
-	var revisionInfo []rcsv1alpha1.RevisionInfo
+	var revisionInfo []cappv1alpha1.RevisionInfo
 
 	if isRequired {
 		kservice := &knativev1.Service{}

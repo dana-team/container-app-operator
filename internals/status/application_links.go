@@ -3,7 +3,7 @@ package status
 import (
 	"strings"
 
-	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/go-logr/logr"
 	routev1 "github.com/openshift/api/route/v1"
 	"golang.org/x/net/context"
@@ -18,8 +18,8 @@ const (
 
 // This function builds the ApplicationLinks status of the Capp  by getting the console route.
 // It returns a pointer to the ApplicationLinks struct.
-func buildApplicationLinks(ctx context.Context, log logr.Logger, r client.Client, isRequired bool) (*rcsv1alpha1.ApplicationLinks, error) {
-	applicationLinks := rcsv1alpha1.ApplicationLinks{}
+func buildApplicationLinks(ctx context.Context, log logr.Logger, r client.Client, isRequired bool) (*cappv1alpha1.ApplicationLinks, error) {
+	applicationLinks := cappv1alpha1.ApplicationLinks{}
 	if isRequired {
 		console, err := getClusterConsole(ctx, log, r)
 		if err != nil {

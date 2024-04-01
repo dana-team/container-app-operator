@@ -1,10 +1,11 @@
 package e2e_tests
 
 import (
-	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	mock "github.com/dana-team/container-app-operator/test/e2e_tests/mocks"
 	"github.com/dana-team/container-app-operator/test/e2e_tests/testconsts"
 	utilst "github.com/dana-team/container-app-operator/test/e2e_tests/utils"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
@@ -118,12 +119,12 @@ var _ = Describe("Validate DomainMapping functionality", func() {
 
 		By("Removing the Route from the Capp and check the status")
 		toBeUpdatedCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-		toBeUpdatedCapp.Spec.RouteSpec = rcsv1alpha1.RouteSpec{}
+		toBeUpdatedCapp.Spec.RouteSpec = cappv1alpha1.RouteSpec{}
 		utilst.UpdateCapp(k8sClient, toBeUpdatedCapp)
 
-		Eventually(func() rcsv1alpha1.RouteStatus {
+		Eventually(func() cappv1alpha1.RouteStatus {
 			capp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
 			return capp.Status.RouteStatus
-		}, testconsts.Timeout, testconsts.Interval).Should(Equal(rcsv1alpha1.RouteStatus{}))
+		}, testconsts.Timeout, testconsts.Interval).Should(Equal(cappv1alpha1.RouteStatus{}))
 	})
 })

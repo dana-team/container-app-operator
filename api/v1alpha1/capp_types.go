@@ -17,7 +17,9 @@ limitations under the License.
 package v1alpha1
 
 import (
+	nfspvcv1alpha1 "github.com/dana-team/nfspvc-operator/api/v1alpha1"
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
@@ -52,6 +54,30 @@ type CappSpec struct {
 
 	// LogSpec defines the configuration for shipping Capp logs.
 	LogSpec LogSpec `json:"logSpec,omitempty"`
+
+	// VolumesSpec defines the volumes specification for the Capp.
+	VolumesSpec VolumesSpec `json:"volumesSpec,omitempty"`
+}
+
+// VolumesSpec defines the volumes specification for the Capp.
+type VolumesSpec struct {
+	// NFSVolumes is a list of NFS volumes to be mounted.
+	NFSVolumes []NFSVolume `json:"nfsVolumes,omitempty"`
+}
+
+// NFSVolume defines the NFS volume specification for the Capp.
+type NFSVolume struct {
+	// Server is the hostname or IP address of the NFS server.
+	Server string `json:"server"`
+
+	// Path is the exported path on the NFS server.
+	Path string `json:"path"`
+
+	// Name is the name of the volume.
+	Name string `json:"name"`
+
+	// Capacity is the capacity of the volume.
+	Capacity corev1.ResourceList `json:"capacity"`
 }
 
 // RouteSpec defines the route specification for the Capp.
@@ -167,6 +193,20 @@ type RouteStatus struct {
 	DomainMappingObjectStatus knativev1beta1.DomainMappingStatus `json:"domainMappingObjectStatus,omitempty"`
 }
 
+// VolumesStatus shows the state of the Volumes objects linked to the Capp.
+type VolumesStatus struct {
+	// NFSVolumeStatus is the status of the underlying NFSVolume objects.
+	NFSVolumesStatus []NFSVolumeStatus `json:"nfsVolumesStatus,omitempty"`
+}
+
+type NFSVolumeStatus struct {
+	// VolumeName is the name of the volume.
+	VolumeName string `json:"volumeName,omitempty"`
+
+	// NFSPVCStatus is the status of the underlying NfsPvc object.
+	NFSPVCStatus nfspvcv1alpha1.NfsPvcStatus `json:"nfsPvcStatus,omitempty"`
+}
+
 // CappStatus defines the observed state of Capp.
 type CappStatus struct {
 	// ApplicationLinks contains relevant information about
@@ -193,6 +233,10 @@ type CappStatus struct {
 	// RouteStatus shows the state of the DomainMapping object linked to the Capp.
 	// +optional
 	RouteStatus RouteStatus `json:"routeStatus,omitempty"`
+
+	// VolumesStatus shows the state of the Volumes objects linked to the Capp.
+	// +optional
+	VolumesStatus VolumesStatus `json:"volumesStatus,omitempty"`
 
 	// Conditions contain details about the current state of the Capp.
 	// +optional
