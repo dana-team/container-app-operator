@@ -4,15 +4,20 @@ import (
 	"context"
 	"testing"
 
-	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	resourceprepares "github.com/dana-team/container-app-operator/internals/resource-managers"
+	nfspvcv1alpha1 "github.com/dana-team/nfspvc-operator/api/v1alpha1"
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/scale/scheme"
+
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -23,7 +28,8 @@ const CappResourceKey = "rcs.dana.io/parent-capp"
 
 func newScheme() *runtime.Scheme {
 	s := runtime.NewScheme()
-	_ = rcsv1alpha1.AddToScheme(s)
+	_ = nfspvcv1alpha1.AddToScheme(s)
+	_ = cappv1alpha1.AddToScheme(s)
 	_ = knativev1beta1.AddToScheme(s)
 	_ = knativev1.AddToScheme(s)
 	_ = scheme.AddToScheme(s)
@@ -35,10 +41,10 @@ func newFakeClient() client.Client {
 	return fake.NewClientBuilder().WithScheme(scheme).Build()
 }
 
-func generateBaseCapp() rcsv1alpha1.Capp {
-	capp := rcsv1alpha1.Capp{
-		Spec: rcsv1alpha1.CappSpec{
-			RouteSpec: rcsv1alpha1.RouteSpec{},
+func generateBaseCapp() cappv1alpha1.Capp {
+	capp := cappv1alpha1.Capp{
+		Spec: cappv1alpha1.CappSpec{
+			RouteSpec: cappv1alpha1.RouteSpec{},
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-capp",
@@ -115,4 +121,53 @@ func TestDommainMappingHostname(t *testing.T) {
 	assert.NoError(t, knativeManager.HandleIrrelevantDomainMapping(capp), "Expected no error when calling Handling DomainMapping hostname.")
 	err := fakeClient.Get(ctx, types.NamespacedName{Name: "dma.dev", Namespace: "test-ns"}, &domainMapping)
 	assert.True(t, errors.IsNotFound(err), "Expected the DomainMapping to be deleted.")
+}
+
+// test NFSPVCManager cleanup
+func TestNfsPvcManagerCleanUp(t *testing.T) {
+	fakeClient := newFakeClient()
+	ctx := context.Background()
+	capp := generateBaseCapp()
+	capp.Spec.VolumesSpec.NFSVolumes = []cappv1alpha1.NFSVolume{
+		{
+			Name:     "test-nfs",
+			Server:   "test-server",
+			Path:     "/test-path",
+			Capacity: corev1.ResourceList{corev1.ResourceStorage: resource.MustParse("1Gi")},
+		},
+	}
+	capp.Status.VolumesStatus = cappv1alpha1.VolumesStatus{
+		NFSVolumesStatus: []cappv1alpha1.NFSVolumeStatus{
+			{
+				VolumeName: "test-nfs",
+				NFSPVCStatus: nfspvcv1alpha1.NfsPvcStatus{
+					PvcPhase: "Bound",
+					PvPhase:  "Bound",
+				},
+			},
+		},
+	}
+	NFSPVC := nfspvcv1alpha1.NfsPvc{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-nfs",
+			Namespace: "test-ns",
+		},
+		Spec: nfspvcv1alpha1.NfsPvcSpec{
+			Server: "test-server",
+			Path:   "/test-path",
+			AccessModes: []corev1.PersistentVolumeAccessMode{
+				corev1.ReadWriteMany,
+			},
+			Capacity: corev1.ResourceList{corev1.ResourceStorage: resource.MustParse("1Gi")},
+		},
+	}
+
+	assert.NoError(t, fakeClient.Create(ctx, &capp), "Expected no error when creating capp")
+	assert.NoError(t, fakeClient.Create(ctx, &NFSPVC), "Expected no error when creating NFSPVC.")
+	NFSPVCManager := resourceprepares.NFSPVCManager{Ctx: ctx, Log: logr.Logger{}, K8sclient: fakeClient}
+	assert.NoError(t, NFSPVCManager.CleanUp(capp), "Expected no error when calling clean up.")
+	NFSPVCObj := nfspvcv1alpha1.NfsPvc{}
+	err := fakeClient.Get(ctx, types.NamespacedName{Name: "test-nfs", Namespace: "test-ns"}, &NFSPVCObj)
+	assert.True(t, errors.IsNotFound(err), "Expected the NFSPVC to be deleted.")
+
 }

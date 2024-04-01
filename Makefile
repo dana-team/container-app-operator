@@ -107,6 +107,15 @@ docker-build: ## Build docker image with the manager.
 docker-push: ## Push docker image with the manager.
 	$(CONTAINER_TOOL) push ${IMG}
 
+.PHONY: install-nfspvc
+install-nfspvc: ## Install NfsPvcOperator
+	kubectl apply -f https://raw.githubusercontent.com/sahar2339/nfspvc-operator/feature/all_in_one_yaml/all_in_one.yaml 
+
+
+
+.PHONY: enable-nfs-knative
+enable-nfs-knative: ## Enable NFS for Knative
+	kubectl patch configmap config-features -n knative-serving -p '{"data":{"kubernetes.podspec-persistent-volume-claim":"enabled", "kubernetes.podspec-persistent-volume-write":"enabled"}}'
 # PLATFORMS defines the target platforms for the manager image be built to provide support to multiple
 # architectures. (i.e. make docker-buildx IMG=myregistry/mypoperator:0.0.1). To use this option you need to:
 # - be able to use docker buildx. More info: https://docs.docker.com/build/buildx/
@@ -156,7 +165,7 @@ install-logging: ## Install logging operator on the kind cluster
 	helm upgrade --install --wait --create-namespace --namespace logging logging-operator oci://ghcr.io/kube-logging/helm-charts/logging-operator --set logging.enabled=true
 
 .PHONY: prereq
-prereq: install install-knative install-helm install-logging  ## Install every prerequisite needed to develop on container-app-operator.
+prereq: install install-knative install-helm install-logging install-nfspvc enable-nfs-knative ## Install every prerequisite needed to develop on container-app-operator.
 
 ##@ Build Dependencies
 

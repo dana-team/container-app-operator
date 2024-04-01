@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"reflect"
 
-	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	rclient "github.com/dana-team/container-app-operator/internals/wrappers"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -35,9 +35,9 @@ type KnativeDomainMappingManager struct {
 }
 
 // PrepareKnativeDomainMapping creates a new DomainMapping for a Knative service.
-// Takes a context.Context object, and a rcsv1alpha1.Capp object as input.
+// Takes a context.Context object, and a cappv1alpha1.Capp object as input.
 // Returns a knativev1alphav1.DomainMapping object.
-func (k KnativeDomainMappingManager) prepareResource(capp rcsv1alpha1.Capp) knativev1beta1.DomainMapping {
+func (k KnativeDomainMappingManager) prepareResource(capp cappv1alpha1.Capp) knativev1beta1.DomainMapping {
 	knativeDomainMapping := &knativev1beta1.DomainMapping{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
@@ -63,7 +63,7 @@ func (k KnativeDomainMappingManager) prepareResource(capp rcsv1alpha1.Capp) knat
 	return *knativeDomainMapping
 }
 
-func (k KnativeDomainMappingManager) CleanUp(capp rcsv1alpha1.Capp) error {
+func (k KnativeDomainMappingManager) CleanUp(capp cappv1alpha1.Capp) error {
 	if capp.Spec.RouteSpec.Hostname == "" {
 		return nil
 	}
@@ -76,11 +76,11 @@ func (k KnativeDomainMappingManager) CleanUp(capp rcsv1alpha1.Capp) error {
 }
 
 // IsRequired is responsible to determine if resource knative domain mapping is required.
-func (k KnativeDomainMappingManager) IsRequired(capp rcsv1alpha1.Capp) bool {
+func (k KnativeDomainMappingManager) IsRequired(capp cappv1alpha1.Capp) bool {
 	return capp.Spec.RouteSpec.Hostname != ""
 }
 
-func (k KnativeDomainMappingManager) CreateOrUpdateObject(capp rcsv1alpha1.Capp) error {
+func (k KnativeDomainMappingManager) CreateOrUpdateObject(capp cappv1alpha1.Capp) error {
 	if err := k.HandleIrrelevantDomainMapping(capp); err != nil {
 		k.Log.Error(err, "failed to handle irrelevant DomainMappings")
 		return err
@@ -110,7 +110,7 @@ func (k KnativeDomainMappingManager) CreateOrUpdateObject(capp rcsv1alpha1.Capp)
 	return nil
 }
 
-func (k KnativeDomainMappingManager) HandleIrrelevantDomainMapping(capp rcsv1alpha1.Capp) error {
+func (k KnativeDomainMappingManager) HandleIrrelevantDomainMapping(capp cappv1alpha1.Capp) error {
 	logger := k.Log
 	requirement, err := labels.NewRequirement(CappResourceKey, selection.Equals, []string{capp.Name})
 	if err != nil {
@@ -139,7 +139,7 @@ func (k KnativeDomainMappingManager) HandleIrrelevantDomainMapping(capp rcsv1alp
 
 // SetHttpsKnativeDomainMapping takes a Capp, Knative Domain Mapping and
 // a ResourceBaseManager Client and sets the Knative Domain Mapping Tls based on the Capp's Https field.
-func (k KnativeDomainMappingManager) setHttpsKnativeDomainMapping(capp rcsv1alpha1.Capp, knativeDomainMapping *knativev1beta1.DomainMapping, resourceManager rclient.ResourceBaseManagerClient) {
+func (k KnativeDomainMappingManager) setHttpsKnativeDomainMapping(capp cappv1alpha1.Capp, knativeDomainMapping *knativev1beta1.DomainMapping, resourceManager rclient.ResourceBaseManagerClient) {
 	isHttps := capp.Spec.RouteSpec.TlsEnabled
 	if isHttps {
 		tlsSecret := corev1.Secret{}

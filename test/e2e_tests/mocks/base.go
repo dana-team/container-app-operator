@@ -1,7 +1,7 @@
 package mocks
 
 import (
-	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
@@ -17,8 +17,8 @@ const (
 	AutoScaleCM    = "autoscale-defaults"
 )
 
-func CreateBaseCapp() *rcsv1alpha1.Capp {
-	return &rcsv1alpha1.Capp{
+func CreateBaseCapp() *cappv1alpha1.Capp {
+	return &cappv1alpha1.Capp{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Capp",
 			APIVersion: "rcs.dana.io/v1alpha1",
@@ -27,7 +27,7 @@ func CreateBaseCapp() *rcsv1alpha1.Capp {
 			Name:      CappName,
 			Namespace: NSName,
 		},
-		Spec: rcsv1alpha1.CappSpec{
+		Spec: cappv1alpha1.CappSpec{
 			ConfigurationSpec: knativev1.ConfigurationSpec{
 				Template: knativev1.RevisionTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
@@ -52,8 +52,8 @@ func CreateBaseCapp() *rcsv1alpha1.Capp {
 					},
 				},
 			},
-			RouteSpec: rcsv1alpha1.RouteSpec{},
-			LogSpec:   rcsv1alpha1.LogSpec{},
+			RouteSpec: cappv1alpha1.RouteSpec{},
+			LogSpec:   cappv1alpha1.LogSpec{},
 		},
 	}
 }
