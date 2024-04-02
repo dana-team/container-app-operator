@@ -4,7 +4,7 @@ The `container-app-operator` is an operator that reconciles `Capp` CRs.
 
 `Capp` (or ContainerApp) provides a higher-level abstraction for deploying containerized workload, making it easier for end-users to deploy workloads on Kubernetes without being knowledgeable in Kubernetes concepts, while adhering to the standards required by the infrastructure and platform teams without any extra burden on the users.
 
-The operator uses open-source projects, such as [`Knative Serving`](https://github.com/knative/serving) and [`logging-operator`](https://github.com/kube-logging/logging-operator) to create an abstraction for containerized workloads.
+The operator uses open-source projects, such as [`Knative Serving`](https://github.com/knative/serving), [`logging-operator`](https://github.com/kube-logging/logging-operator) and [`nfspvc-operator`](https://github.com/dana-team/nfspvc-operator) to create an abstraction for containerized workloads.
 
 ## Run Container Service
 
@@ -27,6 +27,7 @@ The `container-app-operator` project can work as a standalone solution, but is m
 - [x] Support for all `Knative Serving` configurations.
 - [x] Support for exporting logs to `Elasticsearch` and `Splunk` indexes.
 - [x] Support for changing the state of `Capp` from `enabled` (workload is in running state) to `disabled` (workload is not in running state).
+- [x] Support for external NFS storage connected to `Capp` by using `volumeMounts`.
 
 ## Getting Started
 
@@ -39,6 +40,7 @@ The `container-app-operator` project can work as a standalone solution, but is m
 3. `Logging Operator` installed on the cluster (you can [use the Helm Chart](https://kube-logging.dev/docs/install/#deploy-logging-operator-with-helm))
 
 `Knative Serving` and `Logging Operator` can also be installed by running:
+
 ```bash
 $ make prereq
 ```
@@ -56,6 +58,7 @@ $ make docker-build docker-push IMG=<registry>/container-app-operator:<tag>
 ```
 
 ### Change target autoscaler default values
+
 To change the target values a `configMap` with the name `autoscale-default` in the namespace `capp-operator-system` needs to be created.
 
 The `configMap` should contain the scale metric types as keys and for the value the desired target values.
@@ -77,6 +80,21 @@ data:
   concurrency: "10"
 ```
 
+### Enable Persistent Volume extension in Knative
+
+In order to use `volumeMounts` in `Capp`, `Knative Serving` needs to be configured to support volumes. This is done by adding the following lines to the `ConfigMap` of name `config-features` in the `Knative Serving` namespace:
+
+```yaml
+kubernetes.podspec-persistent-volume-claim: enabled
+kubernetes.podspec-persistent-volume-write: enabled
+```
+
+It's possible to use the following one-liner:
+
+```bash
+$ kubectl patch --namespace knative-serving configmap/config-features --type merge --patch '{"data":{"kubernetes.podspec-persistent-volume-claim": "enabled", "kubernetes.podspec-persistent-volume-write": "enabled"}}'
+```
+
 ## Example Capp
 
 ```yaml
@@ -95,10 +113,25 @@ spec:
                 value: capp-env-var
             image: 'quay.io/danateamorg/example-python-app:v1-flask'
             name: capp-sample
+            volumeMounts:
+              - name: testpvc
+                mountPath: /data
+        volumes:
+          - name: testpvc
+            persistentVolumeClaim:
+              claimName: nfspvc
+              readOnly: false
   routeSpec:
     hostname: capp.dev
     tlsEnabled: true
     tlsSecret: cappTlsSecretName
+  volumesSpec:
+    nfsVolumes:
+      - server: test
+        path: /test
+        name: nfspvc
+        capacity:
+          storage: 200Gi
   logSpec:
     type: elastic
     host: 10.11.12.13
