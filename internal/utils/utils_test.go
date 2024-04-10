@@ -3,7 +3,7 @@ package utils_test
 import (
 	"testing"
 
-	"github.com/dana-team/container-app-operator/internals/utils"
+	"github.com/dana-team/container-app-operator/internal/utils"
 	"github.com/stretchr/testify/assert"
 )
 

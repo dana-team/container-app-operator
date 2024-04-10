@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
-	rclient "github.com/dana-team/container-app-operator/internals/wrappers"
+	rclient "github.com/dana-team/container-app-operator/internal/wrappers"
 	"github.com/go-logr/logr"
 	networkingv1 "github.com/openshift/api/network/v1"
 	routev1 "github.com/openshift/api/route/v1"

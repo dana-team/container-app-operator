@@ -6,7 +6,7 @@ import (
 	"reflect"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
-	rclient "github.com/dana-team/container-app-operator/internals/wrappers"
+	rclient "github.com/dana-team/container-app-operator/internal/wrappers"
 	nfspvcv1alpha1 "github.com/dana-team/nfspvc-operator/api/v1alpha1"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"

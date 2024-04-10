@@ -2,7 +2,7 @@ package autoscale
 
 import (
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
-	"github.com/dana-team/container-app-operator/internals/utils"
+	"github.com/dana-team/container-app-operator/internal/utils"
 	"k8s.io/utils/strings/slices"
 )
 

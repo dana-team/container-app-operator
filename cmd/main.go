@@ -21,8 +21,8 @@ import (
 	"os"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
-	"github.com/dana-team/container-app-operator/internals/controllers"
-	"github.com/dana-team/container-app-operator/internals/utils"
+	"github.com/dana-team/container-app-operator/internal/controllers"
+	"github.com/dana-team/container-app-operator/internal/utils"
 	nfspvcv1alpha1 "github.com/dana-team/nfspvc-operator/api/v1alpha1"
 	"github.com/go-logr/zapr"
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"

@@ -4,7 +4,7 @@ import (
 	"context"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
-	rmanagers "github.com/dana-team/container-app-operator/internals/resource-managers"
+	rmanagers "github.com/dana-team/container-app-operator/internal/resource-managers"
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
