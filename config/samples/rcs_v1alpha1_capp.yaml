@@ -1,6 +1,0 @@
-apiVersion: rcs.dana.io/v1alpha1
-kind: Capp
-metadata:
-  name: capp-sample
-spec:
-  # TODO(user): Add fields here

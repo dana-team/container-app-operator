@@ -7,7 +7,7 @@ import (
 
 	"github.com/cisco-open/operator-tools/pkg/secret"
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
-	rclient "github.com/dana-team/container-app-operator/internals/wrappers"
+	rclient "github.com/dana-team/container-app-operator/internal/wrappers"
 	"github.com/go-logr/logr"
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
 	"github.com/kube-logging/logging-operator/pkg/sdk/logging/model/output"

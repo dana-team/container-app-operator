@@ -13,9 +13,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/dana-team/container-app-operator/internals/status"
+	"github.com/dana-team/container-app-operator/internal/status"
 
-	"github.com/dana-team/container-app-operator/internals/finalizer"
+	"github.com/dana-team/container-app-operator/internal/finalizer"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -23,7 +23,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
-	rmanagers "github.com/dana-team/container-app-operator/internals/resource-managers"
+	rmanagers "github.com/dana-team/container-app-operator/internal/resource-managers"
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
