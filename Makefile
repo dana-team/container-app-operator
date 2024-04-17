@@ -146,13 +146,20 @@ undeploy: kustomize ## Undeploy controller from the K8s cluster specified in ~/.
 	$(KUSTOMIZE) build config/default | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
 
 ##@ Capp prerequisites
+CERT_MANAGER_VERSION ?= v1.13.3
+CERT_MANAGER_URL ?= https://github.com/cert-manager/cert-manager/releases/download/$(CERT_MANAGER_VERSION)/cert-manager.yaml
+NFSPVC_URL ?= https://raw.githubusercontent.com/dana-team/nfspvc-operator/main/all_in_one.yaml
 
 .PHONY: prereq
-prereq: install install-knative install-helm install-logging install-nfspvc enable-nfs-knative ## Install every prerequisite needed to develop on container-app-operator.
+prereq: install install-cert-manager install-knative install-helm install-logging install-nfspvc enable-nfs-knative ## Install every prerequisite needed to develop on container-app-operator.
 
 .PHONY: install-nfspvc
 install-nfspvc: ## Install NfsPvcOperator
-	kubectl apply -f https://raw.githubusercontent.com/sahar2339/nfspvc-operator/feature/all_in_one_yaml/all_in_one.yaml
+	kubectl apply -f $(NFSPVC_URL)
+
+.PHONY: install-cert-manager
+install-cert-manager:
+	kubectl apply -f $(CERT_MANAGER_URL)
 
 .PHONY: enable-nfs-knative
 enable-nfs-knative: ## Enable NFS for Knative
