@@ -1,0 +1,12 @@
+apiVersion: rcs.dana.io/v1alpha1
+kind: CappRevision
+metadata:
+  labels:
+    app.kubernetes.io/name: capprevision
+    app.kubernetes.io/instance: capprevision-sample
+    app.kubernetes.io/part-of: container-app-operator
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: container-app-operator
+  name: capprevision-sample
+spec:
+  # TODO(user): Add fields here

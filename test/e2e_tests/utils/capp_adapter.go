@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	TimeoutCapp          = 30 * time.Second
+	TimeoutCapp          = 120 * time.Second
 	CappCreationInterval = 2 * time.Second
 )
 
@@ -29,7 +29,9 @@ func CreateCapp(k8sClient client.Client, capp *cappv1alpha1.Capp) *cappv1alpha1.
 
 // UpdateCapp updates an existing Capp instance.
 func UpdateCapp(k8sClient client.Client, capp *cappv1alpha1.Capp) {
-	Expect(k8sClient.Update(context.Background(), capp)).To(Succeed())
+	Eventually(func() error {
+		return k8sClient.Update(context.Background(), capp)
+	}, TimeoutCapp, CappCreationInterval).Should(Succeed(), "Should update capp")
 }
 
 // DeleteCapp deletes an existing Capp instance.

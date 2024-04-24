@@ -254,6 +254,7 @@ var _ = Describe("Validate knative functionality", func() {
 		checkRevisionReadiness(assertionCapp.Name+testconsts.FirstRevisionSuffix, true)
 
 		By("Updating the capp secret environment variable")
+		assertionCapp = utilst.GetCapp(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
 		nonExistingSecretName := utilst.GenerateSecretName()
 		assertionCapp.Spec.ConfigurationSpec.Template.Spec.Containers[0].Env = *mock.CreateEnvVarObject(nonExistingSecretName)
 		updateCapp(assertionCapp, false)

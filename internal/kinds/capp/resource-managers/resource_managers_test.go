@@ -4,8 +4,9 @@ import (
 	"context"
 	"testing"
 
+	resourceprepares "github.com/dana-team/container-app-operator/internal/kinds/capp/resource-managers"
+
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
-	resourceprepares "github.com/dana-team/container-app-operator/internal/resource-managers"
 	nfspvcv1alpha1 "github.com/dana-team/nfspvc-operator/api/v1alpha1"
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"

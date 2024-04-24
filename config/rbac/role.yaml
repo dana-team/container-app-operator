@@ -86,6 +86,26 @@ rules:
 - apiGroups:
   - rcs.dana.io
   resources:
+  - capprevisions
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - rcs.dana.io
+  resources:
+  - capprevisions/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - rcs.dana.io
+  resources:
   - capps
   verbs:
   - create
