@@ -5,6 +5,7 @@
 domain: rcs.dana.io
 layout:
 - go.kubebuilder.io/v4
+multigroup: true
 projectName: container-app-operator
 repo: github.com/dana-team/container-app-operator
 resources:
@@ -15,6 +16,13 @@ resources:
   domain: dana.io
   group: rcs
   kind: Capp
+  path: github.com/dana-team/container-app-operator/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: rcs.dana.io
+  kind: CappRevision
   path: github.com/dana-team/container-app-operator/api/v1alpha1
   version: v1alpha1
 version: "3"

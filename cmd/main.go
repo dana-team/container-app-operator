@@ -20,9 +20,10 @@ import (
 	"flag"
 	"os"
 
-	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
-	"github.com/dana-team/container-app-operator/internal/controllers"
-	"github.com/dana-team/container-app-operator/internal/utils"
+	crcontroller "github.com/dana-team/container-app-operator/internal/kinds/capp-revision/controllers"
+	cappcontroller "github.com/dana-team/container-app-operator/internal/kinds/capp/controllers"
+	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
+
 	nfspvcv1alpha1 "github.com/dana-team/nfspvc-operator/api/v1alpha1"
 	"github.com/go-logr/zapr"
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
@@ -40,6 +41,8 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	runtimezap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+
+	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -111,13 +114,22 @@ func main() {
 		initOpenshiftSchemes()
 	}
 
-	if err = (&controllers.CappReconciler{
+	if err = (&cappcontroller.CappReconciler{
 		Client:        mgr.GetClient(),
 		Scheme:        mgr.GetScheme(),
 		OnOpenshift:   onOpenshift,
-		EventRecorder: mgr.GetEventRecorderFor("container-app_controller"),
+		EventRecorder: mgr.GetEventRecorderFor("container-app-controller"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Capp")
+		os.Exit(1)
+	}
+
+	if err = (&crcontroller.CappRevisionReconciler{
+		Client:        mgr.GetClient(),
+		Scheme:        mgr.GetScheme(),
+		EventRecorder: mgr.GetEventRecorderFor("capprevision-controller"),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "CappRevision")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder

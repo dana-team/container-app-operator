@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/dana-team/container-app-operator/internal/kinds/capp/autoscale"
+	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
+	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/wrappers"
+
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
-	"github.com/dana-team/container-app-operator/internal/autoscale"
-	"github.com/dana-team/container-app-operator/internal/utils"
-	rclient "github.com/dana-team/container-app-operator/internal/wrappers"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
