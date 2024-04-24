@@ -167,7 +167,8 @@ enable-nfs-knative: ## Enable NFS for Knative
 
 .PHONY: install-logging
 install-logging: ## Install logging operator on the kind cluster
-	helm upgrade --install --wait --create-namespace --namespace logging logging-operator oci://ghcr.io/kube-logging/helm-charts/logging-operator --set logging.enabled=true
+	helm upgrade --install --wait --create-namespace --namespace logging-operator-system logging-operator oci://ghcr.io/kube-logging/helm-charts/logging-operator
+	kubectl apply -f hack/logging-operator-resources.yaml
 
 KNATIVE_URL ?= https://github.com/knative-extensions/kn-plugin-quickstart/releases/download/knative-v1.11.2/kn-quickstart-linux-amd64
 KNATIVE_HPA_URL ?= https://github.com/knative/serving/releases/download/knative-v1.11.2/serving-hpa.yaml

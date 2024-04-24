@@ -7,8 +7,8 @@ import (
 	"time"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
-	"github.com/dana-team/container-app-operator/internal/kinds/capp-revision/actionmangers"
-	"github.com/dana-team/container-app-operator/internal/kinds/capp-revision/adapters"
+	"github.com/dana-team/container-app-operator/internal/kinds/capprevision/actionmangers"
+	"github.com/dana-team/container-app-operator/internal/kinds/capprevision/adapters"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"

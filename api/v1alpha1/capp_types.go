@@ -107,7 +107,7 @@ type RouteSpec struct {
 // LogSpec defines the configuration for shipping Capp logs.
 type LogSpec struct {
 	// Type defines where to send the Capp logs
-	// Possible values : "elastic" and "splunk".
+	// +kubebuilder:validation:Enum=elastic
 	// +optional
 	Type string `json:"type,omitempty"`
 
@@ -115,27 +115,18 @@ type LogSpec struct {
 	// +optional
 	Host string `json:"host,omitempty"`
 
-	// SSLVerify determines whether to skip ssl verification.
-	// +optional
-	SSLVerify bool `json:"sslVerify,omitempty"`
-
 	// Index defines the index name to write events to.
 	// +optional
 	Index string `json:"index,omitempty"`
 
-	// UserName defines a User for authentication.
+	// User defines a User for authentication.
 	// +optional
-	UserName string `json:"username,omitempty"`
+	User string `json:"username,omitempty"`
 
-	// PasswordSecretName defines the name of the secret
+	// PasswordSecret defines the name of the secret
 	// containing the password for authentication.
 	// +optional
-	PasswordSecretName string `json:"passwordSecretName,omitempty"`
-
-	// HecTokenSecretName defines the name of the secret
-	// containing the Splunk Hec token.
-	// +optional
-	HecTokenSecretName string `json:"hecTokenSecretName,omitempty"`
+	PasswordSecret string `json:"passwordSecretName,omitempty"`
 }
 
 // ApplicationLinks contains relevant information about
@@ -171,17 +162,17 @@ type StateStatus struct {
 	LastChange metav1.Time `json:"lastChange,omitempty"`
 }
 
-// LoggingStatus defines the state of the Flow and Output objects linked to the Capp.
+// LoggingStatus defines the state of the SyslogNGFlow and SyslogNGOutput objects linked to the Capp.
 type LoggingStatus struct {
-	// Flow represents the Status of the Flow used by the Capp.
+	// SyslogNGFlow represents the Status of the SyslogNGFlow used by the Capp.
 	// +optional
-	Flow loggingv1beta1.FlowStatus `json:"flow,omitempty"`
+	SyslogNGFlow loggingv1beta1.SyslogNGFlowStatus `json:"syslogngflow,omitempty"`
 
-	// Output represents the Status of the Output used by the Capp.
+	// SyslogNGOutput represents the Status of the SyslogNGOutput used by the Capp.
 	// +optional
-	Output loggingv1beta1.OutputStatus `json:"output,omitempty"`
+	SyslogNGOutput loggingv1beta1.SyslogNGOutputStatus `json:"syslogngoutput,omitempty"`
 
-	// Conditions contain details about the current state of the Output and Flow used by the Capp.
+	// Conditions contain details about the current state of the SyslogNGFlow and SyslogNGOutput used by the Capp.
 	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }

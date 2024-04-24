@@ -1,0 +1,110 @@
+---
+apiVersion: logging.banzaicloud.io/v1beta1
+kind: Logging
+metadata:
+  name: logging
+spec:
+  clusterDomain: cluster.local
+  configCheck:
+    timeoutSeconds: 10
+  controlNamespace: logging-operator-system
+---
+apiVersion: logging.banzaicloud.io/v1beta1
+kind: FluentbitAgent
+metadata:
+  name: logging
+  namespace: logging-operator-system
+spec:
+  filterKubernetes:
+    Annotations: 'Off'
+  inputTail:
+    Parser: cri-log-key
+  customParsers: |
+    [PARSER]
+      Name cri-log-key
+      Format  regex
+      Regex ^(?<time>[^ ]+) (?<stream>stdout|stderr) (?<logtag>[^ ]*) (?<log>.*)$
+      Time_Key time
+      Time_Format %Y-%m-%dT%H:%M:%S.%L%z
+  livenessProbe:
+    exec:
+      command:
+        - /bin/sh
+        - '-c'
+        - >
+          LIVENESS_THRESHOLD_SECONDS=${LIVENESS_THRESHOLD_SECONDS:-300}; if [ !
+          -e /buffers ]; then
+            exit 1;
+          fi; touch -d "${LIVENESS_THRESHOLD_SECONDS} seconds ago"
+          /tmp/marker-liveness; if [-z "$(find /buffers -type d -newer
+          /tmp/marker-liveness -print -quit)" ]; then
+            exit 1;
+          fi;
+    initialDelaySeconds: 600
+    periodSeconds: 60
+  resources:
+    limits:
+      cpu: '1'
+      memory: 1Gi
+    requests:
+      cpu: 100m
+      memory: 100Mi
+  security:
+    securityContext:
+      privileged: true
+  targetHost: logging-syslog-ng.logging-operator-system.svc.cluster.local
+---
+apiVersion: logging.banzaicloud.io/v1beta1
+kind: SyslogNGConfig
+metadata:
+  name: logging
+  namespace: logging-operator-system
+spec:
+  jsonKeyDelim: '#'
+  statefulSet:
+    spec:
+      replicas: 2
+      template:
+        spec:
+          containers:
+            - livenessProbe:
+                exec:
+                  command:
+                    - /usr/sbin/syslog-ng-ctl
+                    - '--control=/tmp/syslog-ng/syslog-ng.ctl'
+                    - query
+                    - get
+                    - global.sdata_updates.processed
+                initialDelaySeconds: 600
+                periodSeconds: 60
+              name: syslog-ng
+              readinessProbe:
+                exec:
+                  command:
+                    - /bin/sh
+                    - '-c'
+                    - FREESPACE_THRESHOLD=90
+                    - FREESPACE_CURRENT=$(df -h $BUFFER_PATH | grep / | awk '{print $5}' | sed 's/%//g')
+                    - if [ "$FREESPACE_CURRENT -gt "$FREESPACE_THRESHOLD" ] ; then exit 1; fi
+                    - MAX_FILE_NUMBER=5000
+                    - FILE_NUMBER_CURRENT=$(find $BUFFER_PATH -type f -name *.buffer | wc -l)
+                    - if [ "$FILE_NUMBER_CURRENT" -gt "$MAX_FILE_NUMBER" ] ; then exit 1; fi
+              resources:
+                limits:
+                  cpu: '1'
+                  memory: 4Gi
+                requests:
+                  cpu: 200m
+                  memory: 1Gi
+              volumeMounts:
+                - mountPath: /buffers
+                  name: buffer
+      volumeClaimTemplates:
+        - metadata:
+            name: buffer
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 10Gi

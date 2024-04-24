@@ -90,6 +90,7 @@ func (k KnativeDomainMappingManager) CreateOrUpdateObject(capp cappv1alpha1.Capp
 		cappDomainMapping := k.prepareResource(capp)
 		knativeDomainMapping := knativev1beta1.DomainMapping{}
 		resourceManager := rclient.ResourceBaseManagerClient{Ctx: k.Ctx, K8sclient: k.K8sclient, Log: k.Log}
+
 		if err := k.K8sclient.Get(k.Ctx, types.NamespacedName{Namespace: capp.Namespace, Name: capp.Spec.RouteSpec.Hostname}, &knativeDomainMapping); err != nil {
 			if errors.IsNotFound(err) {
 				if err := resourceManager.CreateResource(&cappDomainMapping); err != nil {
@@ -108,6 +109,7 @@ func (k KnativeDomainMappingManager) CreateOrUpdateObject(capp cappv1alpha1.Capp
 			}
 		}
 	}
+
 	return nil
 }
 

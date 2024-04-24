@@ -5,18 +5,18 @@ import (
 	"sort"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
-	"github.com/dana-team/container-app-operator/internal/kinds/capp-revision/adapters"
+	"github.com/dana-team/container-app-operator/internal/kinds/capprevision/adapters"
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const revisionsToKeep = 10
 
-// getRevisionsBeforeAfter splits a slice of CappRevisions into two slices:
+// splitRevisionsAtIndex splits a slice of CappRevisions into two slices:
 // one containing the elements before the specified index (exclusive),
 // and one containing the elements after the specified index (inclusive).
 // If the index is out of bounds, it adjusts to return appropriate slices.
-func getRevisionsBeforeAfter(revisions []cappv1alpha1.CappRevision, index int) ([]cappv1alpha1.CappRevision, []cappv1alpha1.CappRevision) {
+func splitRevisionsAtIndex(revisions []cappv1alpha1.CappRevision, index int) ([]cappv1alpha1.CappRevision, []cappv1alpha1.CappRevision) {
 	if index <= 0 {
 		return []cappv1alpha1.CappRevision{}, revisions
 	}
@@ -41,13 +41,13 @@ func HandleCappUpdate(ctx context.Context, k8sClient client.Client, capp cappv1a
 	if numOfRevisions < revisionsToKeep {
 		return adapters.CreateCappRevision(ctx, k8sClient, logger, capp, cappRevisions[0].Spec.RevisionNumber+1)
 	}
-	relevantRevision, revisionsToDelete := getRevisionsBeforeAfter(cappRevisions, revisionsToKeep-1)
+	relevantRevision, revisionsToDelete := splitRevisionsAtIndex(cappRevisions, revisionsToKeep-1)
 
 	for _, revision := range revisionsToDelete {
 		if err := adapters.DeleteCappRevision(ctx, k8sClient, logger, &revision); err != nil {
 			return err
 		}
 	}
-	return adapters.CreateCappRevision(ctx, k8sClient, logger, capp, relevantRevision[0].Spec.RevisionNumber+1)
 
+	return adapters.CreateCappRevision(ctx, k8sClient, logger, capp, relevantRevision[0].Spec.RevisionNumber+1)
 }

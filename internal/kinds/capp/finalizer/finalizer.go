@@ -15,7 +15,7 @@ const FinalizerCleanupCapp = "dana.io/capp-cleanup"
 func HandleResourceDeletion(ctx context.Context, capp cappv1alpha1.Capp, r client.Client, resourceManagers map[string]rmanagers.ResourceManager) (error, bool) {
 	if capp.ObjectMeta.DeletionTimestamp != nil {
 		if controllerutil.ContainsFinalizer(&capp, FinalizerCleanupCapp) {
-			if err := finalizeService(capp, resourceManagers); err != nil {
+			if err := finalizeCapp(capp, resourceManagers); err != nil {
 				return err, false
 			}
 			return RemoveFinalizer(ctx, capp, r), true
@@ -33,8 +33,8 @@ func RemoveFinalizer(ctx context.Context, capp cappv1alpha1.Capp, r client.Clien
 	return nil
 }
 
-// fnializeService runs the cleanup of all the resource mangers.
-func finalizeService(capp cappv1alpha1.Capp, resourceManagers map[string]rmanagers.ResourceManager) error {
+// finalizeCapp runs the cleanup of all the resource managers.
+func finalizeCapp(capp cappv1alpha1.Capp, resourceManagers map[string]rmanagers.ResourceManager) error {
 	for _, manager := range resourceManagers {
 		if err := manager.CleanUp(capp); err != nil {
 			return err

@@ -53,7 +53,7 @@ rules:
 - apiGroups:
   - logging.banzaicloud.io
   resources:
-  - flows
+  - syslogngflows
   verbs:
   - create
   - delete
@@ -64,7 +64,7 @@ rules:
 - apiGroups:
   - logging.banzaicloud.io
   resources:
-  - outputs
+  - syslogngoutputs
   verbs:
   - create
   - delete
