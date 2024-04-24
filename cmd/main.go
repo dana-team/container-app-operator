@@ -20,9 +20,9 @@ import (
 	"flag"
 	"os"
 
-	crcontroller "github.com/dana-team/container-app-operator/internal/kinds/capp-revision/controllers"
 	cappcontroller "github.com/dana-team/container-app-operator/internal/kinds/capp/controllers"
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
+	crcontroller "github.com/dana-team/container-app-operator/internal/kinds/capprevision/controllers"
 
 	nfspvcv1alpha1 "github.com/dana-team/nfspvc-operator/api/v1alpha1"
 	"github.com/go-logr/zapr"

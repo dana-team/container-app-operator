@@ -42,7 +42,7 @@ type CappTemplate struct {
 	// +optional
 	Labels map[string]string `json:"labels,omitempty"`
 
-	// Annotations is the related Capp annotations
+	// Annotations is a map of string keys and values which are the actual annotations of the related Capp
 	// +optional
 	Annotations map[string]string `json:"Annotations,omitempty"`
 }

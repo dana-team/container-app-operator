@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
+
 	"k8s.io/apimachinery/pkg/types"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
@@ -46,8 +48,8 @@ type CappReconciler struct {
 // +kubebuilder:rbac:groups=serving.knative.dev,resources=services,verbs=get;list;watch;update;create;delete
 // +kubebuilder:rbac:groups=serving.knative.dev,resources=domainmappings,verbs=get;list;watch;update;create;delete
 // +kubebuilder:rbac:groups=serving.knative.dev,resources=revisions,verbs=get;list;watch;update;create
-// +kubebuilder:rbac:groups=logging.banzaicloud.io,resources=flows,verbs=get;list;watch;update;create;delete
-// +kubebuilder:rbac:groups=logging.banzaicloud.io,resources=outputs,verbs=get;list;watch;update;create;delete
+// +kubebuilder:rbac:groups=logging.banzaicloud.io,resources=syslogngflows,verbs=get;list;watch;update;create;delete
+// +kubebuilder:rbac:groups=logging.banzaicloud.io,resources=syslogngoutputs,verbs=get;list;watch;update;create;delete
 // +kubebuilder:rbac:groups=route.openshift.io,resources=routes,verbs=get;list;watch;update;create
 // +kubebuilder:rbac:groups="",resources=nodes,verbs=get;list;watch;
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;
@@ -62,7 +64,7 @@ func (r *CappReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&cappv1alpha1.Capp{}).
 		Watches(
 			&knativev1.Service{},
-			handler.EnqueueRequestsFromMapFunc(r.findCappFromKnative),
+			handler.EnqueueRequestsFromMapFunc(r.findCappFromEvent),
 			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
 		).
 		Watches(
@@ -70,14 +72,24 @@ func (r *CappReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			handler.EnqueueRequestsFromMapFunc(r.findCappFromDomainMapping),
 			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
 		).
+		Watches(
+			&loggingv1beta1.SyslogNGOutput{},
+			handler.EnqueueRequestsFromMapFunc(r.findCappFromEvent),
+			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
+		).
+		Watches(
+			&loggingv1beta1.SyslogNGFlow{},
+			handler.EnqueueRequestsFromMapFunc(r.findCappFromEvent),
+			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
+		).
 		Complete(r)
 }
 
-// findCappFromKnative maps Knative reconciliation requests to Capp reconciliation requests.
-func (r *CappReconciler) findCappFromKnative(ctx context.Context, knativeService client.Object) []reconcile.Request {
+// findCappFromKnative maps reconciliation requests to Capp reconciliation requests.
+func (r *CappReconciler) findCappFromEvent(ctx context.Context, object client.Object) []reconcile.Request {
 	request := reconcile.Request{NamespacedName: types.NamespacedName{
-		Namespace: knativeService.GetNamespace(),
-		Name:      knativeService.GetName()}}
+		Namespace: object.GetNamespace(),
+		Name:      object.GetName()}}
 
 	return []reconcile.Request{request}
 }
@@ -108,8 +120,8 @@ func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	resourceManagers := map[string]rmanagers.ResourceManager{
 		rmanagers.DomainMapping:  rmanagers.KnativeDomainMappingManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder},
 		rmanagers.KnativeServing: rmanagers.KnativeServiceManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder},
-		rmanagers.Flow:           rmanagers.FlowManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder},
-		rmanagers.Output:         rmanagers.OutputManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder},
+		rmanagers.SyslogNGFlow:   rmanagers.SyslogNGFlowManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder},
+		rmanagers.SyslogNGOutput: rmanagers.SyslogNGOutputManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder},
 		rmanagers.NFSPVC:         rmanagers.NFSPVCManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder},
 	}
 
@@ -117,12 +129,15 @@ func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to handle Capp deletion: %s", err.Error())
 	}
+
 	if deleted {
 		return ctrl.Result{}, nil
 	}
+
 	if err := finalizer.EnsureFinalizer(ctx, capp, r.Client); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to ensure finalizer in Capp: %s", err.Error())
 	}
+
 	if err := r.SyncApplication(ctx, capp, resourceManagers, logger); err != nil {
 		if errors.IsConflict(err) {
 			logger.Info(fmt.Sprintf("Conflict detected requeuing: %s", err.Error()))

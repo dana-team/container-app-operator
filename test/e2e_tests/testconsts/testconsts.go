@@ -21,7 +21,5 @@ const (
 	TestContainerName         = "capp-test-container"
 	FirstRevisionSuffix       = "-00001"
 	KnativeAutoscaleTargetKey = "autoscaling.knative.dev/target"
-	OutputSuffix              = "-output"
-	FlowSuffix                = "-flow"
 	TestIndex                 = "test"
 )

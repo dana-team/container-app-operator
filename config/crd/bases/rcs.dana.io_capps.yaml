@@ -7642,11 +7642,6 @@ spec:
               logSpec:
                 description: LogSpec defines the configuration for shipping Capp logs.
                 properties:
-                  hecTokenSecretName:
-                    description: |-
-                      HecTokenSecretName defines the name of the secret
-                      containing the Splunk Hec token.
-                    type: string
                   host:
                     description: Host defines Elasticsearch or Splunk host.
                     type: string
@@ -7655,19 +7650,16 @@ spec:
                     type: string
                   passwordSecretName:
                     description: |-
-                      PasswordSecretName defines the name of the secret
+                      PasswordSecret defines the name of the secret
                       containing the password for authentication.
                     type: string
-                  sslVerify:
-                    description: SSLVerify determines whether to skip ssl verification.
-                    type: boolean
                   type:
-                    description: |-
-                      Type defines where to send the Capp logs
-                      Possible values : "elastic" and "splunk".
+                    description: Type defines where to send the Capp logs
+                    enum:
+                    - elastic
                     type: string
                   username:
-                    description: UserName defines a User for authentication.
+                    description: User defines a User for authentication.
                     type: string
                 type: object
               routeSpec:
@@ -8165,7 +8157,7 @@ spec:
                 properties:
                   conditions:
                     description: Conditions contain details about the current state
-                      of the Output and Flow used by the Capp.
+                      of the SyslogNGFlow and SyslogNGOutput used by the Capp.
                     items:
                       description: "Condition contains details for one aspect of the
                         current state of this API Resource.\n---\nThis struct is intended
@@ -8236,9 +8228,9 @@ spec:
                       - type
                       type: object
                     type: array
-                  flow:
-                    description: Flow represents the Status of the Flow used by the
-                      Capp.
+                  syslogngflow:
+                    description: SyslogNGFlow represents the Status of the SyslogNGFlow
+                      used by the Capp.
                     properties:
                       active:
                         type: boolean
@@ -8249,9 +8241,9 @@ spec:
                       problemsCount:
                         type: integer
                     type: object
-                  output:
-                    description: Output represents the Status of the Output used by
-                      the Capp.
+                  syslogngoutput:
+                    description: SyslogNGOutput represents the Status of the SyslogNGOutput
+                      used by the Capp.
                     properties:
                       active:
                         type: boolean

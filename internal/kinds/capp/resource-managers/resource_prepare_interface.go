@@ -11,19 +11,23 @@ type ResourceManager interface {
 }
 
 const (
-	eventCappFlowCreationFailed           = "FlowCreationFailed"
-	eventCappFlowCreated                  = "FlowCreated"
-	eventCappDomainMappingCreationFailed  = "DomainMappingCreationFailed"
-	eventCappKnativeServiceCreationFailed = "KnativeServiceCreationFailed"
-	eventCappOutputCreationFailed         = "OutputCreationFailed"
-	eventCappOutputCreated                = "OutputCreated"
-	eventCappDisabled                     = "CappDisabled"
-	eventCappEnabled                      = "CappEnabled"
-	eventNFSPVCCreationFailed             = "NfsPvcCreationFailed"
-	eventNFSPVCCreated                    = "NfsPvcCreated"
-	DomainMapping                         = "domainMapping"
+	eventCappDisabled = "CappDisabled"
+	eventCappEnabled  = "CappEnabled"
+
 	KnativeServing                        = "knativeServing"
-	Flow                                  = "flow"
-	Output                                = "output"
-	NFSPVC                                = "NfsPvc"
+	eventCappKnativeServiceCreationFailed = "KnativeServiceCreationFailed"
+
+	DomainMapping                        = "domainMapping"
+	eventCappDomainMappingCreationFailed = "DomainMappingCreationFailed"
+
+	NFSPVC                    = "NfsPvc"
+	eventNFSPVCCreationFailed = "NfsPvcCreationFailed"
+	eventNFSPVCCreated        = "NfsPvcCreated"
+
+	SyslogNGFlow                          = "syslogNGFlow"
+	SyslogNGOutput                        = "syslogNGOutput"
+	eventCappSyslogNGFlowCreationFailed   = "SyslogNGFlowCreationFailed"
+	eventCappSyslogNGFlowCreated          = "SyslogNGFlowCreated"
+	eventCappSyslogNGOutputCreationFailed = "SyslogNGOutputCreationFailed"
+	eventCappSyslogNGlSOutputCreated      = "SyslogNGOutputCreated"
 )

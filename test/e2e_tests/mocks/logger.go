@@ -9,56 +9,38 @@ import (
 
 var (
 	ElasticType       = "elastic"
-	SplunkType        = "splunk"
-	ElasticHost       = "20.76.217.187"
-	SplunkHost        = "74.234.208.141"
+	ElasticHost       = "1.2.3.4"
 	MainIndex         = "main"
 	ElasticUserName   = "elastic"
-	SplunkUserName    = "bGFiZXI="
-	SplunkPassword    = "QWExMjM0NTYh"
-	HecTokenKey       = "hec_token"
-	SplunkHecToken    = "ODVhZTc2YmYtYjYyMS00MDk5LWIyYzMtOGI5OTk3NTA0OTgy"
-	ElasticSecretName = "quickstart-es-elastic-user"
-	SplunkSecretName  = "splunk-single-standalone-secrets"
-	UsernameKey       = "username"
-	PasswordKey       = "password"
-	SplunkHecTokenKey = "SplunkHecToken"
+	ElasticSecretName = "credentials"
 )
 
+// CreateElasticLogSpec creates a Logging Spec for Elasticsearch.
 func CreateElasticLogSpec() cappv1alpha1.LogSpec {
 	return cappv1alpha1.LogSpec{
-		Type:               ElasticType,
-		Host:               ElasticHost,
-		SSLVerify:          false,
-		Index:              MainIndex,
-		UserName:           ElasticUserName,
-		PasswordSecretName: ElasticSecretName,
+		Type:           ElasticType,
+		Host:           ElasticHost,
+		Index:          MainIndex,
+		User:           ElasticUserName,
+		PasswordSecret: ElasticSecretName,
 	}
 }
 
-func CreateSplunkLogSpec() cappv1alpha1.LogSpec {
-	return cappv1alpha1.LogSpec{
-		Type:               SplunkType,
-		Host:               SplunkHost,
-		SSLVerify:          false,
-		Index:              MainIndex,
-		HecTokenSecretName: SplunkSecretName,
-	}
-}
-
-func CreateOutputObject(outputName string) *loggingv1beta1.Output {
-	return &loggingv1beta1.Output{
+// CreateSyslogNGOutputObject returns a SyslogNGOutput object.
+func CreateSyslogNGOutputObject(name string) *loggingv1beta1.SyslogNGOutput {
+	return &loggingv1beta1.SyslogNGOutput{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      outputName,
+			Name:      name,
 			Namespace: NSName,
 		},
 	}
 }
 
-func CreateFlowObject(flowName string) *loggingv1beta1.Flow {
-	return &loggingv1beta1.Flow{
+// CreateSyslogNGFlowObject returns a SyslogNGFlow object.
+func CreateSyslogNGFlowObject(name string) *loggingv1beta1.SyslogNGFlow {
+	return &loggingv1beta1.SyslogNGFlow{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      flowName,
+			Name:      name,
 			Namespace: NSName,
 		},
 	}
@@ -73,17 +55,5 @@ func CreateElasticSecretObject() *corev1.Secret {
 		},
 		Type: "Opaque",
 		Data: map[string][]byte{ElasticUserName: []byte(SecretValue)},
-	}
-}
-
-func CreateSplunkSecretObject() *corev1.Secret {
-	return &corev1.Secret{
-		TypeMeta: metav1.TypeMeta{},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      SplunkSecretName,
-			Namespace: NSName,
-		},
-		Type: "Opaque",
-		Data: map[string][]byte{HecTokenKey: []byte(SplunkHecToken), UsernameKey: []byte(SplunkUserName), PasswordKey: []byte(SplunkPassword), SplunkHecTokenKey: []byte(SplunkHecToken)},
 	}
 }

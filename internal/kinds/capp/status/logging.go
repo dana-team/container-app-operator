@@ -13,53 +13,56 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// buildLoggingStatus builds the Logging status of the Capp CRD by getting the Flow and Output objects
+const (
+	loggingResourceInvalid = "LoggingResourceInvalid"
+	loggingReady           = "LoggingIsReady"
+	conditionReady         = "ready"
+)
+
+// buildLoggingStatus builds the Logging status of the Capp CRD by getting the SyslogNGFlow and SyslogNGOutput objects
 // bundled to the Capp and adding their status. It also creates a condition in accordance with their situation.
 func buildLoggingStatus(ctx context.Context, capp cappv1alpha1.Capp, log logr.Logger, r client.Client, isRequired bool) (cappv1alpha1.LoggingStatus, error) {
-	logger := log.WithValues("FlowName", capp.Name+"-flow", "OutputName", capp.Name+"-output")
+	logger := log.WithValues("SyslogNGFlowName", capp.Name, "SyslogNGOutputName", capp.Name)
 	loggingStatus := cappv1alpha1.LoggingStatus{}
 
 	if !isRequired {
 		return loggingStatus, nil
 	}
 
-	flow := &loggingv1beta1.Flow{}
+	syslogNGFlow := &loggingv1beta1.SyslogNGFlow{}
 	logger.Info("Building logger status")
-	logger.Info("Trying to fetch existing flow")
 
-	if err := r.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: capp.Name + "-flow"},
-		flow); err != nil {
-		logger.Error(err, "Failed to fetch flow")
+	if err := r.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: capp.Name}, syslogNGFlow); err != nil {
+		logger.Error(err, "Failed to fetch SyslogNGFlow")
 		return loggingStatus, err
 	}
-	logger.Info("Fetched flow successfully.")
 
-	logger.Info("Trying to fetch existing output")
-	output := &loggingv1beta1.Output{}
-	if err := r.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: capp.Name + "-output"},
-		output); err != nil {
-		logger.Error(err, "Failed to fetch output")
+	syslogNGOutput := &loggingv1beta1.SyslogNGOutput{}
+	if err := r.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: capp.Name}, syslogNGOutput); err != nil {
+		logger.Error(err, "Failed to fetch SyslogNGOutput")
 		return loggingStatus, err
 	}
-	logger.Info("Fetched output successfully.")
-	loggingStatus.Flow = flow.Status
-	loggingStatus.Output = output.Status
+
+	loggingStatus.SyslogNGFlow = syslogNGFlow.Status
+	loggingStatus.SyslogNGOutput = syslogNGOutput.Status
 
 	problems := "True"
-	reason := "Ready"
-	if flow.Status.ProblemsCount != 0 || output.Status.ProblemsCount != 0 {
-		reason = "LoggingResourceInvalid"
+	reason := conditionReady
+
+	if syslogNGFlow.Status.ProblemsCount != 0 || syslogNGOutput.Status.ProblemsCount != 0 {
+		reason = loggingResourceInvalid
 		problems = "False"
 	}
 
 	condition := metav1.Condition{
-		Type:               "LoggingIsReady",
+		Type:               loggingReady,
 		Status:             metav1.ConditionStatus(problems),
 		LastTransitionTime: metav1.Time{Time: time.Now()},
 		Reason:             reason,
 	}
 
 	meta.SetStatusCondition(&loggingStatus.Conditions, condition)
-	logger.Info("Built logger status successfully ")
+	logger.Info("Successfully built logger status")
+
 	return loggingStatus, nil
 }

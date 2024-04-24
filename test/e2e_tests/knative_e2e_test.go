@@ -260,7 +260,7 @@ var _ = Describe("Validate knative functionality", func() {
 		updateCapp(assertionCapp, false)
 	})
 
-	It("Should create capp with autoscale annotation.The default annotation in the  ksvc should be overridden", func() {
+	It("Should create capp with autoscale annotation. The default annotation in the  ksvc should be overridden", func() {
 		By("Creating a capp instance")
 		testCapp := mock.CreateBaseCapp()
 		annotations := map[string]string{

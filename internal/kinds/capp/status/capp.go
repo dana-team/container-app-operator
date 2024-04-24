@@ -34,8 +34,8 @@ func SyncStatus(ctx context.Context, capp cappv1alpha1.Capp, log logr.Logger, r 
 		return err
 	}
 
-	knativeServiceManger := resourceManagers[rmanagers.KnativeServing]
-	knativeObjectStatus, revisionInfo, err := buildKnativeStatus(ctx, r, capp, knativeServiceManger.IsRequired(capp))
+	knativeServiceManager := resourceManagers[rmanagers.KnativeServing]
+	knativeObjectStatus, revisionInfo, err := buildKnativeStatus(ctx, r, capp, knativeServiceManager.IsRequired(capp))
 	if err != nil {
 		return err
 	}
@@ -43,22 +43,22 @@ func SyncStatus(ctx context.Context, capp cappv1alpha1.Capp, log logr.Logger, r 
 	cappObject.Status.KnativeObjectStatus = knativeObjectStatus
 	cappObject.Status.RevisionInfo = revisionInfo
 
-	FlowManager := resourceManagers[rmanagers.Flow]
-	loggingStatus, err := buildLoggingStatus(ctx, capp, log, r, FlowManager.IsRequired(capp))
+	syslogNGFlowManager := resourceManagers[rmanagers.SyslogNGFlow]
+	loggingStatus, err := buildLoggingStatus(ctx, capp, log, r, syslogNGFlowManager.IsRequired(capp))
 	if err != nil {
 		return err
 	}
 	cappObject.Status.LoggingStatus = loggingStatus
 
-	DomainMappinManger := resourceManagers[rmanagers.DomainMapping]
-	routeStatus, err := buildRouteStatus(ctx, r, capp, DomainMappinManger.IsRequired(capp))
+	domainMappingManager := resourceManagers[rmanagers.DomainMapping]
+	routeStatus, err := buildRouteStatus(ctx, r, capp, domainMappingManager.IsRequired(capp))
 	if err != nil {
 		return err
 	}
 	cappObject.Status.RouteStatus = routeStatus
 
-	NFSPVCManager := resourceManagers[rmanagers.NFSPVC]
-	volumesStatus, err := buildVolumesStatus(ctx, r, capp, NFSPVCManager.IsRequired(capp))
+	nfspvcManager := resourceManagers[rmanagers.NFSPVC]
+	volumesStatus, err := buildVolumesStatus(ctx, r, capp, nfspvcManager.IsRequired(capp))
 	if err != nil {
 		return err
 	}
@@ -68,8 +68,9 @@ func SyncStatus(ctx context.Context, capp cappv1alpha1.Capp, log logr.Logger, r 
 	cappObject.Status.KnativeObjectStatus = knativeObjectStatus
 	cappObject.Status.RevisionInfo = revisionInfo
 	cappObject.Status.ApplicationLinks = *applicationLinks
+
 	if err := r.Status().Update(ctx, &cappObject); err != nil {
-		log.Error(err, "can't update capp status")
+		log.Error(err, "failed to update Capp status")
 		return err
 	}
 

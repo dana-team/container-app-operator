@@ -49,6 +49,7 @@ var _ = Describe("Validate CappRevision creation", func() {
 
 	It(fmt.Sprintf("Should limit CappRevisions to %s per Capp", strconv.Itoa(revisionsToKeep)), func() {
 		baseCapp := mock.CreateBaseCapp()
+
 		By("Creating Capp")
 		desiredCapp := utilst.CreateCapp(k8sClient, baseCapp)
 		desiredCapp = utilst.GetCapp(k8sClient, desiredCapp.Name, desiredCapp.Namespace)
@@ -59,15 +60,16 @@ var _ = Describe("Validate CappRevision creation", func() {
 			assertValue := fmt.Sprintf("test%s", strconv.Itoa(i))
 			desiredCapp.Annotations["test"] = assertValue
 			utilst.UpdateCapp(k8sClient, desiredCapp)
+
 			Eventually(func() string {
 				return utilst.GetCapp(k8sClient, desiredCapp.Name, desiredCapp.Namespace).Annotations["test"]
 			}, testconsts.Timeout, testconsts.Interval).Should(Equal(assertValue), "Should be equal to the updated value")
 			utilst.GetCapp(k8sClient, desiredCapp.Name, desiredCapp.Namespace)
-
 		}
+
 		Eventually(func() int {
-			cappRevisons, _ := utilst.GetCappRevisions(context.Background(), k8sClient, *desiredCapp)
-			return len(cappRevisons)
+			cappRevisions, _ := utilst.GetCappRevisions(context.Background(), k8sClient, *desiredCapp)
+			return len(cappRevisions)
 		}, testconsts.Timeout, testconsts.Interval).Should(Equal(revisionsToKeep),
 			fmt.Sprintf("Should limit to %s CappRevision", strconv.Itoa(revisionsToKeep)))
 

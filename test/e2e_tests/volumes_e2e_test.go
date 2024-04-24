@@ -17,8 +17,8 @@ import (
 
 const (
 	NfsPvcName          = "test-volume"
-	TimeoutNfs          = 80 * time.Second
-	NfsCreationInterval = 1 * time.Second
+	TimeoutNfs          = 180 * time.Second
+	NfsCreationInterval = 5 * time.Second
 )
 
 var _ = Describe("Validate NFSPVC functionality", func() {

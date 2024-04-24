@@ -25,7 +25,7 @@ The `container-app-operator` project can work as a standalone solution, but is m
 - [x] Support for autoscaler (`HPA` or `KPA`) according to the chosen `scaleMetric` (`concurrency`, `rps`, `cpu`, `memory`) with default settings.
 - [x] Support for HTTP/HTTPS `DomainMapping` for accessing applications via `Ingress`/`Route`.
 - [x] Support for all `Knative Serving` configurations.
-- [x] Support for exporting logs to `Elasticsearch` and `Splunk` indexes.
+- [x] Support for exporting logs to an `Elasticsearch` index.
 - [x] Support for changing the state of `Capp` from `enabled` (workload is in running state) to `disabled` (workload is not in running state).
 - [x] Support for external NFS storage connected to `Capp` by using `volumeMounts`.
 
@@ -136,9 +136,8 @@ spec:
     type: elastic
     host: 10.11.12.13
     index: main
-    username: elastic
-    passwordSecretName: es-elastic-user
-    sslVerify: false
+    user: elastic
+    passwordSecret: es-elastic-user
   scaleMetric: concurrency
   state: enabled
 ```

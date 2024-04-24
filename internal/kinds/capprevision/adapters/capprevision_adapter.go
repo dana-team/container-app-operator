@@ -67,7 +67,6 @@ func GetCappRevisions(ctx context.Context, r client.Client, capp cappv1alpha1.Ca
 
 // CreateCappRevision initializes and creates a CappRevision.
 func CreateCappRevision(ctx context.Context, k8sClient client.Client, logger logr.Logger, capp cappv1alpha1.Capp, revisionNumber int) error {
-
 	cappRevision := cappv1alpha1.CappRevision{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
@@ -85,25 +84,28 @@ func CreateCappRevision(ctx context.Context, k8sClient client.Client, logger log
 			RevisionNumber: revisionNumber,
 		},
 	}
+
 	if err := controllerutil.SetOwnerReference(&capp, &cappRevision, k8sClient.Scheme()); err != nil {
 		return err
 	}
-	logger.Info(fmt.Sprintf("Trying to create cappRevision: %q.", cappRevision.Name))
+
+	logger.Info(fmt.Sprintf("Trying to create CappRevision: %q.", cappRevision.Name))
 	if err := k8sClient.Create(ctx, &cappRevision); err != nil {
 		logger.Error(err, fmt.Sprintf("Failed to create CappRevision %q.", cappRevision.Name))
 		return err
 	}
+
 	logger.Info(fmt.Sprintf("Successfully created CappRevision %q", cappRevision.Name))
 	return nil
 }
 
 // DeleteCappRevision deletes a specified CappRevision and returning an error on failure.
 func DeleteCappRevision(ctx context.Context, k8sClient client.Client, logger logr.Logger, cappRevision *cappv1alpha1.CappRevision) error {
-
-	logger.Info(fmt.Sprintf("Trying to delete cappRevision: %q", cappRevision.Name))
+	logger.Info(fmt.Sprintf("Trying to delete CappRevision: %q", cappRevision.Name))
 	if err := k8sClient.Delete(ctx, cappRevision); err != nil {
 		logger.Error(err, fmt.Sprintf("Failed to delete CappRevision %q.", cappRevision.Name))
 		return err
 	}
+
 	return nil
 }
