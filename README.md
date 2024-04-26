@@ -28,6 +28,7 @@ The `container-app-operator` project can work as a standalone solution, but is m
 - [x] Support for exporting logs to an `Elasticsearch` index.
 - [x] Support for changing the state of `Capp` from `enabled` (workload is in running state) to `disabled` (workload is not in running state).
 - [x] Support for external NFS storage connected to `Capp` by using `volumeMounts`.
+- [X] Support for `CappRevisions` to keep track of changes to `Capp` in a different CRD (up to 10 `CappRevisions` are saved for each `Capp`)
 
 ## Getting Started
 
