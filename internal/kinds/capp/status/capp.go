@@ -3,7 +3,7 @@ package status
 import (
 	"context"
 
-	rmanagers "github.com/dana-team/container-app-operator/internal/kinds/capp/resource-managers"
+	rmanagers "github.com/dana-team/container-app-operator/internal/kinds/capp/resourcemanagers"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/go-logr/logr"
@@ -57,7 +57,7 @@ func SyncStatus(ctx context.Context, capp cappv1alpha1.Capp, log logr.Logger, r 
 	}
 	cappObject.Status.RouteStatus = routeStatus
 
-	nfspvcManager := resourceManagers[rmanagers.NFSPVC]
+	nfspvcManager := resourceManagers[rmanagers.NfsPVC]
 	volumesStatus, err := buildVolumesStatus(ctx, r, capp, nfspvcManager.IsRequired(capp))
 	if err != nil {
 		return err

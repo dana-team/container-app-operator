@@ -4,7 +4,7 @@ import (
 	"context"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
-	rmanagers "github.com/dana-team/container-app-operator/internal/kinds/capp/resource-managers"
+	rmanagers "github.com/dana-team/container-app-operator/internal/kinds/capp/resourcemanagers"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )

@@ -22,9 +22,7 @@ var _ = Describe("Validate capp creation", func() {
 		baseCapp.Spec.ScaleMetric = testconsts.UnsupportedScaleMetric
 		Expect(k8sClient.Create(context.Background(), baseCapp)).ShouldNot(Equal(nil))
 	})
-})
 
-var _ = Describe("Validate Capp adapter", func() {
 	It("Should succeed all adapter functions", func() {
 		baseCapp := mock.CreateBaseCapp()
 		desiredCapp := utilst.CreateCapp(k8sClient, baseCapp)

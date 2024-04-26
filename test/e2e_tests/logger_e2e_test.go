@@ -3,6 +3,8 @@ package e2e_tests
 import (
 	"fmt"
 
+	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+
 	"github.com/dana-team/container-app-operator/test/e2e_tests/testconsts"
 
 	mock "github.com/dana-team/container-app-operator/test/e2e_tests/mocks"
@@ -82,6 +84,39 @@ func testCappWithLogger(logType string) {
 		Eventually(func() bool {
 			return utilst.DoesResourceExist(k8sClient, syslogNGFlowObject)
 		}, testconsts.Timeout, testconsts.Interval).ShouldNot(BeTrue(), "Should not find a resource.")
+	})
+
+	It("Should cleanup SyslogNGFlow and SyslogNGOutput when they are no longer required", func() {
+		By(fmt.Sprintf("Creating a Capp with %s logger", logType))
+		createdCapp := utilst.CreateCappWithLogger(logType, k8sClient)
+
+		By("Checking if the SyslogNGFlow and SyslogNGOutput were created successfully")
+		syslogNGFlowName := createdCapp.Name
+		syslogNGFlowObject := mock.CreateSyslogNGFlowObject(syslogNGFlowName)
+
+		syslogNGOutputName := createdCapp.Name
+		syslogNGOutputObject := mock.CreateSyslogNGOutputObject(syslogNGOutputName)
+
+		Eventually(func() bool {
+			return utilst.DoesResourceExist(k8sClient, syslogNGFlowObject)
+		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "Should find a resource.")
+
+		Eventually(func() bool {
+			return utilst.DoesResourceExist(k8sClient, syslogNGOutputObject)
+		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "Should find a resource.")
+
+		By("Removing the logging requirement from Capp Spec and checking cleanup")
+		toBeUpdatedCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
+		toBeUpdatedCapp.Spec.LogSpec = cappv1alpha1.LogSpec{}
+		utilst.UpdateCapp(k8sClient, toBeUpdatedCapp)
+
+		Eventually(func() bool {
+			return utilst.DoesResourceExist(k8sClient, syslogNGFlowObject)
+		}, testconsts.Timeout, testconsts.Interval).Should(BeFalse(), "Should not find a resource.")
+
+		Eventually(func() bool {
+			return utilst.DoesResourceExist(k8sClient, syslogNGOutputObject)
+		}, testconsts.Timeout, testconsts.Interval).Should(BeFalse(), "Should not find a resource.")
 	})
 }
 

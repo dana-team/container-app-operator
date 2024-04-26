@@ -35,7 +35,6 @@ func updateCapp(capp *cappv1alpha1.Capp, shouldRevisionBeReady bool) {
 }
 
 // checkRevisionReadiness checks the readiness of the specified revision and asserts its state based on shouldBeReady flag.
-
 func checkRevisionReadiness(revisionName string, shouldBeReady bool) {
 	By("Checking if the revision was created successfully")
 	revisionObject := mock.CreateRevisionObject(revisionName)
@@ -260,7 +259,7 @@ var _ = Describe("Validate knative functionality", func() {
 		updateCapp(assertionCapp, false)
 	})
 
-	It("Should create capp with autoscale annotation. The default annotation in the  ksvc should be overridden", func() {
+	It("Should create capp with autoscale annotation. The default annotation in the ksvc should be overridden", func() {
 		By("Creating a capp instance")
 		testCapp := mock.CreateBaseCapp()
 		annotations := map[string]string{
