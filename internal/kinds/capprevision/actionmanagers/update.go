@@ -1,4 +1,4 @@
-package actionmangers
+package actionmanagers
 
 import (
 	"context"

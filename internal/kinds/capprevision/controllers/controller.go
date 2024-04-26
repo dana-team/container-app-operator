@@ -7,7 +7,7 @@ import (
 	"time"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
-	"github.com/dana-team/container-app-operator/internal/kinds/capprevision/actionmangers"
+	"github.com/dana-team/container-app-operator/internal/kinds/capprevision/actionmanagers"
 	"github.com/dana-team/container-app-operator/internal/kinds/capprevision/adapters"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -97,7 +97,7 @@ func syncCappRevision(ctx context.Context, k8sClient client.Client, capp cappv1a
 	}
 
 	if len(cappRevisions) == 0 {
-		return actionmangers.HandleCappCreation(ctx, k8sClient, capp, logger)
+		return actionmanagers.HandleCappCreation(ctx, k8sClient, capp, logger)
 	}
-	return actionmangers.HandleCappUpdate(ctx, k8sClient, capp, logger, cappRevisions)
+	return actionmanagers.HandleCappUpdate(ctx, k8sClient, capp, logger, cappRevisions)
 }
