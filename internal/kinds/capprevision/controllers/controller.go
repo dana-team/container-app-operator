@@ -3,7 +3,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"time"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
@@ -15,9 +14,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -37,29 +34,10 @@ type CappRevisionReconciler struct {
 // +kubebuilder:rbac:groups=rcs.dana.io,resources=capprevisions,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=rcs.dana.io,resources=capprevisions/status,verbs=get;update;patch
 
-type SpecChangedPredicate struct {
-	predicate.Funcs
-}
-
-// Update implements default UpdateEvent filter for checking label change.
-func (SpecChangedPredicate) Update(e event.UpdateEvent) bool {
-	if e.ObjectOld == nil {
-		return false
-	}
-	if e.ObjectNew == nil {
-		return false
-	}
-	newCapp := e.ObjectNew.(*cappv1alpha1.Capp)
-	oldCapp := e.ObjectOld.(*cappv1alpha1.Capp)
-	return !reflect.DeepEqual(oldCapp.Spec, newCapp.Spec)
-
-}
-
 // SetupWithManager sets up the controller with the Manager.
 func (r *CappRevisionReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&cappv1alpha1.Capp{}).
-		WithEventFilter(predicate.Or(predicate.AnnotationChangedPredicate{}, predicate.LabelChangedPredicate{}, SpecChangedPredicate{})).
 		Complete(r)
 }
 
@@ -69,7 +47,7 @@ func (r *CappRevisionReconciler) Reconcile(ctx context.Context, req reconcile.Re
 	capp := cappv1alpha1.Capp{}
 	if err := r.Client.Get(ctx, req.NamespacedName, &capp); err != nil {
 		if errors.IsNotFound(err) {
-			logger.Info("Didn't find Capp")
+			logger.Info("Capp does not exist")
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, fmt.Errorf("failed to get Capp: %s", err.Error())

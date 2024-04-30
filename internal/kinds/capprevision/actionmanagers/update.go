@@ -4,6 +4,8 @@ import (
 	"context"
 	"sort"
 
+	"k8s.io/apimachinery/pkg/api/equality"
+
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/dana-team/container-app-operator/internal/kinds/capprevision/adapters"
 	"github.com/go-logr/logr"
@@ -33,11 +35,40 @@ func sortByCreationTime(cappRevisions []cappv1alpha1.CappRevision) {
 	})
 }
 
+// equalAnnotations returns a boolean indicating whether two Capp specs are equal.
+func equalSpec(cappSpec, revisionCappSpec cappv1alpha1.CappSpec) bool {
+	return equality.Semantic.DeepEqual(cappSpec, revisionCappSpec)
+}
+
+// equalAnnotations returns a boolean indicating whether two annotation maps are equal.
+func equalAnnotations(cappAnnotations, revisionCappAnnotations map[string]string) bool {
+	return equality.Semantic.DeepEqual(cappAnnotations, revisionCappAnnotations)
+}
+
+// equalLabels returns a boolean indicating whether two label maps are equal.
+func equalLabels(cappLabels, revisionCappLabels map[string]string) bool {
+	return equality.Semantic.DeepEqual(cappLabels, revisionCappLabels)
+}
+
+// isEqual returns a boolean indicating whether a Capp instance is equal to a Capp Revision instance.
+// The comparison concerts the Capp Spec of the two instances, the Capp annotations and Capp labels.
+func isEqual(capp cappv1alpha1.Capp, revision cappv1alpha1.CappRevision) bool {
+	return equalSpec(capp.Spec, revision.Spec.CappTemplate.Spec) &&
+		equalAnnotations(capp.Annotations, revision.Spec.CappTemplate.Annotations) &&
+		equalLabels(capp.Labels, revision.Spec.CappTemplate.Labels)
+}
+
 // HandleCappUpdate manages the flow of CappRevision when a Capp is updated. It ensures that a CappRevision is created for every update.
 // It also maintains a limit of only revisionsToKeep CappRevisions in the same namespace as the Capp.
 func HandleCappUpdate(ctx context.Context, k8sClient client.Client, capp cappv1alpha1.Capp, logger logr.Logger, cappRevisions []cappv1alpha1.CappRevision) error {
 	sortByCreationTime(cappRevisions)
 	numOfRevisions := len(cappRevisions)
+
+	latestRevision := cappRevisions[0]
+	if isEqual(capp, latestRevision) {
+		return nil
+	}
+
 	if numOfRevisions < revisionsToKeep {
 		return adapters.CreateCappRevision(ctx, k8sClient, logger, capp, cappRevisions[0].Spec.RevisionNumber+1)
 	}

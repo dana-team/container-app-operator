@@ -44,7 +44,7 @@ type CappTemplate struct {
 
 	// Annotations is a map of string keys and values which are the actual annotations of the related Capp
 	// +optional
-	Annotations map[string]string `json:"Annotations,omitempty"`
+	Annotations map[string]string `json:"annotations,omitempty"`
 }
 
 //+kubebuilder:object:root=true
