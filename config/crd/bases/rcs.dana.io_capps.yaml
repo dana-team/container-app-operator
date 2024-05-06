@@ -7648,7 +7648,7 @@ spec:
                   index:
                     description: Index defines the index name to write events to.
                     type: string
-                  passwordSecretName:
+                  passwordSecret:
                     description: |-
                       PasswordSecret defines the name of the secret
                       containing the password for authentication.
@@ -7658,7 +7658,7 @@ spec:
                     enum:
                     - elastic
                     type: string
-                  username:
+                  user:
                     description: User defines a User for authentication.
                     type: string
                 type: object

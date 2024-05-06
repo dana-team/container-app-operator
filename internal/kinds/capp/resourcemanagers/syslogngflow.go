@@ -44,15 +44,11 @@ func (f SyslogNGFlowManager) prepareResource(capp cappv1alpha1.Capp) loggingv1be
 			Namespace: capp.GetNamespace(),
 		},
 		Spec: loggingv1beta1.SyslogNGFlowSpec{
-			Filters: []loggingv1beta1.SyslogNGFilter{
-				{
-					Match: &filter.MatchConfig{
-						Regexp: &filter.RegexpMatchExpr{
-							Pattern: capp.GetName(),
-							Type:    "string",
-							Value:   fmt.Sprintf("json#kubernetes#json#%s", knativeConfiguration),
-						},
-					},
+			Match: &loggingv1beta1.SyslogNGMatch{
+				Regexp: &filter.RegexpMatchExpr{
+					Pattern: capp.GetName(),
+					Type:    "string",
+					Value:   fmt.Sprintf("json#kubernetes#labels#%s", knativeConfiguration),
 				},
 			},
 			LocalOutputRefs: []string{syslogNGOutputName},

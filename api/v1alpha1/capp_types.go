@@ -121,12 +121,12 @@ type LogSpec struct {
 
 	// User defines a User for authentication.
 	// +optional
-	User string `json:"username,omitempty"`
+	User string `json:"user,omitempty"`
 
 	// PasswordSecret defines the name of the secret
 	// containing the password for authentication.
 	// +optional
-	PasswordSecret string `json:"passwordSecretName,omitempty"`
+	PasswordSecret string `json:"passwordSecret,omitempty"`
 }
 
 // ApplicationLinks contains relevant information about
