@@ -115,13 +115,8 @@ spec:
             image: 'quay.io/danateamorg/example-python-app:v1-flask'
             name: capp-sample
             volumeMounts:
-              - name: testpvc
+              - name: test-nfspvc
                 mountPath: /data
-        volumes:
-          - name: testpvc
-            persistentVolumeClaim:
-              claimName: nfspvc
-              readOnly: false
   routeSpec:
     hostname: capp.dev
     tlsEnabled: true
@@ -130,7 +125,7 @@ spec:
     nfsVolumes:
       - server: test
         path: /test
-        name: nfspvc
+        name: test-nfspvc
         capacity:
           storage: 200Gi
   logSpec:
