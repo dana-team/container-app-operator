@@ -43,7 +43,7 @@ spec:
                 description: CappTemplate holds the manifest of a specific Capp corresponding
                   to a particular RevisionNumber
                 properties:
-                  Annotations:
+                  annotations:
                     additionalProperties:
                       type: string
                     description: Annotations is a map of string keys and values which
