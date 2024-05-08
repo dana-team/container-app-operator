@@ -22,4 +22,6 @@ const (
 	FirstRevisionSuffix       = "-00001"
 	KnativeAutoscaleTargetKey = "autoscaling.knative.dev/target"
 	TestIndex                 = "test"
+	TestLabelKey              = "e2e-test"
+	CappResourceKey           = "rcs.dana.io/parent-capp"
 )

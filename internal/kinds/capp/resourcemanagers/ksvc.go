@@ -44,7 +44,11 @@ type KnativeServiceManager struct {
 // prepareResource generates a Knative Service definition from a given Capp resource.
 func (k KnativeServiceManager) prepareResource(capp cappv1alpha1.Capp, ctx context.Context) knativev1.Service {
 	knativeServiceAnnotations := utils.FilterKeysWithoutPrefix(capp.Annotations, danaAnnotationsPrefix)
-	knativeServiceLabels := utils.FilterKeysWithoutPrefix(capp.Labels, danaAnnotationsPrefix)
+	knativeServiceLabels := map[string]string{}
+
+	if capp.Labels != nil {
+		knativeServiceLabels = capp.Labels
+	}
 	knativeServiceLabels[CappResourceKey] = capp.Name
 
 	knativeService := knativev1.Service{
