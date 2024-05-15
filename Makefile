@@ -145,6 +145,17 @@ deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in
 undeploy: kustomize ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
 	$(KUSTOMIZE) build config/default | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
 
+.PHONY: build/install.yaml
+build/install.yaml: manifests kustomize
+	mkdir -p $(dir $@) && \
+	rm -rf build/kustomize && \
+	mkdir -p build/kustomize && \
+	cd build/kustomize && \
+	$(KUSTOMIZE) create --resources ../../config/default && \
+	$(KUSTOMIZE) edit set image controller=${IMG} && \
+	cd ${CURDIR} && \
+	$(KUSTOMIZE) build build/kustomize > $@
+
 ##@ Capp prerequisites
 CERT_MANAGER_VERSION ?= v1.13.3
 CERT_MANAGER_URL ?= https://github.com/cert-manager/cert-manager/releases/download/$(CERT_MANAGER_VERSION)/cert-manager.yaml

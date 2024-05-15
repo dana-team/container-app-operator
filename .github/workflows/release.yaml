@@ -5,22 +5,33 @@ on:
 env:
   REGISTRY: ghcr.io
   REPOSITORY_NAME: ${{ github.repository }}
+  DANA_ORG: dana-team
 
 jobs:
   build-and-push-image:
     name: Build and push image
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       packages: write
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-    - name: Log in to the Container registry
-      uses: docker/login-action@5f4866a30a54f16a52d2ecb4a3898e9e424939cf
-      with:
-        registry: ${{ env.REGISTRY }}
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-    - name: Build and push docker image
-      run: make docker-build docker-push IMG=${{ env.REGISTRY }}/${{ env.REPOSITORY_NAME }}:${GITHUB_REF##*/}
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@5f4866a30a54f16a52d2ecb4a3898e9e424939cf
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push image
+        run: make docker-build docker-push IMG=${{ env.REGISTRY }}/${{ env.REPOSITORY_NAME }}:${GITHUB_REF##*/}
+
+      - name: Create install.yaml file
+        run: make build/install.yaml IMG=${{ env.REGISTRY }}/${{ env.REPOSITORY_NAME }}:${GITHUB_REF##*/}
+
+      - name: Upload install.yaml file
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ./build/install.yaml
