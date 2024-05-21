@@ -23,6 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
+	dnsv1alpha1 "sigs.k8s.io/external-dns/endpoint"
 )
 
 // CappSpec defines the desired state of Capp.
@@ -182,6 +183,10 @@ type RouteStatus struct {
 	// DomainMappingObjectStatus is the status of the underlying DomainMapping object
 	// +optional
 	DomainMappingObjectStatus knativev1beta1.DomainMappingStatus `json:"domainMappingObjectStatus,omitempty"`
+
+	// DNSEndpointObjectStatus is the status of the underlying DNSEndpoint object
+	// +optional
+	DNSEndpointObjectStatus dnsv1alpha1.DNSEndpointStatus `json:"dnsEndpointObjectStatus,omitempty"`
 }
 
 // VolumesStatus shows the state of the Volumes objects linked to the Capp.

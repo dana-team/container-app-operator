@@ -22,6 +22,7 @@ require (
 	knative.dev/pkg v0.0.0-20240116073220-b488e7be5902
 	knative.dev/serving v0.40.1
 	sigs.k8s.io/controller-runtime v0.17.4
+	sigs.k8s.io/external-dns v0.14.1
 )
 
 require (
@@ -48,7 +49,7 @@ require (
 	github.com/google/pprof v0.0.0-20240508145209-1db217f89380 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/iancoleman/orderedmap v0.3.0 // indirect
-	github.com/imdario/mergo v0.3.13 // indirect
+	github.com/imdario/mergo v0.3.16 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
@@ -59,10 +60,11 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.73.2 // indirect
-	github.com/prometheus/client_golang v1.18.0 // indirect
+	github.com/prometheus/client_golang v1.19.0 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
-	github.com/prometheus/common v0.47.0 // indirect
+	github.com/prometheus/common v0.48.0 // indirect
 	github.com/prometheus/procfs v0.14.0 // indirect
+	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/spf13/cast v1.6.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	go.uber.org/multierr v1.11.0 // indirect

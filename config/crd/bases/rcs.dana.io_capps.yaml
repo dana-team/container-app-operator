@@ -8259,6 +8259,15 @@ spec:
                 description: RouteStatus shows the state of the DomainMapping object
                   linked to the Capp.
                 properties:
+                  dnsEndpointObjectStatus:
+                    description: DNSEndpointObjectStatus is the status of the underlying
+                      DNSEndpoint object
+                    properties:
+                      observedGeneration:
+                        description: The generation observed by the external-dns controller.
+                        format: int64
+                        type: integer
+                    type: object
                   domainMappingObjectStatus:
                     description: DomainMappingObjectStatus is the status of the underlying
                       DomainMapping object

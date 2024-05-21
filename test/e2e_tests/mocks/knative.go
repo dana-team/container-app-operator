@@ -6,8 +6,9 @@ import (
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 )
 
-var PassEnvName = "PASSWORD"
+var passEnvName = "PASSWORD"
 
+// CreateRevisionObject returns an empty KnativeRevision object.
 func CreateRevisionObject(revisionName string) *knativev1.Revision {
 	return &knativev1.Revision{
 		ObjectMeta: metav1.ObjectMeta{
@@ -17,10 +18,11 @@ func CreateRevisionObject(revisionName string) *knativev1.Revision {
 	}
 }
 
+// CreateEnvVarObject returns an EnvVar object.
 func CreateEnvVarObject(refName string) *[]corev1.EnvVar {
 	return &[]corev1.EnvVar{
 		{
-			Name: PassEnvName,
+			Name: passEnvName,
 			ValueFrom: &corev1.EnvVarSource{
 				SecretKeyRef: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
@@ -33,6 +35,7 @@ func CreateEnvVarObject(refName string) *[]corev1.EnvVar {
 	}
 }
 
+// CreateKnativeServiceObject returns an empty KSVC object.
 func CreateKnativeServiceObject(knativeServiceName string) *knativev1.Service {
 	return &knativev1.Service{
 		ObjectMeta: metav1.ObjectMeta{

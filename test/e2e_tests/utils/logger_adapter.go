@@ -26,14 +26,14 @@ func CreateCredentialsSecret(logType string, client client.Client) {
 	}
 }
 
-// GetSyslogNGOutput fetches existing and returns an instance of SyslogNGOutput.
+// GetSyslogNGOutput fetches existing and returns an instance of a SyslogNGOutput.
 func GetSyslogNGOutput(k8sClient client.Client, name string, namespace string) *loggingv1beta1.SyslogNGOutput {
 	syslogNGOutput := &loggingv1beta1.SyslogNGOutput{}
 	GetResource(k8sClient, syslogNGOutput, name, namespace)
 	return syslogNGOutput
 }
 
-// GetSyslogNGFlow fetches existing and returns an instance of SyslogNGFlow.
+// GetSyslogNGFlow fetches existing and returns an instance of a SyslogNGFlow.
 func GetSyslogNGFlow(k8sClient client.Client, name string, namespace string) *loggingv1beta1.SyslogNGFlow {
 	syslogNGFlow := &loggingv1beta1.SyslogNGFlow{}
 	GetResource(k8sClient, syslogNGFlow, name, namespace)

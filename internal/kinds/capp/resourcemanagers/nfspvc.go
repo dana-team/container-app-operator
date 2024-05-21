@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	NfsPVC                    = "NfsPvc"
+	NfsPVC                    = "nfsPvc"
 	eventNFSPVCCreationFailed = "NfsPvcCreationFailed"
 	eventNFSPVCCreated        = "NfsPvcCreated"
 )

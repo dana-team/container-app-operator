@@ -39,13 +39,12 @@ func DeleteCapp(k8sClient client.Client, capp *cappv1alpha1.Capp) {
 	Expect(k8sClient.Delete(context.Background(), capp)).To(Succeed())
 }
 
-// GenerateCappName generates a new secret name by calling
-// generateName with the predefined RouteTlsSecret as the baseName.
+// GenerateCappName generates a new name for Capp.
 func GenerateCappName() string {
 	return generateName(mock.CappName)
 }
 
-// GetCapp fetch existing and return an instance of Capp.
+// GetCapp fetches and returns an existing instance of a Capp.
 func GetCapp(k8sClient client.Client, name string, namespace string) *cappv1alpha1.Capp {
 	capp := &cappv1alpha1.Capp{}
 	GetResource(k8sClient, capp, name, namespace)

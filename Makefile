@@ -158,11 +158,13 @@ build/install.yaml: manifests kustomize
 
 ##@ Capp prerequisites
 CERT_MANAGER_VERSION ?= v1.13.3
+NFSPVC_VERSION ?= v0.3.0
+
 CERT_MANAGER_URL ?= https://github.com/cert-manager/cert-manager/releases/download/$(CERT_MANAGER_VERSION)/cert-manager.yaml
-NFSPVC_URL ?= https://raw.githubusercontent.com/dana-team/nfspvc-operator/main/all_in_one.yaml
+NFSPVC_URL ?= https://github.com/dana-team/nfspvc-operator/releases/download/$(NFSPVC_VERSION)/install.yaml
 
 .PHONY: prereq
-prereq: install install-cert-manager install-knative install-helm install-logging install-nfspvc enable-nfs-knative ## Install every prerequisite needed to develop on container-app-operator.
+prereq: install install-cert-manager install-knative install-helm install-logging install-nfspvc enable-nfs-knative install-external-dns ## Install every prerequisite needed to develop on container-app-operator.
 
 .PHONY: install-nfspvc
 install-nfspvc: ## Install NfsPvcOperator
@@ -180,6 +182,13 @@ enable-nfs-knative: ## Enable NFS for Knative
 install-logging: ## Install logging operator on the kind cluster
 	helm upgrade --install --wait --create-namespace --namespace logging-operator-system logging-operator oci://ghcr.io/kube-logging/helm-charts/logging-operator
 	kubectl apply -f hack/logging-operator-resources.yaml
+
+.PHONY: install-external-dns
+install-external-dns: ## Install external-dns on the kind cluster
+	helm repo add external-dns https://kubernetes-sigs.github.io/external-dns/
+	helm repo update
+	helm upgrade --install --wait --create-namespace --namespace external-dns-system external-dns external-dns/external-dns --set sources={crd}
+	kubectl apply -f hack/external-dns-resources.yaml
 
 KNATIVE_URL ?= https://github.com/knative-extensions/kn-plugin-quickstart/releases/download/knative-v1.11.2/kn-quickstart-linux-amd64
 KNATIVE_HPA_URL ?= https://github.com/knative/serving/releases/download/knative-v1.11.2/serving-hpa.yaml

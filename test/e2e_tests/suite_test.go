@@ -6,28 +6,14 @@ import (
 
 	"github.com/dana-team/container-app-operator/test/e2e_tests/testconsts"
 
-	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	mock "github.com/dana-team/container-app-operator/test/e2e_tests/mocks"
 	utilst "github.com/dana-team/container-app-operator/test/e2e_tests/utils"
-	nfspvcv1alpha1 "github.com/dana-team/nfspvc-operator/api/v1alpha1"
-	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	networkingv1 "github.com/openshift/api/network/v1"
-	routev1 "github.com/openshift/api/route/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/kubernetes/scheme"
-	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
-	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
-)
-
-var (
-	k8sClient       client.Client
-	targetAutoScale map[string]string
 )
 
 func TestE2e(t *testing.T) {
@@ -35,20 +21,6 @@ func TestE2e(t *testing.T) {
 
 	SetDefaultEventuallyTimeout(testconsts.DefaultEventually)
 	RunSpecs(t, "Capp Suite")
-}
-
-func newScheme() *runtime.Scheme {
-	s := runtime.NewScheme()
-	_ = nfspvcv1alpha1.AddToScheme(s)
-	_ = corev1.AddToScheme(s)
-	_ = cappv1alpha1.AddToScheme(s)
-	_ = loggingv1beta1.AddToScheme(s)
-	_ = knativev1beta1.AddToScheme(s)
-	_ = knativev1.AddToScheme(s)
-	_ = networkingv1.Install(s)
-	_ = routev1.Install(s)
-	_ = scheme.AddToScheme(s)
-	return s
 }
 
 var _ = SynchronizedBeforeSuite(func() {

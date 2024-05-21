@@ -6,6 +6,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
+	dnsv1alpha1 "sigs.k8s.io/external-dns/endpoint"
 )
 
 // PrepareKSVC returns a KSVC object.
@@ -51,6 +52,16 @@ func PrepareSyslogNGFlow(name, namespace string) loggingv1beta1.SyslogNGFlow {
 // PrepareSyslogNGOutput returns a SyslogNGOutput object.
 func PrepareSyslogNGOutput(name, namespace string) loggingv1beta1.SyslogNGOutput {
 	return loggingv1beta1.SyslogNGOutput{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+	}
+}
+
+// PrepareDNSEndpoint returns a DNSEndpoint object.
+func PrepareDNSEndpoint(name, namespace string) dnsv1alpha1.DNSEndpoint {
+	return dnsv1alpha1.DNSEndpoint{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,

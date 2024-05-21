@@ -49,9 +49,6 @@ func (k KnativeDomainMappingManager) prepareResource(capp cappv1alpha1.Capp) (kn
 			Labels: map[string]string{
 				CappResourceKey: capp.Name,
 			},
-			Annotations: map[string]string{
-				CappResourceKey: capp.Name,
-			},
 		},
 		Spec: knativev1beta1.DomainMappingSpec{
 			Ref: duckv1.KReference{
@@ -110,7 +107,7 @@ func (k KnativeDomainMappingManager) CleanUp(capp cappv1alpha1.Capp) error {
 	return nil
 }
 
-// IsRequired is responsible to determine if resource knative domain mapping is required.
+// IsRequired is responsible to determine if resource DomainMapping is required.
 func (k KnativeDomainMappingManager) IsRequired(capp cappv1alpha1.Capp) bool {
 	return capp.Spec.RouteSpec.Hostname != ""
 }
@@ -159,7 +156,7 @@ func (k KnativeDomainMappingManager) createDomainMapping(capp cappv1alpha1.Capp,
 		return err
 	}
 
-	k.EventRecorder.Event(&capp, corev1.EventTypeWarning, eventCappDomainMappingCreated,
+	k.EventRecorder.Event(&capp, corev1.EventTypeNormal, eventCappDomainMappingCreated,
 		fmt.Sprintf("Created DomainMapping %s", domainMappingFromCapp.Name))
 
 	return nil

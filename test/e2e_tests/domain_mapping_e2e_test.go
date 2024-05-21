@@ -49,9 +49,9 @@ var _ = Describe("Validate DomainMapping functionality", func() {
 		}, testconsts.Timeout, testconsts.Interval).Should(Equal(updatedRouteHostname))
 
 		By("checking if the domainMapping was updated")
-		updateDomainMappingObject := mock.CreateDomainMappingObject(updatedRouteHostname)
+		updatedDomainMappingObject := mock.CreateDomainMappingObject(updatedRouteHostname)
 		Eventually(func() bool {
-			return utilst.DoesResourceExist(k8sClient, updateDomainMappingObject)
+			return utilst.DoesResourceExist(k8sClient, updatedDomainMappingObject)
 		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "Should find a resource.")
 
 		By("Deleting the capp instance")
@@ -62,7 +62,7 @@ var _ = Describe("Validate DomainMapping functionality", func() {
 
 		By("Checking if the domainMapping was deleted successfully")
 		Eventually(func() bool {
-			return utilst.DoesResourceExist(k8sClient, updateDomainMappingObject)
+			return utilst.DoesResourceExist(k8sClient, updatedDomainMappingObject)
 		}, testconsts.Timeout, testconsts.Interval).ShouldNot(BeTrue(), "Should not find a resource.")
 	})
 

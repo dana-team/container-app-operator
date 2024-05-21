@@ -20,10 +20,15 @@ import (
 	"flag"
 	"os"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	dnsv1alpha1 "sigs.k8s.io/external-dns/endpoint"
+
 	cappcontroller "github.com/dana-team/container-app-operator/internal/kinds/capp/controllers"
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 	crcontroller "github.com/dana-team/container-app-operator/internal/kinds/capprevision/controllers"
 
+	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	nfspvcv1alpha1 "github.com/dana-team/nfspvc-operator/api/v1alpha1"
 	"github.com/go-logr/zapr"
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
@@ -41,8 +46,6 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	runtimezap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
-
-	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -51,6 +54,8 @@ var (
 	setupLog = ctrl.Log.WithName("setup")
 )
 
+const externalDNSGroupVersion = "externaldns.k8s.io/v1alpha1"
+
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(knativev1.AddToScheme(scheme))
@@ -58,11 +63,21 @@ func init() {
 	utilruntime.Must(knativev1beta1.AddToScheme(scheme))
 	utilruntime.Must(cappv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(nfspvcv1alpha1.AddToScheme(scheme))
+	initExternalDNSSchemes()
+
 	//+kubebuilder:scaffold:scheme
 }
 
 func initOpenshiftSchemes() {
 	utilruntime.Must(routev1.Install(scheme))
+}
+
+// initExternalDNSSchemes is needed because the ExternalDNS operator does not
+// provide an AddToScheme method that can be used.
+func initExternalDNSSchemes() {
+	groupVersion, _ := schema.ParseGroupVersion(externalDNSGroupVersion)
+	scheme.AddKnownTypes(groupVersion, &dnsv1alpha1.DNSEndpoint{}, &dnsv1alpha1.DNSEndpointList{})
+	metav1.AddToGroupVersion(scheme, groupVersion)
 }
 
 func initEcsLogger() {

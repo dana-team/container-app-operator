@@ -179,7 +179,7 @@ func (k KnativeServiceManager) createKSVC(capp *cappv1alpha1.Capp, knativeServic
 		return err
 	}
 
-	k.EventRecorder.Event(capp, corev1.EventTypeWarning, eventCappKnativeServiceCreated,
+	k.EventRecorder.Event(capp, corev1.EventTypeNormal, eventCappKnativeServiceCreated,
 		fmt.Sprintf("Created KnativeService %s", knativeServiceFromCapp.Name))
 
 	return nil

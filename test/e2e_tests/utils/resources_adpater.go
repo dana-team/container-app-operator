@@ -10,8 +10,6 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -56,13 +54,6 @@ func GetResource(k8sClient client.Client, obj client.Object, name, namespace str
 func generateName(baseName string) string {
 	randString := generateRandomString(RandStrLength)
 	return baseName + "-" + randString
-}
-
-// GetDomainMapping fetch existing and return an instance of DomainMapping.
-func GetDomainMapping(k8sClient client.Client, name string, namespace string) *knativev1beta1.DomainMapping {
-	domainMapping := &knativev1beta1.DomainMapping{}
-	GetResource(k8sClient, domainMapping, name, namespace)
-	return domainMapping
 }
 
 // CreateSecret creates a new secret.

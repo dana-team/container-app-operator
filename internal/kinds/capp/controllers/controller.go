@@ -56,7 +56,8 @@ type CappReconciler struct {
 // +kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;
 // +kubebuilder:rbac:groups="",resources=events,verbs=get;list;watch;update;create;patch;
 // +kubebuilder:rbac:groups="events.k8s.io",resources=events,verbs=get;list;watch;update;create;patch
-// +kubebuilder:rbac:groups="nfspvc.dana.io",resources=nfspvcs,verbs=get;list;watch;update;create;delete;
+// +kubebuilder:rbac:groups="nfspvc.dana.io",resources=nfspvcs,verbs=get;list;watch;update;create;delete
+// +kubebuilder:rbac:groups="externaldns.k8s.io",resources=dnsendpoints,verbs=get;list;watch;update;create;delete
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *CappReconciler) SetupWithManager(mgr ctrl.Manager) error {
@@ -123,6 +124,7 @@ func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		rmanagers.SyslogNGFlow:   rmanagers.SyslogNGFlowManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder},
 		rmanagers.SyslogNGOutput: rmanagers.SyslogNGOutputManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder},
 		rmanagers.NfsPVC:         rmanagers.NFSPVCManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder},
+		rmanagers.DNSEndpoint:    rmanagers.DNSEndpointManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder},
 	}
 
 	err, deleted := finalizer.HandleResourceDeletion(ctx, capp, r.Client, resourceManagers)
@@ -140,7 +142,7 @@ func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 	if err := r.SyncApplication(ctx, capp, resourceManagers, logger); err != nil {
 		if errors.IsConflict(err) {
-			logger.Info(fmt.Sprintf("Conflict detected requeuing: %s", err.Error()))
+			logger.Info(fmt.Sprintf("Conflict detected, requeuing: %s", err.Error()))
 			return ctrl.Result{RequeueAfter: RequeueTime}, nil
 		}
 		return ctrl.Result{}, fmt.Errorf("failed to sync Capp: %s", err.Error())
@@ -156,6 +158,7 @@ func (r *CappReconciler) SyncApplication(ctx context.Context, capp cappv1alpha1.
 			return err
 		}
 	}
+
 	if err := status.SyncStatus(ctx, capp, logger, r.Client, r.OnOpenshift, resourceManagers); err != nil {
 		return err
 	}
