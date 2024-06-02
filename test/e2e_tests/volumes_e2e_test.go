@@ -24,7 +24,6 @@ const (
 var _ = Describe("Validate NFSPVC functionality", func() {
 	It("Should create, update and delete NFSPVC when creating, updating and deleting a Capp instance", func() {
 		By("Creating a capp with a NFSPVC")
-
 		NFSPVCCapp := mock.CreateBaseCapp()
 		NFSPVCCapp.Spec.VolumesSpec.NFSVolumes = []cappv1alpha1.NFSVolume{
 			{

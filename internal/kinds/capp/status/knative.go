@@ -46,7 +46,7 @@ func buildRevisionsStatus(ctx context.Context, capp cappv1alpha1.Capp, r client.
 	return revisionsInfo, nil
 }
 
-// buildKnativeStatus responsible all the status related to the knative.
+// buildKnativeStatus responsible all the status related to Knative.
 func buildKnativeStatus(ctx context.Context, kubeClient client.Client, capp cappv1alpha1.Capp, isRequired bool) (knativev1.ServiceStatus, []cappv1alpha1.RevisionInfo, error) {
 	knativeObjectStatus := knativev1.ServiceStatus{}
 	var revisionInfo []cappv1alpha1.RevisionInfo

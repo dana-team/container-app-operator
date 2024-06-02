@@ -43,7 +43,7 @@ func CreateBaseCapp() *cappv1alpha1.Capp {
 											Value: "capp-default-test",
 										},
 									},
-									Image:     "ghcr.io/knative/autoscale-go:latest",
+									Image:     "ghcr.io/dana-team/capp-gin-app:v0.2.0",
 									Name:      "capp-default-test",
 									Resources: corev1.ResourceRequirements{},
 								},
@@ -58,11 +58,11 @@ func CreateBaseCapp() *cappv1alpha1.Capp {
 	}
 }
 
-func CreateSecretObject(secretName string) *corev1.Secret {
+func CreateSecretObject(name string) *corev1.Secret {
 	return &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      secretName,
+			Name:      name,
 			Namespace: NSName,
 		},
 		Type: "Opaque",

@@ -11,8 +11,8 @@ import (
 )
 
 const (
-	TimeoutCapp          = 120 * time.Second
-	CappCreationInterval = 2 * time.Second
+	timeoutCapp          = 120 * time.Second
+	cappCreationInterval = 2 * time.Second
 )
 
 // CreateCapp creates a new Capp instance with a unique name and returns it.
@@ -23,7 +23,7 @@ func CreateCapp(k8sClient client.Client, capp *cappv1alpha1.Capp) *cappv1alpha1.
 	Expect(k8sClient.Create(context.Background(), newCapp)).To(Succeed())
 	Eventually(func() string {
 		return GetCapp(k8sClient, newCapp.Name, newCapp.Namespace).Status.KnativeObjectStatus.ConfigurationStatusFields.LatestReadyRevisionName
-	}, TimeoutCapp, CappCreationInterval).ShouldNot(Equal(""), "Should fetch capp")
+	}, timeoutCapp, cappCreationInterval).ShouldNot(Equal(""), "Should fetch capp")
 	return newCapp
 }
 
@@ -31,21 +31,23 @@ func CreateCapp(k8sClient client.Client, capp *cappv1alpha1.Capp) *cappv1alpha1.
 func UpdateCapp(k8sClient client.Client, capp *cappv1alpha1.Capp) {
 	Eventually(func() error {
 		return k8sClient.Update(context.Background(), capp)
-	}, TimeoutCapp, CappCreationInterval).Should(Succeed(), "Should update capp")
+	}, timeoutCapp, cappCreationInterval).Should(Succeed(), "Should update capp")
 }
 
 // DeleteCapp deletes an existing Capp instance.
 func DeleteCapp(k8sClient client.Client, capp *cappv1alpha1.Capp) {
 	Expect(k8sClient.Delete(context.Background(), capp)).To(Succeed())
+	Eventually(func() bool {
+		return DoesResourceExist(k8sClient, capp)
+	}, timeoutCapp, cappCreationInterval).ShouldNot(BeTrue(), "Should not find a resource.")
 }
 
-// GenerateCappName generates a new secret name by calling
-// generateName with the predefined RouteTlsSecret as the baseName.
+// GenerateCappName generates a new name for Capp.
 func GenerateCappName() string {
 	return generateName(mock.CappName)
 }
 
-// GetCapp fetch existing and return an instance of Capp.
+// GetCapp fetches and returns an existing instance of a Capp.
 func GetCapp(k8sClient client.Client, name string, namespace string) *cappv1alpha1.Capp {
 	capp := &cappv1alpha1.Capp{}
 	GetResource(k8sClient, capp, name, namespace)
