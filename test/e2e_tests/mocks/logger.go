@@ -36,7 +36,7 @@ func CreateSyslogNGOutputObject(name string) *loggingv1beta1.SyslogNGOutput {
 	}
 }
 
-// CreateSyslogNGFlowObject returns a SyslogNGFlow object.
+// CreateSyslogNGFlowObject returns an empty SyslogNGFlow object.
 func CreateSyslogNGFlowObject(name string) *loggingv1beta1.SyslogNGFlow {
 	return &loggingv1beta1.SyslogNGFlow{
 		ObjectMeta: metav1.ObjectMeta{
@@ -46,6 +46,7 @@ func CreateSyslogNGFlowObject(name string) *loggingv1beta1.SyslogNGFlow {
 	}
 }
 
+// CreateElasticSecretObject returns a Secret for Elasticsearch logging.
 func CreateElasticSecretObject() *corev1.Secret {
 	return &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{},

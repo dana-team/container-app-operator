@@ -10,16 +10,15 @@ import (
 )
 
 const (
-	CappNameLabelKey = "rcs.dana.io/cappName"
-	ClientListLimit  = 100
+	cappNameLabelKey = "rcs.dana.io/cappName"
+	clientListLimit  = 100
 )
 
 // GetCappRevisions retrieves a list of CappRevision resources filtered by labels matching a specific Capp, returning the list and any error encountered.
 func GetCappRevisions(ctx context.Context, k8sClient client.Client, capp cappv1alpha1.Capp) ([]cappv1alpha1.CappRevision, error) {
-
 	cappRevisions := cappv1alpha1.CappRevisionList{}
 
-	requirement, err := labels.NewRequirement(CappNameLabelKey, selection.Equals, []string{capp.Name})
+	requirement, err := labels.NewRequirement(cappNameLabelKey, selection.Equals, []string{capp.Name})
 	if err != nil {
 		return cappRevisions.Items, err
 	}
@@ -28,7 +27,7 @@ func GetCappRevisions(ctx context.Context, k8sClient client.Client, capp cappv1a
 	listOptions := client.ListOptions{
 		Namespace:     capp.Namespace,
 		LabelSelector: labelSelector,
-		Limit:         ClientListLimit,
+		Limit:         clientListLimit,
 	}
 
 	err = k8sClient.List(ctx, &cappRevisions, &listOptions)

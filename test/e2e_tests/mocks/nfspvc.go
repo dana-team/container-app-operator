@@ -13,10 +13,11 @@ const (
 	Capacity = "1Gi"
 )
 
-func CreateNFSPVCObject(nfspvcName string) *nfspvcv1alpha1.NfsPvc {
+// CreateNFSPVCObject returns an NFSPVC object.
+func CreateNFSPVCObject(name string) *nfspvcv1alpha1.NfsPvc {
 	return &nfspvcv1alpha1.NfsPvc{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      nfspvcName,
+			Name:      name,
 			Namespace: NSName,
 		},
 		Spec: nfspvcv1alpha1.NfsPvcSpec{

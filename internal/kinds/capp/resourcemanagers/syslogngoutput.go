@@ -97,7 +97,7 @@ func (o SyslogNGOutputManager) prepareResource(capp cappv1alpha1.Capp) loggingv1
 // CleanUp attempts to delete the associated SyslogNGOutput for a given Capp resource.
 func (o SyslogNGOutputManager) CleanUp(capp cappv1alpha1.Capp) error {
 	resourceManager := rclient.ResourceManagerClient{Ctx: o.Ctx, K8sclient: o.K8sclient, Log: o.Log}
-	syslogNGOutput := rclient.PrepareSyslogNGOutput(capp.Name, capp.Namespace)
+	syslogNGOutput := rclient.GetBareSyslogNGOutput(capp.Name, capp.Namespace)
 
 	if err := resourceManager.DeleteResource(&syslogNGOutput); err != nil {
 		if errors.IsNotFound(err) {

@@ -60,7 +60,7 @@ func (f SyslogNGFlowManager) prepareResource(capp cappv1alpha1.Capp) loggingv1be
 // CleanUp attempts to delete the associated SyslogNGFlow for a given Capp resource.
 func (f SyslogNGFlowManager) CleanUp(capp cappv1alpha1.Capp) error {
 	resourceManager := rclient.ResourceManagerClient{Ctx: f.Ctx, K8sclient: f.K8sclient, Log: f.Log}
-	syslogNGFlow := rclient.PrepareSyslogNGFlow(capp.Name, capp.Namespace)
+	syslogNGFlow := rclient.GetBareSyslogNGFlow(capp.Name, capp.Namespace)
 
 	if err := resourceManager.DeleteResource(&syslogNGFlow); err != nil {
 		if errors.IsNotFound(err) {

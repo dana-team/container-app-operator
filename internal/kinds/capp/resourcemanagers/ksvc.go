@@ -106,7 +106,7 @@ func (k KnativeServiceManager) prepareVolumes(capp cappv1alpha1.Capp) []corev1.V
 // CleanUp attempts to delete the associated KnativeService for a given Capp resource.
 func (k KnativeServiceManager) CleanUp(capp cappv1alpha1.Capp) error {
 	resourceManager := rclient.ResourceManagerClient{Ctx: k.Ctx, K8sclient: k.K8sclient, Log: k.Log}
-	ksvc := rclient.PrepareKSVC(capp.Name, capp.Namespace)
+	ksvc := rclient.GetBareKSVC(capp.Name, capp.Namespace)
 
 	if err := resourceManager.DeleteResource(&ksvc); err != nil {
 		if errors.IsNotFound(err) {
@@ -179,7 +179,7 @@ func (k KnativeServiceManager) createKSVC(capp *cappv1alpha1.Capp, knativeServic
 		return err
 	}
 
-	k.EventRecorder.Event(capp, corev1.EventTypeWarning, eventCappKnativeServiceCreated,
+	k.EventRecorder.Event(capp, corev1.EventTypeNormal, eventCappKnativeServiceCreated,
 		fmt.Sprintf("Created KnativeService %s", knativeServiceFromCapp.Name))
 
 	return nil

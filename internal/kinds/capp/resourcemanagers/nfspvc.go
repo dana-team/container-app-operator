@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	NfsPVC                    = "NfsPvc"
+	NfsPVC                    = "nfsPvc"
 	eventNFSPVCCreationFailed = "NfsPvcCreationFailed"
 	eventNFSPVCCreated        = "NfsPvcCreated"
 )
@@ -65,7 +65,7 @@ func (n NFSPVCManager) CleanUp(capp cappv1alpha1.Capp) error {
 	resourceManager := rclient.ResourceManagerClient{Ctx: n.Ctx, K8sclient: n.K8sclient, Log: n.Log}
 
 	for _, nfsVolume := range capp.Status.VolumesStatus.NFSVolumesStatus {
-		nsfpvcVolume := rclient.PrepareNFSPVC(nfsVolume.VolumeName, capp.Namespace)
+		nsfpvcVolume := rclient.GetBareNFSPVC(nfsVolume.VolumeName, capp.Namespace)
 
 		if err := resourceManager.DeleteResource(&nsfpvcVolume); err != nil {
 			if errors.IsNotFound(err) {

@@ -20,14 +20,14 @@ func GetNextRevisionName(currentRevision string) string {
 	return nextRevisionName
 }
 
-// GetKsvc f retrieves existing instance of Ksvc and returns it.
-func GetKsvc(k8sClient client.Client, name string, namespace string) *knativev1.Service {
+// GetKSVC fetches and returns an existing instance of a Knative Serving.
+func GetKSVC(k8sClient client.Client, name string, namespace string) *knativev1.Service {
 	ksvc := &knativev1.Service{}
 	GetResource(k8sClient, ksvc, name, namespace)
 	return ksvc
 }
 
-// GetRevision retrieves existing instance of Revision and returns it.
+// GetRevision fetches and returns an existing instance of a Knative Revision.
 func GetRevision(k8sClient client.Client, name string, namespace string) *knativev1.Revision {
 	revision := &knativev1.Revision{}
 	GetResource(k8sClient, revision, name, namespace)

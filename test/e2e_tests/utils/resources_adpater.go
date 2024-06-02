@@ -10,16 +10,14 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
 	charset        = "abcdefghijklmnopqrstuvwxyz0123456789"
-	RandStrLength  = 10
-	RouteHostname  = "test.dev"
-	RouteTlsSecret = "https-capp-secret"
+	randStrLength  = 10
+	routeHostname  = "test.dev"
+	routeTLSSecret = "https-capp-secret"
 )
 
 var seededRand = rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -51,18 +49,16 @@ func GetResource(k8sClient client.Client, obj client.Object, name, namespace str
 	Expect(k8sClient.Get(context.Background(), client.ObjectKey{Name: name, Namespace: namespace}, obj))
 }
 
+// GetClusterResource fetches an existing Cluster resource and returns an instance of it.
+func GetClusterResource(k8sClient client.Client, obj client.Object, name string) {
+	Expect(k8sClient.Get(context.Background(), client.ObjectKey{Name: name}, obj))
+}
+
 // generateName generates a new name by combining the given baseName
 // with a randomly generated string of a specified length.
 func generateName(baseName string) string {
-	randString := generateRandomString(RandStrLength)
+	randString := generateRandomString(randStrLength)
 	return baseName + "-" + randString
-}
-
-// GetDomainMapping fetch existing and return an instance of DomainMapping.
-func GetDomainMapping(k8sClient client.Client, name string, namespace string) *knativev1beta1.DomainMapping {
-	domainMapping := &knativev1beta1.DomainMapping{}
-	GetResource(k8sClient, domainMapping, name, namespace)
-	return domainMapping
 }
 
 // CreateSecret creates a new secret.
@@ -78,13 +74,13 @@ func CreateConfigMap(k8sClient client.Client, configMap *corev1.ConfigMap) {
 // GenerateRouteHostname generates a new route hostname by calling
 // generateName with the predefined RouteHostname as the baseName.
 func GenerateRouteHostname() string {
-	return generateName(RouteHostname)
+	return generateName(routeHostname)
 }
 
 // GenerateSecretName generates a new secret name by calling
 // generateName with the predefined RouteTlsSecret as the baseName.
 func GenerateSecretName() string {
-	return generateName(RouteTlsSecret)
+	return generateName(routeTLSSecret)
 }
 
 // UpdateSecret updates an existing Secret instance.

@@ -71,7 +71,7 @@ func testMetricAnnotation(metricType string) {
 
 	By(fmt.Sprintf("Checking if the ksvc was created with %s metric annotation successfully", metricType))
 	Eventually(func() string {
-		ksvc := utilst.GetKsvc(k8sClient, createdCapp.Name, createdCapp.Namespace)
+		ksvc := utilst.GetKSVC(k8sClient, createdCapp.Name, createdCapp.Namespace)
 		return ksvc.Spec.Template.Annotations[testconsts.KnativeMetricAnnotation]
 	}, testconsts.Timeout, testconsts.Interval).Should(Equal(metricType))
 }
@@ -132,7 +132,7 @@ var _ = Describe("Validate knative functionality", func() {
 
 		By("Checking if the ksvc was updated successfully")
 		Eventually(func() string {
-			ksvc := utilst.GetKsvc(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
+			ksvc := utilst.GetKSVC(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
 			return ksvc.Spec.Template.Annotations[testconsts.KnativeMetricAnnotation]
 		}, testconsts.Timeout, testconsts.Interval).Should(Equal("memory"))
 	})
@@ -148,7 +148,7 @@ var _ = Describe("Validate knative functionality", func() {
 
 		By("Checking if the ksvc was updated successfully")
 		Eventually(func() string {
-			ksvc := utilst.GetKsvc(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
+			ksvc := utilst.GetKSVC(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
 			return ksvc.Spec.ConfigurationSpec.Template.Spec.Containers[0].Name
 		}, testconsts.Timeout, testconsts.Interval).Should(Equal(testconsts.TestContainerName))
 	})
@@ -164,7 +164,7 @@ var _ = Describe("Validate knative functionality", func() {
 
 		By("Checking if the ksvc's container image was updated successfully")
 		Eventually(func() string {
-			ksvc := utilst.GetKsvc(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
+			ksvc := utilst.GetKSVC(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
 			return ksvc.Spec.ConfigurationSpec.Template.Spec.Containers[0].Image
 		}, testconsts.Timeout, testconsts.Interval).Should(Equal(testconsts.ImageExample))
 	})
@@ -182,7 +182,7 @@ var _ = Describe("Validate knative functionality", func() {
 
 		By("Checking if the ksvc's dana annotation was updated successfully")
 		Eventually(func() string {
-			ksvc := utilst.GetKsvc(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
+			ksvc := utilst.GetKSVC(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
 			return ksvc.Spec.Template.Annotations[testconsts.ExampleDanaAnnotation]
 		}, testconsts.Timeout, testconsts.Interval).Should(Equal(testconsts.ExampleAppName))
 	})
@@ -198,7 +198,7 @@ var _ = Describe("Validate knative functionality", func() {
 
 		By("Checking if the ksvc's container environment variable was updated successfully")
 		Eventually(func() string {
-			ksvc := utilst.GetKsvc(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
+			ksvc := utilst.GetKSVC(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
 			return ksvc.Spec.ConfigurationSpec.Template.Spec.Containers[0].Env[0].Value
 		}, testconsts.Timeout, testconsts.Interval).Should(Equal(testconsts.ExampleAppName))
 	})
@@ -235,7 +235,7 @@ var _ = Describe("Validate knative functionality", func() {
 
 		By("Checking if the ksvc's container image was updated successfully")
 		Eventually(func() string {
-			ksvc := utilst.GetKsvc(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
+			ksvc := utilst.GetKSVC(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
 			return ksvc.Spec.ConfigurationSpec.Template.Spec.Containers[0].Image
 		}, testconsts.Timeout, testconsts.Interval).Should(Equal(testconsts.NonExistingImageExample))
 	})
@@ -270,7 +270,7 @@ var _ = Describe("Validate knative functionality", func() {
 
 		By("Checking if the ksvc's defaults annotations were overridden")
 		Eventually(func() string {
-			ksvc := utilst.GetKsvc(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
+			ksvc := utilst.GetKSVC(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
 			return ksvc.Spec.ConfigurationSpec.Template.Annotations[testconsts.KnativeAutoscaleTargetKey]
 		}, testconsts.Timeout, testconsts.Interval).Should(Equal("666"))
 	})
@@ -282,7 +282,7 @@ var _ = Describe("Validate knative functionality", func() {
 
 		By("Checking if the ksvc's annotation is equal to the configMap")
 		Eventually(func() string {
-			ksvc := utilst.GetKsvc(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
+			ksvc := utilst.GetKSVC(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
 			return ksvc.Spec.ConfigurationSpec.Template.Annotations[testconsts.KnativeAutoscaleTargetKey]
 		}, testconsts.Timeout, testconsts.Interval).Should(Equal(targetAutoScale["concurrency"]))
 	})
@@ -299,18 +299,18 @@ var _ = Describe("Validate knative functionality", func() {
 
 		By("Checking if user-defined labels were propagated to the ksvc")
 		Eventually(func() string {
-			ksvc := utilst.GetKsvc(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
+			ksvc := utilst.GetKSVC(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
 			return ksvc.Spec.ConfigurationSpec.Template.Labels[testconsts.TestLabelKey]
 		}, testconsts.Timeout, testconsts.Interval).Should(Equal("test"))
 
 		By("Checking if labels set by the controller cannot be overridden by users")
 		Consistently(func() string {
-			ksvc := utilst.GetKsvc(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
+			ksvc := utilst.GetKSVC(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
 			return ksvc.Spec.ConfigurationSpec.Template.Labels[testconsts.CappResourceKey]
 		}, testconsts.Timeout, testconsts.Interval).ShouldNot(Equal("test"))
 
 		Eventually(func() string {
-			ksvc := utilst.GetKsvc(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
+			ksvc := utilst.GetKSVC(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
 			return ksvc.Spec.ConfigurationSpec.Template.Labels[testconsts.CappResourceKey]
 		}, testconsts.Timeout, testconsts.Interval).Should(Equal(assertionCapp.Name))
 

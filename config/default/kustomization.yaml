@@ -41,9 +41,24 @@ patches:
 # 'CERTMANAGER' needs to be enabled to use ca injection
 #- path: webhookcainjection_patch.yaml
 
+configMapGenerator:
+  - name: dns-zone
+    literals:
+      - zone="dana-team-zone."
+
 # [CERTMANAGER] To enable cert-manager, uncomment all sections with 'CERTMANAGER' prefix.
 # Uncomment the following replacements to add the cert-manager CA injection annotations
-#replacements:
+replacements:
+  - source:
+      kind: ConfigMap
+      name: dns-zone
+      fieldPath: data.zone
+    targets:
+      - select:
+          kind: Deployment
+          name: controller-manager
+        fieldPaths:
+          - spec.template.spec.containers.[name=manager].env.[name=CAPP_DNS_ZONE].value
 #  - source: # Add cert-manager annotation to ValidatingWebhookConfiguration, MutatingWebhookConfiguration and CRDs
 #      kind: Certificate
 #      group: cert-manager.io

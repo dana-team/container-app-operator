@@ -158,17 +158,23 @@ build/install.yaml: manifests kustomize
 
 ##@ Capp prerequisites
 CERT_MANAGER_VERSION ?= v1.13.3
-CERT_MANAGER_URL ?= https://github.com/cert-manager/cert-manager/releases/download/$(CERT_MANAGER_VERSION)/cert-manager.yaml
-NFSPVC_URL ?= https://raw.githubusercontent.com/dana-team/nfspvc-operator/main/all_in_one.yaml
+NFSPVC_VERSION ?= v0.3.0
+CERTIFICATE_OPERATOR_VERSION ?= v0.1.0
+PROVIDER_DNS_VERSION ?= v0.1.0
+PROVIDER_DNS_IMAGE ?= ghcr.io/dana-team/provider-dns:$(PROVIDER_DNS_VERSION)
 
-.PHONY: prereq
-prereq: install install-cert-manager install-knative install-helm install-logging install-nfspvc enable-nfs-knative ## Install every prerequisite needed to develop on container-app-operator.
+CERT_MANAGER_URL ?= https://github.com/cert-manager/cert-manager/releases/download/$(CERT_MANAGER_VERSION)/cert-manager.yaml
+NFSPVC_URL ?= https://github.com/dana-team/nfspvc-operator/releases/download/$(NFSPVC_VERSION)/install.yaml
+CERTIFICATE_OPERATOR_URL ?= https://github.com/dana-team/certificate-operator/releases/download/$(CERTIFICATE_OPERATOR_VERSION)/install.yaml
+
+.PHONY: prereq ## Install every prerequisite needed to develop and run the operator.
+prereq: install install-cert-manager install-knative install-helm install-logging install-nfspvc enable-nfs-knative install-provider-dns install-certificate-operator
 
 .PHONY: install-nfspvc
-install-nfspvc: ## Install NfsPvcOperator
+install-nfspvc: ## Install nfspvc-operator on the cluster
 	kubectl apply -f $(NFSPVC_URL)
 
-.PHONY: install-cert-manager
+.PHONY: install-cert-manager ## Install cert-manager on the cluster
 install-cert-manager:
 	kubectl apply -f $(CERT_MANAGER_URL)
 
@@ -177,9 +183,17 @@ enable-nfs-knative: ## Enable NFS for Knative
 	kubectl patch configmap config-features -n knative-serving -p '{"data":{"kubernetes.podspec-persistent-volume-claim":"enabled", "kubernetes.podspec-persistent-volume-write":"enabled"}}'
 
 .PHONY: install-logging
-install-logging: ## Install logging operator on the kind cluster
+install-logging: ## Install logging-operator on the cluster
 	helm upgrade --install --wait --create-namespace --namespace logging-operator-system logging-operator oci://ghcr.io/kube-logging/helm-charts/logging-operator
 	kubectl apply -f hack/logging-operator-resources.yaml
+
+.PHONY: install-provider-dns
+install-provider-dns: install-crossplane install-up ## Install external-dns on the cluster
+	$(LOCALBIN)/up ctp provider install $(PROVIDER_DNS_IMAGE)
+
+.PHONY: install-certificate-operator
+install-certificate-operator:  ## Install certificate-operator on the cluster
+	kubectl apply -f $(CERTIFICATE_OPERATOR_URL)
 
 KNATIVE_URL ?= https://github.com/knative-extensions/kn-plugin-quickstart/releases/download/knative-v1.11.2/kn-quickstart-linux-amd64
 KNATIVE_HPA_URL ?= https://github.com/knative/serving/releases/download/knative-v1.11.2/serving-hpa.yaml
@@ -190,6 +204,13 @@ install-knative: ## Install knative controller on the kind cluster
 	@CLUSTER_NAME=$$(kubectl config current-context | awk -F '-' '{ print $$2}'); \
 	(yes no || true) | $(LOCALBIN)/kn-quickstart kind -n $$CLUSTER_NAME
 	$(KUBECTL) apply -f $(KNATIVE_HPA_URL)
+
+CROSSPLANE_HELM ?= https://charts.crossplane.io/stable
+.PHONY: install-crossplane
+install-crossplane: ## Install crossplane controller on the kind cluster
+	helm repo add crossplane-stable $(CROSSPLANE_HELM)
+	helm repo update
+	helm upgrade --install crossplane --wait --namespace crossplane-system --create-namespace crossplane-stable/crossplane
 
 ##@ Dependencies
 
@@ -206,6 +227,7 @@ ENVTEST ?= $(LOCALBIN)/setup-envtest-$(ENVTEST_VERSION)
 GOLANGCI_LINT = $(LOCALBIN)/golangci-lint-$(GOLANGCI_LINT_VERSION)
 GINKGO ?= $(LOCALBIN)/ginkgo
 HELM_URL ?= https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+UP_URL ?= https://cli.upbound.io/stable/v0.28.0/bin/linux_amd64/up
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v5.3.0
@@ -243,6 +265,11 @@ install-helm: ## Install helm on the local machine
 	wget -O $(LOCALBIN)/get-helm.sh $(HELM_URL)
 	chmod 700 $(LOCALBIN)/get-helm.sh
 	$(LOCALBIN)/get-helm.sh
+
+.PHONY: install-up
+install-up: ## Install up on the local machine
+	wget -O $(LOCALBIN)/up $(UP_URL)
+	chmod 700 $(LOCALBIN)/up
 
 # go-install-tool will 'go install' any package with custom target and name of binary, if it doesn't exist
 # $1 - target path with name of binary (ideally with version)
