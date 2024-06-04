@@ -16,7 +16,8 @@ var _ = Describe("Validate DomainMapping functionality", func() {
 		createdCapp, routeHostname := utilst.CreateCappWithHTTPHostname(k8sClient)
 
 		By("Checking if the domainMapping was created successfully")
-		domainMappingObject := mock.CreateDomainMappingObject(routeHostname)
+		domainMappingName := utilst.GenerateResourceName(routeHostname, mock.ZoneValue)
+		domainMappingObject := mock.CreateDomainMappingObject(domainMappingName)
 		Eventually(func() bool {
 			return utilst.DoesResourceExist(k8sClient, domainMappingObject)
 		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "Should find a resource.")
@@ -28,11 +29,11 @@ var _ = Describe("Validate DomainMapping functionality", func() {
 				return ""
 			}
 			return capp.Status.RouteStatus.DomainMappingObjectStatus.URL.Host
-		}, testconsts.Timeout, testconsts.Interval).Should(Equal(routeHostname), "Should update Route Status of Capp")
+		}, testconsts.Timeout, testconsts.Interval).Should(Equal(domainMappingName), "Should update Route Status of Capp")
 
 		By("Updating the Capp Route hostname and checking the status")
 		toBeUpdatedCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-		updatedRouteHostname := utilst.GenerateRouteHostname()
+		updatedRouteHostname := utilst.GenerateResourceName(utilst.GenerateRouteHostname(), mock.ZoneValue)
 		toBeUpdatedCapp.Spec.RouteSpec.Hostname = updatedRouteHostname
 		utilst.UpdateCapp(k8sClient, toBeUpdatedCapp)
 
@@ -69,8 +70,9 @@ var _ = Describe("Validate DomainMapping functionality", func() {
 		utilst.CreateSecret(k8sClient, secretObject)
 
 		By("Checking if the secret reference exists at the domainMapping")
+		domainMappingName := utilst.GenerateResourceName(routeHostname, mock.ZoneValue)
 		Eventually(func() string {
-			domainMapping := utilst.GetDomainMapping(k8sClient, routeHostname, createdCapp.Namespace)
+			domainMapping := utilst.GetDomainMapping(k8sClient, domainMappingName, createdCapp.Namespace)
 			return domainMapping.Spec.TLS.SecretName
 		}, testconsts.Timeout, testconsts.Interval).Should(Equal(secretName))
 	})
@@ -79,18 +81,19 @@ var _ = Describe("Validate DomainMapping functionality", func() {
 		By("Creating a capp with a route")
 		createdCapp, routeHostname := utilst.CreateCappWithHTTPHostname(k8sClient)
 
+		domainMappingName := utilst.GenerateResourceName(routeHostname, mock.ZoneValue)
 		By("Checking if the RouteStatus of the Capp was updated successfully")
 		Eventually(func() string {
 			capp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
 			return capp.Status.RouteStatus.DomainMappingObjectStatus.URL.Host
-		}, testconsts.Timeout, testconsts.Interval).Should(Equal(routeHostname), "Should update Route Status of Capp")
+		}, testconsts.Timeout, testconsts.Interval).Should(Equal(domainMappingName), "Should update Route Status of Capp")
 
 		By("Removing the Route from the Capp and check the status and resource clean up")
 		toBeUpdatedCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
 		toBeUpdatedCapp.Spec.RouteSpec = cappv1alpha1.RouteSpec{}
 		utilst.UpdateCapp(k8sClient, toBeUpdatedCapp)
 
-		domainMappingObject := mock.CreateDomainMappingObject(routeHostname)
+		domainMappingObject := mock.CreateDomainMappingObject(domainMappingName)
 		Eventually(func() bool {
 			return utilst.DoesResourceExist(k8sClient, domainMappingObject)
 		}, testconsts.Timeout, testconsts.Interval).ShouldNot(BeTrue(), "Should not find a resource.")

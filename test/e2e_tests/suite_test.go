@@ -29,6 +29,7 @@ var _ = SynchronizedBeforeSuite(func() {
 	createE2ETestNamespace()
 	initE2ETestAutoScaleConfigMap()
 	createE2ETestAutoScaleConfigMap()
+	createE2ETestZoneConfigMap()
 }, func() {
 	initClient()
 	initE2ETestAutoScaleConfigMap()
@@ -72,10 +73,20 @@ func initE2ETestAutoScaleConfigMap() {
 	targetAutoScale = map[string]string{"rps": rps, "cpu": cpu, "memory": memory, "concurrency": concurrency}
 }
 
-// createE2ETestAutoScaleConfigMap creates an Auto Scale ConfigMap for the e2e tests.
+// createE2ETestAutoScaleConfigMap creates an Autoscale ConfigMap for the e2e tests.
 func createE2ETestAutoScaleConfigMap() {
 	autoScaleConfigMap := mock.CreateConfigMapObject(mock.ControllerNS, mock.AutoScaleCM, targetAutoScale)
 	utilst.CreateConfigMap(k8sClient, autoScaleConfigMap)
+}
+
+// createE2ETestZoneConfigMap creates a Zone ConfigMap for the e2e tests.
+func createE2ETestZoneConfigMap() {
+	zone := map[string]string{
+		mock.ZoneKey: mock.ZoneValue,
+	}
+
+	zoneConfigMap := mock.CreateConfigMapObject(mock.ControllerNS, mock.ZoneCM, zone)
+	utilst.CreateConfigMap(k8sClient, zoneConfigMap)
 }
 
 // cleanUp make sure the test environment is clean.
@@ -85,16 +96,31 @@ func cleanUp() {
 			Name: mock.NSName,
 		},
 	}
+
 	configMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{
 		Name:      mock.AutoScaleCM,
 		Namespace: mock.ControllerNS,
 	}}
+
 	if utilst.DoesResourceExist(k8sClient, configMap) {
 		Expect(k8sClient.Delete(context.Background(), configMap)).To(Succeed())
 		Eventually(func() error {
 			return k8sClient.Get(context.Background(), client.ObjectKey{Name: mock.AutoScaleCM, Namespace: mock.ControllerNS}, configMap)
 		}, testconsts.Timeout, testconsts.Interval).Should(HaveOccurred(), "The autoscale configMap should be deleted")
 	}
+
+	configMap = &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{
+		Name:      mock.ZoneCM,
+		Namespace: mock.ControllerNS,
+	}}
+
+	if utilst.DoesResourceExist(k8sClient, configMap) {
+		Expect(k8sClient.Delete(context.Background(), configMap)).To(Succeed())
+		Eventually(func() error {
+			return k8sClient.Get(context.Background(), client.ObjectKey{Name: mock.ZoneCM, Namespace: mock.ControllerNS}, configMap)
+		}, testconsts.Timeout, testconsts.Interval).Should(HaveOccurred(), "The autoscale configMap should be deleted")
+	}
+
 	if utilst.DoesResourceExist(k8sClient, namespace) {
 		Expect(k8sClient.Delete(context.Background(), namespace)).To(Succeed())
 		Eventually(func() error {

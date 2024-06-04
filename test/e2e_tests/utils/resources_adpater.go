@@ -68,7 +68,7 @@ func CreateSecret(k8sClient client.Client, secret *corev1.Secret) {
 
 // CreateConfigMap creates a new configMap.
 func CreateConfigMap(k8sClient client.Client, configMap *corev1.ConfigMap) {
-	Expect(k8sClient.Create(context.Background(), configMap)).To(Succeed())
+	Expect(k8sClient.Create(context.Background(), configMap)).To(SatisfyAny(BeNil(), WithTransform(errors.IsAlreadyExists, BeTrue())))
 }
 
 // GenerateRouteHostname generates a new route hostname by calling

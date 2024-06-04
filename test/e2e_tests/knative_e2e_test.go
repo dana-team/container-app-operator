@@ -307,7 +307,7 @@ var _ = Describe("Validate knative functionality", func() {
 		Consistently(func() string {
 			ksvc := utilst.GetKSVC(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
 			return ksvc.Spec.ConfigurationSpec.Template.Labels[testconsts.CappResourceKey]
-		}, testconsts.Timeout, testconsts.Interval).ShouldNot(Equal("test"))
+		}, testconsts.DefaultConsistently, testconsts.Interval).ShouldNot(Equal("test"))
 
 		Eventually(func() string {
 			ksvc := utilst.GetKSVC(k8sClient, assertionCapp.Name, assertionCapp.Namespace)

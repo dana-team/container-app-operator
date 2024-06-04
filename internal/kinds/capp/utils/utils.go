@@ -8,6 +8,8 @@ import (
 	"k8s.io/client-go/rest"
 )
 
+const CappNS = "capp-operator-system"
+
 // IsOnOpenshift returns true if the cluster has the openshift config group
 func IsOnOpenshift(config *rest.Config) (bool, error) {
 	dc, err := discovery.NewDiscoveryClientForConfig(config)
