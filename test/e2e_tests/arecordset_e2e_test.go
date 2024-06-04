@@ -15,7 +15,8 @@ var _ = Describe("Validate ARecordSet functionality", func() {
 		createdCapp, _ := utilst.CreateCappWithHTTPHostname(k8sClient)
 
 		By("Checking if the ARecordSet was created successfully")
-		aRecordSetObject := mock.CreateARecordSetObject(createdCapp.Spec.RouteSpec.Hostname)
+		aRecordSetName := utilst.GenerateResourceName(createdCapp.Spec.RouteSpec.Hostname, mock.ZoneValue)
+		aRecordSetObject := mock.CreateARecordSetObject(aRecordSetName)
 		Eventually(func() bool {
 			return utilst.DoesResourceExist(k8sClient, aRecordSetObject)
 		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "Should find a resource.")
@@ -27,8 +28,9 @@ var _ = Describe("Validate ARecordSet functionality", func() {
 		utilst.UpdateCapp(k8sClient, toBeUpdatedCapp)
 
 		updatedARecordSet := aRecordSetObject
+		updatedARecordSetName := utilst.GenerateResourceName(updatedRouteHostname, mock.ZoneValue)
 		Eventually(func() *string {
-			updatedARecordSet = utilst.GetARecordSet(k8sClient, updatedRouteHostname)
+			updatedARecordSet = utilst.GetARecordSet(k8sClient, updatedARecordSetName)
 			return updatedARecordSet.Spec.ForProvider.Name
 		}, testconsts.Timeout, testconsts.Interval).Should(Equal(&updatedRouteHostname))
 
@@ -49,7 +51,8 @@ var _ = Describe("Validate ARecordSet functionality", func() {
 		createdCapp, _ := utilst.CreateCappWithHTTPHostname(k8sClient)
 
 		By("Checking if the ARecordSet was created successfully")
-		aRecordSetObject := mock.CreateARecordSetObject(createdCapp.Spec.RouteSpec.Hostname)
+		aRecordSetName := utilst.GenerateResourceName(createdCapp.Spec.RouteSpec.Hostname, mock.ZoneValue)
+		aRecordSetObject := mock.CreateARecordSetObject(aRecordSetName)
 		Eventually(func() bool {
 			return utilst.DoesResourceExist(k8sClient, aRecordSetObject)
 		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "Should find a resource.")

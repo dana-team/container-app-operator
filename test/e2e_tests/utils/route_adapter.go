@@ -1,6 +1,8 @@
 package utils
 
 import (
+	"strings"
+
 	certv1alpha1 "github.com/dana-team/certificate-operator/api/v1alpha1"
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	mock "github.com/dana-team/container-app-operator/test/e2e_tests/mocks"
@@ -8,6 +10,8 @@ import (
 	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+const dot = "."
 
 // CreateCappWithHTTPHostname creates a Capp with a Hostname.
 func CreateCappWithHTTPHostname(k8sClient client.Client) (*cappv1alpha1.Capp, string) {
@@ -51,4 +55,16 @@ func GetCertificate(k8sClient client.Client, name string, namespace string) *cer
 	certificate := &certv1alpha1.Certificate{}
 	GetResource(k8sClient, certificate, name, namespace)
 	return certificate
+}
+
+// GenerateResourceName generates the hostname based on the provided suffix and a dot (".") trailing character.
+// It returns the adjusted hostname, where the suffix (minus the trailing character) is added if not already present.
+func GenerateResourceName(hostname, suffix string) string {
+	suffixWithoutTrailingChar := suffix[:len(suffix)-len(dot)]
+
+	if !strings.HasSuffix(hostname, suffixWithoutTrailingChar) {
+		return hostname + dot + suffixWithoutTrailingChar
+	}
+
+	return hostname
 }

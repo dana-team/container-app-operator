@@ -25,8 +25,7 @@ const (
 	danaAnnotationsPrefix                 = "rcs.dana.io"
 	cappDisabledState                     = "disabled"
 	cappEnabledState                      = "enabled"
-	DefaultAutoScaleCM                    = "autoscale-defaults"
-	CappNS                                = "capp-operator-system"
+	defaultAutoScaleCM                    = "autoscale-defaults"
 	KnativeServing                        = "knativeServing"
 	eventCappKnativeServiceCreationFailed = "KnativeServiceCreationFailed"
 	eventCappKnativeServiceCreated        = "KnativeServiceCreated"
@@ -77,8 +76,8 @@ func (k KnativeServiceManager) prepareResource(capp cappv1alpha1.Capp, ctx conte
 	knativeService.Spec.Template.Spec.Volumes = append(knativeService.Spec.Template.Spec.Volumes, volumes...)
 
 	defaultCM := corev1.ConfigMap{}
-	if err := k.K8sclient.Get(k.Ctx, types.NamespacedName{Namespace: CappNS, Name: DefaultAutoScaleCM}, &defaultCM); err != nil {
-		k.Log.Error(err, fmt.Sprintf("could not fetch configMap: %q", CappNS))
+	if err := k.K8sclient.Get(k.Ctx, types.NamespacedName{Namespace: utils.CappNS, Name: defaultAutoScaleCM}, &defaultCM); err != nil {
+		k.Log.Error(err, fmt.Sprintf("could not fetch configMap from namespace %q", utils.CappNS))
 	}
 
 	knativeService.Spec.Template.ObjectMeta.Annotations = utils.MergeMaps(knativeServiceAnnotations, autoscale.SetAutoScaler(capp, defaultCM.Data))

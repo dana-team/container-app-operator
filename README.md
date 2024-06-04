@@ -45,15 +45,17 @@ The `container-app-operator` project can work as a standalone solution, but is m
 
 1. A Kubernetes cluster (you can [use KinD](https://kind.sigs.k8s.io/docs/user/quick-start/)).
 
-2. `Knative Serving` installed on the cluster (you can [use the quickstart](https://knative.dev/docs/getting-started/quickstart-install/)).
+2. `knative-serving` installed on the cluster (you can [use the quickstart](https://knative.dev/docs/getting-started/quickstart-install/)).
 
-3. `NFSPVC Operator` installed on the cluster (you can [use the `install.yaml`](https://github.com/dana-team/nfspvc-operator/releases)).
+3. `nfspvc-operator` installed on the cluster (you can [use the `install.yaml`](https://github.com/dana-team/nfspvc-operator/releases)).
 
-4. `External DNS` installed on the cluster (you can [use the Helm Chart](https://artifacthub.io/packages/helm/external-dns/external-dns)).
+4. `provider-dns` and `Crossplane` installed on the cluster (you can [follow the instructions](https://github.com/dana-team/provider-dns) for the provider and [for Crossplane](https://docs.crossplane.io/latest/software/install/)).
 
-5. `Logging Operator` installed on the cluster (you can [use the Helm Chart](https://kube-logging.dev/docs/install/#deploy-logging-operator-with-helm)).
+5. `certificate-operator` installed on the cluster (you can [use the `install.yaml`](https://github.com/dana-team/certificate-operator/releases))
 
-`Knative Serving`, `Logging Operator`, `NFSPVC Operator` and `External DNS` can also be installed by running:
+5. `logging-operator` installed on the cluster (you can [use the Helm Chart](https://kube-logging.dev/docs/install/#deploy-logging-operator-with-helm)).
+
+Everything can also be installed by running:
 
 ```bash
 $ make prereq
@@ -107,6 +109,22 @@ It's possible to use the following one-liner:
 
 ```bash
 $ kubectl patch --namespace knative-serving configmap/config-features --type merge --patch '{"data":{"kubernetes.podspec-persistent-volume-claim": "enabled", "kubernetes.podspec-persistent-volume-write": "enabled"}}'
+```
+
+### Using a Custom Hostname
+
+`Capp` enables using a custom hostname for the application. This in turn creates `DomainMapping` and `ARecordSet` objects and a `Certificate` object if `TLS` is desired. 
+
+To correctly create the resources, it is needed to provider the operator with the `DNS Zone` where the application is exposed. This is done using a `ConfigMap` called `dns-zone` which needs to be created in the operator namespace. Note the trailing `.` which must be added to the zone name:
+
+```yaml
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: dns-zone
+  namespace: capp-operator-system
+data:
+  zone: "capp-zone.com."
 ```
 
 ## Example Capp

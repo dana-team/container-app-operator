@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"os"
 	"reflect"
 
+	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 
@@ -29,7 +29,6 @@ const (
 	eventCappARecordSetCreationFailed = "ARecordSetCreationFailed"
 	eventCappARecordSetCreated        = "ARecordSetCreated"
 	cappNamespaceKey                  = "rcs.dana.io/parent-capp-ns"
-	zoneEnvKey                        = "CAPP_DNS_ZONE"
 	xpProviderDNSConfigRefName        = "dns-default"
 	localhostAddress                  = "127.0.0.1"
 )
@@ -39,18 +38,6 @@ type ARecordSetManager struct {
 	K8sclient     client.Client
 	Log           logr.Logger
 	EventRecorder record.EventRecorder
-}
-
-// getZoneForRecord returns the zone to be used for the record from an environment variable.
-func getZoneForRecord() (string, error) {
-	zone, ok := os.LookupEnv(zoneEnvKey)
-	if !ok {
-		return zone, fmt.Errorf("%s environment variable not set", zoneEnvKey)
-	} else if zone == "" {
-		return zone, fmt.Errorf("%s environment variable is empty", zoneEnvKey)
-	}
-
-	return zone, nil
 }
 
 // getAddressesForRecord performs a DNS lookup for the given URL and returns a slice of IP address strings.
@@ -74,11 +61,13 @@ func (r ARecordSetManager) prepareResource(capp cappv1alpha1.Capp) (dnsv1alpha1.
 	placeholderAddress := localhostAddress
 	addresses := []*string{&placeholderAddress}
 
-	name := capp.Spec.RouteSpec.Hostname
-	zone, err := getZoneForRecord()
+	zone, err := utils.GetZoneFromConfig(r.Ctx, r.K8sclient)
 	if err != nil {
 		return dnsv1alpha1.ARecordSet{}, err
 	}
+
+	resourceName := utils.GenerateResourceName(capp.Spec.RouteSpec.Hostname, zone)
+	recordName := utils.GenerateRecordName(capp.Spec.RouteSpec.Hostname, zone)
 
 	// in a normal behavior, it can be assumed that this condition will eventually be satisfied
 	// since there will be another reconciliation loop after the Capp status is updated
@@ -92,7 +81,7 @@ func (r ARecordSetManager) prepareResource(capp cappv1alpha1.Capp) (dnsv1alpha1.
 	recordset := dnsv1alpha1.ARecordSet{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: capp.Spec.RouteSpec.Hostname,
+			Name: resourceName,
 			Labels: map[string]string{
 				CappResourceKey:  capp.Name,
 				cappNamespaceKey: capp.Namespace,
@@ -100,7 +89,7 @@ func (r ARecordSetManager) prepareResource(capp cappv1alpha1.Capp) (dnsv1alpha1.
 		},
 		Spec: dnsv1alpha1.ARecordSetSpec{
 			ForProvider: dnsv1alpha1.ARecordSetParameters{
-				Name:      &name,
+				Name:      &recordName,
 				Zone:      &zone,
 				Addresses: addresses,
 			},

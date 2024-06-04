@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
+
 	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/resourceclient"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
@@ -39,11 +41,17 @@ type KnativeDomainMappingManager struct {
 }
 
 // PrepareKnativeDomainMapping creates a new DomainMapping for a Knative service.
-func (k KnativeDomainMappingManager) prepareResource(capp cappv1alpha1.Capp) knativev1beta1.DomainMapping {
+func (k KnativeDomainMappingManager) prepareResource(capp cappv1alpha1.Capp) (knativev1beta1.DomainMapping, error) {
+	zone, err := utils.GetZoneFromConfig(k.Ctx, k.K8sclient)
+	if err != nil {
+		return knativev1beta1.DomainMapping{}, err
+	}
+	resourceName := utils.GenerateResourceName(capp.Spec.RouteSpec.Hostname, zone)
+
 	knativeDomainMapping := &knativev1beta1.DomainMapping{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      capp.Spec.RouteSpec.Hostname,
+			Name:      resourceName,
 			Namespace: capp.Namespace,
 			Labels: map[string]string{
 				CappResourceKey: capp.Name,
@@ -64,7 +72,7 @@ func (k KnativeDomainMappingManager) prepareResource(capp cappv1alpha1.Capp) kna
 		}
 	}
 
-	return *knativeDomainMapping
+	return *knativeDomainMapping, nil
 }
 
 // CleanUp attempts to delete the associated DomainMapping for a given Capp resource.
@@ -100,7 +108,11 @@ func (k KnativeDomainMappingManager) Manage(capp cappv1alpha1.Capp) error {
 
 // createOrUpdate creates or updates a DomainMapping resource.
 func (k KnativeDomainMappingManager) createOrUpdate(capp cappv1alpha1.Capp) error {
-	domainMappingFromCapp := k.prepareResource(capp)
+	domainMappingFromCapp, err := k.prepareResource(capp)
+	if err != nil {
+		return fmt.Errorf("failed to prepare DomainMapping: %w", err)
+	}
+
 	domainMapping := knativev1beta1.DomainMapping{}
 	resourceManager := rclient.ResourceManagerClient{Ctx: k.Ctx, K8sclient: k.K8sclient, Log: k.Log}
 

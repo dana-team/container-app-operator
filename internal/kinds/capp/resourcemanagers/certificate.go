@@ -6,6 +6,7 @@ import (
 
 	certv1alpha1 "github.com/dana-team/certificate-operator/api/v1alpha1"
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,11 +36,17 @@ type CertificateManager struct {
 }
 
 // prepareResource prepares a Certificate resource based on the provided Capp.
-func (c CertificateManager) prepareResource(capp cappv1alpha1.Capp) certv1alpha1.Certificate {
-	return certv1alpha1.Certificate{
+func (c CertificateManager) prepareResource(capp cappv1alpha1.Capp) (certv1alpha1.Certificate, error) {
+	zone, err := utils.GetZoneFromConfig(c.Ctx, c.K8sclient)
+	if err != nil {
+		return certv1alpha1.Certificate{}, err
+	}
+	resourceName := utils.GenerateResourceName(capp.Spec.RouteSpec.Hostname, zone)
+
+	certificate := certv1alpha1.Certificate{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      capp.Spec.RouteSpec.Hostname,
+			Name:      resourceName,
 			Namespace: capp.Namespace,
 			Labels: map[string]string{
 				CappResourceKey: capp.Name,
@@ -48,10 +55,10 @@ func (c CertificateManager) prepareResource(capp cappv1alpha1.Capp) certv1alpha1
 		Spec: certv1alpha1.CertificateSpec{
 			CertificateData: certv1alpha1.CertificateData{
 				Subject: certv1alpha1.Subject{
-					CommonName: capp.Spec.RouteSpec.Hostname,
+					CommonName: resourceName,
 				},
 				San: certv1alpha1.San{
-					DNS: []string{capp.Spec.RouteSpec.Hostname},
+					DNS: []string{resourceName},
 				},
 				Form: certificateForm,
 			},
@@ -61,6 +68,8 @@ func (c CertificateManager) prepareResource(capp cappv1alpha1.Capp) certv1alpha1
 			},
 		},
 	}
+
+	return certificate, nil
 }
 
 // CleanUp attempts to delete the associated Certificate for a given Capp resource.
@@ -96,7 +105,11 @@ func (c CertificateManager) Manage(capp cappv1alpha1.Capp) error {
 
 // create creates a Certificate resource.
 func (c CertificateManager) create(capp cappv1alpha1.Capp) error {
-	certificateFromCapp := c.prepareResource(capp)
+	certificateFromCapp, err := c.prepareResource(capp)
+	if err != nil {
+		return fmt.Errorf("failed to prepare Certificate: %w", err)
+	}
+
 	certificate := certv1alpha1.Certificate{}
 	resourceManager := rclient.ResourceManagerClient{Ctx: c.Ctx, K8sclient: c.K8sclient, Log: c.Log}
 
