@@ -64,16 +64,31 @@ var _ = Describe("Validate DomainMapping functionality", func() {
 	})
 
 	It("Should create DomainMapping with secret when Creating an HTTPS Capp instance", func() {
-		By("Creating an https capp")
-		createdCapp, routeHostname, secretName := utilst.CreateHTTPSCapp(k8sClient)
+		By("Creating an HTTP Capp")
+		createdCapp, routeHostname := utilst.CreateCappWithHTTPHostname(k8sClient)
+
+		By("Making sure the tls secret exists in advance")
+		secretName := utilst.GenerateSecretName()
 		secretObject := mock.CreateSecretObject(secretName)
 		utilst.CreateSecret(k8sClient, secretObject)
+		Eventually(func() bool {
+			return utilst.DoesResourceExist(k8sClient, secretObject)
+		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "Should find a resource.")
+
+		By("Changing Capp to be HTTPS")
+		assertionCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
+		assertionCapp.Spec.RouteSpec.TlsEnabled = true
+		assertionCapp.Spec.RouteSpec.TlsSecret = secretName
+		utilst.UpdateCapp(k8sClient, assertionCapp)
 
 		By("Checking if the secret reference exists at the domainMapping")
 		domainMappingName := utilst.GenerateResourceName(routeHostname, mock.ZoneValue)
 		Eventually(func() string {
 			domainMapping := utilst.GetDomainMapping(k8sClient, domainMappingName, createdCapp.Namespace)
-			return domainMapping.Spec.TLS.SecretName
+			if domainMapping.Spec.TLS != nil {
+				return domainMapping.Spec.TLS.SecretName
+			}
+			return ""
 		}, testconsts.Timeout, testconsts.Interval).Should(Equal(secretName))
 	})
 

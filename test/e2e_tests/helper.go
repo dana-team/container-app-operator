@@ -5,6 +5,7 @@ import (
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	nfspvcv1alpha1 "github.com/dana-team/nfspvc-operator/api/v1alpha1"
 	dnsv1alpha1 "github.com/dana-team/provider-dns/apis/recordset/v1alpha1"
+	"github.com/go-logr/logr"
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -18,6 +19,7 @@ var (
 	k8sClient       client.Client
 	targetAutoScale map[string]string
 	scheme          = runtime.NewScheme()
+	logger          logr.Logger
 )
 
 func newScheme() *runtime.Scheme {

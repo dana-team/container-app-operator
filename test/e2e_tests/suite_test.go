@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 
+	"k8s.io/apimachinery/pkg/api/errors"
+
 	"github.com/dana-team/container-app-operator/test/e2e_tests/testconsts"
 
 	mock "github.com/dana-team/container-app-operator/test/e2e_tests/mocks"
@@ -14,6 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 func TestE2e(t *testing.T) {
@@ -41,6 +44,8 @@ var _ = SynchronizedAfterSuite(func() {}, func() {
 
 // initClient initializes a k8s client.
 func initClient() {
+	log.SetLogger(logger)
+
 	cfg, err := config.GetConfig()
 	Expect(err).NotTo(HaveOccurred())
 
@@ -57,7 +62,7 @@ func createE2ETestNamespace() {
 		},
 	}
 
-	Expect(k8sClient.Create(context.Background(), namespace)).To(Succeed())
+	Expect(k8sClient.Create(context.Background(), namespace)).To(SatisfyAny(BeNil(), WithTransform(errors.IsAlreadyExists, BeTrue())))
 	Eventually(func() bool {
 		return utilst.DoesResourceExist(k8sClient, namespace)
 	}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "The namespace should be created")
