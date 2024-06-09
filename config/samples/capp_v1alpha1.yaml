@@ -1,0 +1,17 @@
+apiVersion: rcs.dana.io/v1alpha1
+kind: Capp
+metadata:
+  name: capp-sample
+  namespace: capp-sample
+spec:
+  configurationSpec:
+    template:
+      spec:
+        containers:
+          - env:
+              - name: APP_NAME
+                value: capp-env-var
+            image: 'ghcr.io/dana-team/capp-gin-app:v0.2.0'
+            name: capp-sample
+  scaleMetric: concurrency
+  state: enabled
