@@ -12,7 +12,7 @@ import (
 var _ = Describe("Validate Certificate functionality", func() {
 	It("Should create, update and delete Certificate when creating, updating and deleting a Capp instance", func() {
 		By("Creating an HTTPS Capp")
-		createdCapp, routeHostname, _ := utilst.CreateHTTPSCapp(k8sClient)
+		createdCapp, routeHostname := utilst.CreateHTTPSCapp(k8sClient)
 
 		By("Checking if the Certificate was created successfully")
 		certificateName := utilst.GenerateResourceName(routeHostname, mock.ZoneValue)
@@ -67,7 +67,7 @@ var _ = Describe("Validate Certificate functionality", func() {
 
 	It("Should cleanup Certificate when no longer required (tls)", func() {
 		By("Creating an HTTPS Capp")
-		createdCapp, routeHostname, _ := utilst.CreateHTTPSCapp(k8sClient)
+		createdCapp, routeHostname := utilst.CreateHTTPSCapp(k8sClient)
 
 		By("Checking if the Certificate was created successfully")
 		certificateName := utilst.GenerateResourceName(routeHostname, mock.ZoneValue)
@@ -79,7 +79,6 @@ var _ = Describe("Validate Certificate functionality", func() {
 		By("Removing the Certificate requirement from Capp Spec and checking cleanup", func() {
 			toBeUpdatedCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
 			toBeUpdatedCapp.Spec.RouteSpec.TlsEnabled = false
-			toBeUpdatedCapp.Spec.RouteSpec.TlsSecret = ""
 			utilst.UpdateCapp(k8sClient, toBeUpdatedCapp)
 
 			Eventually(func() bool {
@@ -90,7 +89,7 @@ var _ = Describe("Validate Certificate functionality", func() {
 
 	It("Should cleanup Certificate when no longer required (hostname)", func() {
 		By("Creating an HTTPS Capp")
-		createdCapp, routeHostname, _ := utilst.CreateHTTPSCapp(k8sClient)
+		createdCapp, routeHostname := utilst.CreateHTTPSCapp(k8sClient)
 
 		By("Checking if the Certificate was created successfully")
 		certificateName := utilst.GenerateResourceName(routeHostname, mock.ZoneValue)

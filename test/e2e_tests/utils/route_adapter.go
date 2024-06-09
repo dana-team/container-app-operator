@@ -24,16 +24,14 @@ func CreateCappWithHTTPHostname(k8sClient client.Client) (*cappv1alpha1.Capp, st
 }
 
 // CreateHTTPSCapp creates a Capp with a Hostname, TLS Enabled and TLSSecret.
-func CreateHTTPSCapp(k8sClient client.Client) (*cappv1alpha1.Capp, string, string) {
+func CreateHTTPSCapp(k8sClient client.Client) (*cappv1alpha1.Capp, string) {
 	httpsCapp := mock.CreateBaseCapp()
 	hostname := GenerateRouteHostname()
-	secretName := GenerateSecretName()
 
 	httpsCapp.Spec.RouteSpec.Hostname = hostname
-	httpsCapp.Spec.RouteSpec.TlsSecret = secretName
 	httpsCapp.Spec.RouteSpec.TlsEnabled = true
 
-	return CreateCapp(k8sClient, httpsCapp), hostname, secretName
+	return CreateCapp(k8sClient, httpsCapp), hostname
 }
 
 // GetDomainMapping fetches and returns an existing instance of a DomainMapping.
