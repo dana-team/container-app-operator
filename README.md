@@ -151,7 +151,6 @@ spec:
   routeSpec:
     hostname: capp.dev
     tlsEnabled: true
-    tlsSecret: cappTlsSecretName
   volumesSpec:
     nfsVolumes:
       - server: test

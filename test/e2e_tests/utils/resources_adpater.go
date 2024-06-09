@@ -83,6 +83,11 @@ func GenerateSecretName() string {
 	return generateName(routeTLSSecret)
 }
 
+// GenerateCertSecretName generates a capp cert secret name.
+func GenerateCertSecretName(cappName string) string {
+	return fmt.Sprintf("%s-tls", cappName)
+}
+
 // UpdateSecret updates an existing Secret instance.
 func UpdateSecret(k8sClient client.Client, secret *corev1.Secret) {
 	Expect(k8sClient.Update(context.Background(), secret)).To(Succeed())

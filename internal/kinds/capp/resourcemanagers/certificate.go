@@ -42,6 +42,7 @@ func (c CertificateManager) prepareResource(capp cappv1alpha1.Capp) (certv1alpha
 		return certv1alpha1.Certificate{}, err
 	}
 	resourceName := utils.GenerateResourceName(capp.Spec.RouteSpec.Hostname, zone)
+	secretName := utils.GenerateSecretName(capp)
 
 	certificate := certv1alpha1.Certificate{
 		TypeMeta: metav1.TypeMeta{},
@@ -62,7 +63,7 @@ func (c CertificateManager) prepareResource(capp cappv1alpha1.Capp) (certv1alpha
 				},
 				Form: certificateForm,
 			},
-			SecretName: capp.Spec.RouteSpec.TlsSecret,
+			SecretName: secretName,
 			ConfigRef: certv1alpha1.ConfigReference{
 				Name: certificateConfig,
 			},

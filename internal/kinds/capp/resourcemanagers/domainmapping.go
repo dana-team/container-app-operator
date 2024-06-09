@@ -47,6 +47,7 @@ func (k KnativeDomainMappingManager) prepareResource(capp cappv1alpha1.Capp) (kn
 		return knativev1beta1.DomainMapping{}, err
 	}
 	resourceName := utils.GenerateResourceName(capp.Spec.RouteSpec.Hostname, zone)
+	secretName := utils.GenerateSecretName(capp)
 
 	knativeDomainMapping := &knativev1beta1.DomainMapping{
 		TypeMeta: metav1.TypeMeta{},
@@ -67,7 +68,7 @@ func (k KnativeDomainMappingManager) prepareResource(capp cappv1alpha1.Capp) (kn
 	}
 
 	if tlsEnabled := capp.Spec.RouteSpec.TlsEnabled; tlsEnabled {
-		if err := k.setHTTPSKnativeDomainMapping(capp.Spec.RouteSpec.TlsSecret, capp.Namespace, knativeDomainMapping); err != nil {
+		if err := k.setHTTPSKnativeDomainMapping(secretName, capp.Namespace, knativeDomainMapping); err != nil {
 			if !errors.IsNotFound(err) {
 				return *knativeDomainMapping, err
 			}

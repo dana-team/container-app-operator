@@ -1,7 +1,10 @@
 package utils
 
 import (
+	"fmt"
 	"strings"
+
+	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
@@ -66,4 +69,9 @@ func FilterMap(originalMap map[string]string, substring string) map[string]strin
 		}
 	}
 	return filteredMap
+}
+
+// GenerateSecretName generates TLS secret name for certificate and domain mapping.
+func GenerateSecretName(capp cappv1alpha1.Capp) string {
+	return fmt.Sprintf("%s-tls", capp.Name)
 }
