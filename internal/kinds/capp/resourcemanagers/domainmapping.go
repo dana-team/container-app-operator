@@ -67,12 +67,34 @@ func (k KnativeDomainMappingManager) prepareResource(capp cappv1alpha1.Capp) (kn
 	}
 
 	if tlsEnabled := capp.Spec.RouteSpec.TlsEnabled; tlsEnabled {
-		knativeDomainMapping.Spec.TLS = &knativev1beta1.SecretTLS{
-			SecretName: capp.Spec.RouteSpec.TlsSecret,
+		if err := k.setHTTPSKnativeDomainMapping(capp.Spec.RouteSpec.TlsSecret, capp.Namespace, knativeDomainMapping); err != nil {
+			if !errors.IsNotFound(err) {
+				return *knativeDomainMapping, err
+			}
 		}
 	}
 
 	return *knativeDomainMapping, nil
+}
+
+// setHTTPSKnativeDomainMapping sets the DomainMapping TLS based on Capp.
+func (k KnativeDomainMappingManager) setHTTPSKnativeDomainMapping(secretName, secretNamespace string, knativeDomainMapping *knativev1beta1.DomainMapping) error {
+	tlsSecret := corev1.Secret{}
+	resourceManager := rclient.ResourceManagerClient{Ctx: k.Ctx, K8sclient: k.K8sclient, Log: k.Log}
+
+	if err := resourceManager.K8sclient.Get(resourceManager.Ctx, types.NamespacedName{Name: secretName, Namespace: secretNamespace}, &tlsSecret); err != nil {
+		if errors.IsNotFound(err) {
+			k.Log.Info("tlsSecret does not yet exist", "secretName", secretName)
+			return nil
+		}
+		return fmt.Errorf("failed to get tlsSecret %s for DomainMapping: %w", secretName, err)
+	}
+
+	knativeDomainMapping.Spec.TLS = &knativev1beta1.SecretTLS{
+		SecretName: secretName,
+	}
+
+	return nil
 }
 
 // CleanUp attempts to delete the associated DomainMapping for a given Capp resource.

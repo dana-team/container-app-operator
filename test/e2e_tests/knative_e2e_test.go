@@ -14,7 +14,6 @@ import (
 
 // updateCapp updates the given Capp object and ensures the readiness of the latest revision
 // if shouldRevisionBeReady is true. It also checks and asserts the state of the LatestReadyRevision.
-
 func updateCapp(capp *cappv1alpha1.Capp, shouldRevisionBeReady bool) {
 	latestReadyRevisionBeforeUpdate := capp.Status.KnativeObjectStatus.ConfigurationStatusFields.LatestReadyRevisionName
 	nextRevisionName := utilst.GetNextRevisionName(latestReadyRevisionBeforeUpdate)
