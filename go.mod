@@ -18,13 +18,13 @@ require (
 	go.elastic.co/ecszap v1.0.2
 	go.uber.org/zap v1.27.0
 	golang.org/x/net v0.25.0
-	k8s.io/api v0.29.4
-	k8s.io/apimachinery v0.29.4
-	k8s.io/client-go v0.29.4
+	k8s.io/api v0.30.1
+	k8s.io/apimachinery v0.30.1
+	k8s.io/client-go v0.30.1
 	k8s.io/utils v0.0.0-20240502163921-fe8a2dddb1d0
 	knative.dev/pkg v0.0.0-20240116073220-b488e7be5902
 	knative.dev/serving v0.40.1
-	sigs.k8s.io/controller-runtime v0.17.4
+	sigs.k8s.io/controller-runtime v0.18.4
 )
 
 require (
@@ -122,8 +122,8 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/apiextensions-apiserver v0.29.4 // indirect
-	k8s.io/component-base v0.29.4 // indirect
+	k8s.io/apiextensions-apiserver v0.30.1 // indirect
+	k8s.io/component-base v0.30.1 // indirect
 	k8s.io/klog/v2 v2.120.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20240430033511-f0e62f92d13f // indirect
 	knative.dev/networking v0.0.0-20240116081125-ce0738abf051 // indirect
