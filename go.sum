@@ -39,8 +39,8 @@ github.com/crossplane/crossplane-runtime v1.16.0 h1:lz+l0wEB3qowdTmN7t0PZkfuNSvf
 github.com/crossplane/crossplane-runtime v1.16.0/go.mod h1:Pz2tdGVMF6KDGzHZOkvKro0nKc8EzK0sb/nSA7pH4Dc=
 github.com/crossplane/upjet v1.3.0 h1:qRgcfqLz4M2v7enUku3xEriY5poc5XVbRl98nbvvu+E=
 github.com/crossplane/upjet v1.3.0/go.mod h1:3pDVtCgyBc5f2Zx4K5HEPxxhjndmOc5CHCJNpIivK/g=
-github.com/dana-team/certificate-operator v0.1.0 h1:0M/W6v/gaw7LO2HJBeCkqHtn0kQDZrXaMS0FW6Ishlg=
-github.com/dana-team/certificate-operator v0.1.0/go.mod h1:gY9hjV3gk3LTBxi2UbkmdXlKF3eI8kr5+XxSzMgp6hU=
+github.com/dana-team/certificate-operator v0.1.2 h1:X2Purs96Ae/HOjcK1WHxZ3+rpPmautnE7xhelpn4Ews=
+github.com/dana-team/certificate-operator v0.1.2/go.mod h1:gY9hjV3gk3LTBxi2UbkmdXlKF3eI8kr5+XxSzMgp6hU=
 github.com/dana-team/nfspvc-operator v0.3.0 h1:K8++dWanaDGLxm5kqLUG6fqeaW/nLR+hrSr04MKC2d0=
 github.com/dana-team/nfspvc-operator v0.3.0/go.mod h1:E32D1+U6DX/ZlVKprdYMOV2wV5E3TOS2jqRCEu/umHI=
 github.com/dana-team/provider-dns v0.1.0 h1:lp3KsHg51P+phQdKAFR3Grx/O1azOnGumTfJhZGoGcU=
