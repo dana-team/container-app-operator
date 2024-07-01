@@ -3,7 +3,7 @@ module github.com/dana-team/container-app-operator
 go 1.22.2
 
 require (
-	github.com/cisco-open/operator-tools v0.34.0
+	github.com/cisco-open/operator-tools v0.36.0
 	github.com/crossplane/crossplane-runtime v1.16.0
 	github.com/dana-team/certificate-operator v0.1.0
 	github.com/dana-team/nfspvc-operator v0.3.0
@@ -44,7 +44,7 @@ require (
 	github.com/evanphx/json-patch v5.9.0+incompatible // indirect
 	github.com/evanphx/json-patch/v5 v5.9.0 // indirect
 	github.com/fatih/camelcase v1.0.0 // indirect
-	github.com/fatih/color v1.16.0 // indirect
+	github.com/fatih/color v1.17.0 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/go-openapi/jsonpointer v0.21.0 // indirect
 	github.com/go-openapi/jsonreference v0.21.0 // indirect
@@ -120,8 +120,8 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/apiextensions-apiserver v0.30.1 // indirect
-	k8s.io/component-base v0.30.1 // indirect
+	k8s.io/apiextensions-apiserver v0.30.2 // indirect
+	k8s.io/component-base v0.30.2 // indirect
 	k8s.io/klog/v2 v2.120.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20240430033511-f0e62f92d13f // indirect
 	knative.dev/networking v0.0.0-20240418213116-979f63728302 // indirect
