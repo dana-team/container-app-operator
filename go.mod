@@ -5,7 +5,7 @@ go 1.22.2
 require (
 	github.com/cisco-open/operator-tools v0.36.0
 	github.com/crossplane/crossplane-runtime v1.16.0
-	github.com/dana-team/certificate-operator v0.1.0
+	github.com/dana-team/certificate-operator v0.1.2
 	github.com/dana-team/nfspvc-operator v0.3.0
 	github.com/dana-team/provider-dns v0.1.0
 	github.com/go-logr/logr v1.4.2
