@@ -141,12 +141,14 @@ func (k KnativeDomainMappingManager) createOrUpdate(capp cappv1alpha1.Capp) erro
 
 	if err := k.K8sclient.Get(k.Ctx, types.NamespacedName{Namespace: capp.Namespace, Name: domainMappingFromCapp.Name}, &domainMapping); err != nil {
 		if errors.IsNotFound(err) {
+			if err := k.createDomainMapping(capp, domainMappingFromCapp, resourceManager); err != nil {
+				return err
+			}
 			if capp.Status.RouteStatus.DomainMappingObjectStatus.URL != nil {
-				if err := k.handlePreviousDomainMappings(capp, resourceManager); err != nil {
+				if err := k.handlePreviousDomainMappings(capp, resourceManager, domainMappingFromCapp.Name); err != nil {
 					return fmt.Errorf("failed to delete previous DomainMappings: %w", err)
 				}
 			}
-			return k.createDomainMapping(capp, domainMappingFromCapp, resourceManager)
 		} else {
 			return fmt.Errorf("failed to get DomainMapping %q: %w", domainMappingFromCapp.Name, err)
 		}
@@ -180,8 +182,19 @@ func (k KnativeDomainMappingManager) updateDomainMapping(knativeDomainMapping, d
 	return nil
 }
 
-// handlePreviousDomainMappings takes care of removing unneeded DomainMapping objects.
-func (k KnativeDomainMappingManager) handlePreviousDomainMappings(capp cappv1alpha1.Capp, resourceManager rclient.ResourceManagerClient) error {
+// handlePreviousDomainMappings takes care of removing unneeded DomainMapping objects. If the ARecordSet
+// which corresponds to the latest DomainMapping object is not yet available then return early
+// and do not delete the previous DomainMappings.
+func (k KnativeDomainMappingManager) handlePreviousDomainMappings(capp cappv1alpha1.Capp, resourceManager rclient.ResourceManagerClient, name string) error {
+	available, err := utils.IsARecordSetAvailable(k.Ctx, k.K8sclient, name, capp.Namespace)
+	if err != nil {
+		return err
+	}
+
+	if !available {
+		return nil
+	}
+
 	domainMappings, err := k.getPreviousDomainMappings(capp)
 	if err != nil {
 		return err

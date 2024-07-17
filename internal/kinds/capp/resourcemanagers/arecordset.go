@@ -147,12 +147,14 @@ func (r ARecordSetManager) createOrUpdate(capp cappv1alpha1.Capp) error {
 
 	if err := r.K8sclient.Get(r.Ctx, types.NamespacedName{Namespace: capp.Namespace, Name: aRecordSetFromCapp.Name}, &aRecordSet); err != nil {
 		if errors.IsNotFound(err) {
+			if err := r.createARecordSet(capp, aRecordSetFromCapp, resourceManager); err != nil {
+				return err
+			}
 			if capp.Status.RouteStatus.DomainMappingObjectStatus.URL != nil {
-				if err := r.handlePreviousARecordSets(capp, resourceManager); err != nil {
+				if err := r.handlePreviousARecordSets(capp, resourceManager, aRecordSetFromCapp.Name); err != nil {
 					return fmt.Errorf("failed to delete previous Certificates: %w", err)
 				}
 			}
-			return r.createARecordSet(capp, aRecordSetFromCapp, resourceManager)
 		} else {
 			return fmt.Errorf("failed to get ARecordSet %q: %w", aRecordSetFromCapp.Name, err)
 		}
@@ -186,8 +188,18 @@ func (r ARecordSetManager) updateARecordSet(aRecordSet, aRecordSetFromCapp dnsv1
 	return nil
 }
 
-// handlePreviousARecordSets takes care of removing unneeded Certificate objects.
-func (r ARecordSetManager) handlePreviousARecordSets(capp cappv1alpha1.Capp, resourceManager rclient.ResourceManagerClient) error {
+// handlePreviousARecordSets takes care of removing unneeded ARecordSet objects. If the new ARecordSet
+// is not yet available then return early and do not delete the previous Records.
+func (r ARecordSetManager) handlePreviousARecordSets(capp cappv1alpha1.Capp, resourceManager rclient.ResourceManagerClient, name string) error {
+	available, err := utils.IsARecordSetAvailable(r.Ctx, r.K8sclient, name, capp.Namespace)
+	if err != nil {
+		return err
+	}
+
+	if !available {
+		return nil
+	}
+
 	arecordsets, err := r.getPreviousARecordSets(capp)
 	if err != nil {
 		return err

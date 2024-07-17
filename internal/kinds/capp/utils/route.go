@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"strings"
 
+	xpcommonv1 "github.com/crossplane/crossplane-runtime/apis/common/v1"
+	dnsv1alpha1 "github.com/dana-team/provider-dns/apis/recordset/v1alpha1"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -16,6 +19,23 @@ const (
 	placeholderZone = "capp.com."
 	dot             = "."
 )
+
+// IsARecordSetAvailable returns a boolean indicating whether an ARecordSet is currently available.
+func IsARecordSetAvailable(ctx context.Context, k8sClient client.Client, name, namespace string) (bool, error) {
+	var available bool
+
+	aRecordSet := dnsv1alpha1.ARecordSet{}
+	if err := k8sClient.Get(ctx, types.NamespacedName{Namespace: namespace, Name: name}, &aRecordSet); err != nil {
+		return false, fmt.Errorf("failed getting ARecordSet: %w", err)
+	}
+
+	if aRecordSet.Status.Conditions != nil {
+		readyCondition := aRecordSet.Status.GetCondition(xpcommonv1.TypeReady)
+		available = readyCondition.Equal(xpcommonv1.Available())
+	}
+
+	return available, nil
+}
 
 // GetZoneFromConfig returns the zone to be used for the record from a ConfigMap.
 func GetZoneFromConfig(ctx context.Context, k8sClient client.Client) (string, error) {

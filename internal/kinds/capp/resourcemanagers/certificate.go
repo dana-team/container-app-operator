@@ -116,8 +116,11 @@ func (c CertificateManager) create(capp cappv1alpha1.Capp) error {
 
 	if err := c.K8sclient.Get(c.Ctx, types.NamespacedName{Namespace: capp.Namespace, Name: certificateFromCapp.Name}, &certificate); err != nil {
 		if errors.IsNotFound(err) {
+			if err := c.createCertificate(capp, certificateFromCapp, resourceManager); err != nil {
+				return err
+			}
 			if capp.Status.RouteStatus.DomainMappingObjectStatus.URL != nil {
-				if err := c.handlePreviousCertificates(capp, resourceManager); err != nil {
+				if err := c.handlePreviousCertificates(capp, resourceManager, certificateFromCapp.Name); err != nil {
 					return fmt.Errorf("failed to handle previous Certificates: %w", err)
 				}
 			}
@@ -145,8 +148,19 @@ func (c CertificateManager) createCertificate(capp cappv1alpha1.Capp, certificat
 	return nil
 }
 
-// handlePreviousCertificates takes care of removing unneeded Certificate objects.
-func (c CertificateManager) handlePreviousCertificates(capp cappv1alpha1.Capp, resourceManager rclient.ResourceManagerClient) error {
+// handlePreviousCertificates takes care of removing unneeded Certificate objects. If the ARecordSet
+// which corresponds to the latest Certificate object is not yet available then return early
+// and do not delete the previous Certificates.
+func (c CertificateManager) handlePreviousCertificates(capp cappv1alpha1.Capp, resourceManager rclient.ResourceManagerClient, name string) error {
+	available, err := utils.IsARecordSetAvailable(c.Ctx, c.K8sclient, name, capp.Namespace)
+	if err != nil {
+		return err
+	}
+
+	if !available {
+		return nil
+	}
+
 	certificates, err := c.getPreviousCertificates(capp)
 	if err != nil {
 		return err
