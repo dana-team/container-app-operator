@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand"
 	"strconv"
+	"strings"
 	"time"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
@@ -17,8 +18,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+var (
+	domain           = cappv1alpha1.GroupVersion.Group
+	cappNameLabelKey = domain + "/cappName"
+)
+
 const (
-	CappNameLabelKey   = "rcs.dana.io/cappName"
 	ClientListLimit    = 100
 	charSet            = "abcdefghijklmnopqrstuvwxyz0123456789"
 	RandomStringLength = 5
@@ -45,11 +50,22 @@ func getSubstringUntilIndex(s string, index int) string {
 	return s[:index]
 }
 
+// copyAnnotations returns a map of annotations from a Capp that contain the Domain string.
+func copyAnnotations(capp cappv1alpha1.Capp) map[string]string {
+	annotations := make(map[string]string)
+	for key, value := range capp.ObjectMeta.Annotations {
+		if strings.Contains(key, domain) {
+			annotations[key] = value
+		}
+	}
+	return annotations
+}
+
 // GetCappRevisions retrieves a list of CappRevision resources filtered by labels matching a specific Capp, returning the list and any error encountered.
 func GetCappRevisions(ctx context.Context, r client.Client, capp cappv1alpha1.Capp) ([]cappv1alpha1.CappRevision, error) {
 	cappRevisions := cappv1alpha1.CappRevisionList{}
 
-	requirement, err := labels.NewRequirement(CappNameLabelKey, selection.Equals, []string{capp.Name})
+	requirement, err := labels.NewRequirement(cappNameLabelKey, selection.Equals, []string{capp.Name})
 	if err != nil {
 		return cappRevisions.Items, err
 	}
@@ -72,8 +88,9 @@ func CreateCappRevision(ctx context.Context, k8sClient client.Client, logger log
 		ObjectMeta: metav1.ObjectMeta{
 			Name: fmt.Sprintf("%s-%s-v%s", getSubstringUntilIndex(capp.Name, IndexCut),
 				generateRandomString(RandomStringLength), strconv.Itoa(revisionNumber)),
-			Namespace: capp.Namespace,
-			Labels:    map[string]string{CappNameLabelKey: capp.Name},
+			Namespace:   capp.Namespace,
+			Labels:      map[string]string{cappNameLabelKey: capp.Name},
+			Annotations: copyAnnotations(capp),
 		},
 		Spec: cappv1alpha1.CappRevisionSpec{
 			CappTemplate: cappv1alpha1.CappTemplate{
