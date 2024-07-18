@@ -12,6 +12,11 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+var (
+	testAnnotationKey   = utilst.Domain + "/test"
+	testAnnotationValue = "test"
+)
+
 const (
 	moreThanRevisionsToKeep = 12
 	revisionsToKeep         = 10
@@ -72,6 +77,25 @@ var _ = Describe("Validate CappRevision creation", func() {
 			return len(cappRevisions)
 		}, testconsts.Timeout, testconsts.Interval).Should(Equal(revisionsToKeep),
 			fmt.Sprintf("Should limit to %s CappRevision", strconv.Itoa(revisionsToKeep)))
+
+	})
+
+	It(fmt.Sprintf("Should copy annotations containing %s to CappRevision", utilst.Domain), func() {
+		baseCapp := mock.CreateBaseCapp()
+		baseCapp.Annotations = map[string]string{testAnnotationKey: testAnnotationValue}
+		By("Creating Capp")
+		desiredCapp := utilst.CreateCapp(k8sClient, baseCapp)
+		desiredCapp = utilst.GetCapp(k8sClient, desiredCapp.Name, desiredCapp.Namespace)
+
+		Eventually(func() string {
+			cappRevisions, _ := utilst.GetCappRevisions(context.Background(), k8sClient, *desiredCapp)
+			val, ok := cappRevisions[0].Annotations[testAnnotationKey]
+			if ok {
+				return val
+			}
+			return ""
+		}, testconsts.Timeout, testconsts.Interval).Should(Equal(testAnnotationValue),
+			"Should copy annotations to CappRevision")
 
 	})
 })

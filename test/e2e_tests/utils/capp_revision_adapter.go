@@ -9,9 +9,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+var (
+	Domain           = cappv1alpha1.GroupVersion.Group
+	cappNameLabelKey = Domain + "/cappName"
+)
+
 const (
-	cappNameLabelKey = "rcs.dana.io/cappName"
-	clientListLimit  = 100
+	clientListLimit = 100
 )
 
 // GetCappRevisions retrieves a list of CappRevision resources filtered by labels matching a specific Capp, returning the list and any error encountered.
