@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	dnsv1alpha1 "github.com/dana-team/provider-dns/apis/recordset/v1alpha1"
+
 	certv1alpha1 "github.com/dana-team/certificate-operator/api/v1alpha1"
 
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
@@ -82,6 +84,11 @@ func (r *CappReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
 		).
 		Watches(
+			&dnsv1alpha1.ARecordSet{},
+			handler.EnqueueRequestsFromMapFunc(r.findCappFromHostname),
+			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
+		).
+		Watches(
 			&loggingv1beta1.SyslogNGOutput{},
 			handler.EnqueueRequestsFromMapFunc(r.findCappFromEvent),
 			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
@@ -127,13 +134,13 @@ func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	}
 
 	resourceManagers := map[string]rmanagers.ResourceManager{
-		rmanagers.DomainMapping:  rmanagers.KnativeDomainMappingManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder},
 		rmanagers.KnativeServing: rmanagers.KnativeServiceManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder},
+		rmanagers.ARecordSet:     rmanagers.ARecordSetManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder},
+		rmanagers.Certificate:    rmanagers.CertificateManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder},
+		rmanagers.DomainMapping:  rmanagers.KnativeDomainMappingManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder},
 		rmanagers.SyslogNGFlow:   rmanagers.SyslogNGFlowManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder},
 		rmanagers.SyslogNGOutput: rmanagers.SyslogNGOutputManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder},
 		rmanagers.NfsPVC:         rmanagers.NFSPVCManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder},
-		rmanagers.ARecordSet:     rmanagers.ARecordSetManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder},
-		rmanagers.Certificate:    rmanagers.CertificateManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder},
 	}
 
 	err, deleted := finalizer.HandleResourceDeletion(ctx, capp, r.Client, resourceManagers)
