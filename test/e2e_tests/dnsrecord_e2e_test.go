@@ -9,29 +9,29 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Validate ARecordSet functionality", func() {
-	It("Should create, update and delete ARecordSet when creating, updating and deleting a Capp instance", func() {
+var _ = Describe("Validate CNAMERecord functionality", func() {
+	It("Should create, update and delete CNAMERecord when creating, updating and deleting a Capp instance", func() {
 		By("Creating a capp with a route")
 		createdCapp, _ := utilst.CreateCappWithHTTPHostname(k8sClient)
 
-		By("Checking if the ARecordSet was created successfully")
-		aRecordSetName := utilst.GenerateResourceName(createdCapp.Spec.RouteSpec.Hostname, mock.ZoneValue)
-		aRecordSetObject := mock.CreateARecordSetObject(aRecordSetName)
+		By("Checking if the CNAMERecord was created successfully")
+		cnameRecordName := utilst.GenerateResourceName(createdCapp.Spec.RouteSpec.Hostname, mock.ZoneValue)
+		cnameRecordObject := mock.CreateCNAMERecordObject(cnameRecordName)
 		Eventually(func() bool {
-			return utilst.DoesResourceExist(k8sClient, aRecordSetObject)
+			return utilst.DoesResourceExist(k8sClient, cnameRecordObject)
 		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "Should find a resource.")
 
-		By("checking if the ARecordSet object was updated after changing the Capp Route Hostname")
+		By("checking if the CNAMERecord object was updated after changing the Capp Route Hostname")
 		toBeUpdatedCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
 		updatedRouteHostname := utilst.GenerateRouteHostname()
 		toBeUpdatedCapp.Spec.RouteSpec.Hostname = updatedRouteHostname
 		utilst.UpdateCapp(k8sClient, toBeUpdatedCapp)
 
-		updatedARecordSet := aRecordSetObject
-		updatedARecordSetName := utilst.GenerateResourceName(updatedRouteHostname, mock.ZoneValue)
+		updatedCNAMERecord := cnameRecordObject
+		updatedCNAMERecordName := utilst.GenerateResourceName(updatedRouteHostname, mock.ZoneValue)
 		Eventually(func() *string {
-			updatedARecordSet = utilst.GetARecordSet(k8sClient, updatedARecordSetName)
-			return updatedARecordSet.Spec.ForProvider.Name
+			updatedCNAMERecord = utilst.GetCNAMERecord(k8sClient, updatedCNAMERecordName)
+			return updatedCNAMERecord.Spec.ForProvider.Name
 		}, testconsts.Timeout, testconsts.Interval).Should(Equal(&updatedRouteHostname))
 
 		By("Deleting the Capp instance")
@@ -40,30 +40,30 @@ var _ = Describe("Validate ARecordSet functionality", func() {
 			return utilst.DoesResourceExist(k8sClient, createdCapp)
 		}, testconsts.Timeout, testconsts.Interval).ShouldNot(BeTrue(), "Should not find a resource.")
 
-		By("Checking if the ARecordSet was deleted successfully")
+		By("Checking if the CNAMERecord was deleted successfully")
 		Eventually(func() bool {
-			return utilst.DoesResourceExist(k8sClient, updatedARecordSet)
+			return utilst.DoesResourceExist(k8sClient, updatedCNAMERecord)
 		}, testconsts.Timeout, testconsts.Interval).ShouldNot(BeTrue(), "Should not find a resource.")
 	})
 
-	It("Should cleanup ARecordSet when no longer required", func() {
+	It("Should cleanup CNAMERecord when no longer required", func() {
 		By("Creating a capp with a route")
 		createdCapp, _ := utilst.CreateCappWithHTTPHostname(k8sClient)
 
-		By("Checking if the ARecordSet was created successfully")
-		aRecordSetName := utilst.GenerateResourceName(createdCapp.Spec.RouteSpec.Hostname, mock.ZoneValue)
-		aRecordSetObject := mock.CreateARecordSetObject(aRecordSetName)
+		By("Checking if the CNAMERecord was created successfully")
+		cnameRecordName := utilst.GenerateResourceName(createdCapp.Spec.RouteSpec.Hostname, mock.ZoneValue)
+		cnameRecordObject := mock.CreateCNAMERecordObject(cnameRecordName)
 		Eventually(func() bool {
-			return utilst.DoesResourceExist(k8sClient, aRecordSetObject)
+			return utilst.DoesResourceExist(k8sClient, cnameRecordObject)
 		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "Should find a resource.")
 
-		By("Removing the ARecordSet requirement from Capp Spec and checking cleanup", func() {
+		By("Removing the CNAMERecord requirement from Capp Spec and checking cleanup", func() {
 			toBeUpdatedCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
 			toBeUpdatedCapp.Spec.RouteSpec.Hostname = ""
 			utilst.UpdateCapp(k8sClient, toBeUpdatedCapp)
 
 			Eventually(func() bool {
-				return utilst.DoesResourceExist(k8sClient, aRecordSetObject)
+				return utilst.DoesResourceExist(k8sClient, cnameRecordObject)
 			}, testconsts.Timeout, testconsts.Interval).Should(BeFalse(), "Should not find a resource.")
 		})
 	})

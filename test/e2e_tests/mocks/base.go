@@ -15,9 +15,11 @@ const (
 	SecretValue    = "YmFyCg=="
 	ControllerNS   = "capp-operator-system"
 	AutoScaleCM    = "autoscale-defaults"
-	ZoneCM         = "dns-zone"
+	DNSConfig      = "dns-config"
+	CNAMEKey       = "cname"
 	ZoneKey        = "zone"
 	ZoneValue      = "test-zone.com."
+	CNAMEValue     = "test-cname.com"
 )
 
 func CreateBaseCapp() *cappv1alpha1.Capp {

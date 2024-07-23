@@ -52,7 +52,7 @@ func SyncStatus(ctx context.Context, capp cappv1alpha1.Capp, log logr.Logger, r 
 
 	routeRequired := map[string]bool{
 		rmanagers.DomainMapping: resourceManagers[rmanagers.DomainMapping].IsRequired(capp),
-		rmanagers.ARecordSet:    resourceManagers[rmanagers.ARecordSet].IsRequired(capp),
+		rmanagers.DNSRecord:     resourceManagers[rmanagers.DNSRecord].IsRequired(capp),
 		rmanagers.Certificate:   resourceManagers[rmanagers.Certificate].IsRequired(capp),
 	}
 	routeStatus, err := buildRouteStatus(ctx, r, capp, routeRequired)

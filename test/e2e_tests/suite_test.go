@@ -86,12 +86,13 @@ func createE2ETestAutoScaleConfigMap() {
 
 // createE2ETestZoneConfigMap creates a Zone ConfigMap for the e2e tests.
 func createE2ETestZoneConfigMap() {
-	zone := map[string]string{
-		mock.ZoneKey: mock.ZoneValue,
+	dnsConfig := map[string]string{
+		mock.ZoneKey:  mock.ZoneValue,
+		mock.CNAMEKey: mock.CNAMEValue,
 	}
 
-	zoneConfigMap := mock.CreateConfigMapObject(mock.ControllerNS, mock.ZoneCM, zone)
-	utilst.CreateConfigMap(k8sClient, zoneConfigMap)
+	dnsConfigMap := mock.CreateConfigMapObject(mock.ControllerNS, mock.DNSConfig, dnsConfig)
+	utilst.CreateConfigMap(k8sClient, dnsConfigMap)
 }
 
 // cleanUp make sure the test environment is clean.
@@ -115,14 +116,14 @@ func cleanUp() {
 	}
 
 	configMap = &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{
-		Name:      mock.ZoneCM,
+		Name:      mock.DNSConfig,
 		Namespace: mock.ControllerNS,
 	}}
 
 	if utilst.DoesResourceExist(k8sClient, configMap) {
 		Expect(k8sClient.Delete(context.Background(), configMap)).To(Succeed())
 		Eventually(func() error {
-			return k8sClient.Get(context.Background(), client.ObjectKey{Name: mock.ZoneCM, Namespace: mock.ControllerNS}, configMap)
+			return k8sClient.Get(context.Background(), client.ObjectKey{Name: mock.DNSConfig, Namespace: mock.ControllerNS}, configMap)
 		}, testconsts.Timeout, testconsts.Interval).Should(HaveOccurred(), "The autoscale configMap should be deleted")
 	}
 

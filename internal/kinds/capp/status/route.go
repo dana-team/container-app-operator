@@ -5,21 +5,26 @@ import (
 
 	rmanagers "github.com/dana-team/container-app-operator/internal/kinds/capp/resourcemanagers"
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
+	dnsrecordv1alpha1 "github.com/dana-team/provider-dns/apis/record/v1alpha1"
 
 	certv1alpha1 "github.com/dana-team/certificate-operator/api/v1alpha1"
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
-	dnsv1alpha1 "github.com/dana-team/provider-dns/apis/recordset/v1alpha1"
 	"k8s.io/apimachinery/pkg/types"
 	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // buildRouteStatus constructs the Route Status of the Capp object in accordance to the
-// status of the corresponding DomainMapping, ARecordSet and Certificate objects if such exist.
+// status of the corresponding DomainMapping, DNSRecord and Certificate objects if such exist.
 func buildRouteStatus(ctx context.Context, kubeClient client.Client, capp cappv1alpha1.Capp, isRequired map[string]bool) (cappv1alpha1.RouteStatus, error) {
 	routeStatus := cappv1alpha1.RouteStatus{}
 
-	zone, err := utils.GetZoneFromConfig(ctx, kubeClient)
+	dnsConfig, err := utils.GetDNSConfig(ctx, kubeClient)
+	if err != nil {
+		return routeStatus, err
+	}
+
+	zone, err := utils.GetZoneFromConfig(dnsConfig)
 	if err != nil {
 		return routeStatus, err
 	}
@@ -29,7 +34,7 @@ func buildRouteStatus(ctx context.Context, kubeClient client.Client, capp cappv1
 		return routeStatus, err
 	}
 
-	aRecordSetStatus, err := buildARecordSetStatus(ctx, kubeClient, capp, isRequired[rmanagers.ARecordSet], zone)
+	dnsRecordStatus, err := buildDNSRecordStatus(ctx, kubeClient, capp, isRequired[rmanagers.DNSRecord], zone)
 	if err != nil {
 		return routeStatus, err
 	}
@@ -40,7 +45,7 @@ func buildRouteStatus(ctx context.Context, kubeClient client.Client, capp cappv1
 	}
 
 	routeStatus.DomainMappingObjectStatus = domainMappingStatus
-	routeStatus.ARecordSetObjectStatus = aRecordSetStatus
+	routeStatus.DNSRecordObjectStatus = dnsRecordStatus
 	routeStatus.CertificateObjectStatus = certificateStatus
 
 	return routeStatus, nil
@@ -78,18 +83,32 @@ func buildCertificateStatus(ctx context.Context, kubeClient client.Client, capp 
 	return certificate.Status, nil
 }
 
-// buildARecordSetStatus partly constructs the Route Status of the Capp object in accordance to the
-// status of the corresponding ARecordSet object.
-func buildARecordSetStatus(ctx context.Context, kubeClient client.Client, capp cappv1alpha1.Capp, isRequired bool, zone string) (dnsv1alpha1.ARecordSetStatus, error) {
+// buildDNSRecordStatus partly constructs the Route Status of the Capp object in accordance to the
+// status of the corresponding DNSRecord object.
+func buildDNSRecordStatus(ctx context.Context, kubeClient client.Client, capp cappv1alpha1.Capp, isRequired bool, zone string) (cappv1alpha1.DNSRecordObjectStatus, error) {
+	dnsStatus := cappv1alpha1.DNSRecordObjectStatus{}
+	var err error
+
 	if !isRequired {
-		return dnsv1alpha1.ARecordSetStatus{}, nil
+		return dnsStatus, nil
 	}
 
-	aRecordSet := &dnsv1alpha1.ARecordSet{}
-	aRecordSetName := utils.GenerateResourceName(capp.Spec.RouteSpec.Hostname, zone)
-	if err := kubeClient.Get(ctx, types.NamespacedName{Name: aRecordSetName}, aRecordSet); err != nil {
-		return dnsv1alpha1.ARecordSetStatus{}, err
+	dnsStatus.CNAMERecordObjectStatus, err = buildCNAMERecordStatus(ctx, kubeClient, capp, zone)
+	if err != nil {
+		return dnsStatus, err
 	}
 
-	return aRecordSet.Status, nil
+	return dnsStatus, nil
+}
+
+// buildCNAMERecordStatus partly constructs the Route Status of the Capp object in accordance to the
+// status of the corresponding CNAMERecord object.
+func buildCNAMERecordStatus(ctx context.Context, kubeClient client.Client, capp cappv1alpha1.Capp, zone string) (dnsrecordv1alpha1.CNAMERecordStatus, error) {
+	cnameRecord := &dnsrecordv1alpha1.CNAMERecord{}
+	cnameRecordName := utils.GenerateResourceName(capp.Spec.RouteSpec.Hostname, zone)
+	if err := kubeClient.Get(ctx, types.NamespacedName{Name: cnameRecordName}, cnameRecord); err != nil {
+		return dnsrecordv1alpha1.CNAMERecordStatus{}, err
+	}
+
+	return cnameRecord.Status, nil
 }

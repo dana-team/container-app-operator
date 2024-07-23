@@ -3,10 +3,11 @@ package utils
 import (
 	"strings"
 
+	dnsrecordv1alpha1 "github.com/dana-team/provider-dns/apis/record/v1alpha1"
+
 	certv1alpha1 "github.com/dana-team/certificate-operator/api/v1alpha1"
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	mock "github.com/dana-team/container-app-operator/test/e2e_tests/mocks"
-	dnsv1alpha1 "github.com/dana-team/provider-dns/apis/recordset/v1alpha1"
 	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -41,11 +42,11 @@ func GetDomainMapping(k8sClient client.Client, name string, namespace string) *k
 	return domainMapping
 }
 
-// GetARecordSet fetches and returns an existing instance of an ARecordSet.
-func GetARecordSet(k8sClient client.Client, name string) *dnsv1alpha1.ARecordSet {
-	aRecordSet := &dnsv1alpha1.ARecordSet{}
-	GetClusterResource(k8sClient, aRecordSet, name)
-	return aRecordSet
+// GetCNAMERecord fetches and returns an existing instance of an CNAMERecord.
+func GetCNAMERecord(k8sClient client.Client, name string) *dnsrecordv1alpha1.CNAMERecord {
+	cnameRecord := &dnsrecordv1alpha1.CNAMERecord{}
+	GetClusterResource(k8sClient, cnameRecord, name)
+	return cnameRecord
 }
 
 // GetCertificate fetches and returns an existing instance of a Certificate.

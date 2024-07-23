@@ -20,14 +20,14 @@ import (
 	"flag"
 	"os"
 
+	dnsrecordv1alpha1 "github.com/dana-team/provider-dns/apis/record/v1alpha1"
+
 	certv1alpha1 "github.com/dana-team/certificate-operator/api/v1alpha1"
 
+	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	cappcontroller "github.com/dana-team/container-app-operator/internal/kinds/capp/controllers"
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 	crcontroller "github.com/dana-team/container-app-operator/internal/kinds/capprevision/controllers"
-	dnsv1alpha1 "github.com/dana-team/provider-dns/apis/recordset/v1alpha1"
-
-	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	nfspvcv1alpha1 "github.com/dana-team/nfspvc-operator/api/v1alpha1"
 	"github.com/go-logr/zapr"
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
@@ -61,7 +61,7 @@ func init() {
 	utilruntime.Must(cappv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(nfspvcv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(certv1alpha1.AddToScheme(scheme))
-	utilruntime.Must(dnsv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(dnsrecordv1alpha1.AddToScheme(scheme))
 
 	//+kubebuilder:scaffold:scheme
 }

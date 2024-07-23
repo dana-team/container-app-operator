@@ -19,7 +19,7 @@ package v1alpha1
 import (
 	certv1alpha1 "github.com/dana-team/certificate-operator/api/v1alpha1"
 	nfspvcv1alpha1 "github.com/dana-team/nfspvc-operator/api/v1alpha1"
-	dnsv1alpha1 "github.com/dana-team/provider-dns/apis/recordset/v1alpha1"
+	dnsrecordv1alpha1 "github.com/dana-team/provider-dns/apis/record/v1alpha1"
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -183,11 +183,17 @@ type RouteStatus struct {
 
 	// ARecordSetObjectStatus is the status of the underlying ARecordSet object
 	// +optional
-	ARecordSetObjectStatus dnsv1alpha1.ARecordSetStatus `json:"aRecordSetObjectStatus,omitempty"`
+	DNSRecordObjectStatus DNSRecordObjectStatus `json:"dnsRecordObjectStatus,omitempty"`
 
 	// CertificateObjectStatus is the status of the underlying Certificate object
 	// +optional
 	CertificateObjectStatus certv1alpha1.CertificateStatus `json:"certificateObjectStatus,omitempty"`
+}
+
+type DNSRecordObjectStatus struct {
+	// CNAMERecordObjectStatus is the status of the underlying ARecordSet object
+	// +optional
+	CNAMERecordObjectStatus dnsrecordv1alpha1.CNAMERecordStatus `json:"cnameRecordObjectStatus,omitempty"`
 }
 
 // VolumesStatus shows the state of the Volumes objects linked to the Capp.

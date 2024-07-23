@@ -141,9 +141,9 @@ rules:
   - patch
   - update
 - apiGroups:
-  - recordset.dns.crossplane.io
+  - record.dns.crossplane.io
   resources:
-  - arecordsets
+  - cnamerecords
   verbs:
   - create
   - delete

@@ -3,7 +3,7 @@ package resourceclient
 import (
 	certv1alpha1 "github.com/dana-team/certificate-operator/api/v1alpha1"
 	nfspvcv1alpha1 "github.com/dana-team/nfspvc-operator/api/v1alpha1"
-	dnsv1alpha1 "github.com/dana-team/provider-dns/apis/recordset/v1alpha1"
+	dnsvrecord1alpha1 "github.com/dana-team/provider-dns/apis/record/v1alpha1"
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
@@ -70,9 +70,9 @@ func GetBareSyslogNGOutput(name, namespace string) loggingv1beta1.SyslogNGOutput
 	}
 }
 
-// GetBareARecordSet returns an ARecordSet object with only ObjectMeta set.
-func GetBareARecordSet(name string) dnsv1alpha1.ARecordSet {
-	return dnsv1alpha1.ARecordSet{
+// GetBareDNSRecord returns a DNSRecord object with only ObjectMeta set.
+func GetBareDNSRecord(name string) dnsvrecord1alpha1.CNAMERecord {
+	return dnsvrecord1alpha1.CNAMERecord{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
