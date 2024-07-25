@@ -143,7 +143,7 @@ type ApplicationLinks struct {
 type RevisionInfo struct {
 	// RevisionStatus communicates the observed state of the Revision (from the controller).
 	// +optional
-	RevisionStatus knativev1.RevisionStatus `json:"RevisionsStatus,omitempty"`
+	RevisionStatus knativev1.RevisionStatus `json:"revisionsStatus,omitempty"`
 
 	// RevisionName is the name of the revision.
 	// +optional
@@ -217,7 +217,7 @@ type CappStatus struct {
 
 	// RevisionInfo shows the revision information.
 	// +optional
-	RevisionInfo []RevisionInfo `json:"Revisions,omitempty"`
+	RevisionInfo []RevisionInfo `json:"revisions,omitempty"`
 
 	// StateStatus shows the current Capp state
 	// +optional
