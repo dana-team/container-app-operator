@@ -29,7 +29,6 @@ const (
 	eventCappDomainMappingCreationFailed = "DomainMappingCreationFailed"
 	eventCappDomainMappingCreated        = "DomainMappingCreated"
 	referenceKind                        = "Service"
-	CappResourceKey                      = "rcs.dana.io/parent-capp"
 )
 
 type KnativeDomainMappingManager struct {
@@ -60,7 +59,8 @@ func (k KnativeDomainMappingManager) prepareResource(capp cappv1alpha1.Capp) (kn
 			Name:      resourceName,
 			Namespace: capp.Namespace,
 			Labels: map[string]string{
-				CappResourceKey: capp.Name,
+				utils.CappResourceKey:   capp.Name,
+				utils.ManagedByLabelKey: utils.CappKey,
 			},
 		},
 		Spec: knativev1beta1.DomainMappingSpec{
@@ -216,7 +216,7 @@ func (k KnativeDomainMappingManager) getPreviousDomainMappings(capp cappv1alpha1
 	knativeDomainMappings := knativev1beta1.DomainMappingList{}
 
 	set := labels.Set{
-		CappResourceKey: capp.Name,
+		utils.CappResourceKey: capp.Name,
 	}
 
 	listOptions := utils.GetListOptions(set)

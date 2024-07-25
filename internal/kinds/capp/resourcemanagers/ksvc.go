@@ -22,7 +22,6 @@ import (
 )
 
 const (
-	danaAnnotationsPrefix                 = "rcs.dana.io"
 	cappDisabledState                     = "disabled"
 	cappEnabledState                      = "enabled"
 	defaultAutoScaleCM                    = "autoscale-defaults"
@@ -42,13 +41,13 @@ type KnativeServiceManager struct {
 
 // prepareResource generates a Knative Service definition from a given Capp resource.
 func (k KnativeServiceManager) prepareResource(capp cappv1alpha1.Capp, ctx context.Context) knativev1.Service {
-	knativeServiceAnnotations := utils.FilterKeysWithoutPrefix(capp.Annotations, danaAnnotationsPrefix)
+	knativeServiceAnnotations := utils.FilterKeysWithoutPrefix(capp.Annotations, utils.CappAPIGroup)
 	knativeServiceLabels := map[string]string{}
 
 	if capp.Labels != nil {
 		knativeServiceLabels = capp.Labels
 	}
-	knativeServiceLabels[CappResourceKey] = capp.Name
+	knativeServiceLabels[utils.CappResourceKey] = capp.Name
 
 	knativeService := knativev1.Service{
 		TypeMeta: metav1.TypeMeta{},
@@ -56,7 +55,8 @@ func (k KnativeServiceManager) prepareResource(capp cappv1alpha1.Capp, ctx conte
 			Name:      capp.Name,
 			Namespace: capp.Namespace,
 			Labels: map[string]string{
-				CappResourceKey: capp.Name,
+				utils.CappResourceKey:   capp.Name,
+				utils.ManagedByLabelKey: utils.CappKey,
 			},
 			Annotations: knativeServiceAnnotations,
 		},

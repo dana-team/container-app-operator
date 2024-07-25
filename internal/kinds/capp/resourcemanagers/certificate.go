@@ -55,7 +55,8 @@ func (c CertificateManager) prepareResource(capp cappv1alpha1.Capp) (certv1alpha
 			Name:      resourceName,
 			Namespace: capp.Namespace,
 			Labels: map[string]string{
-				CappResourceKey: capp.Name,
+				utils.CappResourceKey:   capp.Name,
+				utils.ManagedByLabelKey: utils.CappKey,
 			},
 		},
 		Spec: certv1alpha1.CertificateSpec{
@@ -182,7 +183,7 @@ func (c CertificateManager) getPreviousCertificates(capp cappv1alpha1.Capp) (cer
 	certificates := certv1alpha1.CertificateList{}
 
 	set := labels.Set{
-		CappResourceKey: capp.Name,
+		utils.CappResourceKey: capp.Name,
 	}
 	listOptions := utils.GetListOptions(set)
 

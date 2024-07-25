@@ -6,7 +6,7 @@ import (
 	"github.com/dana-team/container-app-operator/test/e2e_tests/testconsts"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
-	mock "github.com/dana-team/container-app-operator/test/e2e_tests/mocks"
+	"github.com/dana-team/container-app-operator/test/e2e_tests/mocks"
 	utilst "github.com/dana-team/container-app-operator/test/e2e_tests/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -36,7 +36,7 @@ func updateCapp(capp *cappv1alpha1.Capp, shouldRevisionBeReady bool) {
 // checkRevisionReadiness checks the readiness of the specified revision and asserts its state based on shouldBeReady flag.
 func checkRevisionReadiness(revisionName string, shouldBeReady bool) {
 	By("Checking if the revision was created successfully")
-	revisionObject := mock.CreateRevisionObject(revisionName)
+	revisionObject := mocks.CreateRevisionObject(revisionName)
 	Eventually(func() bool {
 		return utilst.DoesResourceExist(k8sClient, revisionObject)
 	}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "Should find a resource.")
@@ -64,7 +64,7 @@ func createAndGetCapp(testCapp *cappv1alpha1.Capp) *cappv1alpha1.Capp {
 // testMetricAnnotation tests capp instance creation with a specified metric annotation.
 func testMetricAnnotation(metricType string) {
 	By("Creating a capp instance")
-	testCapp := mock.CreateBaseCapp()
+	testCapp := mocks.CreateBaseCapp()
 	testCapp.Spec.ScaleMetric = metricType
 	createdCapp := utilst.CreateCapp(k8sClient, testCapp)
 
@@ -90,16 +90,21 @@ var _ = Describe("Validate knative functionality", func() {
 
 	It("Should create and delete a ksvc when creating and deleting a capp instance", func() {
 		By("Creating a capp instance")
-		testCapp := mock.CreateBaseCapp()
+		testCapp := mocks.CreateBaseCapp()
 		testCapp.Spec.ScaleMetric = "cpu"
 		assertionCapp := createAndGetCapp(testCapp)
 
 		By("Checking if the ksvc was created successfully")
-		ksvcObject := mock.CreateKnativeServiceObject(assertionCapp.Name)
+		ksvcObject := mocks.CreateKnativeServiceObject(assertionCapp.Name)
 		Eventually(func() bool {
 			return utilst.DoesResourceExist(k8sClient, ksvcObject)
 		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "Should find a resource.")
 		checkRevisionReadiness(assertionCapp.Name+testconsts.FirstRevisionSuffix, true)
+
+		By("Checking the ksvc has the needed labels")
+		ksvcObject = utilst.GetKSVC(k8sClient, assertionCapp.Name, mocks.NSName)
+		Expect(ksvcObject.Labels[testconsts.CappResourceKey]).Should(Equal(assertionCapp.Name))
+		Expect(ksvcObject.Labels[testconsts.ManagedByLabelKey]).Should(Equal(testconsts.CappKey))
 
 		By("Deleting the capp instance")
 		utilst.DeleteCapp(k8sClient, assertionCapp)
@@ -113,7 +118,7 @@ var _ = Describe("Validate knative functionality", func() {
 		}, testconsts.Timeout, testconsts.Interval).ShouldNot(BeTrue(), "Should not find a resource.")
 
 		By("Checking if the revision exists")
-		revisionObject := mock.CreateRevisionObject(assertionCapp.Name + testconsts.FirstRevisionSuffix)
+		revisionObject := mocks.CreateRevisionObject(assertionCapp.Name + testconsts.FirstRevisionSuffix)
 		Eventually(func() bool {
 			return utilst.DoesResourceExist(k8sClient, revisionObject)
 		}, testconsts.Timeout, testconsts.Interval).ShouldNot(BeTrue(), "Should not find a resource.")
@@ -121,7 +126,7 @@ var _ = Describe("Validate knative functionality", func() {
 
 	It("Should update ksvc metric annotation and create a new revision when updating the capp scale metric", func() {
 		By("Creating a capp instance")
-		testCapp := mock.CreateBaseCapp()
+		testCapp := mocks.CreateBaseCapp()
 		testCapp.Spec.ScaleMetric = "cpu"
 		assertionCapp := createAndGetCapp(testCapp)
 
@@ -138,7 +143,7 @@ var _ = Describe("Validate knative functionality", func() {
 
 	It("Should update ksvc container name and create a new revision when updating a capp container name", func() {
 		By("Creating a capp instance")
-		testCapp := mock.CreateBaseCapp()
+		testCapp := mocks.CreateBaseCapp()
 		assertionCapp := createAndGetCapp(testCapp)
 
 		By("Updating the a capp container name")
@@ -154,7 +159,7 @@ var _ = Describe("Validate knative functionality", func() {
 
 	It("Should update ksvc container image and create a new revision when updating a capp container image", func() {
 		By("Creating a capp instance")
-		testCapp := mock.CreateBaseCapp()
+		testCapp := mocks.CreateBaseCapp()
 		assertionCapp := createAndGetCapp(testCapp)
 
 		By("Updating capp's container image")
@@ -170,7 +175,7 @@ var _ = Describe("Validate knative functionality", func() {
 
 	It("Should update ksvc dana annotation when updating capp's dana annotation", func() {
 		By("Creating a capp instance")
-		testCapp := mock.CreateBaseCapp()
+		testCapp := mocks.CreateBaseCapp()
 		assertionCapp := createAndGetCapp(testCapp)
 
 		By("Updating capp's dana annotation")
@@ -188,7 +193,7 @@ var _ = Describe("Validate knative functionality", func() {
 
 	It("Should update ksvc environment variable and create a new revision when updating a capp container environment variable", func() {
 		By("Creating a capp instance")
-		testCapp := mock.CreateBaseCapp()
+		testCapp := mocks.CreateBaseCapp()
 		assertionCapp := createAndGetCapp(testCapp)
 
 		By("Updating capp's container environment variable")
@@ -205,17 +210,17 @@ var _ = Describe("Validate knative functionality", func() {
 	It("Should create a new revision in ready state when updating capp's secret environment variable", func() {
 		By("Creating a secret")
 		secretName := utilst.GenerateSecretName()
-		secretObject := mock.CreateSecretObject(secretName)
+		secretObject := mocks.CreateSecretObject(secretName)
 		utilst.CreateSecret(k8sClient, secretObject)
 
 		By("Creating a capp instance with a secret environment variable")
-		testCapp := mock.CreateBaseCapp()
-		testCapp.Spec.ConfigurationSpec.Template.Spec.PodSpec.Containers[0].Env = *mock.CreateEnvVarObject(secretName)
+		testCapp := mocks.CreateBaseCapp()
+		testCapp.Spec.ConfigurationSpec.Template.Spec.PodSpec.Containers[0].Env = *mocks.CreateEnvVarObject(secretName)
 		assertionCapp := createAndGetCapp(testCapp)
 		checkRevisionReadiness(assertionCapp.Name+testconsts.FirstRevisionSuffix, true)
 
 		By("Updating the secret")
-		secretObject.Data = map[string][]byte{testconsts.NewSecretKey: []byte(mock.SecretValue)}
+		secretObject.Data = map[string][]byte{testconsts.NewSecretKey: []byte(mocks.SecretValue)}
 		utilst.UpdateSecret(k8sClient, secretObject)
 
 		By("Updating the capp secret environment variable")
@@ -225,7 +230,7 @@ var _ = Describe("Validate knative functionality", func() {
 
 	It("Should create not ready revision when attempting to update to non existing image", func() {
 		By("Creating a capp instance")
-		testCapp := mock.CreateBaseCapp()
+		testCapp := mocks.CreateBaseCapp()
 		assertionCapp := createAndGetCapp(testCapp)
 
 		By("Updating capp's container image")
@@ -242,25 +247,25 @@ var _ = Describe("Validate knative functionality", func() {
 	It("Should create not ready revision when attempting to update to non existing secret", func() {
 		By("Creating a secret")
 		secretName := utilst.GenerateSecretName()
-		secretObject := mock.CreateSecretObject(secretName)
+		secretObject := mocks.CreateSecretObject(secretName)
 		utilst.CreateSecret(k8sClient, secretObject)
 
 		By("Creating a capp instance with a secret environment variable")
-		testCapp := mock.CreateBaseCapp()
-		testCapp.Spec.ConfigurationSpec.Template.Spec.PodSpec.Containers[0].Env = *mock.CreateEnvVarObject(secretName)
+		testCapp := mocks.CreateBaseCapp()
+		testCapp.Spec.ConfigurationSpec.Template.Spec.PodSpec.Containers[0].Env = *mocks.CreateEnvVarObject(secretName)
 		assertionCapp := createAndGetCapp(testCapp)
 		checkRevisionReadiness(assertionCapp.Name+testconsts.FirstRevisionSuffix, true)
 
 		By("Updating the capp secret environment variable")
 		assertionCapp = utilst.GetCapp(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
 		nonExistingSecretName := utilst.GenerateSecretName()
-		assertionCapp.Spec.ConfigurationSpec.Template.Spec.Containers[0].Env = *mock.CreateEnvVarObject(nonExistingSecretName)
+		assertionCapp.Spec.ConfigurationSpec.Template.Spec.Containers[0].Env = *mocks.CreateEnvVarObject(nonExistingSecretName)
 		updateCapp(assertionCapp, false)
 	})
 
 	It("Should create capp with autoscale annotation. The default annotation in the ksvc should be overridden", func() {
 		By("Creating a capp instance")
-		testCapp := mock.CreateBaseCapp()
+		testCapp := mocks.CreateBaseCapp()
 		annotations := map[string]string{
 			testconsts.KnativeAutoscaleTargetKey: "666",
 		}
@@ -276,7 +281,7 @@ var _ = Describe("Validate knative functionality", func() {
 
 	It("Should check the default ksvc annotation is equal to the configMap concurrency value", func() {
 		By("Creating a capp instance")
-		testCapp := mock.CreateBaseCapp()
+		testCapp := mocks.CreateBaseCapp()
 		assertionCapp := createAndGetCapp(testCapp)
 
 		By("Checking if the ksvc's annotation is equal to the configMap")
@@ -288,7 +293,7 @@ var _ = Describe("Validate knative functionality", func() {
 
 	It("Should propagate Capp labels to the underlying KSVC", func() {
 		By("Creating a capp instance")
-		testCapp := mock.CreateBaseCapp()
+		testCapp := mocks.CreateBaseCapp()
 		labels := map[string]string{
 			testconsts.TestLabelKey:    "test",
 			testconsts.CappResourceKey: "test",
