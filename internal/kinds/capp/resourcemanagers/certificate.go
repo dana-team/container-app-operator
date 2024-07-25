@@ -11,7 +11,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
 
 	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/resourceclient"
@@ -37,10 +36,16 @@ type CertificateManager struct {
 
 // prepareResource prepares a Certificate resource based on the provided Capp.
 func (c CertificateManager) prepareResource(capp cappv1alpha1.Capp) (certv1alpha1.Certificate, error) {
-	zone, err := utils.GetZoneFromConfig(c.Ctx, c.K8sclient)
+	dnsConfig, err := utils.GetDNSConfig(c.Ctx, c.K8sclient)
 	if err != nil {
 		return certv1alpha1.Certificate{}, err
 	}
+
+	zone, err := utils.GetZoneFromConfig(dnsConfig)
+	if err != nil {
+		return certv1alpha1.Certificate{}, err
+	}
+
 	resourceName := utils.GenerateResourceName(capp.Spec.RouteSpec.Hostname, zone)
 	secretName := utils.GenerateSecretName(capp)
 
@@ -148,11 +153,14 @@ func (c CertificateManager) createCertificate(capp cappv1alpha1.Capp, certificat
 	return nil
 }
 
-// handlePreviousCertificates takes care of removing unneeded Certificate objects. If the ARecordSet
+// handlePreviousCertificates takes care of removing unneeded Certificate objects. If the DNSRecord
 // which corresponds to the latest Certificate object is not yet available then return early
 // and do not delete the previous Certificates.
 func (c CertificateManager) handlePreviousCertificates(capp cappv1alpha1.Capp, resourceManager rclient.ResourceManagerClient, name string) error {
-	available, err := utils.IsARecordSetAvailable(c.Ctx, c.K8sclient, name, capp.Namespace)
+	var available bool
+	var err error
+
+	available, err = utils.IsDNSRecordAvailable(c.Ctx, c.K8sclient, name, capp.Namespace)
 	if err != nil {
 		return err
 	}
@@ -173,15 +181,10 @@ func (c CertificateManager) handlePreviousCertificates(capp cappv1alpha1.Capp, r
 func (c CertificateManager) getPreviousCertificates(capp cappv1alpha1.Capp) (certv1alpha1.CertificateList, error) {
 	certificates := certv1alpha1.CertificateList{}
 
-	requirement, err := labels.NewRequirement(CappResourceKey, selection.Equals, []string{capp.Name})
-	if err != nil {
-		return certificates, fmt.Errorf("unable to create label requirement for Capp: %w", err)
+	set := labels.Set{
+		CappResourceKey: capp.Name,
 	}
-
-	labelSelector := labels.NewSelector().Add(*requirement)
-	listOptions := client.ListOptions{
-		LabelSelector: labelSelector,
-	}
+	listOptions := utils.GetListOptions(set)
 
 	if err := c.K8sclient.List(c.Ctx, &certificates, &listOptions); err != nil {
 		return certificates, fmt.Errorf("unable to list Certificates of Capp %q: %w", capp.Name, err)

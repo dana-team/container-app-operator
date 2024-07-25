@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"strings"
 
+	"k8s.io/apimachinery/pkg/labels"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -74,4 +77,14 @@ func FilterMap(originalMap map[string]string, substring string) map[string]strin
 // GenerateSecretName generates TLS secret name for certificate and domain mapping.
 func GenerateSecretName(capp cappv1alpha1.Capp) string {
 	return fmt.Sprintf("%s-tls", capp.Name)
+}
+
+// GetListOptions returns a list option object from a given Set.
+func GetListOptions(set labels.Set) client.ListOptions {
+	labelSelector := labels.SelectorFromSet(set)
+	listOptions := client.ListOptions{
+		LabelSelector: labelSelector,
+	}
+
+	return listOptions
 }

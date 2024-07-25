@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	dnsv1alpha1 "github.com/dana-team/provider-dns/apis/recordset/v1alpha1"
+	dnsrecordv1alpha1 "github.com/dana-team/provider-dns/apis/record/v1alpha1"
 
 	certv1alpha1 "github.com/dana-team/certificate-operator/api/v1alpha1"
 
@@ -61,7 +61,7 @@ type CappReconciler struct {
 // +kubebuilder:rbac:groups="",resources=events,verbs=get;list;watch;update;create;patch;
 // +kubebuilder:rbac:groups="events.k8s.io",resources=events,verbs=get;list;watch;update;create;patch
 // +kubebuilder:rbac:groups="nfspvc.dana.io",resources=nfspvcs,verbs=get;list;watch;update;create;delete
-// +kubebuilder:rbac:groups="recordset.dns.crossplane.io",resources=arecordsets,verbs=get;list;watch;update;create;delete
+// +kubebuilder:rbac:groups="record.dns.crossplane.io",resources=cnamerecords,verbs=get;list;watch;update;create;delete
 // +kubebuilder:rbac:groups="cert.dana.io",resources=certificates,verbs=get;list;watch;update;create;delete
 
 // SetupWithManager sets up the controller with the Manager.
@@ -84,7 +84,7 @@ func (r *CappReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
 		).
 		Watches(
-			&dnsv1alpha1.ARecordSet{},
+			&dnsrecordv1alpha1.CNAMERecord{},
 			handler.EnqueueRequestsFromMapFunc(r.findCappFromHostname),
 			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
 		).
@@ -135,7 +135,7 @@ func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 	resourceManagers := map[string]rmanagers.ResourceManager{
 		rmanagers.KnativeServing: rmanagers.KnativeServiceManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder},
-		rmanagers.ARecordSet:     rmanagers.ARecordSetManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder},
+		rmanagers.DNSRecord:      rmanagers.DNSRecordManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder},
 		rmanagers.Certificate:    rmanagers.CertificateManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder},
 		rmanagers.DomainMapping:  rmanagers.KnativeDomainMappingManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder},
 		rmanagers.SyslogNGFlow:   rmanagers.SyslogNGFlowManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder},

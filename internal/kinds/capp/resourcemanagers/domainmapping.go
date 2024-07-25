@@ -15,7 +15,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -29,8 +28,8 @@ const (
 	DomainMapping                        = "domainMapping"
 	eventCappDomainMappingCreationFailed = "DomainMappingCreationFailed"
 	eventCappDomainMappingCreated        = "DomainMappingCreated"
-	CappResourceKey                      = "rcs.dana.io/parent-capp"
 	referenceKind                        = "Service"
+	CappResourceKey                      = "rcs.dana.io/parent-capp"
 )
 
 type KnativeDomainMappingManager struct {
@@ -42,10 +41,16 @@ type KnativeDomainMappingManager struct {
 
 // PrepareKnativeDomainMapping creates a new DomainMapping for a Knative service.
 func (k KnativeDomainMappingManager) prepareResource(capp cappv1alpha1.Capp) (knativev1beta1.DomainMapping, error) {
-	zone, err := utils.GetZoneFromConfig(k.Ctx, k.K8sclient)
+	dnsConfig, err := utils.GetDNSConfig(k.Ctx, k.K8sclient)
 	if err != nil {
 		return knativev1beta1.DomainMapping{}, err
 	}
+
+	zone, err := utils.GetZoneFromConfig(dnsConfig)
+	if err != nil {
+		return knativev1beta1.DomainMapping{}, err
+	}
+
 	resourceName := utils.GenerateResourceName(capp.Spec.RouteSpec.Hostname, zone)
 	secretName := utils.GenerateSecretName(capp)
 
@@ -182,11 +187,14 @@ func (k KnativeDomainMappingManager) updateDomainMapping(knativeDomainMapping, d
 	return nil
 }
 
-// handlePreviousDomainMappings takes care of removing unneeded DomainMapping objects. If the ARecordSet
+// handlePreviousDomainMappings takes care of removing unneeded DomainMapping objects. If the DNSRecord
 // which corresponds to the latest DomainMapping object is not yet available then return early
 // and do not delete the previous DomainMappings.
 func (k KnativeDomainMappingManager) handlePreviousDomainMappings(capp cappv1alpha1.Capp, resourceManager rclient.ResourceManagerClient, name string) error {
-	available, err := utils.IsARecordSetAvailable(k.Ctx, k.K8sclient, name, capp.Namespace)
+	var available bool
+	var err error
+
+	available, err = utils.IsDNSRecordAvailable(k.Ctx, k.K8sclient, name, capp.Namespace)
 	if err != nil {
 		return err
 	}
@@ -207,16 +215,11 @@ func (k KnativeDomainMappingManager) handlePreviousDomainMappings(capp cappv1alp
 func (k KnativeDomainMappingManager) getPreviousDomainMappings(capp cappv1alpha1.Capp) (knativev1beta1.DomainMappingList, error) {
 	knativeDomainMappings := knativev1beta1.DomainMappingList{}
 
-	requirement, err := labels.NewRequirement(CappResourceKey, selection.Equals, []string{capp.Name})
-	if err != nil {
-		return knativeDomainMappings, fmt.Errorf("unable to create label requirement for Capp: %w", err)
+	set := labels.Set{
+		CappResourceKey: capp.Name,
 	}
 
-	labelSelector := labels.NewSelector().Add(*requirement)
-	listOptions := client.ListOptions{
-		LabelSelector: labelSelector,
-	}
-
+	listOptions := utils.GetListOptions(set)
 	if err := k.K8sclient.List(k.Ctx, &knativeDomainMappings, &listOptions); err != nil {
 		return knativeDomainMappings, fmt.Errorf("unable to list DomainMappings of Capp %q: %w", capp.Name, err)
 	}

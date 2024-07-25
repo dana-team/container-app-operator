@@ -20,7 +20,7 @@ The `container-app-operator` project can work as a standalone solution, but is m
 
 3. The `nfspvc-operator controller` reconciles the `NFSPVC` CRs in the cluster and creates `PVC` and `PVs` with an external NFS storage configuration (bring your own NFS).
 
-4. The `provider-dns` is a `Crossplane Provider` which reconciles the `ARecordSet` CRs in the cluster and creates DNS A Records in the pre-configured DNS provider (bring your own DNS provider).
+4. The `provider-dns` is a `Crossplane Provider` which reconciles the DNS Record CRs in the cluster and creates DNS Records in the pre-configured DNS provider (bring your own DNS provider).
 
 5. The `certificate-operator` reconciles `Certificate` CRs in the cluster and creates certificates using the Cert API.
 
@@ -31,7 +31,7 @@ The `container-app-operator` project can work as a standalone solution, but is m
 
 - [x] Support for autoscaler (`HPA` or `KPA`) according to the chosen `scaleMetric` (`concurrency`, `rps`, `cpu`, `memory`) with default settings.
 - [x] Support for HTTP/HTTPS `DomainMapping` for accessing applications via `Ingress`/`Route`.
-- [x] Support for `DNS A Records` lifecycle management based on the `hostname` API field.
+- [x] Support for `DNS Records` lifecycle management based on the `hostname` API field.
 - [x] Support for `Certificate` lifecycle management based on the `hostname` API field.
 - [x] Support for all `Knative Serving` configurations.
 - [x] Support for exporting logs to an `Elasticsearch` index.
@@ -53,7 +53,7 @@ The `container-app-operator` project can work as a standalone solution, but is m
 
 5. `certificate-operator` installed on the cluster (you can [use the `install.yaml`](https://github.com/dana-team/certificate-operator/releases))
 
-5. `logging-operator` installed on the cluster (you can [use the Helm Chart](https://kube-logging.dev/docs/install/#deploy-logging-operator-with-helm)).
+6. `logging-operator` installed on the cluster (you can [use the Helm Chart](https://kube-logging.dev/docs/install/#deploy-logging-operator-with-helm)).
 
 Everything can also be installed by running:
 
@@ -113,18 +113,19 @@ $ kubectl patch --namespace knative-serving configmap/config-features --type mer
 
 ### Using a Custom Hostname
 
-`Capp` enables using a custom hostname for the application. This in turn creates `DomainMapping` and `ARecordSet` objects and a `Certificate` object if `TLS` is desired. 
+`Capp` enables using a custom hostname for the application. This in turn creates `DomainMapping`, a DNS Record object and a `Certificate` object if `TLS` is desired. 
 
-To correctly create the resources, it is needed to provider the operator with the `DNS Zone` where the application is exposed. This is done using a `ConfigMap` called `dns-zone` which needs to be created in the operator namespace. Note the trailing `.` which must be added to the zone name:
+To correctly create the resources, it is needed to provider the operator with the `DNS Config` where the application is exposed. This is done using a `ConfigMap` called `dns-config` which needs to be created in the operator namespace. Note the trailing `.` which must be added to the zone name:
 
 ```yaml
 kind: ConfigMap
 apiVersion: v1
 metadata:
-  name: dns-zone
+  name: dns-config
   namespace: capp-operator-system
 data:
   zone: "capp-zone.com."
+  cname: "ingress.capp-zone.com."
 ```
 
 ## Example Capp

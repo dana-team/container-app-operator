@@ -2,7 +2,7 @@ package mocks
 
 import (
 	certv1alpha1 "github.com/dana-team/certificate-operator/api/v1alpha1"
-	dnsv1alpha1 "github.com/dana-team/provider-dns/apis/recordset/v1alpha1"
+	dnsrecordv1alpha1 "github.com/dana-team/provider-dns/apis/record/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
 )
@@ -27,9 +27,9 @@ func CreateCertificateObject(name string) *certv1alpha1.Certificate {
 	}
 }
 
-// CreateARecordSetObject returns an empty ARecordSet object.
-func CreateARecordSetObject(name string) *dnsv1alpha1.ARecordSet {
-	return &dnsv1alpha1.ARecordSet{
+// CreateCNAMERecordObject returns an empty ARecordSet object.
+func CreateCNAMERecordObject(name string) *dnsrecordv1alpha1.CNAMERecord {
+	return &dnsrecordv1alpha1.CNAMERecord{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
