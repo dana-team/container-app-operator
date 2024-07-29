@@ -19,7 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-func TestE2e(t *testing.T) {
+func TestE2E(t *testing.T) {
 	RegisterFailHandler(Fail)
 
 	SetDefaultEventuallyTimeout(testconsts.DefaultEventually)

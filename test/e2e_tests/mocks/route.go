@@ -27,8 +27,8 @@ func CreateCertificateObject(name string) *certv1alpha1.Certificate {
 	}
 }
 
-// CreateCNAMERecordObject returns an empty ARecordSet object.
-func CreateCNAMERecordObject(name string) *dnsrecordv1alpha1.CNAMERecord {
+// CreateDNSRecordObject returns an empty ARecordSet object.
+func CreateDNSRecordObject(name string) *dnsrecordv1alpha1.CNAMERecord {
 	return &dnsrecordv1alpha1.CNAMERecord{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,

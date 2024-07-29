@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
+
 	dnsrecordv1alpha1 "github.com/dana-team/provider-dns/apis/record/v1alpha1"
 
 	certv1alpha1 "github.com/dana-team/certificate-operator/api/v1alpha1"
@@ -116,7 +118,7 @@ func (r *CappReconciler) findCappFromHostname(ctx context.Context, object client
 
 	request := reconcile.Request{NamespacedName: types.NamespacedName{
 		Namespace: object.GetNamespace(),
-		Name:      labels[rmanagers.CappResourceKey]}}
+		Name:      labels[utils.CappResourceKey]}}
 
 	return []reconcile.Request{request}
 }

@@ -1,10 +1,9 @@
 package e2e_tests
 
 import (
-	mock "github.com/dana-team/container-app-operator/test/e2e_tests/mocks"
+	"github.com/dana-team/container-app-operator/test/e2e_tests/mocks"
 	"github.com/dana-team/container-app-operator/test/e2e_tests/testconsts"
 	utilst "github.com/dana-team/container-app-operator/test/e2e_tests/utils"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -15,15 +14,20 @@ var _ = Describe("Validate Certificate functionality", func() {
 		createdCapp, routeHostname := utilst.CreateHTTPSCapp(k8sClient)
 
 		By("Checking if the Certificate was created successfully")
-		certificateName := utilst.GenerateResourceName(routeHostname, mock.ZoneValue)
-		certificateObject := mock.CreateCertificateObject(certificateName)
+		certificateName := utilst.GenerateResourceName(routeHostname, mocks.ZoneValue)
+		certificateObject := mocks.CreateCertificateObject(certificateName)
 		Eventually(func() bool {
 			return utilst.DoesResourceExist(k8sClient, certificateObject)
 		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "Should find a resource.")
 
+		By("Checking the Certificate has the needed labels")
+		certificateObject = utilst.GetCertificate(k8sClient, certificateName, mocks.NSName)
+		Expect(certificateObject.Labels[testconsts.CappResourceKey]).Should(Equal(createdCapp.Name))
+		Expect(certificateObject.Labels[testconsts.ManagedByLabelKey]).Should(Equal(testconsts.CappKey))
+
 		By("Updating the Capp Route hostname and checking the status")
 		toBeUpdatedCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-		updatedRouteHostname := utilst.GenerateResourceName(utilst.GenerateRouteHostname(), mock.ZoneValue)
+		updatedRouteHostname := utilst.GenerateResourceName(utilst.GenerateRouteHostname(), mocks.ZoneValue)
 		toBeUpdatedCapp.Spec.RouteSpec.Hostname = updatedRouteHostname
 		utilst.UpdateCapp(k8sClient, toBeUpdatedCapp)
 
@@ -36,7 +40,7 @@ var _ = Describe("Validate Certificate functionality", func() {
 		}, testconsts.Timeout, testconsts.Interval).Should(Equal(updatedRouteHostname), "Should update Route Status of Capp")
 
 		By("checking if the Certificate object was updated after changing the Capp Route Hostname")
-		updatedCertificateObject := mock.CreateCertificateObject(updatedRouteHostname)
+		updatedCertificateObject := mocks.CreateCertificateObject(updatedRouteHostname)
 		Eventually(func() bool {
 			return utilst.DoesResourceExist(k8sClient, updatedCertificateObject)
 		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "Should find a resource.")
@@ -58,8 +62,8 @@ var _ = Describe("Validate Certificate functionality", func() {
 		_, routeHostname := utilst.CreateCappWithHTTPHostname(k8sClient)
 
 		By("Checking if the Certificate was not created")
-		certificateName := utilst.GenerateResourceName(routeHostname, mock.ZoneValue)
-		certificateObject := mock.CreateCertificateObject(certificateName)
+		certificateName := utilst.GenerateResourceName(routeHostname, mocks.ZoneValue)
+		certificateObject := mocks.CreateCertificateObject(certificateName)
 		Consistently(func() bool {
 			return utilst.DoesResourceExist(k8sClient, certificateObject)
 		}, testconsts.DefaultConsistently, testconsts.Interval).Should(BeFalse(), "Should not find a resource.")
@@ -70,8 +74,8 @@ var _ = Describe("Validate Certificate functionality", func() {
 		createdCapp, routeHostname := utilst.CreateHTTPSCapp(k8sClient)
 
 		By("Checking if the Certificate was created successfully")
-		certificateName := utilst.GenerateResourceName(routeHostname, mock.ZoneValue)
-		certificateObject := mock.CreateCertificateObject(certificateName)
+		certificateName := utilst.GenerateResourceName(routeHostname, mocks.ZoneValue)
+		certificateObject := mocks.CreateCertificateObject(certificateName)
 		Eventually(func() bool {
 			return utilst.DoesResourceExist(k8sClient, certificateObject)
 		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "Should find a resource.")
@@ -92,8 +96,8 @@ var _ = Describe("Validate Certificate functionality", func() {
 		createdCapp, routeHostname := utilst.CreateHTTPSCapp(k8sClient)
 
 		By("Checking if the Certificate was created successfully")
-		certificateName := utilst.GenerateResourceName(routeHostname, mock.ZoneValue)
-		certificateObject := mock.CreateCertificateObject(certificateName)
+		certificateName := utilst.GenerateResourceName(routeHostname, mocks.ZoneValue)
+		certificateObject := mocks.CreateCertificateObject(certificateName)
 		Eventually(func() bool {
 			return utilst.DoesResourceExist(k8sClient, certificateObject)
 		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "Should find a resource.")

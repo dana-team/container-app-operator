@@ -4,7 +4,7 @@ import (
 	"context"
 
 	_ "github.com/dana-team/container-app-operator/api/v1alpha1"
-	mock "github.com/dana-team/container-app-operator/test/e2e_tests/mocks"
+	"github.com/dana-team/container-app-operator/test/e2e_tests/mocks"
 	"github.com/dana-team/container-app-operator/test/e2e_tests/testconsts"
 	utilst "github.com/dana-team/container-app-operator/test/e2e_tests/utils"
 	. "github.com/onsi/ginkgo/v2"
@@ -13,7 +13,7 @@ import (
 
 var _ = Describe("Validate capp creation", func() {
 	It("Should validate capp spec", func() {
-		baseCapp := mock.CreateBaseCapp()
+		baseCapp := mocks.CreateBaseCapp()
 		By("Creating Capp with no scale metric")
 		desiredCapp := utilst.CreateCapp(k8sClient, baseCapp)
 		Expect(desiredCapp.Spec.ScaleMetric).ShouldNot(Equal(nil))
@@ -24,7 +24,7 @@ var _ = Describe("Validate capp creation", func() {
 	})
 
 	It("Should succeed all adapter functions", func() {
-		baseCapp := mock.CreateBaseCapp()
+		baseCapp := mocks.CreateBaseCapp()
 		desiredCapp := utilst.CreateCapp(k8sClient, baseCapp)
 
 		By("Checks unique creation of Capp")
@@ -33,12 +33,12 @@ var _ = Describe("Validate capp creation", func() {
 
 		By("Checks if Capp Updated successfully")
 		desiredCapp = assertionCapp.DeepCopy()
-		desiredCapp.Spec.ScaleMetric = mock.RPSScaleMetric
+		desiredCapp.Spec.ScaleMetric = mocks.RPSScaleMetric
 		utilst.UpdateCapp(k8sClient, desiredCapp)
 		Eventually(func() string {
 			assertionCapp = utilst.GetCapp(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
 			return assertionCapp.Spec.ScaleMetric
-		}, testconsts.Timeout, testconsts.Interval).Should(Equal(mock.RPSScaleMetric), "Should fetch capp.")
+		}, testconsts.Timeout, testconsts.Interval).Should(Equal(mocks.RPSScaleMetric), "Should fetch capp.")
 
 		By("Checks if deleted successfully")
 		utilst.DeleteCapp(k8sClient, assertionCapp)
@@ -49,7 +49,7 @@ var _ = Describe("Validate capp creation", func() {
 
 	It("Validate state functionality", func() {
 		By("Creating a capp instance")
-		testCapp := mock.CreateBaseCapp()
+		testCapp := mocks.CreateBaseCapp()
 		assertionCapp := createAndGetCapp(testCapp)
 
 		By("Checking if the capp state is enabled")
@@ -59,7 +59,7 @@ var _ = Describe("Validate capp creation", func() {
 		}, testconsts.Timeout, testconsts.Interval).Should(Equal(testconsts.EnabledState))
 
 		By("Checking if the ksvc was created successfully")
-		ksvcObject := mock.CreateKnativeServiceObject(assertionCapp.Name)
+		ksvcObject := mocks.CreateKnativeServiceObject(assertionCapp.Name)
 		Eventually(func() bool {
 			return utilst.DoesResourceExist(k8sClient, ksvcObject)
 		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "Should find a resource.")
@@ -83,7 +83,7 @@ var _ = Describe("Validate capp creation", func() {
 			return utilst.DoesResourceExist(k8sClient, ksvcObject)
 		}, testconsts.Timeout, testconsts.Interval).ShouldNot(BeTrue(), "Should not find a resource.")
 		Eventually(func() bool {
-			revision := mock.CreateRevisionObject(revisionName)
+			revision := mocks.CreateRevisionObject(revisionName)
 			return utilst.DoesResourceExist(k8sClient, revision)
 		}, testconsts.Timeout, testconsts.Interval).ShouldNot(BeTrue(), "Should not find a resource.")
 

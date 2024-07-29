@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
+
 	"github.com/cisco-open/operator-tools/pkg/secret"
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/resourceclient"
@@ -85,6 +87,10 @@ func (o SyslogNGOutputManager) prepareResource(capp cappv1alpha1.Capp) loggingv1
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      syslogNGOutputName,
 				Namespace: capp.GetNamespace(),
+				Labels: map[string]string{
+					utils.CappResourceKey:   capp.Name,
+					utils.ManagedByLabelKey: utils.CappKey,
+				},
 			},
 			Spec: syslogNGOutputSpec,
 		}

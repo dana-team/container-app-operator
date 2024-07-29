@@ -26,7 +26,6 @@ const (
 	DNSRecord                        = "DNSRecord"
 	eventCappDNSRecordCreationFailed = "DNSRecordCreationFailed"
 	eventCappDNSRecordCreated        = "DNSRecordCreated"
-	cappNamespaceKey                 = "rcs.dana.io/parent-capp-ns"
 	xpProviderDNSConfigRefName       = "dns-default"
 )
 
@@ -62,8 +61,9 @@ func (r DNSRecordManager) prepareResource(capp cappv1alpha1.Capp) (dnsrecordv1al
 		ObjectMeta: metav1.ObjectMeta{
 			Name: resourceName,
 			Labels: map[string]string{
-				CappResourceKey:  capp.Name,
-				cappNamespaceKey: capp.Namespace,
+				utils.CappResourceKey:   capp.Name,
+				utils.CappNamespaceKey:  capp.Namespace,
+				utils.ManagedByLabelKey: utils.CappKey,
 			},
 		},
 		Spec: dnsrecordv1alpha1.CNAMERecordSpec{
@@ -192,8 +192,8 @@ func (r DNSRecordManager) getPreviousDNSRecords(capp cappv1alpha1.Capp) (dnsreco
 	dnsRecords := dnsrecordv1alpha1.CNAMERecordList{}
 
 	set := labels.Set{
-		CappResourceKey:  capp.Name,
-		cappNamespaceKey: capp.Namespace,
+		utils.CappResourceKey:  capp.Name,
+		utils.CappNamespaceKey: capp.Namespace,
 	}
 	listOptions := utils.GetListOptions(set)
 

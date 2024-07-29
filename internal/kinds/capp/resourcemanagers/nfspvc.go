@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
+
 	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/resourceclient"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
@@ -41,7 +43,8 @@ func (n NFSPVCManager) prepareResource(capp cappv1alpha1.Capp) []nfspvcv1alpha1.
 				Name:      nfsVolume.Name,
 				Namespace: capp.Namespace,
 				Labels: map[string]string{
-					CappResourceKey: capp.Name,
+					utils.CappResourceKey:   capp.Name,
+					utils.ManagedByLabelKey: utils.CappKey,
 				},
 			},
 			Spec: nfspvcv1alpha1.NfsPvcSpec{

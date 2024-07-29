@@ -42,8 +42,8 @@ func GetDomainMapping(k8sClient client.Client, name string, namespace string) *k
 	return domainMapping
 }
 
-// GetCNAMERecord fetches and returns an existing instance of an CNAMERecord.
-func GetCNAMERecord(k8sClient client.Client, name string) *dnsrecordv1alpha1.CNAMERecord {
+// GetDNSRecord fetches and returns an existing instance of an CNAMERecord.
+func GetDNSRecord(k8sClient client.Client, name string) *dnsrecordv1alpha1.CNAMERecord {
 	cnameRecord := &dnsrecordv1alpha1.CNAMERecord{}
 	GetClusterResource(k8sClient, cnameRecord, name)
 	return cnameRecord

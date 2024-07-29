@@ -2,58 +2,68 @@ package e2e_tests
 
 import (
 	"context"
-	"time"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	"github.com/dana-team/container-app-operator/test/e2e_tests/mocks"
+	"github.com/dana-team/container-app-operator/test/e2e_tests/testconsts"
+	utilst "github.com/dana-team/container-app-operator/test/e2e_tests/utils"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-
-	mock "github.com/dana-team/container-app-operator/test/e2e_tests/mocks"
-	utilst "github.com/dana-team/container-app-operator/test/e2e_tests/utils"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
 const (
-	NfsPvcName          = "test-volume"
-	TimeoutNfs          = 180 * time.Second
-	NfsCreationInterval = 5 * time.Second
+	nfspvcName = "test-volume"
 )
 
 var _ = Describe("Validate NFSPVC functionality", func() {
 	It("Should create, update and delete NFSPVC when creating, updating and deleting a Capp instance", func() {
 		By("Creating a capp with a NFSPVC")
-		NFSPVCCapp := mock.CreateBaseCapp()
-		NFSPVCCapp.Spec.VolumesSpec.NFSVolumes = []cappv1alpha1.NFSVolume{
+		testCapp := mocks.CreateBaseCapp()
+		testCapp.Spec.VolumesSpec.NFSVolumes = []cappv1alpha1.NFSVolume{
 			{
-				Name:     NfsPvcName,
+				Name:     nfspvcName,
 				Server:   "nfs-server",
 				Path:     "/path",
 				Capacity: corev1.ResourceList{corev1.ResourceStorage: resource.MustParse("1Gi")},
 			},
 		}
-		NFSPVCCapp.Spec.ConfigurationSpec.Template.Spec.Containers[0].VolumeMounts = []corev1.VolumeMount{
+		testCapp.Spec.ConfigurationSpec.Template.Spec.Containers[0].VolumeMounts = []corev1.VolumeMount{
 			{
-				Name:      NfsPvcName,
+				Name:      nfspvcName,
 				MountPath: "/mnt",
 			},
 		}
-		Expect(k8sClient.Create(context.Background(), NFSPVCCapp)).To(Succeed())
+
+		cappName := utilst.GenerateCappName()
+		testCapp.Name = cappName
+		Expect(k8sClient.Create(context.Background(), testCapp)).To(Succeed())
+
 		Eventually(func() string {
-			return utilst.GetCapp(k8sClient, NFSPVCCapp.Name, NFSPVCCapp.Namespace).Spec.VolumesSpec.NFSVolumes[0].Name
-		}, TimeoutNfs, NfsCreationInterval).Should(Equal(NfsPvcName), "Should fetch capp with volume")
+			capp := utilst.GetCapp(k8sClient, testCapp.Name, testCapp.Namespace)
+			if len(capp.Spec.VolumesSpec.NFSVolumes) > 0 {
+				return capp.Spec.VolumesSpec.NFSVolumes[0].Name
+			}
+			return ""
+		}, testconsts.Timeout, testconsts.Interval).Should(Equal(nfspvcName), "Should fetch capp with volume")
 
 		By("Checking if the NFSPVC was created successfully")
-		NFSPVCObject := mock.CreateNFSPVCObject(NfsPvcName)
+		nfspvcObject := mocks.CreateNFSPVCObject(nfspvcName)
 		Eventually(func() bool {
-			return utilst.DoesResourceExist(k8sClient, NFSPVCObject)
-		}, TimeoutNfs, NfsCreationInterval).Should(BeTrue(), "Should find a resource.")
+			return utilst.DoesResourceExist(k8sClient, nfspvcObject)
+		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "Should find a resource.")
+
+		By("Checking the NFSPVC has the needed labels")
+		nfspvcObject = utilst.GetNFSPVC(k8sClient, nfspvcName, mocks.NSName)
+		Expect(nfspvcObject.Labels[testconsts.CappResourceKey]).Should(Equal(testCapp.Name))
+		Expect(nfspvcObject.Labels[testconsts.ManagedByLabelKey]).Should(Equal(testconsts.CappKey))
 
 		By("Deleting the Capp instance")
-		utilst.DeleteCapp(k8sClient, NFSPVCCapp)
+		utilst.DeleteCapp(k8sClient, testCapp)
 		Eventually(func() bool {
-			return utilst.DoesResourceExist(k8sClient, NFSPVCObject)
-		}, TimeoutNfs, NfsCreationInterval).Should(BeFalse(), "Should find a resource.")
+			return utilst.DoesResourceExist(k8sClient, nfspvcObject)
+		}, testconsts.Timeout, testconsts.Interval).Should(BeFalse(), "Should find a resource.")
 	})
 })

@@ -1,6 +1,10 @@
 package testconsts
 
-import "time"
+import (
+	"time"
+
+	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+)
 
 const (
 	Timeout             = 300 * time.Second
@@ -24,5 +28,16 @@ const (
 	KnativeAutoscaleTargetKey = "autoscaling.knative.dev/target"
 	TestIndex                 = "test"
 	TestLabelKey              = "e2e-test"
-	CappResourceKey           = "rcs.dana.io/parent-capp"
+)
+
+var (
+	CappAPIGroup      = cappv1alpha1.GroupVersion.Group
+	CappNamespaceKey  = CappAPIGroup + "/parent-capp-ns"
+	CappResourceKey   = CappAPIGroup + "/parent-capp"
+	ManagedByLabelKey = CappAPIGroup + "/managed-by"
+)
+
+const (
+	CappNS  = "capp-operator-system"
+	CappKey = "capp"
 )

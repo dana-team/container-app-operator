@@ -14,7 +14,17 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-const CappNS = "capp-operator-system"
+var (
+	CappAPIGroup      = cappv1alpha1.GroupVersion.Group
+	CappNamespaceKey  = CappAPIGroup + "/parent-capp-ns"
+	CappResourceKey   = CappAPIGroup + "/parent-capp"
+	ManagedByLabelKey = CappAPIGroup + "/managed-by"
+)
+
+const (
+	CappNS  = "capp-operator-system"
+	CappKey = "capp"
+)
 
 // IsOnOpenshift returns true if the cluster has the openshift config group
 func IsOnOpenshift(config *rest.Config) (bool, error) {

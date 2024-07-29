@@ -3,11 +3,13 @@ package e2e_tests
 import (
 	"fmt"
 
+	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
+
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 
 	"github.com/dana-team/container-app-operator/test/e2e_tests/testconsts"
 
-	mock "github.com/dana-team/container-app-operator/test/e2e_tests/mocks"
+	"github.com/dana-team/container-app-operator/test/e2e_tests/mocks"
 	utilst "github.com/dana-team/container-app-operator/test/e2e_tests/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -16,7 +18,7 @@ import (
 // checkOutputIndexValue checks if the SyslogLogOutput index value matches the desired value based on the logger type.
 func checkOutputIndexValue(logType string, syslogNGOutputName string, syslogNGOutputNamespace string, IndexDesiredValue string) {
 	switch logType {
-	case mock.ElasticType:
+	case mocks.ElasticType:
 		Eventually(func() string {
 			syslogNGOutput := utilst.GetSyslogNGOutput(k8sClient, syslogNGOutputName, syslogNGOutputNamespace)
 			return syslogNGOutput.Spec.Elasticsearch.Index
@@ -32,29 +34,39 @@ func testCappWithLogger(logType string) {
 		createdCapp := utilst.CreateCappWithLogger(logType, k8sClient)
 
 		syslogNGOutputName := createdCapp.Name
-		syslogNGOutputObject := mock.CreateSyslogNGOutputObject(syslogNGOutputName)
+		syslogNGOutputObject := mocks.CreateSyslogNGOutputObject(syslogNGOutputName)
 
 		By(fmt.Sprintf("Creating a secret containing %s credentials", logType))
 		utilst.CreateCredentialsSecret(logType, k8sClient)
 
 		By("Checking if the SyslogNGOutput is active and has no problems")
+		syslogNGOutput := &loggingv1beta1.SyslogNGOutput{}
 		Eventually(func() bool {
-			syslogNGOutput := utilst.GetSyslogNGOutput(k8sClient, syslogNGOutputName, createdCapp.Namespace)
+			syslogNGOutput = utilst.GetSyslogNGOutput(k8sClient, syslogNGOutputName, createdCapp.Namespace)
 			return *syslogNGOutput.Status.Active
 		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue())
 
+		By("Checking the SyslogNGOutput has the needed labels")
+		Expect(syslogNGOutput.Labels[testconsts.CappResourceKey]).Should(Equal(createdCapp.Name))
+		Expect(syslogNGOutput.Labels[testconsts.ManagedByLabelKey]).Should(Equal(testconsts.CappKey))
+
 		Eventually(func() int {
-			syslogNGOutput := utilst.GetSyslogNGOutput(k8sClient, syslogNGOutputName, createdCapp.Namespace)
+			syslogNGOutput = utilst.GetSyslogNGOutput(k8sClient, syslogNGOutputName, createdCapp.Namespace)
 			return syslogNGOutput.Status.ProblemsCount
 		}, testconsts.Timeout, testconsts.Interval).Should(Equal(0))
 
 		By("Checking if the SyslogNGFlow was created successfully and active")
 		syslogNGFlowName := createdCapp.Name
-		syslogNGFlowObject := mock.CreateSyslogNGFlowObject(syslogNGFlowName)
+		syslogNGFlowObject := mocks.CreateSyslogNGFlowObject(syslogNGFlowName)
 
 		Eventually(func() bool {
 			return utilst.DoesResourceExist(k8sClient, syslogNGFlowObject)
 		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "Should find a resource.")
+
+		By("Checking the SyslogNGFlow has the needed labels")
+		syslogNGFlowObject = utilst.GetSyslogNGFlow(k8sClient, syslogNGFlowName, mocks.NSName)
+		Expect(syslogNGFlowObject.Labels[testconsts.CappResourceKey]).Should(Equal(createdCapp.Name))
+		Expect(syslogNGFlowObject.Labels[testconsts.ManagedByLabelKey]).Should(Equal(testconsts.CappKey))
 
 		Eventually(func() bool {
 			syslogNGFlow := utilst.GetSyslogNGFlow(k8sClient, syslogNGFlowName, createdCapp.Namespace)
@@ -92,10 +104,10 @@ func testCappWithLogger(logType string) {
 
 		By("Checking if the SyslogNGFlow and SyslogNGOutput were created successfully")
 		syslogNGFlowName := createdCapp.Name
-		syslogNGFlowObject := mock.CreateSyslogNGFlowObject(syslogNGFlowName)
+		syslogNGFlowObject := mocks.CreateSyslogNGFlowObject(syslogNGFlowName)
 
 		syslogNGOutputName := createdCapp.Name
-		syslogNGOutputObject := mock.CreateSyslogNGOutputObject(syslogNGOutputName)
+		syslogNGOutputObject := mocks.CreateSyslogNGOutputObject(syslogNGOutputName)
 
 		Eventually(func() bool {
 			return utilst.DoesResourceExist(k8sClient, syslogNGFlowObject)
@@ -121,5 +133,5 @@ func testCappWithLogger(logType string) {
 }
 
 var _ = Describe("Validate Logger functionality", func() {
-	testCappWithLogger(mock.ElasticType)
+	testCappWithLogger(mocks.ElasticType)
 })

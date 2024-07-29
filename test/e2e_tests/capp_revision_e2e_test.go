@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
-	mock "github.com/dana-team/container-app-operator/test/e2e_tests/mocks"
+	"github.com/dana-team/container-app-operator/test/e2e_tests/mocks"
 	"github.com/dana-team/container-app-operator/test/e2e_tests/testconsts"
 	utilst "github.com/dana-team/container-app-operator/test/e2e_tests/utils"
 	. "github.com/onsi/ginkgo/v2"
@@ -24,7 +24,7 @@ const (
 
 var _ = Describe("Validate CappRevision creation", func() {
 	It("Should validate CappRevison lifecycle based on Capp lifecycle", func() {
-		baseCapp := mock.CreateBaseCapp()
+		baseCapp := mocks.CreateBaseCapp()
 		By("Creating regular Capp")
 		desiredCapp := utilst.CreateCapp(k8sClient, baseCapp)
 
@@ -53,7 +53,7 @@ var _ = Describe("Validate CappRevision creation", func() {
 	})
 
 	It(fmt.Sprintf("Should limit CappRevisions to %s per Capp", strconv.Itoa(revisionsToKeep)), func() {
-		baseCapp := mock.CreateBaseCapp()
+		baseCapp := mocks.CreateBaseCapp()
 
 		By("Creating Capp")
 		desiredCapp := utilst.CreateCapp(k8sClient, baseCapp)
@@ -81,7 +81,7 @@ var _ = Describe("Validate CappRevision creation", func() {
 	})
 
 	It(fmt.Sprintf("Should copy annotations containing %s to CappRevision", utilst.Domain), func() {
-		baseCapp := mock.CreateBaseCapp()
+		baseCapp := mocks.CreateBaseCapp()
 		baseCapp.Annotations = map[string]string{testAnnotationKey: testAnnotationValue}
 		By("Creating Capp")
 		desiredCapp := utilst.CreateCapp(k8sClient, baseCapp)
