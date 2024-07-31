@@ -285,10 +285,11 @@ var _ = Describe("Validate knative functionality", func() {
 		assertionCapp := createAndGetCapp(testCapp)
 
 		By("Checking if the ksvc's annotation is equal to the configMap")
-		Eventually(func() string {
+		Eventually(func() bool {
 			ksvc := utilst.GetKSVC(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
-			return ksvc.Spec.ConfigurationSpec.Template.Annotations[testconsts.KnativeAutoscaleTargetKey]
-		}, testconsts.Timeout, testconsts.Interval).Should(Equal(targetAutoScale["concurrency"]))
+			return ksvc.Spec.ConfigurationSpec.Template.Annotations[testconsts.KnativeAutoscaleTargetKey] == targetAutoScale[testconsts.ConcurrencyScaleKey] &&
+				ksvc.Spec.ConfigurationSpec.Template.Annotations[testconsts.KnativeActivationScaleKey] == targetAutoScale[testconsts.DefaultCmActivationScaleKey]
+		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue())
 	})
 
 	It("Should propagate Capp labels to the underlying KSVC", func() {

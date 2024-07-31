@@ -7,17 +7,24 @@ import (
 )
 
 const (
-	KnativeMetricKey          = "autoscaling.knative.dev/metric"
-	KnativeAutoscaleClassKey  = "autoscaling.knative.dev/class"
-	KnativeAutoscaleTargetKey = "autoscaling.knative.dev/target"
-	AutoScalerSubString       = "autoscaling"
+	KnativeMetricKey            = "autoscaling.knative.dev/metric"
+	KnativeAutoscaleClassKey    = "autoscaling.knative.dev/class"
+	KnativeAutoscaleTargetKey   = "autoscaling.knative.dev/target"
+	AutoScalerSubString         = "autoscaling"
+	knativeActivationScaleKey   = "autoscaling.knative.dev/activation-scale"
+	defaultCmActivationScaleKey = "activationScale"
+	rpsScaleKey                 = "rps"
+	cpuScaleKey                 = "cpu"
+	memoryScaleKey              = "memory"
+	concurrencyScaleKey         = "concurrency"
 )
 
 var TargetDefaultValues = map[string]string{
-	"rps":         "200",
-	"cpu":         "80",
-	"memory":      "70",
-	"concurrency": "10",
+	rpsScaleKey:                 "200",
+	cpuScaleKey:                 "80",
+	memoryScaleKey:              "70",
+	concurrencyScaleKey:         "10",
+	defaultCmActivationScaleKey: "3",
 }
 
 var KPAMetrics = []string{"rps", "concurrency"}
@@ -38,6 +45,7 @@ func SetAutoScaler(capp cappv1alpha1.Capp, defaults map[string]string) map[strin
 	autoScaleAnnotations[KnativeAutoscaleClassKey] = getAutoScaleClassByMetric(scaleMetric)
 	autoScaleAnnotations[KnativeMetricKey] = scaleMetric
 	autoScaleAnnotations[KnativeAutoscaleTargetKey] = autoScaleDefaults[scaleMetric]
+	autoScaleAnnotations[knativeActivationScaleKey] = autoScaleDefaults[defaultCmActivationScaleKey]
 	autoScaleAnnotations = utils.MergeMaps(autoScaleAnnotations, givenAutoScaleAnnotation)
 
 	return autoScaleAnnotations
