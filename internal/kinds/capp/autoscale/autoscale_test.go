@@ -19,18 +19,20 @@ func TestSetAutoScaler(t *testing.T) {
 		},
 	}
 	exampleCappCpuExpected := map[string]string{
-		"autoscaling.knative.dev/class":  "hpa.autoscaling.knative.dev",
-		"autoscaling.knative.dev/metric": "cpu",
-		"autoscaling.knative.dev/target": "80",
+		"autoscaling.knative.dev/class":            "hpa.autoscaling.knative.dev",
+		"autoscaling.knative.dev/metric":           "cpu",
+		"autoscaling.knative.dev/target":           "80",
+		"autoscaling.knative.dev/activation-scale": "3",
 	}
 	annotationsCpu := SetAutoScaler(exampleCapp, map[string]string{})
 	assert.Equal(t, exampleCappCpuExpected, annotationsCpu)
 
 	exampleCapp.Spec.ScaleMetric = "rps"
 	exampleCappRpsExpected := map[string]string{
-		"autoscaling.knative.dev/class":  "kpa.autoscaling.knative.dev",
-		"autoscaling.knative.dev/metric": "rps",
-		"autoscaling.knative.dev/target": "200",
+		"autoscaling.knative.dev/class":            "kpa.autoscaling.knative.dev",
+		"autoscaling.knative.dev/metric":           "rps",
+		"autoscaling.knative.dev/target":           "200",
+		"autoscaling.knative.dev/activation-scale": "3",
 	}
 	annotationsRps := SetAutoScaler(exampleCapp, map[string]string{})
 	assert.Equal(t, exampleCappRpsExpected, annotationsRps)

@@ -74,8 +74,9 @@ func initE2ETestAutoScaleConfigMap() {
 	cpu := "88"
 	memory := "7"
 	concurrency := "11"
+	activationScale := "4"
 
-	targetAutoScale = map[string]string{"rps": rps, "cpu": cpu, "memory": memory, "concurrency": concurrency}
+	targetAutoScale = map[string]string{testconsts.RpsScaleKey: rps, testconsts.CpuScaleKey: cpu, testconsts.MemoryScaleKey: memory, testconsts.ConcurrencyScaleKey: concurrency, testconsts.DefaultCmActivationScaleKey: activationScale}
 }
 
 // createE2ETestAutoScaleConfigMap creates an Autoscale ConfigMap for the e2e tests.
