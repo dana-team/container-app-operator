@@ -1,0 +1,16 @@
+{{- if .Values.klusterlet.enabled }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "container-app-operator.fullname" . }}-klusterlet-work-sa-capp-target-binding
+  labels:
+    {{- include "container-app-operator.labels" . | nindent 4 }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Values.klusterlet.serviceAccountName }}
+    namespace: {{ .Values.klusterlet.namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "container-app-operator.fullname" . }}-klusterlet-work-sa-capp-target
+{{- end }}

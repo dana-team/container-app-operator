@@ -4,7 +4,7 @@ The `container-app-operator` is an operator that reconciles `Capp` CRs.
 
 `Capp` (or ContainerApp) provides a higher-level abstraction for deploying containerized Serverless workload, making it easier for end-users to deploy workloads on Kubernetes without being knowledgeable in Kubernetes concepts, while adhering to the standards required by the infrastructure and platform teams without any extra burden on the users.
 
-The operator uses open-source projects, such as [`knative-serving`](https://github.com/knative/serving), [`logging-operator`](https://github.com/kube-logging/logging-operator), [`nfspvc-operator`](https://github.com/dana-team/nfspvc-operator) and [`external-dns`](https://github.com/kubernetes-sigs/external-dns) to create an abstraction for containerized workloads.
+The operator uses open-source projects, such as [`knative-serving`](https://github.com/knative/serving), [`logging-operator`](https://github.com/kube-logging/logging-operator), [`nfspvc-operator`](https://github.com/dana-team/nfspvc-operator) and [`provider-dns`](https://github.com/dana-team/provider-dns) to create an abstraction for containerized workloads.
 
 ## Run Container Service
 
@@ -24,7 +24,7 @@ The `container-app-operator` project can work as a standalone solution, but is m
 
 5. The `certificate-operator` reconciles `Certificate` CRs in the cluster and creates certificates using the Cert API.
 
-6. The `logging-operator controller` reconciles the `Flow` and `Output` CRs in the cluster and collects logs from the pods' `stdout` and sends them to a pre-existing `Elasticsearch` or `Splunk` index (bring your own indexes).
+6. The `logging-operator controller` reconciles the `Flow` and `Output` CRs in the cluster and collects logs from the pods' `stdout` and sends them to a pre-existing `Elasticsearch` index (bring your own indexes).
 
 
 ## Feature Highlights
@@ -51,21 +51,68 @@ The `container-app-operator` project can work as a standalone solution, but is m
 
 4. `provider-dns` and `Crossplane` installed on the cluster (you can [follow the instructions](https://github.com/dana-team/provider-dns) for the provider and [for Crossplane](https://docs.crossplane.io/latest/software/install/)).
 
-5. `certificate-operator` installed on the cluster (you can [use the `install.yaml`](https://github.com/dana-team/certificate-operator/releases))
+5. `certificate-operator` installed on the cluster (you can [use the `install.yaml`](https://github.com/dana-team/certificate-operator/releases)).
 
 6. `logging-operator` installed on the cluster (you can [use the Helm Chart](https://kube-logging.dev/docs/install/#deploy-logging-operator-with-helm)).
 
 Everything can also be installed by running:
 
 ```bash
-$ make prereq
+$ make prereq 
 ```
 
+This uses, behind the scenes, a `Helmfile` which is available at the `charts/cappp-prereq-helmfile.yaml` file in this repository.
+
+#### Using the Helmfile
+
+The `Helmfile` defines all the Helm Charts which are installed as prerequisites for `Capp`. It uses a YAML file to define all the different Charts. To run the `Helmfile` directly, use:
+
+```bash
+$ helmfile apply -f charts/cappp-prereq-helmfile.yaml
+```
+
+`Helmfile`, similarly to Helm, allows setting values for the installed Charts either using a state values file (`--state-values-file`) or using individual key-value pairs (`--state-values-set`). For example, to change the Chart values of the `provider-dns`, which is defined in the Helmfile, you can use:
+
+```bash
+$ helmfile apply -f charts/cappp-prereq-helmfile.yaml --state-values-set providerDNSRealmName=<value>
+```
+
+#### Customizing the prereq
+
+You can pass different variables to the `Makefile` to control the underlying values in the dependent Charts.
+
+For example, to install `provider-dns` with certain Chart values, do:
+
+```bash
+$ make prereq PROVIDER_DNS_REALM=<value> PROVIDER_DNS_KDC=<value> PROVIDER_DNS_POLICY=<value> PROVIDER_DNS_NAMESERVER=<value> PROVIDER_DNS_USERNAME=<value> PROVIDER_DNS_PASSWORD=<value>
+```
+
+| Value Name              | Value Default                            | Explanation                                                                                                  |
+|-------------------------|------------------------------------------|--------------------------------------------------------------------------------------------------------------|
+| PROVIDER_DNS_REALM      | `DANA-DEV.COM`                           | Defines the name of the Kerberos Realm to use in the provider.                                               |
+| PROVIDER_DNS_KDC        | `dana-wdc-1.dana-dev.com`                | Defines the name of the Kerberos Key Distribution Center server.                                             |
+| PROVIDER_DNS_POLICY     | `ClusterFirst`                           | Defines the `dnsPolicy` of the `provider-dns` deployment. If used then it should be set to `None`.           |
+| PROVIDER_DNS_NAMESERVER | `8.8.8.8`     | The nameserver to use in the `dnsConfig` of the `provider-dns` deployment if `dnsPolicy` is set to `None`.   |
+| PROVIDER_DNS_USERNAME   | `dana`                                   | Defines the username to connect to the KDC with.                                                             |
+| PROVIDER_DNS_PASSWORD   | `passw0rd`                               | Defines the password to connect to the KDC with.                                                             |
+
 ### Deploying the controller
+
+#### Deploy with Helm
+
+Use `Helm` to deploy `Capp` with all the needed resources. Only deploy it after installing the [prereq](#prerequisites).
+
+```bash
+$ helm upgrade --install capp-operatoor --namespace capp-operator-system --create-namespace oci://ghcr.io/dana-team/helm-charts/container-app-operator --version <release>
+```
+
+#### Deploy with Makefile
 
 ```bash
 $ make deploy IMG=ghcr.io/dana-team/container-app-operator:<release>
 ```
+
+Alternatively, deploy it with Helm (the Chart is available at the `charts/container-app-operator` directory on this repository):
 
 #### Build your own image
 
@@ -113,7 +160,7 @@ $ kubectl patch --namespace knative-serving configmap/config-features --type mer
 
 ### Using a Custom Hostname
 
-`Capp` enables using a custom hostname for the application. This in turn creates `DomainMapping`, a DNS Record object and a `Certificate` object if `TLS` is desired. 
+`Capp` enables using a custom hostname for the application. This in turn creates `DomainMapping`, a DNS Record object and a `Certificate` object if `TLS` is desired.
 
 To correctly create the resources, it is needed to provider the operator with the `DNS Config` where the application is exposed. This is done using a `ConfigMap` called `dns-config` which needs to be created in the operator namespace. Note the trailing `.` which must be added to the zone name:
 

@@ -1,0 +1,41 @@
+{{- if .Values.klusterlet.enabled }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "container-app-operator.fullname" . }}-klusterlet-work-sa-capp-target
+  labels:
+    {{- include "container-app-operator.labels" . | nindent 4 }}
+rules:
+  - verbs:
+      - create
+      - update
+      - patch
+      - delete
+      - get
+      - list
+      - watch
+    apiGroups:
+      - rcs.dana.io
+    resources:
+      - capps
+  - verbs:
+      - update
+    apiGroups:
+      - rcs.dana.io
+    resources:
+      - capps/finalizers
+  - verbs:
+      - get
+    apiGroups:
+      - rcs.dana.io
+    resources:
+      - capps/status
+  - verbs:
+      - get
+      - list
+      - watch
+    apiGroups:
+      - serving.knative.dev
+    resources:
+      - services
+{{- end }}

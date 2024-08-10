@@ -38,7 +38,7 @@ Follow the Getting Started entry in the [`README.md`](README.md)
 
 ## Versioning and Branching
 
-`Capp` follows [Semantic Versioning](https://semver.org). 
+`Capp` follows [Semantic Versioning](https://semver.org).
 
 - an X (*major*) release indicates a set of backwards-compatible code. Changing X means there's a breaking change.
 
@@ -79,4 +79,3 @@ See more [information here](https://github.com/kubernetes/community/blob/master/
 ## Where the CI Tests are configured
 
 See the [action files](.github/workflows) to check its tests, and the scripts used on it.
-
