@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "container-app-operator.fullname" . }}-controller-manager
+  labels:
+    {{- include "container-app-operator.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      control-plane: controller-manager
+  template:
+    metadata:
+      labels:
+        control-plane: controller-manager
+        {{- include "container-app-operator.selectorLabels" . | nindent 8 }}
+      annotations:
+        kubectl.kubernetes.io/default-container: manager
+    spec:
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}
+      nodeSelector:
+        {{- toYaml .Values.nodeSelector | nindent 8 }}
+      tolerations:
+        {{- toYaml .Values.tolerations | nindent 8 }}
+      affinity:
+        {{- toYaml .Values.affinity | nindent 8 }}
+      containers:
+        - name: manager
+          image: {{ .Values.image.manager.repository }}:{{ .Values.image.manager.tag | default .Chart.AppVersion }}
+          imagePullPolicy: {{ .Values.image.manager.pullPolicy }}
+          command:
+          {{- range .Values.manager.command }}
+          - {{ . | quote }}
+          {{- end }}
+          args:
+          {{- range .Values.manager.args }}
+          - {{ . | quote }}
+          {{- end }}
+          securityContext:
+            {{- toYaml .Values.manager.securityContext | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: {{ .Values.manager.ports.health.containerPort }}
+            initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: {{ .Values.manager.ports.health.containerPort }}
+            initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+          resources:
+            limits:
+              cpu: {{ .Values.manager.resources.limits.cpu }}
+              memory: {{ .Values.manager.resources.limits.memory }}
+            requests:
+              cpu: {{ .Values.manager.resources.requests.cpu }}
+              memory: {{ .Values.manager.resources.requests.memory }}
+        - name: kube-rbac-proxy
+          image: {{ .Values.image.kubeRbacProxy.repository }}:{{ .Values.image.kubeRbacProxy.tag }}
+          imagePullPolicy: {{ .Values.image.kubeRbacProxy.pullPolicy }}
+          args:
+          {{- range .Values.kubeRbacProxy.args }}
+          - {{ . | quote }}
+          {{- end }}
+          securityContext:
+            {{- toYaml .Values.kubeRbacProxy.securityContext | nindent 12 }}
+          ports:
+            - name: {{ .Values.kubeRbacProxy.ports.https.name }}
+              containerPort: {{ .Values.kubeRbacProxy.ports.https.containerPort }}
+              protocol: {{ .Values.kubeRbacProxy.ports.https.protocol }}
+          resources:
+            limits:
+              cpu: {{ .Values.kubeRbacProxy.resources.limits.cpu }}
+              memory: {{ .Values.kubeRbacProxy.resources.limits.memory }}
+            requests:
+              cpu: {{ .Values.kubeRbacProxy.resources.requests.cpu }}
+              memory: {{ .Values.kubeRbacProxy.resources.requests.memory }}
+      serviceAccountName: {{ include "container-app-operator.fullname" . }}-controller-manager

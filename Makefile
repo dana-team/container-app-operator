@@ -145,79 +145,29 @@ deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in
 undeploy: kustomize ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
 	$(KUSTOMIZE) build config/default | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
 
-.PHONY: build/install.yaml
-build/install.yaml: manifests kustomize
-	mkdir -p $(dir $@) && \
-	rm -rf build/kustomize && \
-	mkdir -p build/kustomize && \
-	cd build/kustomize && \
-	$(KUSTOMIZE) create --resources ../../config/default && \
-	$(KUSTOMIZE) edit set image controller=${IMG} && \
-	cd ${CURDIR} && \
-	$(KUSTOMIZE) build build/kustomize > $@
-
 ##@ Capp prerequisites
-CERT_MANAGER_VERSION ?= v1.13.3
-NFSPVC_VERSION ?= v0.3.0
-CERTIFICATE_OPERATOR_VERSION ?= v0.1.0
-PROVIDER_DNS_VERSION ?= v0.1.0
-PROVIDER_DNS_IMAGE ?= ghcr.io/dana-team/provider-dns:$(PROVIDER_DNS_VERSION)
-
-CERT_MANAGER_URL ?= https://github.com/cert-manager/cert-manager/releases/download/$(CERT_MANAGER_VERSION)/cert-manager.yaml
-NFSPVC_URL ?= https://github.com/dana-team/nfspvc-operator/releases/download/$(NFSPVC_VERSION)/install.yaml
-CERTIFICATE_OPERATOR_URL ?= https://github.com/dana-team/certificate-operator/releases/download/$(CERTIFICATE_OPERATOR_VERSION)/install.yaml
+KNATIVE_VERSION ?= v1.11.2
+KNATIVE_URL ?= https://github.com/knative-extensions/kn-plugin-quickstart/releases/download/knative-$(KNATIVE_VERSION)/kn-quickstart-linux-amd64
+KNATIVE_HPA_URL ?= https://github.com/knative/serving/releases/download/knative-$(KNATIVE_VERSION)/serving-hpa.yaml
+CROSSPLANE_SCC_CRB ?= hack/crossplane-scc-clusterrolebinding.yaml
+PREREQ_HELMFILE ?= charts/capp-prereq-helmfile.yaml
 
 .PHONY: prereq ## Install every prerequisite needed to develop and run the operator.
-prereq: install install-cert-manager install-knative install-helm install-crossplane install-logging enable-nfs-knative install-certificate-operator install-nfspvc
+prereq: install install-knative enable-nfs-knative install-prereq-helmfile
 
 .PHONY: prereq-openshift ## Install every prerequisite needed to develop and run the operator on OpenShift with Serverless already installed.
-prereq-openshift: install install-cert-manager install-helm install-crossplane install-logging enable-nfs-knative install-certificate-operator install-nfspvc
+prereq-openshift: enable-nfs-knative install-crossplane-scc install-prereq-helmfile
 
 .PHONY: uninstall-prereq ## Uninstall every prerequisite needed to develop and run the operator.
-uninstall-prereq: uninstall-logging uninstall-nfspvc uninstall-crossplane uninstall-certificate-operator uninstall-cert-manager
+uninstall-prereq: uninstall-prereq-helmfile
 
-.PHONY: install-nfspvc
-install-nfspvc: ## Install nfspvc-operator on the cluster
-	kubectl apply -f $(NFSPVC_URL)
-
-.PHONY: uninstall-nfspvc
-uninstall-nfspvc: ## Uninstall nfspvc-operator on the cluster
-	kubectl delete -f $(NFSPVC_URL)
-
-.PHONY: install-cert-manager
-install-cert-manager: ## Install cert-manager on the cluster
-	kubectl apply -f $(CERT_MANAGER_URL)
-	kubectl wait --for=condition=ready pods -l app=cert-manager -n cert-manager
-
-.PHONY: uninstall-cert-manager
-uninstall-cert-manager: ## Uninstall cert-manager on the cluster
-	kubectl delete -f $(CERT_MANAGER_URL)
+.PHONY: uninstall-prereq-openshift  ## Uninstall every prerequisite needed to develop and run the operator.
+uninstall-prereq-openshift: uninstall-prereq-helmfile uninstall-crossplane-scc
 
 .PHONY: enable-nfs-knative
 enable-nfs-knative: ## Enable NFS for Knative
 	kubectl patch configmap config-features -n knative-serving -p '{"data":{"kubernetes.podspec-persistent-volume-claim":"enabled", "kubernetes.podspec-persistent-volume-write":"enabled"}}'
 
-.PHONY: install-logging
-install-logging: ## Install logging-operator on the cluster
-	helm upgrade --install --wait --create-namespace --namespace logging-operator-system logging-operator oci://ghcr.io/kube-logging/helm-charts/logging-operator
-	kubectl apply -f hack/logging-operator-resources.yaml
-
-.PHONY: uninstall-logging
-uninstall-logging: ## Uninstall logging-operator on the cluster
-	kubectl delete -f hack/logging-operator-resources.yaml
-	helm uninstall --namespace logging-operator-system logging-operator
-	kubectl delete ns logging-operator-system
-
-.PHONY: install-certificate-operator
-install-certificate-operator:  ## Install certificate-operator on the cluster
-	kubectl apply -f $(CERTIFICATE_OPERATOR_URL)
-
-.PHONY: uninstall-certificate-operator
-uninstall-certificate-operator:  ## Uninstall certificate-operator on the cluster
-	kubectl delete -f $(CERTIFICATE_OPERATOR_URL)
-
-KNATIVE_URL ?= https://github.com/knative-extensions/kn-plugin-quickstart/releases/download/knative-v1.11.2/kn-quickstart-linux-amd64
-KNATIVE_HPA_URL ?= https://github.com/knative/serving/releases/download/knative-v1.11.2/serving-hpa.yaml
 .PHONY: install-knative
 install-knative: ## Install knative controller on the kind cluster
 	wget -O $(LOCALBIN)/kn-quickstart $(KNATIVE_URL)
@@ -226,24 +176,32 @@ install-knative: ## Install knative controller on the kind cluster
 	(yes no || true) | $(LOCALBIN)/kn-quickstart kind -n $$CLUSTER_NAME
 	$(KUBECTL) apply -f $(KNATIVE_HPA_URL)
 
-CROSSPLANE_HELM ?= https://charts.crossplane.io/stable
-CROSSPLANE_SCC_CRB ?= hack/crossplane-scc-clusterrolebinding.yaml
-.PHONY: install-crossplane
-install-crossplane: ## Install crossplane controller on the kind cluster
-	helm repo add crossplane-stable $(CROSSPLANE_HELM)
-	helm repo update
+.PHONY: install-crossplane-scc
+install-crossplane-scc: ## Install crossplane rbac on the cluster
 	kubectl apply -f $(CROSSPLANE_SCC_CRB)
-	helm upgrade --install crossplane --wait --namespace crossplane-system --create-namespace crossplane-stable/crossplane \
-	--set provider.packages='{$(PROVIDER_DNS_IMAGE)}'
 
-CROSSPLANE_HELM ?= https://charts.crossplane.io/stable
 CROSSPLANE_SCC_CRB ?= hack/crossplane-scc-clusterrolebinding.yaml
-.PHONY: uninstall-crossplane
-uninstall-crossplane: ## Uninstall crossplane controller on the kind cluster
+.PHONY: uninstall-crossplane-scc
+uninstall-crossplane-scc: ## Uninstall crossplane rbac from the kind cluster
 	kubectl delete -f $(CROSSPLANE_SCC_CRB)
-	helm uninstall crossplane --namespace crossplane-system
-	kubectl delete ns crossplane-system
-	kubectl delete providers dana-team-provider-dns
+
+.PHONY: install-prereq-helmfile
+install-prereq-helmfile: helm helm-plugins helmfile
+	${HELMFILE} apply -f $(PREREQ_HELMFILE) \
+	--state-values-set providerDNSRealmName=${PROVIDER_DNS_REALM} \
+	--state-values-set providerDNSKDCName=${PROVIDER_DNS_KDC} \
+	--state-values-set providerDNSPolicy=${PROVIDER_DNS_POLICY} \
+	--state-values-set providerDNSNameservers=${PROVIDER_DNS_NAMESERVER} \
+	--state-values-set providerDNSUsername=${PROVIDER_DNS_USERNAME} \
+	--state-values-set providerDNSPassword=${PROVIDER_DNS_PASSWORD}
+
+.PHONY: uninstall-prereq-helmfile
+uninstall-prereq-helmfile: helm helm-plugins helmfile
+	${HELMFILE} destroy -f $(PREREQ_HELMFILE)
+
+.PHONY: doc-chart
+doc-chart: helm-docs helm
+	$(HELM_DOCS) charts/
 
 ##@ Dependencies
 
@@ -259,13 +217,19 @@ CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen-$(CONTROLLER_TOOLS_VERSION)
 ENVTEST ?= $(LOCALBIN)/setup-envtest-$(ENVTEST_VERSION)
 GOLANGCI_LINT = $(LOCALBIN)/golangci-lint-$(GOLANGCI_LINT_VERSION)
 GINKGO ?= $(LOCALBIN)/ginkgo
+HELMFILE ?= $(LOCALBIN)/helmfile-$(HELMFILE_VERSION)
+HELM_DOCS ?= $(LOCALBIN)/helm-docs-$(HELM_DOCS_VERSION)
+
 HELM_URL ?= https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+HELMFILE_URL ?= https://github.com/helmfile/helmfile/releases/download/v${HELMFILE_VERSION}/helmfile_${HELMFILE_VERSION}_linux_amd64.tar.gz
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v5.3.0
 CONTROLLER_TOOLS_VERSION ?= v0.14.0
 ENVTEST_VERSION ?= release-0.17
 GOLANGCI_LINT_VERSION ?= v1.54.2
+HELMFILE_VERSION ?= 0.167.1
+HELM_DOCS_VERSION ?= v1.14.2
 
 .PHONY: kustomize
 kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary.
@@ -292,11 +256,39 @@ ginkgo: $(GINKGO) ## Download ginkgo locally if necessary.
 $(GINKGO): $(LOCALBIN)
 	test -s $(LOCALBIN)/ginkgo || GOBIN=$(LOCALBIN) go install github.com/onsi/ginkgo/v2/ginkgo@latest
 
-.PHONY: install-helm
-install-helm: ## Install helm on the local machine
+.PHONY: helm
+helm: ## Install helm on the local machine
 	wget -O $(LOCALBIN)/get-helm.sh $(HELM_URL)
 	chmod 700 $(LOCALBIN)/get-helm.sh
 	$(LOCALBIN)/get-helm.sh
+
+.PHONY: helm-plugins
+helm-plugins: ## Install helm plugins on the local machine
+	@if ! helm plugin list | grep -q 'diff'; then \
+		helm plugin install https://github.com/databus23/helm-diff; \
+	fi
+	@if ! helm plugin list | grep -q 'git'; then \
+		helm plugin install https://github.com/aslafy-z/helm-git; \
+	fi
+	@if ! helm plugin list | grep -q 's3'; then \
+		helm plugin install https://github.com/hypnoglow/helm-s3; \
+	fi
+	@if ! helm plugin list | grep -q 'secrets'; then \
+		helm plugin install https://github.com/jkroepke/helm-secrets; \
+	fi
+
+.PHONY: helmfile
+helmfile: $(HELMFILE) ## Install helmfile on the local machine
+$(HELMFILE): $(LOCALBIN)
+	wget -O $(LOCALBIN)/helmfile.tar.gz $(HELMFILE_URL)
+	tar -xzvf $(LOCALBIN)/helmfile.tar.gz -C $(LOCALBIN)
+	rm $(LOCALBIN)/helmfile.tar.gz $(LOCALBIN)/*.md $(LOCALBIN)/LICENSE
+	mv $(LOCALBIN)/helmfile $(LOCALBIN)/helmfile-$(HELMFILE_VERSION)
+
+.PHONY: helm-docs
+helm-docs: $(HELM_DOCS)
+$(HELM_DOCS): $(LOCALBIN)
+	$(call go-install-tool,$(HELM_DOCS),github.com/norwoodj/helm-docs/cmd/helm-docs,$(HELM_DOCS_VERSION))
 
 # go-install-tool will 'go install' any package with custom target and name of binary, if it doesn't exist
 # $1 - target path with name of binary (ideally with version)

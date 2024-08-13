@@ -1,0 +1,196 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "container-app-operator.fullname" . }}-manager-role
+  labels:
+    {{- include "container-app-operator.labels" . | nindent 4 }}
+rules:
+- apiGroups:
+    - ""
+  resources:
+    - configmaps
+  verbs:
+    - get
+    - list
+    - watch
+- apiGroups:
+    - ""
+  resources:
+    - events
+  verbs:
+    - create
+    - get
+    - list
+    - patch
+    - update
+    - watch
+- apiGroups:
+    - ""
+  resources:
+    - nodes
+  verbs:
+    - get
+    - list
+    - watch
+- apiGroups:
+    - ""
+  resources:
+    - secrets
+  verbs:
+    - get
+    - list
+    - watch
+- apiGroups:
+    - cert.dana.io
+  resources:
+    - certificates
+  verbs:
+    - create
+    - delete
+    - get
+    - list
+    - update
+    - watch
+- apiGroups:
+    - events.k8s.io
+  resources:
+    - events
+  verbs:
+    - create
+    - get
+    - list
+    - patch
+    - update
+    - watch
+- apiGroups:
+    - logging.banzaicloud.io
+  resources:
+    - syslogngflows
+  verbs:
+    - create
+    - delete
+    - get
+    - list
+    - update
+    - watch
+- apiGroups:
+    - logging.banzaicloud.io
+  resources:
+    - syslogngoutputs
+  verbs:
+    - create
+    - delete
+    - get
+    - list
+    - update
+    - watch
+- apiGroups:
+    - nfspvc.dana.io
+  resources:
+    - nfspvcs
+  verbs:
+    - create
+    - delete
+    - get
+    - list
+    - update
+    - watch
+- apiGroups:
+    - rcs.dana.io
+  resources:
+    - capprevisions
+  verbs:
+    - create
+    - delete
+    - get
+    - list
+    - patch
+    - update
+    - watch
+- apiGroups:
+    - rcs.dana.io
+  resources:
+    - capprevisions/status
+  verbs:
+    - get
+    - patch
+    - update
+- apiGroups:
+    - rcs.dana.io
+  resources:
+    - capps
+  verbs:
+    - create
+    - delete
+    - get
+    - list
+    - patch
+    - update
+    - watch
+- apiGroups:
+    - rcs.dana.io
+  resources:
+    - capps/finalizers
+  verbs:
+    - update
+- apiGroups:
+    - rcs.dana.io
+  resources:
+    - capps/status
+  verbs:
+    - get
+    - patch
+    - update
+- apiGroups:
+    - record.dns.crossplane.io
+  resources:
+    - cnamerecords
+  verbs:
+    - create
+    - delete
+    - get
+    - list
+    - update
+    - watch
+- apiGroups:
+    - route.openshift.io
+  resources:
+    - routes
+  verbs:
+    - create
+    - get
+    - list
+    - update
+    - watch
+- apiGroups:
+    - serving.knative.dev
+  resources:
+    - domainmappings
+  verbs:
+    - create
+    - delete
+    - get
+    - list
+    - update
+    - watch
+- apiGroups:
+    - serving.knative.dev
+  resources:
+    - revisions
+  verbs:
+    - create
+    - get
+    - list
+    - update
+    - watch
+- apiGroups:
+    - serving.knative.dev
+  resources:
+    - services
+  verbs:
+    - create
+    - delete
+    - get
+    - list
+    - update
+    - watch

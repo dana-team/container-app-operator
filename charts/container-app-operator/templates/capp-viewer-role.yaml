@@ -1,0 +1,21 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "container-app-operator.fullname" . }}-capp-viewer-role
+  labels:
+    {{- include "container-app-operator.labels" . | nindent 4 }}
+rules:
+- apiGroups:
+  - rcs.dana.io
+  resources:
+  - capps
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - rcs.dana.io
+  resources:
+  - capps/status
+  verbs:
+  - get

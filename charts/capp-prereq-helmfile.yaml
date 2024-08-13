@@ -1,0 +1,73 @@
+repositories:
+  - name: jetstack
+    url: https://charts.jetstack.io
+  - name: crossplane-stable
+    url: https://charts.crossplane.io/stable
+
+releases:
+  - name: cert-manager
+    namespace: cert-manager
+    createNamespace: true
+    chart: jetstack/cert-manager
+    wait: true
+    set:
+      - name: crds.enabled
+        value: true
+
+  - name: crossplane
+    namespace: crossplane-system
+    createNamespace: true
+    chart: crossplane-stable/crossplane
+    wait: true
+
+  - name: logging-operator
+    namespace: logging
+    createNamespace: true
+    chart: oci://ghcr.io/kube-logging/helm-charts/logging-operator
+    version: 4.8.0
+    wait: true
+    disableValidationOnInstall: true
+    set:
+      - name: logging.enabled
+        value: true
+
+  - name: provider-dns
+    namespace: crossplane-system
+    createNamespace: true
+    chart: oci://ghcr.io/dana-team/helm-charts/provider-dns
+    version: v0.1.1
+    wait: true
+    disableValidationOnInstall: true
+    needs:
+      - crossplane-system/crossplane
+    set:
+      - name: realm.name
+        value: {{ .Values | get "providerDNSRealmName" "" }}
+      - name: realm.kdc
+        value: {{ .Values | get "providerDNSKDCName" "" }}
+      - name: deploymentRuntimeConfig.dnsPolicy
+        value: {{ .Values | get "providerDNSPolicy" "" }}
+      - name: deploymentRuntimeConfig.dnsConfig.nameservers[0]
+        value: {{ .Values | get "providerDNSNameservers" "" }}
+      - name: secret.username
+        value: {{ .Values | get "providerDNSUsername" "" }}
+      - name: secret.password
+        value: {{ .Values | get "providerDNSPassword" "" }}
+
+  - name: nfspvc-operator
+    namespace: nfspvc-operator-system
+    createNamespace: true
+    chart: oci://ghcr.io/dana-team/helm-charts/nfspvc-operator
+    version: v0.4.1
+    wait: true
+    disableValidationOnInstall: true
+    needs:
+      - cert-manager/cert-manager
+
+  - name: certificate-operator
+    namespace: certificate-operator-system
+    createNamespace: true
+    chart: oci://ghcr.io/dana-team/helm-charts/certificate-operator
+    version: v0.1.3
+    wait: true
+    disableValidationOnInstall: true
