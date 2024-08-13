@@ -196,7 +196,7 @@ install-prereq-helmfile: helm helm-plugins helmfile
 	--state-values-set providerDNSPassword=${PROVIDER_DNS_PASSWORD}
 
 .PHONY: uninstall-prereq-helmfile
-uninstall-prereq-helmfile: helm helm-plugins helmfile
+uninstall-prereq-helmfile: helmfile helm helm-plugins
 	${HELMFILE} destroy -f $(PREREQ_HELMFILE)
 
 .PHONY: doc-chart
