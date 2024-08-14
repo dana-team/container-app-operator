@@ -186,7 +186,7 @@ uninstall-crossplane-scc: ## Uninstall crossplane rbac from the kind cluster
 	kubectl delete -f $(CROSSPLANE_SCC_CRB)
 
 .PHONY: install-prereq-helmfile
-install-prereq-helmfile: helm helm-plugins helmfile
+install-prereq-helmfile: helmfile helm helm-plugins
 	${HELMFILE} apply -f $(PREREQ_HELMFILE) \
 	--state-values-set providerDNSRealmName=${PROVIDER_DNS_REALM} \
 	--state-values-set providerDNSKDCName=${PROVIDER_DNS_KDC} \
