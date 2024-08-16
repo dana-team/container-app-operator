@@ -9,3 +9,4 @@ data:
   cpu: "{{ .Values.autoscaleConfig.cpu }}"
   memory: "{{ .Values.autoscaleConfig.memory }}"
   concurrency: "{{ .Values.autoscaleConfig.concurrency }}"
+  activationScale: "{{ .Values.autoscaleConfig.activationScale }}"

@@ -141,6 +141,7 @@ data:
   cpu: "80"
   memory: "70"
   concurrency: "10"
+  activationScale: "3"
 ```
 
 ### Enable Persistent Volume extension in Knative

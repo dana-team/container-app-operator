@@ -148,6 +148,8 @@ autoscaleConfig:
   memory: "70"
   # -- The default concurrency limit for autoscaling.
   concurrency: "10"
+  # -- The default activationScale for autoscaling.
+  activationScale: "3"
 
 # -- Configuration for the DNS.
 dnsConfig:
