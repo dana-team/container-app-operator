@@ -1,7 +1,7 @@
 package e2e_tests
 
 import (
-	certv1alpha1 "github.com/dana-team/certificate-operator/api/v1alpha1"
+	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	nfspvcv1alpha1 "github.com/dana-team/nfspvc-operator/api/v1alpha1"
 	dnsrecordv1alpha1 "github.com/dana-team/provider-dns/apis/record/v1alpha1"
@@ -29,7 +29,7 @@ func newScheme() *runtime.Scheme {
 	utilruntime.Must(knativev1beta1.AddToScheme(scheme))
 	utilruntime.Must(cappv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(nfspvcv1alpha1.AddToScheme(scheme))
-	utilruntime.Must(certv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(cmapi.AddToScheme(scheme))
 	utilruntime.Must(dnsrecordv1alpha1.AddToScheme(scheme))
 
 	return scheme

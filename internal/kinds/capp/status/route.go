@@ -3,11 +3,12 @@ package status
 import (
 	"context"
 
+	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+
 	rmanagers "github.com/dana-team/container-app-operator/internal/kinds/capp/resourcemanagers"
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 	dnsrecordv1alpha1 "github.com/dana-team/provider-dns/apis/record/v1alpha1"
 
-	certv1alpha1 "github.com/dana-team/certificate-operator/api/v1alpha1"
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"k8s.io/apimachinery/pkg/types"
 	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
@@ -69,15 +70,15 @@ func buildDomainMappingStatus(ctx context.Context, kubeClient client.Client, cap
 
 // buildCertificateStatus partly constructs the Route Status of the Capp object in accordance to the
 // status of the corresponding Certificate object.
-func buildCertificateStatus(ctx context.Context, kubeClient client.Client, capp cappv1alpha1.Capp, isRequired bool, zone string) (certv1alpha1.CertificateStatus, error) {
+func buildCertificateStatus(ctx context.Context, kubeClient client.Client, capp cappv1alpha1.Capp, isRequired bool, zone string) (cmapi.CertificateStatus, error) {
 	if !isRequired {
-		return certv1alpha1.CertificateStatus{}, nil
+		return cmapi.CertificateStatus{}, nil
 	}
 
-	certificate := &certv1alpha1.Certificate{}
+	certificate := &cmapi.Certificate{}
 	certificateName := utils.GenerateResourceName(capp.Spec.RouteSpec.Hostname, zone)
 	if err := kubeClient.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: certificateName}, certificate); err != nil {
-		return certv1alpha1.CertificateStatus{}, err
+		return cmapi.CertificateStatus{}, err
 	}
 
 	return certificate.Status, nil

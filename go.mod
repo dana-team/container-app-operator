@@ -3,9 +3,10 @@ module github.com/dana-team/container-app-operator
 go 1.22.2
 
 require (
+	github.com/cert-manager/cert-manager v1.15.3
 	github.com/cisco-open/operator-tools v0.36.0
 	github.com/crossplane/crossplane-runtime v1.16.0
-	github.com/dana-team/certificate-operator v0.1.2
+	github.com/dana-team/cert-external-issuer v0.1.0
 	github.com/dana-team/nfspvc-operator v0.3.0
 	github.com/dana-team/provider-dns v0.1.0
 	github.com/go-logr/logr v1.4.2
@@ -93,7 +94,7 @@ require (
 	github.com/prometheus/client_golang v1.19.1 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.54.0 // indirect
-	github.com/prometheus/procfs v0.14.0 // indirect
+	github.com/prometheus/procfs v0.15.0 // indirect
 	github.com/sergi/go-diff v1.2.0 // indirect
 	github.com/spf13/afero v1.11.0 // indirect
 	github.com/spf13/cast v1.6.0 // indirect
@@ -125,6 +126,7 @@ require (
 	k8s.io/klog/v2 v2.120.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20240430033511-f0e62f92d13f // indirect
 	knative.dev/networking v0.0.0-20240716111826-bab7f2a3e556 // indirect
+	sigs.k8s.io/gateway-api v1.1.0 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect

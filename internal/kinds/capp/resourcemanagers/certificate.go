@@ -2,9 +2,13 @@ package resourcemanagers
 
 import (
 	"context"
+
 	"fmt"
 
-	certv1alpha1 "github.com/dana-team/certificate-operator/api/v1alpha1"
+	certv1alpha1 "github.com/dana-team/cert-external-issuer/api/v1alpha1"
+
+	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 	corev1 "k8s.io/api/core/v1"
@@ -23,8 +27,9 @@ const (
 	Certificate                        = "certificate"
 	eventCappCertificateCreationFailed = "CertificateCreationFailed"
 	eventCappCertificateCreated        = "CertificateCreated"
-	certificateForm                    = "pfx"
-	certificateConfig                  = "certificateconfig-capp"
+	PrivateKeySize                     = 4096
+	clusterIssuerName                  = "cert-external-issuer-clusterissuer"
+	clusterIssuerKind                  = "ClusterIssuer"
 )
 
 type CertificateManager struct {
@@ -35,21 +40,21 @@ type CertificateManager struct {
 }
 
 // prepareResource prepares a Certificate resource based on the provided Capp.
-func (c CertificateManager) prepareResource(capp cappv1alpha1.Capp) (certv1alpha1.Certificate, error) {
+func (c CertificateManager) prepareResource(capp cappv1alpha1.Capp) (cmapi.Certificate, error) {
 	dnsConfig, err := utils.GetDNSConfig(c.Ctx, c.K8sclient)
 	if err != nil {
-		return certv1alpha1.Certificate{}, err
+		return cmapi.Certificate{}, err
 	}
 
 	zone, err := utils.GetZoneFromConfig(dnsConfig)
 	if err != nil {
-		return certv1alpha1.Certificate{}, err
+		return cmapi.Certificate{}, err
 	}
 
 	resourceName := utils.GenerateResourceName(capp.Spec.RouteSpec.Hostname, zone)
 	secretName := utils.GenerateSecretName(capp)
 
-	certificate := certv1alpha1.Certificate{
+	certificate := cmapi.Certificate{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      resourceName,
@@ -59,20 +64,21 @@ func (c CertificateManager) prepareResource(capp cappv1alpha1.Capp) (certv1alpha
 				utils.ManagedByLabelKey: utils.CappKey,
 			},
 		},
-		Spec: certv1alpha1.CertificateSpec{
-			CertificateData: certv1alpha1.CertificateData{
-				Subject: certv1alpha1.Subject{
-					CommonName: resourceName,
-				},
-				San: certv1alpha1.San{
-					DNS: []string{resourceName},
-				},
-				Form: certificateForm,
+		Spec: cmapi.CertificateSpec{
+			CommonName: resourceName,
+			DNSNames:   []string{resourceName},
+			PrivateKey: &cmapi.CertificatePrivateKey{
+				Algorithm: cmapi.RSAKeyAlgorithm,
+				Encoding:  cmapi.PKCS1,
+				Size:      PrivateKeySize,
+			},
+			IsCA: false,
+			IssuerRef: cmmeta.ObjectReference{
+				Name:  clusterIssuerName,
+				Kind:  clusterIssuerKind,
+				Group: certv1alpha1.GroupVersion.Group,
 			},
 			SecretName: secretName,
-			ConfigRef: certv1alpha1.ConfigReference{
-				Name: certificateConfig,
-			},
 		},
 	}
 
@@ -117,7 +123,7 @@ func (c CertificateManager) create(capp cappv1alpha1.Capp) error {
 		return fmt.Errorf("failed to prepare Certificate: %w", err)
 	}
 
-	certificate := certv1alpha1.Certificate{}
+	certificate := cmapi.Certificate{}
 	resourceManager := rclient.ResourceManagerClient{Ctx: c.Ctx, K8sclient: c.K8sclient, Log: c.Log}
 
 	if err := c.K8sclient.Get(c.Ctx, types.NamespacedName{Namespace: capp.Namespace, Name: certificateFromCapp.Name}, &certificate); err != nil {
@@ -140,7 +146,7 @@ func (c CertificateManager) create(capp cappv1alpha1.Capp) error {
 }
 
 // createCertificate creates a new Certificate and emits an event.
-func (c CertificateManager) createCertificate(capp cappv1alpha1.Capp, certificateFromCapp certv1alpha1.Certificate, resourceManager rclient.ResourceManagerClient) error {
+func (c CertificateManager) createCertificate(capp cappv1alpha1.Capp, certificateFromCapp cmapi.Certificate, resourceManager rclient.ResourceManagerClient) error {
 	if err := resourceManager.CreateResource(&certificateFromCapp); err != nil {
 		c.EventRecorder.Event(&capp, corev1.EventTypeWarning, eventCappCertificateCreationFailed,
 			fmt.Sprintf("Failed to create Certificate %s", certificateFromCapp.Name))
@@ -179,8 +185,8 @@ func (c CertificateManager) handlePreviousCertificates(capp cappv1alpha1.Capp, r
 }
 
 // getPreviousCertificates returns a list of all Certificate objects that are related to the given Capp.
-func (c CertificateManager) getPreviousCertificates(capp cappv1alpha1.Capp) (certv1alpha1.CertificateList, error) {
-	certificates := certv1alpha1.CertificateList{}
+func (c CertificateManager) getPreviousCertificates(capp cappv1alpha1.Capp) (cmapi.CertificateList, error) {
+	certificates := cmapi.CertificateList{}
 
 	set := labels.Set{
 		utils.CappResourceKey: capp.Name,
@@ -195,7 +201,7 @@ func (c CertificateManager) getPreviousCertificates(capp cappv1alpha1.Capp) (cer
 }
 
 // deletePreviousCertificates deletes all previous Certificates associated with a Capp.
-func (c CertificateManager) deletePreviousCertificates(certificates certv1alpha1.CertificateList, resourceManager rclient.ResourceManagerClient, hostname string) error {
+func (c CertificateManager) deletePreviousCertificates(certificates cmapi.CertificateList, resourceManager rclient.ResourceManagerClient, hostname string) error {
 	for _, certificate := range certificates.Items {
 		if certificate.Name != hostname {
 			cert := rclient.GetBareCertificate(certificate.Name, certificate.Namespace)
