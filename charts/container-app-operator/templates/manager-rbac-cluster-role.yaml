@@ -41,7 +41,7 @@ rules:
     - list
     - watch
 - apiGroups:
-    - cert.dana.io
+    - cert-manager.io
   resources:
     - certificates
   verbs:

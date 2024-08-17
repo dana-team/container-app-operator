@@ -17,7 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
-	certv1alpha1 "github.com/dana-team/certificate-operator/api/v1alpha1"
+	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	nfspvcv1alpha1 "github.com/dana-team/nfspvc-operator/api/v1alpha1"
 	dnsrecordv1alpha1 "github.com/dana-team/provider-dns/apis/record/v1alpha1"
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
@@ -187,7 +187,7 @@ type RouteStatus struct {
 
 	// CertificateObjectStatus is the status of the underlying Certificate object
 	// +optional
-	CertificateObjectStatus certv1alpha1.CertificateStatus `json:"certificateObjectStatus,omitempty"`
+	CertificateObjectStatus cmapi.CertificateStatus `json:"certificateObjectStatus,omitempty"`
 }
 
 type DNSRecordObjectStatus struct {

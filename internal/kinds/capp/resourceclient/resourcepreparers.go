@@ -1,7 +1,7 @@
 package resourceclient
 
 import (
-	certv1alpha1 "github.com/dana-team/certificate-operator/api/v1alpha1"
+	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	nfspvcv1alpha1 "github.com/dana-team/nfspvc-operator/api/v1alpha1"
 	dnsvrecord1alpha1 "github.com/dana-team/provider-dns/apis/record/v1alpha1"
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
@@ -31,8 +31,8 @@ func GetBareDomainMapping(name, namespace string) knativev1beta1.DomainMapping {
 }
 
 // GetBareCertificate returns a Certificate object with only ObjectMeta set.
-func GetBareCertificate(name, namespace string) certv1alpha1.Certificate {
-	return certv1alpha1.Certificate{
+func GetBareCertificate(name, namespace string) cmapi.Certificate {
+	return cmapi.Certificate{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,

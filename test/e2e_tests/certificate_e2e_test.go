@@ -47,7 +47,7 @@ var _ = Describe("Validate Certificate functionality", func() {
 
 		Eventually(func() []string {
 			updatedCertificateObject = utilst.GetCertificate(k8sClient, updatedRouteHostname, toBeUpdatedCapp.Namespace)
-			return updatedCertificateObject.Spec.CertificateData.San.DNS
+			return updatedCertificateObject.Spec.DNSNames
 		}, testconsts.Timeout, testconsts.Interval).Should(Equal([]string{updatedRouteHostname}))
 
 		By("Deleting the Capp instance and checking if the Certificate was deleted successfully")

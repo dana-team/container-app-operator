@@ -3,9 +3,10 @@ package utils
 import (
 	"strings"
 
+	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+
 	dnsrecordv1alpha1 "github.com/dana-team/provider-dns/apis/record/v1alpha1"
 
-	certv1alpha1 "github.com/dana-team/certificate-operator/api/v1alpha1"
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	mock "github.com/dana-team/container-app-operator/test/e2e_tests/mocks"
 	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
@@ -50,8 +51,8 @@ func GetDNSRecord(k8sClient client.Client, name string) *dnsrecordv1alpha1.CNAME
 }
 
 // GetCertificate fetches and returns an existing instance of a Certificate.
-func GetCertificate(k8sClient client.Client, name string, namespace string) *certv1alpha1.Certificate {
-	certificate := &certv1alpha1.Certificate{}
+func GetCertificate(k8sClient client.Client, name string, namespace string) *cmapi.Certificate {
+	certificate := &cmapi.Certificate{}
 	GetResource(k8sClient, certificate, name, namespace)
 	return certificate
 }
