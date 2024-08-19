@@ -76,6 +76,7 @@ jobs:
         run: |
           helm package charts/${{ steps.chart-name.outputs.value }} --version ${{ steps.version.outputs.value }} --app-version ${{ steps.version.outputs.value }}
           echo "package=${{ steps.chart-name.outputs.value }}-${{ steps.version.outputs.value }}.tgz" >> "$GITHUB_OUTPUT"
+
       - name: Upload chart as artifact
         uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32
         with:
