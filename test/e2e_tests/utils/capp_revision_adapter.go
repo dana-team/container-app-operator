@@ -37,3 +37,10 @@ func GetCappRevisions(ctx context.Context, k8sClient client.Client, capp cappv1a
 	err = k8sClient.List(ctx, &cappRevisions, &listOptions)
 	return cappRevisions.Items, err
 }
+
+// GetCappRevision retrieves a CappRevision by name.
+func GetCappRevision(k8sClient client.Client, cappRevisionName, namespace string) *cappv1alpha1.CappRevision {
+	cappRevision := &cappv1alpha1.CappRevision{}
+	GetResource(k8sClient, cappRevision, cappRevisionName, namespace)
+	return cappRevision
+}

@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"k8s.io/client-go/util/retry"
+	"knative.dev/pkg/kmeta"
 
 	"github.com/dana-team/container-app-operator/test/e2e_tests/mocks"
 	"github.com/dana-team/container-app-operator/test/e2e_tests/testconsts"
@@ -35,6 +36,9 @@ var _ = Describe("Validate CappRevision creation", func() {
 			return len(cappRevisons)
 		}, testconsts.Timeout, testconsts.Interval).ShouldNot(BeZero(), "Should create CappRevisions")
 
+		cappRevisionName := kmeta.ChildName(desiredCapp.Name, fmt.Sprintf("-%05d", 1))
+		utilst.GetCappRevision(k8sClient, cappRevisionName, desiredCapp.Namespace)
+
 		By("Updating Capp")
 		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			desiredCapp = utilst.GetCapp(k8sClient, desiredCapp.Name, desiredCapp.Namespace)
@@ -49,6 +53,9 @@ var _ = Describe("Validate CappRevision creation", func() {
 			cappRevisions, _ := utilst.GetCappRevisions(context.Background(), k8sClient, *desiredCapp)
 			return len(cappRevisions) > 1
 		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "Should create new CappRevision")
+
+		cappRevisionName = kmeta.ChildName(desiredCapp.Name, fmt.Sprintf("-%05d", 2))
+		utilst.GetCappRevision(k8sClient, cappRevisionName, desiredCapp.Namespace)
 
 		By("Deleting Capp")
 		utilst.DeleteCapp(k8sClient, desiredCapp)
@@ -68,7 +75,7 @@ var _ = Describe("Validate CappRevision creation", func() {
 		desiredCapp.Annotations = make(map[string]string)
 
 		By("Checking many updates to Capp")
-		for i := 0; i <= moreThanRevisionsToKeep; i++ {
+		for i := 1; i < moreThanRevisionsToKeep; i++ {
 			assertValue := fmt.Sprintf("test%s", strconv.Itoa(i))
 			err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 				desiredCapp = utilst.GetCapp(k8sClient, desiredCapp.Name, desiredCapp.Namespace)
@@ -84,6 +91,12 @@ var _ = Describe("Validate CappRevision creation", func() {
 			}, testconsts.Timeout, testconsts.Interval).Should(Equal(assertValue), "Should be equal to the updated value")
 
 			desiredCapp = utilst.GetCapp(k8sClient, desiredCapp.Name, desiredCapp.Namespace)
+			if i < revisionsToKeep {
+				Eventually(func() int {
+					cappRevisons, _ := utilst.GetCappRevisions(context.Background(), k8sClient, *desiredCapp)
+					return len(cappRevisons)
+				}, testconsts.Timeout, testconsts.Interval).Should(Equal(i+1), fmt.Sprintf("Should get %v CappRevisions for %v updates", i+1, i))
+			}
 		}
 
 		Eventually(func() int {
@@ -91,7 +104,6 @@ var _ = Describe("Validate CappRevision creation", func() {
 			return len(cappRevisions)
 		}, testconsts.Timeout, testconsts.Interval).Should(Equal(revisionsToKeep),
 			fmt.Sprintf("Should limit to %s CappRevision", strconv.Itoa(revisionsToKeep)))
-
 	})
 
 	It(fmt.Sprintf("Should copy annotations containing %s to CappRevision", utilst.Domain), func() {
@@ -110,6 +122,5 @@ var _ = Describe("Validate CappRevision creation", func() {
 			return ""
 		}, testconsts.Timeout, testconsts.Interval).Should(Equal(testAnnotationValue),
 			"Should copy annotations to CappRevision")
-
 	})
 })
