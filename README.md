@@ -103,7 +103,7 @@ $ make prereq PROVIDER_DNS_REALM=<value> PROVIDER_DNS_KDC=<value> PROVIDER_DNS_P
 Use `Helm` to deploy `Capp` with all the needed resources. Only deploy it after installing the [prereq](#prerequisites).
 
 ```bash
-$ helm upgrade --install capp-operatoor --namespace capp-operator-system --create-namespace oci://ghcr.io/dana-team/helm-charts/container-app-operator --version <release>
+$ helm upgrade --install capp-operator --namespace capp-operator-system --create-namespace oci://ghcr.io/dana-team/helm-charts/container-app-operator --version <release>
 ```
 
 #### Deploy with Makefile
