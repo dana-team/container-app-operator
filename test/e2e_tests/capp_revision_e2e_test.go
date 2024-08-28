@@ -69,7 +69,8 @@ var _ = Describe("Validate CappRevision creation", func() {
 			Eventually(func() string {
 				return utilst.GetCapp(k8sClient, desiredCapp.Name, desiredCapp.Namespace).Annotations["test"]
 			}, testconsts.Timeout, testconsts.Interval).Should(Equal(assertValue), "Should be equal to the updated value")
-			utilst.GetCapp(k8sClient, desiredCapp.Name, desiredCapp.Namespace)
+
+			desiredCapp = utilst.GetCapp(k8sClient, desiredCapp.Name, desiredCapp.Namespace)
 		}
 
 		Eventually(func() int {
