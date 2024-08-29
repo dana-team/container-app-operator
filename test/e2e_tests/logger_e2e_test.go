@@ -3,6 +3,8 @@ package e2e_tests
 import (
 	"fmt"
 
+	"k8s.io/client-go/util/retry"
+
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
@@ -74,9 +76,13 @@ func testCappWithLogger(logType string) {
 		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue())
 
 		By(fmt.Sprintf("Updating the capp %s logger index", logType))
-		toBeUpdatedCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-		toBeUpdatedCapp.Spec.LogSpec.Index = testconsts.TestIndex
-		utilst.UpdateCapp(k8sClient, toBeUpdatedCapp)
+		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			toBeUpdatedCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
+			toBeUpdatedCapp.Spec.LogSpec.Index = testconsts.TestIndex
+
+			return utilst.UpdateResource(k8sClient, toBeUpdatedCapp)
+		})
+		Expect(err).To(BeNil())
 
 		By("Checking if the SyslogNGOutput index was updated")
 		checkOutputIndexValue(logType, syslogNGOutputName, createdCapp.Namespace, testconsts.TestIndex)
@@ -118,9 +124,13 @@ func testCappWithLogger(logType string) {
 		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "Should find a resource.")
 
 		By("Removing the logging requirement from Capp Spec and checking cleanup")
-		toBeUpdatedCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-		toBeUpdatedCapp.Spec.LogSpec = cappv1alpha1.LogSpec{}
-		utilst.UpdateCapp(k8sClient, toBeUpdatedCapp)
+		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			toBeUpdatedCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
+			toBeUpdatedCapp.Spec.LogSpec = cappv1alpha1.LogSpec{}
+
+			return utilst.UpdateResource(k8sClient, toBeUpdatedCapp)
+		})
+		Expect(err).To(BeNil())
 
 		Eventually(func() bool {
 			return utilst.DoesResourceExist(k8sClient, syslogNGFlowObject)

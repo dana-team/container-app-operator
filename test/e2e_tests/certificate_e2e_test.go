@@ -1,11 +1,13 @@
 package e2e_tests
 
 import (
+	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/dana-team/container-app-operator/test/e2e_tests/mocks"
 	"github.com/dana-team/container-app-operator/test/e2e_tests/testconsts"
 	utilst "github.com/dana-team/container-app-operator/test/e2e_tests/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"k8s.io/client-go/util/retry"
 )
 
 var _ = Describe("Validate Certificate functionality", func() {
@@ -26,10 +28,16 @@ var _ = Describe("Validate Certificate functionality", func() {
 		Expect(certificateObject.Labels[testconsts.ManagedByLabelKey]).Should(Equal(testconsts.CappKey))
 
 		By("Updating the Capp Route hostname and checking the status")
-		toBeUpdatedCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
+		var toBeUpdatedCapp *cappv1alpha1.Capp
 		updatedRouteHostname := utilst.GenerateResourceName(utilst.GenerateRouteHostname(), mocks.ZoneValue)
-		toBeUpdatedCapp.Spec.RouteSpec.Hostname = updatedRouteHostname
-		utilst.UpdateCapp(k8sClient, toBeUpdatedCapp)
+
+		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			toBeUpdatedCapp = utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
+			toBeUpdatedCapp.Spec.RouteSpec.Hostname = updatedRouteHostname
+
+			return utilst.UpdateResource(k8sClient, toBeUpdatedCapp)
+		})
+		Expect(err).To(BeNil())
 
 		Eventually(func() string {
 			capp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
@@ -81,9 +89,13 @@ var _ = Describe("Validate Certificate functionality", func() {
 		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "Should find a resource.")
 
 		By("Removing the Certificate requirement from Capp Spec and checking cleanup", func() {
-			toBeUpdatedCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-			toBeUpdatedCapp.Spec.RouteSpec.TlsEnabled = false
-			utilst.UpdateCapp(k8sClient, toBeUpdatedCapp)
+			err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+				toBeUpdatedCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
+				toBeUpdatedCapp.Spec.RouteSpec.TlsEnabled = false
+
+				return utilst.UpdateResource(k8sClient, toBeUpdatedCapp)
+			})
+			Expect(err).To(BeNil())
 
 			Eventually(func() bool {
 				return utilst.DoesResourceExist(k8sClient, certificateObject)
@@ -103,9 +115,13 @@ var _ = Describe("Validate Certificate functionality", func() {
 		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "Should find a resource.")
 
 		By("Removing the Certificate requirement from Capp Spec and checking cleanup", func() {
-			toBeUpdatedCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-			toBeUpdatedCapp.Spec.RouteSpec.Hostname = ""
-			utilst.UpdateCapp(k8sClient, toBeUpdatedCapp)
+			err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+				toBeUpdatedCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
+				toBeUpdatedCapp.Spec.RouteSpec.Hostname = ""
+
+				return utilst.UpdateResource(k8sClient, toBeUpdatedCapp)
+			})
+			Expect(err).To(BeNil())
 
 			Eventually(func() bool {
 				return utilst.DoesResourceExist(k8sClient, certificateObject)

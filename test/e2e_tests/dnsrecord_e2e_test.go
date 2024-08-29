@@ -4,6 +4,7 @@ import (
 	"github.com/dana-team/container-app-operator/test/e2e_tests/mocks"
 	"github.com/dana-team/container-app-operator/test/e2e_tests/testconsts"
 	utilst "github.com/dana-team/container-app-operator/test/e2e_tests/utils"
+	"k8s.io/client-go/util/retry"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -28,10 +29,15 @@ var _ = Describe("Validate DNSRecord functionality", func() {
 		Expect(dnsRecordObject.Labels[testconsts.ManagedByLabelKey]).Should(Equal(testconsts.CappKey))
 
 		By("checking if the DNSRecord object was updated after changing the Capp Route Hostname")
-		toBeUpdatedCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
 		updatedRouteHostname := utilst.GenerateRouteHostname()
-		toBeUpdatedCapp.Spec.RouteSpec.Hostname = updatedRouteHostname
-		utilst.UpdateCapp(k8sClient, toBeUpdatedCapp)
+
+		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			toBeUpdatedCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
+			toBeUpdatedCapp.Spec.RouteSpec.Hostname = updatedRouteHostname
+
+			return utilst.UpdateResource(k8sClient, toBeUpdatedCapp)
+		})
+		Expect(err).To(BeNil())
 
 		updatedDNSRecord := dnsRecordObject
 		updatedDNSRecordName := utilst.GenerateResourceName(updatedRouteHostname, mocks.ZoneValue)
@@ -64,9 +70,13 @@ var _ = Describe("Validate DNSRecord functionality", func() {
 		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "Should find a resource.")
 
 		By("Removing the DNSRecord requirement from Capp Spec and checking cleanup", func() {
-			toBeUpdatedCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-			toBeUpdatedCapp.Spec.RouteSpec.Hostname = ""
-			utilst.UpdateCapp(k8sClient, toBeUpdatedCapp)
+			err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+				toBeUpdatedCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
+				toBeUpdatedCapp.Spec.RouteSpec.Hostname = ""
+
+				return utilst.UpdateResource(k8sClient, toBeUpdatedCapp)
+			})
+			Expect(err).To(BeNil())
 
 			Eventually(func() bool {
 				return utilst.DoesResourceExist(k8sClient, dnsRecordObject)

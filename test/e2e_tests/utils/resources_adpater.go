@@ -61,6 +61,13 @@ func generateName(baseName string) string {
 	return baseName + "-" + randString
 }
 
+// GetSecret fetches and returns an existing instance of a Secret.
+func GetSecret(k8sClient client.Client, name string, namespace string) *corev1.Secret {
+	secret := &corev1.Secret{}
+	GetResource(k8sClient, secret, name, namespace)
+	return secret
+}
+
 // CreateSecret creates a new secret.
 func CreateSecret(k8sClient client.Client, secret *corev1.Secret) {
 	Expect(k8sClient.Create(context.Background(), secret)).To(Succeed())
@@ -88,7 +95,7 @@ func GenerateCertSecretName(cappName string) string {
 	return fmt.Sprintf("%s-tls", cappName)
 }
 
-// UpdateSecret updates an existing Secret instance.
-func UpdateSecret(k8sClient client.Client, secret *corev1.Secret) {
-	Expect(k8sClient.Update(context.Background(), secret)).To(Succeed())
+// UpdateResource updates an existing resource.
+func UpdateResource(k8sClient client.Client, object client.Object) error {
+	return k8sClient.Update(context.Background(), object)
 }
