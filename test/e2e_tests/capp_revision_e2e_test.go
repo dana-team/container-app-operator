@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strconv"
 
+	"k8s.io/client-go/util/retry"
+
 	"github.com/dana-team/container-app-operator/test/e2e_tests/mocks"
 	"github.com/dana-team/container-app-operator/test/e2e_tests/testconsts"
 	utilst "github.com/dana-team/container-app-operator/test/e2e_tests/utils"
@@ -34,13 +36,18 @@ var _ = Describe("Validate CappRevision creation", func() {
 		}, testconsts.Timeout, testconsts.Interval).ShouldNot(BeZero(), "Should create CappRevisions")
 
 		By("Updating Capp")
-		desiredCapp = utilst.GetCapp(k8sClient, desiredCapp.Name, desiredCapp.Namespace)
-		desiredCapp.Annotations = make(map[string]string)
-		desiredCapp.Annotations["test"] = "test"
-		utilst.UpdateCapp(k8sClient, desiredCapp)
+		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			desiredCapp = utilst.GetCapp(k8sClient, desiredCapp.Name, desiredCapp.Namespace)
+			desiredCapp.Annotations = make(map[string]string)
+			desiredCapp.Annotations["test"] = "test"
+
+			return utilst.UpdateResource(k8sClient, desiredCapp)
+		})
+		Expect(err).To(BeNil())
+
 		Eventually(func() bool {
-			cappRevisons, _ := utilst.GetCappRevisions(context.Background(), k8sClient, *desiredCapp)
-			return len(cappRevisons) > 1
+			cappRevisions, _ := utilst.GetCappRevisions(context.Background(), k8sClient, *desiredCapp)
+			return len(cappRevisions) > 1
 		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "Should create new CappRevision")
 
 		By("Deleting Capp")
@@ -63,8 +70,14 @@ var _ = Describe("Validate CappRevision creation", func() {
 		By("Checking many updates to Capp")
 		for i := 0; i <= moreThanRevisionsToKeep; i++ {
 			assertValue := fmt.Sprintf("test%s", strconv.Itoa(i))
-			desiredCapp.Annotations["test"] = assertValue
-			utilst.UpdateCapp(k8sClient, desiredCapp)
+			err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+				desiredCapp = utilst.GetCapp(k8sClient, desiredCapp.Name, desiredCapp.Namespace)
+				desiredCapp.Annotations = make(map[string]string)
+				desiredCapp.Annotations["test"] = assertValue
+
+				return utilst.UpdateResource(k8sClient, desiredCapp)
+			})
+			Expect(err).To(BeNil())
 
 			Eventually(func() string {
 				return utilst.GetCapp(k8sClient, desiredCapp.Name, desiredCapp.Namespace).Annotations["test"]

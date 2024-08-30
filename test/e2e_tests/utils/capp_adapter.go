@@ -27,13 +27,6 @@ func CreateCapp(k8sClient client.Client, capp *cappv1alpha1.Capp) *cappv1alpha1.
 	return newCapp
 }
 
-// UpdateCapp updates an existing Capp instance.
-func UpdateCapp(k8sClient client.Client, capp *cappv1alpha1.Capp) {
-	Eventually(func() error {
-		return k8sClient.Update(context.Background(), capp)
-	}, timeoutCapp, cappCreationInterval).Should(Succeed(), "Should update capp")
-}
-
 // DeleteCapp deletes an existing Capp instance.
 func DeleteCapp(k8sClient client.Client, capp *cappv1alpha1.Capp) {
 	Expect(k8sClient.Delete(context.Background(), capp)).To(Succeed())

@@ -3,6 +3,8 @@ package e2e_tests
 import (
 	"context"
 
+	"k8s.io/client-go/util/retry"
+
 	_ "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/dana-team/container-app-operator/test/e2e_tests/mocks"
 	"github.com/dana-team/container-app-operator/test/e2e_tests/testconsts"
@@ -31,10 +33,15 @@ var _ = Describe("Validate capp creation", func() {
 		assertionCapp := utilst.GetCapp(k8sClient, desiredCapp.Name, desiredCapp.Namespace)
 		Expect(assertionCapp.Name).ShouldNot(Equal(baseCapp.Name))
 
-		By("Checks if Capp Updated successfully")
-		desiredCapp = assertionCapp.DeepCopy()
-		desiredCapp.Spec.ScaleMetric = mocks.RPSScaleMetric
-		utilst.UpdateCapp(k8sClient, desiredCapp)
+		By("Checks if Capp updated successfully")
+		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			assertionCapp := utilst.GetCapp(k8sClient, desiredCapp.Name, desiredCapp.Namespace)
+			assertionCapp.Spec.ScaleMetric = mocks.RPSScaleMetric
+
+			return utilst.UpdateResource(k8sClient, assertionCapp)
+		})
+		Expect(err).To(BeNil())
+
 		Eventually(func() string {
 			assertionCapp = utilst.GetCapp(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
 			return assertionCapp.Spec.ScaleMetric
@@ -50,31 +57,36 @@ var _ = Describe("Validate capp creation", func() {
 	It("Validate state functionality", func() {
 		By("Creating a capp instance")
 		testCapp := mocks.CreateBaseCapp()
-		assertionCapp := createAndGetCapp(testCapp)
+		createdCapp := utilst.CreateCapp(k8sClient, testCapp)
 
 		By("Checking if the capp state is enabled")
 		Eventually(func() string {
-			capp := utilst.GetCapp(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
+			capp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
 			return capp.Status.StateStatus.State
 		}, testconsts.Timeout, testconsts.Interval).Should(Equal(testconsts.EnabledState))
 
 		By("Checking if the ksvc was created successfully")
-		ksvcObject := mocks.CreateKnativeServiceObject(assertionCapp.Name)
+		ksvcObject := mocks.CreateKnativeServiceObject(createdCapp.Name)
 		Eventually(func() bool {
 			return utilst.DoesResourceExist(k8sClient, ksvcObject)
 		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "Should find a resource.")
 
 		By("Checking if the revision is ready")
-		revisionName := assertionCapp.Name + testconsts.FirstRevisionSuffix
+		revisionName := createdCapp.Name + testconsts.FirstRevisionSuffix
 		checkRevisionReadiness(revisionName, true)
 
 		By("Updating the capp status to be disabled")
-		assertionCapp.Spec.State = testconsts.DisabledState
-		utilst.UpdateCapp(k8sClient, assertionCapp)
+		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			assertionCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
+			assertionCapp.Spec.State = testconsts.DisabledState
+
+			return utilst.UpdateResource(k8sClient, assertionCapp)
+		})
+		Expect(err).To(BeNil())
 
 		By("Checking if the capp state is disabled")
 		Eventually(func() string {
-			capp := utilst.GetCapp(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
+			capp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
 			return capp.Status.StateStatus.State
 		}, testconsts.Timeout, testconsts.Interval).Should(Equal(testconsts.DisabledState))
 
@@ -88,9 +100,13 @@ var _ = Describe("Validate capp creation", func() {
 		}, testconsts.Timeout, testconsts.Interval).ShouldNot(BeTrue(), "Should not find a resource.")
 
 		By("Updating the capp status to be enabled")
-		assertionCapp = utilst.GetCapp(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
-		assertionCapp.Spec.State = testconsts.EnabledState
-		utilst.UpdateCapp(k8sClient, assertionCapp)
+		err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			assertionCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
+			assertionCapp.Spec.State = testconsts.EnabledState
+
+			return utilst.UpdateResource(k8sClient, assertionCapp)
+		})
+		Expect(err).To(BeNil())
 
 		By("Checking if the ksvc was recreated successfully")
 		Eventually(func() bool {
