@@ -3,16 +3,14 @@ package adapters
 import (
 	"context"
 	"fmt"
-	"math/rand"
-	"strconv"
 	"strings"
-	"time"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
+	"knative.dev/pkg/kmeta"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -24,31 +22,8 @@ var (
 )
 
 const (
-	ClientListLimit    = 100
-	charSet            = "abcdefghijklmnopqrstuvwxyz0123456789"
-	RandomStringLength = 5
-	IndexCut           = 50
+	ClientListLimit = 100
 )
-
-var seededRand = rand.New(rand.NewSource(time.Now().UnixNano()))
-
-// generateRandomString returns a random string of the specified length using characters from the charset.
-func generateRandomString(length int) string {
-	b := make([]byte, length)
-	for i := range b {
-		b[i] = charSet[seededRand.Intn(len(charSet))]
-	}
-	return string(b)
-}
-
-// getSubstringUntilIndex returns a substring from the start of the given string up to (but not including) the character at the specified index.
-// If the index is out of bounds, it returns the entire string.
-func getSubstringUntilIndex(s string, index int) string {
-	if index < 0 || index > len(s) {
-		return s
-	}
-	return s[:index]
-}
 
 // copyAnnotations returns a map of annotations from a Capp that contain the Domain string.
 func copyAnnotations(capp cappv1alpha1.Capp) map[string]string {
@@ -86,8 +61,7 @@ func CreateCappRevision(ctx context.Context, k8sClient client.Client, logger log
 	cappRevision := cappv1alpha1.CappRevision{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: fmt.Sprintf("%s-%s-v%s", getSubstringUntilIndex(capp.Name, IndexCut),
-				generateRandomString(RandomStringLength), strconv.Itoa(revisionNumber)),
+			Name:        kmeta.ChildName(capp.Name, fmt.Sprintf("-%05d", revisionNumber)),
 			Namespace:   capp.Namespace,
 			Labels:      map[string]string{cappNameLabelKey: capp.Name},
 			Annotations: copyAnnotations(capp),

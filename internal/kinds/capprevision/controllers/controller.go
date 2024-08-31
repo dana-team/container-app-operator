@@ -57,7 +57,7 @@ func (r *CappRevisionReconciler) Reconcile(ctx context.Context, req reconcile.Re
 		return ctrl.Result{}, nil
 	}
 	if err := syncCappRevision(ctx, r.Client, capp, logger); err != nil {
-		if errors.IsConflict(err) {
+		if errors.IsConflict(err) || errors.IsAlreadyExists(err) {
 			logger.Info(fmt.Sprintf("Conflict detected requeuing: %s", err.Error()))
 			return ctrl.Result{RequeueAfter: RequeueTime}, nil
 		}
