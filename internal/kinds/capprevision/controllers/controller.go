@@ -18,7 +18,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-const RequeueTime = 5 * time.Second
+const (
+	cappRevisionControllerName = "CappRevisionController"
+	RequeueTime                = 5 * time.Second
+)
 
 // CappRevisionReconciler reconciles a Capp object
 type CappRevisionReconciler struct {
@@ -38,6 +41,7 @@ type CappRevisionReconciler struct {
 func (r *CappRevisionReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&cappv1alpha1.Capp{}).
+		Named(cappRevisionControllerName).
 		Complete(r)
 }
 
