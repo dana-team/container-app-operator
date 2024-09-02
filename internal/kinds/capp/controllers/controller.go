@@ -37,7 +37,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-const RequeueTime = 5 * time.Second
+const (
+	cappControllerName = "CappController"
+	RequeueTime        = 5 * time.Second
+)
 
 // CappReconciler reconciles a Capp object
 type CappReconciler struct {
@@ -70,6 +73,7 @@ type CappReconciler struct {
 func (r *CappReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&cappv1alpha1.Capp{}).
+		Named(cappControllerName).
 		Watches(
 			&knativev1.Service{},
 			handler.EnqueueRequestsFromMapFunc(r.findCappFromEvent),

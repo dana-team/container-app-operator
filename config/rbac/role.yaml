@@ -8,12 +8,15 @@ rules:
   - ""
   resources:
   - configmaps
+  - nodes
+  - secrets
   verbs:
   - get
   - list
   - watch
 - apiGroups:
   - ""
+  - events.k8s.io
   resources:
   - events
   verbs:
@@ -22,22 +25,6 @@ rules:
   - list
   - patch
   - update
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - nodes
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - secrets
-  verbs:
-  - get
-  - list
   - watch
 - apiGroups:
   - cert-manager.io
@@ -51,30 +38,9 @@ rules:
   - update
   - watch
 - apiGroups:
-  - events.k8s.io
-  resources:
-  - events
-  verbs:
-  - create
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
   - logging.banzaicloud.io
   resources:
   - syslogngflows
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - update
-  - watch
-- apiGroups:
-  - logging.banzaicloud.io
-  resources:
   - syslogngoutputs
   verbs:
   - create
@@ -98,25 +64,6 @@ rules:
   - rcs.dana.io
   resources:
   - capprevisions
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - rcs.dana.io
-  resources:
-  - capprevisions/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - rcs.dana.io
-  resources:
   - capps
   verbs:
   - create
@@ -129,16 +76,17 @@ rules:
 - apiGroups:
   - rcs.dana.io
   resources:
-  - capps/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - rcs.dana.io
-  resources:
+  - capprevisions/status
   - capps/status
   verbs:
   - get
   - patch
+  - update
+- apiGroups:
+  - rcs.dana.io
+  resources:
+  - capps/finalizers
+  verbs:
   - update
 - apiGroups:
   - record.dns.crossplane.io
@@ -165,6 +113,7 @@ rules:
   - serving.knative.dev
   resources:
   - domainmappings
+  - services
   verbs:
   - create
   - delete
@@ -178,17 +127,6 @@ rules:
   - revisions
   verbs:
   - create
-  - get
-  - list
-  - update
-  - watch
-- apiGroups:
-  - serving.knative.dev
-  resources:
-  - services
-  verbs:
-  - create
-  - delete
   - get
   - list
   - update
