@@ -173,7 +173,7 @@ install-knative: ## Install knative controller on the kind cluster
 	wget -O $(LOCALBIN)/kn-quickstart $(KNATIVE_URL)
 	chmod +x $(LOCALBIN)/kn-quickstart
 	@CLUSTER_NAME=$$(kubectl config current-context | awk -F '-' '{ print $$2}'); \
-	(yes no || true) | $(LOCALBIN)/kn-quickstart kind -n $$CLUSTER_NAME
+	(yes no || true) | $(LOCALBIN)/kn-quickstart kind -n $$CLUSTER_NAME --install-serving
 	$(KUBECTL) apply -f $(KNATIVE_HPA_URL)
 
 .PHONY: install-crossplane-scc
