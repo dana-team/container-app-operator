@@ -44,6 +44,5 @@ var (
 )
 
 const (
-	CappNS  = "capp-operator-system"
 	CappKey = "capp"
 )

@@ -104,3 +104,8 @@ func GenerateRecordName(hostname, suffix string) string {
 
 	return hostname[:len(hostname)-len(suffix)]
 }
+
+// IsCustomHostnameSet returns a boolean indicating whether a custom hostname is set.
+func IsCustomHostnameSet(hostname string) bool {
+	return hostname != ""
+}

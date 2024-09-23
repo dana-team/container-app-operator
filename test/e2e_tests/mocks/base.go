@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	CappName       = "capp-default-test"
+	CappName       = "capp-test"
 	NSName         = "capp-e2e-tests"
 	RPSScaleMetric = "rps"
 	SecretKey      = "extra"
@@ -18,8 +18,8 @@ const (
 	DNSConfig      = "dns-config"
 	CNAMEKey       = "cname"
 	ZoneKey        = "zone"
-	ZoneValue      = "test-zone.com."
-	CNAMEValue     = "test-cname.com"
+	ZoneValue      = "zone.com."
+	CNAMEValue     = "cname.com"
 )
 
 func CreateBaseCapp() *cappv1alpha1.Capp {

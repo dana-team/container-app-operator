@@ -76,7 +76,12 @@ func buildCertificateStatus(ctx context.Context, kubeClient client.Client, capp 
 	}
 
 	certificate := &cmapi.Certificate{}
-	certificateName := utils.GenerateResourceName(capp.Spec.RouteSpec.Hostname, zone)
+	hostname := capp.Spec.RouteSpec.Hostname
+	if !utils.IsCustomHostnameSet(hostname) {
+		hostname = capp.Status.KnativeObjectStatus.URL.Host
+	}
+
+	certificateName := utils.GenerateResourceName(hostname, zone)
 	if err := kubeClient.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: certificateName}, certificate); err != nil {
 		return cmapi.CertificateStatus{}, err
 	}
