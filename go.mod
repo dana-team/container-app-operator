@@ -7,7 +7,7 @@ require (
 	github.com/cisco-open/operator-tools v0.36.0
 	github.com/crossplane/crossplane-runtime v1.17.0
 	github.com/dana-team/cert-external-issuer v0.1.0
-	github.com/dana-team/nfspvc-operator v0.4.1
+	github.com/dana-team/nfspvc-operator v0.4.2
 	github.com/dana-team/provider-dns v0.1.0
 	github.com/go-logr/logr v1.4.2
 	github.com/go-logr/zapr v1.3.0

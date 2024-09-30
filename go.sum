@@ -43,8 +43,8 @@ github.com/crossplane/upjet v1.3.0 h1:qRgcfqLz4M2v7enUku3xEriY5poc5XVbRl98nbvvu+
 github.com/crossplane/upjet v1.3.0/go.mod h1:3pDVtCgyBc5f2Zx4K5HEPxxhjndmOc5CHCJNpIivK/g=
 github.com/dana-team/cert-external-issuer v0.1.0 h1:ObSY+ioxhEqwsLVnfqNznpHKH0CDJbYL8UcGVT44MuM=
 github.com/dana-team/cert-external-issuer v0.1.0/go.mod h1:LYZ8pCQZFmfot0+SwIh1OxyGZelMZjKuJM1W5JUxBIY=
-github.com/dana-team/nfspvc-operator v0.4.1 h1:yHsGSAYMtM6jgacnJAAwYEtdqZ9y+y90zdTMnhUhn1Y=
-github.com/dana-team/nfspvc-operator v0.4.1/go.mod h1:/QATwqD8iWsjHHfqbRxfoCwxt9+2f+5StnLx2TA01Dg=
+github.com/dana-team/nfspvc-operator v0.4.2 h1:hwlyYIyccXlD1KtxcsMd/hmdD/IdyLEaZpSQ0lroBzo=
+github.com/dana-team/nfspvc-operator v0.4.2/go.mod h1:Zmz+dfObKTkXVrHAbSzLszsqjJrM351OCYZdQqUDvkI=
 github.com/dana-team/provider-dns v0.1.0 h1:lp3KsHg51P+phQdKAFR3Grx/O1azOnGumTfJhZGoGcU=
 github.com/dana-team/provider-dns v0.1.0/go.mod h1:dyVSBHhnNn6T1WpfhEZyFwiT7Gu4bbCCSXHXOVDgbTc=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
