@@ -159,3 +159,7 @@ dnsConfig:
   zone: capp-zone.com.
   # -- The canonical name that CNAMEs created by the operator should point at.
   cname: ingress.capp-zone.com.
+  # -- The name of the Crossplane DNS provider config.
+  provider: dns-default
+  # -- The name of the Certificate External Issuer name
+  issuer: cert-issuer

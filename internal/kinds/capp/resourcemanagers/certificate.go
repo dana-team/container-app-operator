@@ -28,7 +28,6 @@ const (
 	eventCappCertificateCreationFailed = "CertificateCreationFailed"
 	eventCappCertificateCreated        = "CertificateCreated"
 	PrivateKeySize                     = 4096
-	clusterIssuerName                  = "cert-external-issuer-clusterissuer"
 	clusterIssuerKind                  = "ClusterIssuer"
 )
 
@@ -47,6 +46,11 @@ func (c CertificateManager) prepareResource(capp cappv1alpha1.Capp) (cmapi.Certi
 	}
 
 	zone, err := utils.GetZoneFromConfig(dnsConfig)
+	if err != nil {
+		return cmapi.Certificate{}, err
+	}
+
+	issuer, err := utils.GetIssuerNameFromConfig(dnsConfig)
 	if err != nil {
 		return cmapi.Certificate{}, err
 	}
@@ -79,7 +83,7 @@ func (c CertificateManager) prepareResource(capp cappv1alpha1.Capp) (cmapi.Certi
 			},
 			IsCA: false,
 			IssuerRef: cmmeta.ObjectReference{
-				Name:  clusterIssuerName,
+				Name:  issuer,
 				Kind:  clusterIssuerKind,
 				Group: certv1alpha1.GroupVersion.Group,
 			},
