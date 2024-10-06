@@ -74,7 +74,7 @@ func (c CertificateManager) prepareResource(capp cappv1alpha1.Capp) (cmapi.Certi
 			},
 		},
 		Spec: cmapi.CertificateSpec{
-			CommonName: resourceName,
+			CommonName: utils.TruncateCommonName(resourceName),
 			DNSNames:   []string{resourceName},
 			PrivateKey: &cmapi.CertificatePrivateKey{
 				Algorithm: cmapi.RSAKeyAlgorithm,
