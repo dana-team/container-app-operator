@@ -18,6 +18,10 @@ const (
 	DNSConfig      = "dns-config"
 	CNAMEKey       = "cname"
 	ZoneKey        = "zone"
+	ProviderKey    = "provider"
+	ProviderValue  = "dns-provider"
+	IssuerKey      = "issuer"
+	IssuerValue    = "cert-issuer"
 	ZoneValue      = "zone.com."
 	CNAMEValue     = "cname.com"
 )

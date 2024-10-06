@@ -14,11 +14,15 @@ import (
 )
 
 const (
-	dnsCM           = "dns-config"
-	zoneKey         = "zone"
-	cnameKey        = "cname"
-	placeholderZone = "capp.com."
-	dot             = "."
+	dnsCM               = "dns-config"
+	zoneKey             = "zone"
+	cnameKey            = "cname"
+	issuerKey           = "issuer"
+	providerKey         = "provider"
+	placeholderZone     = "capp.com."
+	placeholderIssuer   = "cert-issuer"
+	placeholderProvider = "dns-default"
+	dot                 = "."
 )
 
 // IsDNSRecordAvailable returns a boolean indicating whether a CNAMERecord is currently available.
@@ -81,6 +85,39 @@ func GetZoneFromConfig(dnsConfig map[string]string) (string, error) {
 	}
 
 	return zone, nil
+}
+
+// GetXPProviderFromConfig returns the Crossplane provider to be used for the record from a ConfigMap.
+func GetXPProviderFromConfig(dnsConfig map[string]string) (string, error) {
+	var ok bool
+	provider := placeholderProvider
+	if len(dnsConfig) > 0 {
+		provider, ok = dnsConfig[providerKey]
+		if !ok {
+			return provider, fmt.Errorf("%q key is not set in ConfigMap %q", providerKey, dnsCM)
+		} else if provider == "" {
+			return provider, fmt.Errorf("%q is empty in ConfigMap %q", providerKey, dnsCM)
+		}
+	}
+
+	return provider, nil
+}
+
+// GetIssuerNameFromConfig returns the name of the Certificate Issuer
+// to be used for the Certificate from a ConfigMap.
+func GetIssuerNameFromConfig(dnsConfig map[string]string) (string, error) {
+	var ok bool
+	issuer := placeholderIssuer
+	if len(dnsConfig) > 0 {
+		issuer, ok = dnsConfig[issuerKey]
+		if !ok {
+			return issuer, fmt.Errorf("%q key is not set in ConfigMap %q", issuerKey, dnsCM)
+		} else if issuer == "" {
+			return issuer, fmt.Errorf("%q is empty in ConfigMap %q", issuerKey, dnsCM)
+		}
+	}
+
+	return issuer, nil
 }
 
 // GenerateResourceName generates the hostname based on the provided suffix and a dot(".") trailing character.

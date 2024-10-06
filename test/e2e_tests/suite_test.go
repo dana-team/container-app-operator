@@ -32,7 +32,7 @@ var _ = SynchronizedBeforeSuite(func() {
 	createE2ETestNamespace()
 	initE2ETestAutoScaleConfigMap()
 	createE2ETestAutoScaleConfigMap()
-	createE2ETestZoneConfigMap()
+	createE2ETestDNSConfigMap()
 }, func() {
 	initClient()
 	initE2ETestAutoScaleConfigMap()
@@ -85,11 +85,13 @@ func createE2ETestAutoScaleConfigMap() {
 	utilst.CreateConfigMap(k8sClient, autoScaleConfigMap)
 }
 
-// createE2ETestZoneConfigMap creates a Zone ConfigMap for the e2e tests.
-func createE2ETestZoneConfigMap() {
+// createE2ETestDNSConfigMap creates a Zone ConfigMap for the e2e tests.
+func createE2ETestDNSConfigMap() {
 	dnsConfig := map[string]string{
-		mock.ZoneKey:  mock.ZoneValue,
-		mock.CNAMEKey: mock.CNAMEValue,
+		mock.ZoneKey:     mock.ZoneValue,
+		mock.CNAMEKey:    mock.CNAMEValue,
+		mock.ProviderKey: mock.ProviderValue,
+		mock.IssuerKey:   mock.IssuerValue,
 	}
 
 	dnsConfigMap := mock.CreateConfigMapObject(mock.ControllerNS, mock.DNSConfig, dnsConfig)

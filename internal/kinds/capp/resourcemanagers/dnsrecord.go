@@ -26,7 +26,6 @@ const (
 	DNSRecord                        = "DNSRecord"
 	eventCappDNSRecordCreationFailed = "DNSRecordCreationFailed"
 	eventCappDNSRecordCreated        = "DNSRecordCreated"
-	xpProviderDNSConfigRefName       = "dns-default"
 )
 
 type DNSRecordManager struct {
@@ -53,6 +52,11 @@ func (r DNSRecordManager) prepareResource(capp cappv1alpha1.Capp) (dnsrecordv1al
 		return dnsrecordv1alpha1.CNAMERecord{}, err
 	}
 
+	xpProvider, err := utils.GetXPProviderFromConfig(dnsConfig)
+	if err != nil {
+		return dnsrecordv1alpha1.CNAMERecord{}, err
+	}
+
 	resourceName := utils.GenerateResourceName(capp.Spec.RouteSpec.Hostname, zone)
 	recordName := utils.GenerateRecordName(capp.Spec.RouteSpec.Hostname, zone)
 
@@ -74,7 +78,7 @@ func (r DNSRecordManager) prepareResource(capp cappv1alpha1.Capp) (dnsrecordv1al
 			},
 			ResourceSpec: xpcommonv1.ResourceSpec{
 				ProviderConfigReference: &xpcommonv1.Reference{
-					Name: xpProviderDNSConfigRefName,
+					Name: xpProvider,
 				},
 			},
 		},
