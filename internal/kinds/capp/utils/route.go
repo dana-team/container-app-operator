@@ -23,6 +23,7 @@ const (
 	placeholderIssuer   = "cert-issuer"
 	placeholderProvider = "dns-default"
 	dot                 = "."
+	maxCommonNameLength = 64
 )
 
 // IsDNSRecordAvailable returns a boolean indicating whether a CNAMERecord is currently available.
@@ -145,4 +146,12 @@ func GenerateRecordName(hostname, suffix string) string {
 // IsCustomHostnameSet returns a boolean indicating whether a custom hostname is set.
 func IsCustomHostnameSet(hostname string) bool {
 	return hostname != ""
+}
+
+// TruncateCommonName truncates the CommonName string to be no longer than 64 characters.
+func TruncateCommonName(s string) string {
+	if len(s) > maxCommonNameLength {
+		return s[:maxCommonNameLength]
+	}
+	return s
 }
