@@ -1,4 +1,4 @@
-# capp-operator
+# container-app-operator
 
 ![Version: 0.0.0](https://img.shields.io/badge/Version-0.0.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: latest](https://img.shields.io/badge/AppVersion-latest-informational?style=flat-square)
 
@@ -9,16 +9,20 @@ A Helm chart for container-app-operator
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | affinity | object | `{}` | Node affinity rules for scheduling pods. Allows you to specify advanced node selection constraints. |
-| autoscaleConfig | object | `{"concurrency":"10","cpu":"80","memory":"70","name":"autoscale-defaults","rps":"200"}` | Configuration for the ConfigMap used to set autoscaling defaults. |
+| autoscaleConfig | object | `{"activationScale":"3","concurrency":"10","cpu":"80","memory":"70","name":"autoscale-defaults","rps":"200"}` | Configuration for the ConfigMap used to set autoscaling defaults. |
+| autoscaleConfig.activationScale | string | `"3"` | The default activationScale for autoscaling. |
 | autoscaleConfig.concurrency | string | `"10"` | The default concurrency limit for autoscaling. |
 | autoscaleConfig.cpu | string | `"80"` | The default CPU utilization percentage for autoscaling. |
 | autoscaleConfig.memory | string | `"70"` | The default memory utilization percentage for autoscaling. |
 | autoscaleConfig.name | string | `"autoscale-defaults"` | The name of the ConfigMap containing autoscale defaults. |
 | autoscaleConfig.rps | string | `"200"` | The default Requests Per Second (RPS) threshold for autoscaling. |
-| dnsConfig | object | `{"cname":"ingress.capp-zone.com.","name":"dns-config","zone":"capp-zone.com."}` | Configuration for the DNS. |
-| dnsConfig.cname | string | `"ingress.capp-zone.com."` | The canonical name that CNAMEs created by the operator should point at. |
+| dnsConfig | object | `{"data":{"cname":"ingress.capp-zone.com.","issuer":"cert-issuer","provider":"dns-default","zone":"capp-zone.com."},"name":"dns-config"}` | Configuration for the DNS. |
+| dnsConfig.data | object | `{"cname":"ingress.capp-zone.com.","issuer":"cert-issuer","provider":"dns-default","zone":"capp-zone.com."}` | The data for the DNS configMap. |
+| dnsConfig.data.cname | string | `"ingress.capp-zone.com."` | The canonical name that CNAMEs created by the operator should point at. |
+| dnsConfig.data.issuer | string | `"cert-issuer"` | The name of the Certificate External Issuer name |
+| dnsConfig.data.provider | string | `"dns-default"` | The name of the Crossplane DNS provider config. |
+| dnsConfig.data.zone | string | `"capp-zone.com."` | The DNS zone for the application. |
 | dnsConfig.name | string | `"dns-config"` | The name of the DNS configMap. |
-| dnsConfig.zone | string | `"capp-zone.com."` | The DNS zone for the application. |
 | fullnameOverride | string | `""` |  |
 | image.kubeRbacProxy.pullPolicy | string | `"IfNotPresent"` | The pull policy for the image. |
 | image.kubeRbacProxy.repository | string | `"gcr.io/kubebuilder/kube-rbac-proxy"` | The repository of the kube-rbac-proxy container image. |
