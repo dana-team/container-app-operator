@@ -5,5 +5,6 @@ metadata:
   labels:
     {{- include "container-app-operator.labels" . | nindent 4 }}
 data:
-  zone: "{{ .Values.dnsConfig.zone }}"
-  cname: "{{ .Values.dnsConfig.cname }}"
+  {{- range $key, $value := .Values.dnsConfig.data }}
+    {{ $key }}: "{{ $value }}"
+  {{- end }}
