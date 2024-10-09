@@ -32,7 +32,7 @@ The `container-app-operator` project can work as a standalone solution, but is m
 - [x] Support for autoscaler (`HPA` or `KPA`) according to the chosen `scaleMetric` (`concurrency`, `rps`, `cpu`, `memory`) with default settings.
 - [x] Support for HTTP/HTTPS `DomainMapping` for accessing applications via `Ingress`/`Route`.
 - [x] Support for `DNS Records` lifecycle management based on the `hostname` API field.
-- [x] Support for `Certificate` lifecycle management for default `Ingress` or based on the `hostname` API field.
+- [x] Support for `Certificate` lifecycle management based on the `hostname` API field.
 - [x] Support for all `Knative Serving` configurations.
 - [x] Support for exporting logs to an `Elasticsearch` index.
 - [x] Support for changing the state of `Capp` from `enabled` (workload is in running state) to `disabled` (workload is not in running state).

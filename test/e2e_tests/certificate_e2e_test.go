@@ -103,7 +103,7 @@ var _ = Describe("Validate Certificate functionality", func() {
 		})
 	})
 
-	It("Should create Certificate for default Ingress when no custom hostname exists", func() {
+	It("Should cleanup Certificate when no longer required (hostname)", func() {
 		By("Creating an HTTPS Capp")
 		createdCapp, routeHostname := utilst.CreateHTTPSCapp(k8sClient)
 
@@ -123,12 +123,9 @@ var _ = Describe("Validate Certificate functionality", func() {
 			})
 			Expect(err).To(BeNil())
 
-			toBeUpdatedCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-			certificateName := utilst.GenerateResourceName(toBeUpdatedCapp.Status.KnativeObjectStatus.URL.Host, mocks.ZoneValue)
-			certificateObject := mocks.CreateCertificateObject(certificateName)
 			Eventually(func() bool {
 				return utilst.DoesResourceExist(k8sClient, certificateObject)
-			}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "Should find a resource.")
+			}, testconsts.Timeout, testconsts.Interval).Should(BeFalse(), "Should not find a resource.")
 		})
 	})
 

@@ -55,12 +55,7 @@ func (c CertificateManager) prepareResource(capp cappv1alpha1.Capp) (cmapi.Certi
 		return cmapi.Certificate{}, err
 	}
 
-	hostname := capp.Spec.RouteSpec.Hostname
-	if !utils.IsCustomHostnameSet(hostname) {
-		hostname = capp.Status.KnativeObjectStatus.URL.Host
-	}
-
-	resourceName := utils.GenerateResourceName(hostname, zone)
+	resourceName := utils.GenerateResourceName(capp.Spec.RouteSpec.Hostname, zone)
 	secretName := utils.GenerateSecretName(capp)
 
 	certificate := cmapi.Certificate{
@@ -112,8 +107,7 @@ func (c CertificateManager) CleanUp(capp cappv1alpha1.Capp) error {
 
 // IsRequired is responsible to determine if resource Certificate is required.
 func (c CertificateManager) IsRequired(capp cappv1alpha1.Capp) bool {
-	return capp.Spec.RouteSpec.TlsEnabled &&
-		(utils.IsCustomHostnameSet(capp.Spec.RouteSpec.Hostname) || capp.Status.KnativeObjectStatus.URL != nil)
+	return capp.Spec.RouteSpec.TlsEnabled && utils.IsCustomHostnameSet(capp.Spec.RouteSpec.Hostname)
 }
 
 // Manage creates or updates a Certificate resource based on the provided Capp if it's required.
