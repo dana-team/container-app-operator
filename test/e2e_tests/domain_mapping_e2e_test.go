@@ -78,7 +78,8 @@ var _ = Describe("Validate DomainMapping functionality", func() {
 		createdCapp, routeHostname := utilst.CreateCappWithHTTPHostname(k8sClient)
 
 		By("Making sure the tls secret exists in advance")
-		secretName := utilst.GenerateCertSecretName(createdCapp.Name)
+		resourceName := utilst.GenerateResourceName(routeHostname, mocks.ZoneValue)
+		secretName := utilst.GenerateCertSecretName(resourceName)
 		secretObject := mocks.CreateSecretObject(secretName)
 		utilst.CreateSecret(k8sClient, secretObject)
 		Eventually(func() bool {

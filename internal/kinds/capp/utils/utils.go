@@ -85,8 +85,8 @@ func FilterMap(originalMap map[string]string, substring string) map[string]strin
 }
 
 // GenerateSecretName generates TLS secret name for certificate and domain mapping.
-func GenerateSecretName(capp cappv1alpha1.Capp) string {
-	return fmt.Sprintf("%s-tls", capp.Name)
+func GenerateSecretName(resourceName string) string {
+	return fmt.Sprintf("%s-tls", resourceName)
 }
 
 // GetListOptions returns a list option object from a given Set.

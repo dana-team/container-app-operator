@@ -91,8 +91,8 @@ func GenerateSecretName() string {
 }
 
 // GenerateCertSecretName generates a capp cert secret name.
-func GenerateCertSecretName(cappName string) string {
-	return fmt.Sprintf("%s-tls", cappName)
+func GenerateCertSecretName(hostname string) string {
+	return fmt.Sprintf("%s-tls", hostname)
 }
 
 // UpdateResource updates an existing resource.

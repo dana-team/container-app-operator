@@ -56,7 +56,7 @@ func (c CertificateManager) prepareResource(capp cappv1alpha1.Capp) (cmapi.Certi
 	}
 
 	resourceName := utils.GenerateResourceName(capp.Spec.RouteSpec.Hostname, zone)
-	secretName := utils.GenerateSecretName(capp)
+	secretName := utils.GenerateSecretName(resourceName)
 
 	certificate := cmapi.Certificate{
 		TypeMeta: metav1.TypeMeta{},
