@@ -51,7 +51,7 @@ func (k KnativeDomainMappingManager) prepareResource(capp cappv1alpha1.Capp) (kn
 	}
 
 	resourceName := utils.GenerateResourceName(capp.Spec.RouteSpec.Hostname, zone)
-	secretName := utils.GenerateSecretName(capp)
+	secretName := utils.GenerateSecretName(resourceName)
 
 	knativeDomainMapping := &knativev1beta1.DomainMapping{
 		TypeMeta: metav1.TypeMeta{},
@@ -103,7 +103,7 @@ func (k KnativeDomainMappingManager) setHTTPSKnativeDomainMapping(secretName, se
 	return nil
 }
 
-// CleanUp attempts to delete the associated DomainMapping for a given Capp resource.
+// CleanUp attempts to delete the associated DomainMapping and tls secret for a given Capp resource.
 func (k KnativeDomainMappingManager) CleanUp(capp cappv1alpha1.Capp) error {
 	resourceManager := rclient.ResourceManagerClient{Ctx: k.Ctx, K8sclient: k.K8sclient, Log: k.Log}
 
@@ -113,6 +113,10 @@ func (k KnativeDomainMappingManager) CleanUp(capp cappv1alpha1.Capp) error {
 			if errors.IsNotFound(err) {
 				return nil
 			}
+			return err
+		}
+
+		if err := deleteTLSSecret(resourceManager.Ctx, resourceManager.K8sclient, utils.GenerateSecretName(capp.Spec.RouteSpec.Hostname), capp.Namespace); err != nil {
 			return err
 		}
 	}
@@ -236,6 +240,26 @@ func (k KnativeDomainMappingManager) deletePreviousDomainMappings(knativeDomainM
 				return err
 			}
 		}
+		if err := deleteTLSSecret(resourceManager.Ctx, resourceManager.K8sclient, utils.GenerateSecretName(domainMapping.Name), domainMapping.Namespace); err != nil {
+			return err
+		}
 	}
+	return nil
+}
+
+// deleteTLSSecret deletes the tls secret associated with the DomainMapping.
+func deleteTLSSecret(ctx context.Context, client client.Client, secretName string, namespace string) error {
+	secret := corev1.Secret{}
+	if err := client.Get(ctx, types.NamespacedName{Name: secretName, Namespace: namespace}, &secret); err != nil {
+		if errors.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+
+	if err := client.Delete(ctx, &secret); err != nil {
+		return err
+	}
+
 	return nil
 }
