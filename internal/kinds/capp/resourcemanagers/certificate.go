@@ -135,14 +135,16 @@ func (c CertificateManager) create(capp cappv1alpha1.Capp) error {
 			if err := c.createCertificate(capp, certificateFromCapp, resourceManager); err != nil {
 				return err
 			}
-			if capp.Status.RouteStatus.DomainMappingObjectStatus.URL != nil {
-				if err := c.handlePreviousCertificates(capp, resourceManager, certificateFromCapp.Name); err != nil {
-					return fmt.Errorf("failed to handle previous Certificates: %w", err)
-				}
-			}
+
 			return c.createCertificate(capp, certificateFromCapp, resourceManager)
 		} else {
 			return fmt.Errorf("failed to get Certificate %q: %w", certificateFromCapp.Name, err)
+		}
+	}
+
+	if capp.Status.RouteStatus.DomainMappingObjectStatus.URL != nil {
+		if err := c.handlePreviousCertificates(capp, resourceManager, certificateFromCapp.Name); err != nil {
+			return fmt.Errorf("failed to handle previous Certificates: %w", err)
 		}
 	}
 

@@ -153,13 +153,14 @@ func (k KnativeDomainMappingManager) createOrUpdate(capp cappv1alpha1.Capp) erro
 			if err := k.createDomainMapping(capp, domainMappingFromCapp, resourceManager); err != nil {
 				return err
 			}
-			if capp.Status.RouteStatus.DomainMappingObjectStatus.URL != nil {
-				if err := k.handlePreviousDomainMappings(capp, resourceManager, domainMappingFromCapp.Name); err != nil {
-					return fmt.Errorf("failed to delete previous DomainMappings: %w", err)
-				}
-			}
 		} else {
 			return fmt.Errorf("failed to get DomainMapping %q: %w", domainMappingFromCapp.Name, err)
+		}
+	}
+
+	if capp.Status.RouteStatus.DomainMappingObjectStatus.URL != nil {
+		if err := k.handlePreviousDomainMappings(capp, resourceManager, domainMappingFromCapp.Name); err != nil {
+			return fmt.Errorf("failed to delete previous DomainMappings: %w", err)
 		}
 	}
 
