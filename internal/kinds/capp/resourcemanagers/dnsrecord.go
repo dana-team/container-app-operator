@@ -133,13 +133,14 @@ func (r DNSRecordManager) createOrUpdate(capp cappv1alpha1.Capp) error {
 			if err := r.createDNSRecord(capp, dnsRecordFromCapp, resourceManager); err != nil {
 				return err
 			}
-			if capp.Status.RouteStatus.DomainMappingObjectStatus.URL != nil {
-				if err := r.handlePreviousDNSRecords(capp, resourceManager, dnsRecordFromCapp.Name); err != nil {
-					return fmt.Errorf("failed to delete previous Certificates: %w", err)
-				}
-			}
 		} else {
 			return fmt.Errorf("failed to get DNSRecord %q: %w", dnsRecordFromCapp.Name, err)
+		}
+	}
+
+	if capp.Status.RouteStatus.DomainMappingObjectStatus.URL != nil {
+		if err := r.handlePreviousDNSRecords(capp, resourceManager, dnsRecordFromCapp.Name); err != nil {
+			return fmt.Errorf("failed to delete previous Certificates: %w", err)
 		}
 	}
 
