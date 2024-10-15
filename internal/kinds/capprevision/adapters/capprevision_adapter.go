@@ -3,7 +3,6 @@ package adapters
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/go-logr/logr"
@@ -24,17 +23,6 @@ var (
 const (
 	ClientListLimit = 100
 )
-
-// copyAnnotations returns a map of annotations from a Capp that contain the Domain string.
-func copyAnnotations(capp cappv1alpha1.Capp) map[string]string {
-	annotations := make(map[string]string)
-	for key, value := range capp.ObjectMeta.Annotations {
-		if strings.Contains(key, domain) {
-			annotations[key] = value
-		}
-	}
-	return annotations
-}
 
 // GetCappRevisions retrieves a list of CappRevision resources filtered by labels matching a specific Capp, returning the list and any error encountered.
 func GetCappRevisions(ctx context.Context, r client.Client, capp cappv1alpha1.Capp) ([]cappv1alpha1.CappRevision, error) {
@@ -61,10 +49,9 @@ func CreateCappRevision(ctx context.Context, k8sClient client.Client, logger log
 	cappRevision := cappv1alpha1.CappRevision{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        kmeta.ChildName(capp.Name, fmt.Sprintf("-%05d", revisionNumber)),
-			Namespace:   capp.Namespace,
-			Labels:      map[string]string{cappNameLabelKey: capp.Name},
-			Annotations: copyAnnotations(capp),
+			Name:      kmeta.ChildName(capp.Name, fmt.Sprintf("-%05d", revisionNumber)),
+			Namespace: capp.Namespace,
+			Labels:    map[string]string{cappNameLabelKey: capp.Name},
 		},
 		Spec: cappv1alpha1.CappRevisionSpec{
 			CappTemplate: cappv1alpha1.CappTemplate{
