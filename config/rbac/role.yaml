@@ -9,16 +9,15 @@ rules:
   resources:
   - configmaps
   - nodes
-  - secrets
   verbs:
   - get
   - list
   - watch
 - apiGroups:
   - ""
-  - events.k8s.io
   resources:
   - events
+  - secrets
   verbs:
   - create
   - get
@@ -35,6 +34,17 @@ rules:
   - delete
   - get
   - list
+  - update
+  - watch
+- apiGroups:
+  - events.k8s.io
+  resources:
+  - events
+  verbs:
+  - create
+  - get
+  - list
+  - patch
   - update
   - watch
 - apiGroups:
