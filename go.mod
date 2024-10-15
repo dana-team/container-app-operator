@@ -4,7 +4,7 @@ go 1.22.2
 
 require (
 	github.com/cert-manager/cert-manager v1.16.1
-	github.com/cisco-open/operator-tools v0.36.0
+	github.com/cisco-open/operator-tools v0.37.0
 	github.com/crossplane/crossplane-runtime v1.17.0
 	github.com/dana-team/cert-external-issuer v0.1.5
 	github.com/dana-team/nfspvc-operator v0.4.3
@@ -99,9 +99,8 @@ require (
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.55.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
-	github.com/sergi/go-diff v1.2.0 // indirect
 	github.com/spf13/afero v1.11.0 // indirect
-	github.com/spf13/cast v1.6.0 // indirect
+	github.com/spf13/cast v1.7.0 // indirect
 	github.com/spf13/cobra v1.8.1 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/tmccombs/hcl2json v0.6.3 // indirect
