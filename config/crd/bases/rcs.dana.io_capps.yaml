@@ -8655,7 +8655,7 @@ spec:
                           Known condition types are `Ready` and `Issuing`.
                         items:
                           description: CertificateCondition contains condition information
-                            for an Certificate.
+                            for a Certificate.
                           properties:
                             lastTransitionTime:
                               description: |-
@@ -8712,7 +8712,7 @@ spec:
                         type: integer
                       lastFailureTime:
                         description: |-
-                          LastFailureTime is set only if the lastest issuance for this
+                          LastFailureTime is set only if the latest issuance for this
                           Certificate failed and contains the time of the failure. If an
                           issuance has failed, the delay till the next issuance will be
                           calculated using formula time.Hour * 2 ^ (failedIssuanceAttempts -

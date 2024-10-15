@@ -60,11 +60,11 @@ type CappReconciler struct {
 // +kubebuilder:rbac:groups=logging.banzaicloud.io,resources=syslogngflows,verbs=get;list;watch;update;create;delete
 // +kubebuilder:rbac:groups=logging.banzaicloud.io,resources=syslogngoutputs,verbs=get;list;watch;update;create;delete
 // +kubebuilder:rbac:groups=route.openshift.io,resources=routes,verbs=get;list;watch;update;create
-// +kubebuilder:rbac:groups="",resources=nodes,verbs=get;list;watch;
-// +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;
-// +kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;
-// +kubebuilder:rbac:groups="",resources=events,verbs=get;list;watch;update;create;patch;
-// +kubebuilder:rbac:groups="events.k8s.io",resources=events,verbs=get;list;watch;update;create;patch
+// +kubebuilder:rbac:groups="",resources=nodes,verbs=get;list;watch
+// +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;update;create;patch;delete
+// +kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch
+// +kubebuilder:rbac:groups="",resources=events,verbs=get;list;watch;update;create;patch
+// +kubebuilder:rbac:groups="events.k8s.io",resources=events,verbs=get;list;watch;update;create;patch;
 // +kubebuilder:rbac:groups="nfspvc.dana.io",resources=nfspvcs,verbs=get;list;watch;update;create;delete
 // +kubebuilder:rbac:groups="record.dns.crossplane.io",resources=cnamerecords,verbs=get;list;watch;update;create;delete
 // +kubebuilder:rbac:groups="cert-manager.io",resources=certificates,verbs=get;list;watch;update;create;delete

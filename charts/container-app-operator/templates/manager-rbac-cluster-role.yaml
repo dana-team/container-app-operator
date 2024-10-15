@@ -6,191 +6,139 @@ metadata:
     {{- include "container-app-operator.labels" . | nindent 4 }}
 rules:
 - apiGroups:
-    - ""
+  - ""
   resources:
-    - configmaps
+  - configmaps
+  - nodes
   verbs:
-    - get
-    - list
-    - watch
+  - get
+  - list
+  - watch
 - apiGroups:
-    - ""
+  - ""
   resources:
-    - events
+  - events
+  - secrets
   verbs:
-    - create
-    - get
-    - list
-    - patch
-    - update
-    - watch
+  - create
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
-    - ""
+  - cert-manager.io
   resources:
-    - nodes
+  - certificates
   verbs:
-    - get
-    - list
-    - watch
+  - create
+  - delete
+  - get
+  - list
+  - update
+  - watch
 - apiGroups:
-    - ""
+  - events.k8s.io
   resources:
-    - secrets
+  - events
   verbs:
-    - get
-    - list
-    - watch
+  - create
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
-    - cert-manager.io
+  - logging.banzaicloud.io
   resources:
-    - certificates
+  - syslogngflows
+  - syslogngoutputs
   verbs:
-    - create
-    - delete
-    - get
-    - list
-    - update
-    - watch
+  - create
+  - delete
+  - get
+  - list
+  - update
+  - watch
 - apiGroups:
-    - events.k8s.io
+  - nfspvc.dana.io
   resources:
-    - events
+  - nfspvcs
   verbs:
-    - create
-    - get
-    - list
-    - patch
-    - update
-    - watch
+  - create
+  - delete
+  - get
+  - list
+  - update
+  - watch
 - apiGroups:
-    - logging.banzaicloud.io
+  - rcs.dana.io
   resources:
-    - syslogngflows
+  - capprevisions
+  - capps
   verbs:
-    - create
-    - delete
-    - get
-    - list
-    - update
-    - watch
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
-    - logging.banzaicloud.io
+  - rcs.dana.io
   resources:
-    - syslogngoutputs
+  - capprevisions/status
+  - capps/status
   verbs:
-    - create
-    - delete
-    - get
-    - list
-    - update
-    - watch
+  - get
+  - patch
+  - update
 - apiGroups:
-    - nfspvc.dana.io
+  - rcs.dana.io
   resources:
-    - nfspvcs
+  - capps/finalizers
   verbs:
-    - create
-    - delete
-    - get
-    - list
-    - update
-    - watch
+  - update
 - apiGroups:
-    - rcs.dana.io
+  - record.dns.crossplane.io
   resources:
-    - capprevisions
+  - cnamerecords
   verbs:
-    - create
-    - delete
-    - get
-    - list
-    - patch
-    - update
-    - watch
+  - create
+  - delete
+  - get
+  - list
+  - update
+  - watch
 - apiGroups:
-    - rcs.dana.io
+  - route.openshift.io
   resources:
-    - capprevisions/status
+  - routes
   verbs:
-    - get
-    - patch
-    - update
+  - create
+  - get
+  - list
+  - update
+  - watch
 - apiGroups:
-    - rcs.dana.io
+  - serving.knative.dev
   resources:
-    - capps
+  - domainmappings
+  - services
   verbs:
-    - create
-    - delete
-    - get
-    - list
-    - patch
-    - update
-    - watch
+  - create
+  - delete
+  - get
+  - list
+  - update
+  - watch
 - apiGroups:
-    - rcs.dana.io
+  - serving.knative.dev
   resources:
-    - capps/finalizers
+  - revisions
   verbs:
-    - update
-- apiGroups:
-    - rcs.dana.io
-  resources:
-    - capps/status
-  verbs:
-    - get
-    - patch
-    - update
-- apiGroups:
-    - record.dns.crossplane.io
-  resources:
-    - cnamerecords
-  verbs:
-    - create
-    - delete
-    - get
-    - list
-    - update
-    - watch
-- apiGroups:
-    - route.openshift.io
-  resources:
-    - routes
-  verbs:
-    - create
-    - get
-    - list
-    - update
-    - watch
-- apiGroups:
-    - serving.knative.dev
-  resources:
-    - domainmappings
-  verbs:
-    - create
-    - delete
-    - get
-    - list
-    - update
-    - watch
-- apiGroups:
-    - serving.knative.dev
-  resources:
-    - revisions
-  verbs:
-    - create
-    - get
-    - list
-    - update
-    - watch
-- apiGroups:
-    - serving.knative.dev
-  resources:
-    - services
-  verbs:
-    - create
-    - delete
-    - get
-    - list
-    - update
-    - watch
+  - create
+  - get
+  - list
+  - update
+  - watch
