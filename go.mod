@@ -13,7 +13,7 @@ require (
 	github.com/go-logr/zapr v1.3.0
 	github.com/kube-logging/logging-operator/pkg/sdk v0.11.1-0.20240314152935-421fefebc813
 	github.com/onsi/ginkgo/v2 v2.20.2
-	github.com/onsi/gomega v1.34.2
+	github.com/onsi/gomega v1.35.0
 	github.com/openshift/api v0.0.0-20241007111039-82e082220d91
 	github.com/stretchr/testify v1.9.0
 	go.elastic.co/ecszap v1.0.3
