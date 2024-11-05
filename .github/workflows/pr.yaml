@@ -53,6 +53,9 @@ jobs:
       - name: Setup prerequisites
         run: make prereq
 
+      - name: Setup environment
+        run: make create-cappConfig IMG=${IMAGE_REGISTRY}/container-app-operator:test-${GITHUB_REF##*/}
+
       - name: Deploy controller to cluster
         run: make install deploy IMG=${IMAGE_REGISTRY}/container-app-operator:test-${GITHUB_REF##*/}
 

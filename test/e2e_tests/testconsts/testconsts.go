@@ -7,10 +7,15 @@ import (
 )
 
 const (
-	Timeout             = 300 * time.Second
-	Interval            = 2 * time.Second
-	DefaultEventually   = 2 * time.Second
-	DefaultConsistently = 30 * time.Second
+	Timeout              = 300 * time.Second
+	Interval             = 2 * time.Second
+	DefaultEventually    = 2 * time.Second
+	DefaultConsistently  = 30 * time.Second
+	RPSValue             = "200"
+	CPUUpdatedValue      = "100"
+	MemoryValue          = "70"
+	ConcurrencyValue     = "10"
+	ActivationScaleValue = "3"
 )
 
 const (

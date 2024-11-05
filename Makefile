@@ -203,6 +203,12 @@ uninstall-prereq-helmfile: helmfile helm helm-plugins
 doc-chart: helm-docs helm
 	$(HELM_DOCS) charts/
 
+
+.PHONY: create-cappConfig
+create-cappConfig: kind ## Run the ci-quickstart script
+	$(shell pwd)/hack/setup-cappConfig-deployer.sh $(KIND) $(IMG)
+
+
 ##@ Dependencies
 
 ## Location to install dependencies to
@@ -250,6 +256,11 @@ $(ENVTEST): $(LOCALBIN)
 golangci-lint: $(GOLANGCI_LINT) ## Download golangci-lint locally if necessary.
 $(GOLANGCI_LINT): $(LOCALBIN)
 	$(call go-install-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/cmd/golangci-lint,${GOLANGCI_LINT_VERSION})
+
+.PHONY: kind
+kind: $(KIND) ## Download kind locally if necessary.
+$(KIND): $(LOCALBIN)
+	test -s $(LOCALBIN)/kind || GOBIN=$(LOCALBIN) go install sigs.k8s.io/kind@$(KIND_VERSION)
 
 .PHONY: ginkgo
 ginkgo: $(GINKGO) ## Download ginkgo locally if necessary.

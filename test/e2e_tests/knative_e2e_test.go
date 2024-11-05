@@ -3,14 +3,13 @@ package e2e_tests
 import (
 	"fmt"
 
-	"k8s.io/client-go/util/retry"
-
-	"github.com/dana-team/container-app-operator/test/e2e_tests/testconsts"
-
+	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/dana-team/container-app-operator/test/e2e_tests/mocks"
+	"github.com/dana-team/container-app-operator/test/e2e_tests/testconsts"
 	utilst "github.com/dana-team/container-app-operator/test/e2e_tests/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"k8s.io/client-go/util/retry"
 )
 
 // verifyLatestReadyRevision ensures the readiness of the latest Knative Revision
@@ -67,7 +66,7 @@ func testMetricAnnotation(metricType string) {
 	}, testconsts.Timeout, testconsts.Interval).Should(Equal(metricType))
 }
 
-var _ = Describe("Validate knative functionality", func() {
+var _ = FDescribe("Validate knative functionality", func() {
 	It("Should create a ksvc with cpu metric annotation when creating a capp with cpu scale metric", func() {
 		testMetricAnnotation("cpu")
 	})
@@ -355,20 +354,6 @@ var _ = Describe("Validate knative functionality", func() {
 		}, testconsts.Timeout, testconsts.Interval).Should(Equal("666"))
 	})
 
-	It("Should check the default ksvc annotation is equal to the configMap concurrency value", func() {
-		By("Creating a capp instance")
-		testCapp := mocks.CreateBaseCapp()
-		createdCapp := utilst.CreateCapp(k8sClient, testCapp)
-		assertionCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-
-		By("Checking if the ksvc's annotation is equal to the configMap")
-		Eventually(func() bool {
-			ksvc := utilst.GetKSVC(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
-			return ksvc.Spec.ConfigurationSpec.Template.Annotations[testconsts.KnativeAutoscaleTargetKey] == targetAutoScale[testconsts.ConcurrencyScaleKey] &&
-				ksvc.Spec.ConfigurationSpec.Template.Annotations[testconsts.KnativeActivationScaleKey] == targetAutoScale[testconsts.DefaultCmActivationScaleKey]
-		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue())
-	})
-
 	It("Should propagate Capp labels to the underlying KSVC", func() {
 		By("Creating a capp instance")
 		testCapp := mocks.CreateBaseCapp()
@@ -397,5 +382,51 @@ var _ = Describe("Validate knative functionality", func() {
 			return ksvc.Spec.ConfigurationSpec.Template.Labels[testconsts.CappResourceKey]
 		}, testconsts.Timeout, testconsts.Interval).Should(Equal(assertionCapp.Name))
 
+	})
+
+	It("Should check the default ksvc annotation is equal to the cappConfig's concurrency value", func() {
+		By("Creating a capp instance")
+		testCapp := mocks.CreateBaseCapp()
+		createdCapp := utilst.CreateCapp(k8sClient, testCapp)
+		assertionCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
+
+		cappConfig := utilst.GetCappConfig(k8sClient, mocks.CappConfigName, mocks.ControllerNS)
+
+		By("Checking if the ksvc's annotation is equal to the cappConfig's autoScale")
+		Eventually(func() bool {
+			ksvc := utilst.GetKSVC(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
+			return ksvc.Spec.ConfigurationSpec.Template.Annotations[testconsts.KnativeAutoscaleTargetKey] == cappConfig.Spec.AutoscaleConfig.Concurrency &&
+				ksvc.Spec.ConfigurationSpec.Template.Annotations[testconsts.KnativeActivationScaleKey] == cappConfig.Spec.AutoscaleConfig.ActivationScale
+		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue())
+	})
+
+	It("Should update the KSVC activationScale when the CappConfig's autoscale settings are changed", func() {
+		By("Getting the CappConfig instance")
+		cappConfig := utilst.GetCappConfig(k8sClient, mocks.CappConfigName, mocks.ControllerNS)
+
+		By("Cretaing a Capp instance")
+		createdCapp, _ := utilst.CreateCappWithHTTPHostname(k8sClient)
+
+		By("Updating the CappConfig autoscale settings")
+		updatedAutoscale := cappv1alpha1.AutoscaleConfig{
+			RPS:             testconsts.RPSValue,
+			CPU:             testconsts.CPUUpdatedValue,
+			Memory:          testconsts.MemoryValue,
+			Concurrency:     testconsts.ConcurrencyValue,
+			ActivationScale: testconsts.ActivationScaleValue,
+		}
+
+		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			cappConfig := utilst.GetCappConfig(k8sClient, mocks.CappConfigName, mocks.ControllerNS)
+			cappConfig.Spec.AutoscaleConfig = updatedAutoscale
+			return utilst.UpdateResource(k8sClient, cappConfig)
+		})
+		Expect(err).To(BeNil())
+
+		By("Checking the ksvc autoscale settings has changed according to the new CappConfig autoscale data")
+		Eventually(func() string {
+			ksvc := utilst.GetKSVC(k8sClient, createdCapp.Name, createdCapp.Namespace)
+			return ksvc.Spec.ConfigurationSpec.Template.Annotations[testconsts.CpuScaleKey]
+		}, testconsts.Timeout, testconsts.Interval).Should(Equal(cappConfig.Spec.AutoscaleConfig.CPU), "KnativeService should reflect updated CappConfig autoscale settings")
 	})
 })

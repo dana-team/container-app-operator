@@ -3,6 +3,7 @@ package resourcemanagers
 import (
 	"context"
 	"fmt"
+	utilst "github.com/dana-team/container-app-operator/test/e2e_tests/utils"
 	"reflect"
 
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/autoscale"
@@ -24,7 +25,7 @@ import (
 const (
 	cappDisabledState                     = "disabled"
 	cappEnabledState                      = "enabled"
-	defaultAutoScaleCM                    = "autoscale-defaults"
+	cappConfigName                        = "capp-config"
 	KnativeServing                        = "knativeServing"
 	eventCappKnativeServiceCreationFailed = "KnativeServiceCreationFailed"
 	eventCappKnativeServiceCreated        = "KnativeServiceCreated"
@@ -75,12 +76,9 @@ func (k KnativeServiceManager) prepareResource(capp cappv1alpha1.Capp, ctx conte
 	volumes := k.prepareVolumes(capp)
 	knativeService.Spec.Template.Spec.Volumes = append(knativeService.Spec.Template.Spec.Volumes, volumes...)
 
-	defaultCM := corev1.ConfigMap{}
-	if err := k.K8sclient.Get(k.Ctx, types.NamespacedName{Namespace: utils.CappNS, Name: defaultAutoScaleCM}, &defaultCM); err != nil {
-		k.Log.Error(err, fmt.Sprintf("could not fetch configMap from namespace %q", utils.CappNS))
-	}
+	cappConfig := utilst.GetCappConfig(k.K8sclient, cappConfigName, utils.CappNS)
 
-	knativeService.Spec.Template.ObjectMeta.Annotations = utils.MergeMaps(knativeServiceAnnotations, autoscale.SetAutoScaler(capp, defaultCM.Data))
+	knativeService.Spec.Template.ObjectMeta.Annotations = utils.MergeMaps(knativeServiceAnnotations, autoscale.SetAutoScaler(capp, cappConfig.Spec.AutoscaleConfig))
 	knativeService.Spec.Template.ObjectMeta.Labels = knativeServiceLabels
 
 	return knativeService

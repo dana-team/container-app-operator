@@ -1,0 +1,18 @@
+apiVersion: rcs.dana.io/v1alpha1
+kind: CappConfig
+metadata:
+  name: {{ .Values.config.name  }}
+  labels:
+    {{- include "container-app-operator.labels" . | nindent 4 }}
+spec:
+  dnsConfig:
+    zone: "{{ .Values.config.config.dns.zone }}"
+    cname: "{{ .Values.config.config.dns.cname }}"
+    provider: "{{ .Values.config.config.dns.provider }}"
+    issuer: "{{ .Values.config.config.dns.issuer }}"
+  autoscaleConfig:
+    rps: "{{ .Values.config.config.autoscaleConfig.rps }}"
+    cpu: "{{ .Values.config.config.autoscaleConfig.cpu }}"
+    memory: "{{ .Values.config.config.autoscaleConfig.memory }}"
+    concurrency: "{{ .Values.config.config.autoscaleConfig.concurrency }}"
+    activationScale: "{{ .Values.config.config.autoscaleConfig.activationScale }}"

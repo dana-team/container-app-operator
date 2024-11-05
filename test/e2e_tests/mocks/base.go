@@ -9,12 +9,12 @@ import (
 
 const (
 	CappName       = "capp-test"
+	CappConfigName = "capp-config"
 	NSName         = "capp-e2e-tests"
 	RPSScaleMetric = "rps"
 	SecretKey      = "extra"
 	SecretValue    = "YmFyCg=="
 	ControllerNS   = "capp-operator-system"
-	AutoScaleCM    = "autoscale-defaults"
 	DNSConfig      = "dns-config"
 	CNAMEKey       = "cname"
 	ZoneKey        = "zone"
@@ -76,16 +76,5 @@ func CreateSecretObject(name string) *corev1.Secret {
 		},
 		Type: "Opaque",
 		Data: map[string][]byte{SecretKey: []byte(SecretValue)},
-	}
-}
-
-func CreateConfigMapObject(namespace string, name string, data map[string]string) *corev1.ConfigMap {
-	return &corev1.ConfigMap{
-		TypeMeta: metav1.TypeMeta{},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
-		Data: data,
 	}
 }

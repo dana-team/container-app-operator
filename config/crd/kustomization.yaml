@@ -4,6 +4,7 @@
 resources:
 - bases/rcs.dana.io_capps.yaml
 - bases/rcs.dana.io_capprevisions.yaml
+- bases/rcs.dana.io_cappconfigs.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
 patchesStrategicMerge:

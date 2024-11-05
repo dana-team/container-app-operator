@@ -6,6 +6,8 @@ import (
 	"math/rand"
 	"time"
 
+	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -73,9 +75,16 @@ func CreateSecret(k8sClient client.Client, secret *corev1.Secret) {
 	Expect(k8sClient.Create(context.Background(), secret)).To(Succeed())
 }
 
-// CreateConfigMap creates a new configMap.
-func CreateConfigMap(k8sClient client.Client, configMap *corev1.ConfigMap) {
-	Expect(k8sClient.Create(context.Background(), configMap)).To(SatisfyAny(BeNil(), WithTransform(errors.IsAlreadyExists, BeTrue())))
+// CreateCappConfig create a new cappConfig
+func CreateCappConfig(k8sClient client.Client, cappConfig *cappv1alpha1.CappConfig) {
+	Expect(k8sClient.Create(context.Background(), cappConfig)).To(SatisfyAny(BeNil(), WithTransform(errors.IsAlreadyExists, BeTrue())))
+}
+
+// GetCappConfig fetches and returns an existing instance of an existing cappConfig
+func GetCappConfig(k8sClient client.Client, name string, namespace string) *cappv1alpha1.CappConfig {
+	cappConfig := &cappv1alpha1.CappConfig{}
+	GetResource(k8sClient, cappConfig, name, namespace)
+	return cappConfig
 }
 
 // GenerateRouteHostname generates a new route hostname by calling

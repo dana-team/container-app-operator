@@ -136,32 +136,27 @@ klusterlet:
   # -- The namespace where the service account resides.
   namespace: open-cluster-management-agent
 
-# -- Configuration for the ConfigMap used to set autoscaling defaults.
-autoscaleConfig:
-  # -- The name of the ConfigMap containing autoscale defaults.
-  name: autoscale-defaults
-  # -- The default Requests Per Second (RPS) threshold for autoscaling.
-  rps: "200"
-  # -- The default CPU utilization percentage for autoscaling.
-  cpu: "80"
-  # -- The default memory utilization percentage for autoscaling.
-  memory: "70"
-  # -- The default concurrency limit for autoscaling.
-  concurrency: "10"
-  # -- The default activationScale for autoscaling.
-  activationScale: "3"
-
-# -- Configuration for the DNS.
-dnsConfig:
-  # -- The name of the DNS configMap.
-  name: dns-config
-  # -- The data for the DNS configMap.
-  data:
-    # -- The DNS zone for the application.
-    zone: capp-zone.com.
-    # -- The canonical name that CNAMEs created by the operator should point at.
-    cname: ingress.capp-zone.com.
-    # -- The name of the Crossplane DNS provider config.
-    provider: dns-default
-    # -- The name of the Certificate External Issuer name
-    issuer: cert-issuer
+# -- Configuration for Cappconfig CRD
+config:
+  name: capp-config
+  config:
+    dns:
+      # -- The DNS zone for the application.
+      zone: capp-zone.com.
+      # -- The canonical name that CNAMEs created by the operator should point at.
+      cname: ingress.capp-zone.com.
+      # -- The name of the Crossplane DNS provider config.
+      provider: dns-default
+      # -- The name of the Certificate External Issuer name
+      issuer: cert-issuer
+    autoscaleConfig:
+      # -- The default Requests Per Second (RPS) threshold for autoscaling.
+      rps: "200"
+      # -- The default CPU utilization percentage for autoscaling.
+      cpu: "80"
+      # -- The default memory utilization percentage for autoscaling.
+      memory: "70"
+      # -- The default concurrency limit for autoscaling.
+      concurrency: "10"
+      # -- The default activationScale for autoscaling.
+      activationScale: "3"

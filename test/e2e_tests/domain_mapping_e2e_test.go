@@ -136,4 +136,38 @@ var _ = Describe("Validate DomainMapping functionality", func() {
 			return capp.Status.RouteStatus
 		}, testconsts.Timeout, testconsts.Interval).Should(Equal(cappv1alpha1.RouteStatus{}), "Should update Route Status of Capp")
 	})
+
+	It("Should change the DomainMapping when the CappConfig is changed", func() {
+		_, routeHostname := utilst.CreateCappWithHTTPHostname(k8sClient)
+
+		By("Creating a DomainMapping instance")
+		domainMappingName := utilst.GenerateResourceName(routeHostname, mocks.ZoneValue)
+		domainMappingObject := mocks.CreateDomainMappingObject(domainMappingName)
+		Eventually(func() bool {
+			response := utilst.DoesResourceExist(k8sClient, domainMappingObject)
+			return response
+		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "Should find a resource.")
+
+		By("Retrieving the CappConfig instance and updating it")
+		zoneValue := "new" + mocks.ZoneValue
+		newDNSConfig := cappv1alpha1.DNSConfig{
+			Zone:     zoneValue,
+			CNAME:    mocks.CNAMEValue,
+			Provider: mocks.ProviderValue,
+			Issuer:   mocks.IssuerValue,
+		}
+		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			cappConfig := utilst.GetCappConfig(k8sClient, mocks.CappConfigName, mocks.ControllerNS)
+			cappConfig.Spec.DNSConfig = newDNSConfig
+			return utilst.UpdateResource(k8sClient, cappConfig)
+		})
+		Expect(err).To(BeNil())
+
+		By("Verifying the change in the dnsConfig is reflected in the DomainMapping")
+		updatedDomainMappingName := utilst.GenerateResourceName(routeHostname, zoneValue)
+		Eventually(func() bool {
+			updatedDomainMapping := utilst.GetDomainMapping(k8sClient, updatedDomainMappingName, mocks.NSName)
+			return updatedDomainMapping.ObjectMeta.Name == updatedDomainMappingName
+		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "The domain mapping should reflect the updated dnsConfig data")
+	})
 })
