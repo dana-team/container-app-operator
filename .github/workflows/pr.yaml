@@ -56,6 +56,9 @@ jobs:
       - name: Deploy controller to cluster
         run: make install deploy IMG=${IMAGE_REGISTRY}/container-app-operator:test-${GITHUB_REF##*/}
 
+      - name: Create CappConfig
+        run: make create-cappConfig
+
       - name: Await controller to be ready
         uses: jupyterhub/action-k8s-await-workloads@v3
         with:

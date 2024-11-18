@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"sigs.k8s.io/controller-runtime/pkg/event"
+
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
@@ -54,6 +56,7 @@ type CappReconciler struct {
 // +kubebuilder:rbac:groups=rcs.dana.io,resources=capps,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=rcs.dana.io,resources=capps/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=rcs.dana.io,resources=capps/finalizers,verbs=update
+// +kubebuilder:rbac:groups="rcs.dana.io",resources=cappconfigs,verbs=get;list;watch;update;create;patch;delete
 // +kubebuilder:rbac:groups=serving.knative.dev,resources=services,verbs=get;list;watch;update;create;delete
 // +kubebuilder:rbac:groups=serving.knative.dev,resources=domainmappings,verbs=get;list;watch;update;create;delete
 // +kubebuilder:rbac:groups=serving.knative.dev,resources=revisions,verbs=get;list;watch;update;create
@@ -104,6 +107,11 @@ func (r *CappReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			handler.EnqueueRequestsFromMapFunc(r.findCappFromEvent),
 			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
 		).
+		Watches(
+			&cappv1alpha1.CappConfig{},
+			handler.EnqueueRequestsFromMapFunc(r.findAllCapps),
+			builder.WithPredicates(DNSConfigChangedPredicate()),
+		).
 		Complete(r)
 }
 
@@ -125,6 +133,49 @@ func (r *CappReconciler) findCappFromHostname(ctx context.Context, object client
 		Name:      labels[utils.CappResourceKey]}}
 
 	return []reconcile.Request{request}
+}
+
+// findAllCapps maps reconciliation requests to all Capp instances in the cluster.
+func (r *CappReconciler) findAllCapps(ctx context.Context, object client.Object) []reconcile.Request {
+	var requests []reconcile.Request
+
+	var cappList cappv1alpha1.CappList
+	if err := r.Client.List(ctx, &cappList, &client.ListOptions{}); err != nil {
+		return nil
+	}
+
+	for _, capp := range cappList.Items {
+		requests = append(requests, reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Namespace: capp.Namespace,
+				Name:      capp.Name,
+			},
+		})
+	}
+	return requests
+}
+
+// DNSConfigChangedPredicate Defines a predicate that triggers the reconcile only when dnsConfig is changed.
+func DNSConfigChangedPredicate() predicate.Predicate {
+	return predicate.Funcs{
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			oldCappConfig, ok := e.ObjectOld.(*cappv1alpha1.CappConfig)
+			if !ok {
+				return false
+			}
+
+			newCappConfig, ok := e.ObjectNew.(*cappv1alpha1.CappConfig)
+			if !ok {
+				return false
+			}
+
+			if oldCappConfig.Spec.DNSConfig != newCappConfig.Spec.DNSConfig {
+				return true
+			}
+
+			return false
+		},
+	}
 }
 
 func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
