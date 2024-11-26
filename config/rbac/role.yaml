@@ -16,8 +16,20 @@ rules:
 - apiGroups:
   - ""
   resources:
-  - events
   - secrets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  - events.k8s.io
+  resources:
+  - events
   verbs:
   - create
   - get
@@ -34,17 +46,6 @@ rules:
   - delete
   - get
   - list
-  - update
-  - watch
-- apiGroups:
-  - events.k8s.io
-  resources:
-  - events
-  verbs:
-  - create
-  - get
-  - list
-  - patch
   - update
   - watch
 - apiGroups:
@@ -73,6 +74,7 @@ rules:
 - apiGroups:
   - rcs.dana.io
   resources:
+  - cappconfigs
   - capprevisions
   - capps
   verbs:

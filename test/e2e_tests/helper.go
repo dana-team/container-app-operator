@@ -16,10 +16,9 @@ import (
 )
 
 var (
-	k8sClient       client.Client
-	targetAutoScale map[string]string
-	scheme          = runtime.NewScheme()
-	logger          logr.Logger
+	k8sClient client.Client
+	scheme    = runtime.NewScheme()
+	logger    logr.Logger
 )
 
 func newScheme() *runtime.Scheme {

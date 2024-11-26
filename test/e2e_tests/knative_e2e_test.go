@@ -355,20 +355,6 @@ var _ = Describe("Validate knative functionality", func() {
 		}, testconsts.Timeout, testconsts.Interval).Should(Equal("666"))
 	})
 
-	It("Should check the default ksvc annotation is equal to the configMap concurrency value", func() {
-		By("Creating a capp instance")
-		testCapp := mocks.CreateBaseCapp()
-		createdCapp := utilst.CreateCapp(k8sClient, testCapp)
-		assertionCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-
-		By("Checking if the ksvc's annotation is equal to the configMap")
-		Eventually(func() bool {
-			ksvc := utilst.GetKSVC(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
-			return ksvc.Spec.ConfigurationSpec.Template.Annotations[testconsts.KnativeAutoscaleTargetKey] == targetAutoScale[testconsts.ConcurrencyScaleKey] &&
-				ksvc.Spec.ConfigurationSpec.Template.Annotations[testconsts.KnativeActivationScaleKey] == targetAutoScale[testconsts.DefaultCmActivationScaleKey]
-		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue())
-	})
-
 	It("Should propagate Capp labels to the underlying KSVC", func() {
 		By("Creating a capp instance")
 		testCapp := mocks.CreateBaseCapp()
@@ -397,5 +383,21 @@ var _ = Describe("Validate knative functionality", func() {
 			return ksvc.Spec.ConfigurationSpec.Template.Labels[testconsts.CappResourceKey]
 		}, testconsts.Timeout, testconsts.Interval).Should(Equal(assertionCapp.Name))
 
+	})
+
+	It("Should check the default ksvc annotation is equal to the cappConfig's concurrency value", func() {
+		By("Creating a capp instance")
+		testCapp := mocks.CreateBaseCapp()
+		createdCapp := utilst.CreateCapp(k8sClient, testCapp)
+		assertionCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
+
+		cappConfig := utilst.GetCappConfig(k8sClient, mocks.CappConfigName, mocks.ControllerNS)
+
+		By("Checking if the ksvc's annotation is equal to the cappConfig's autoScale")
+		Eventually(func() bool {
+			ksvc := utilst.GetKSVC(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
+			return ksvc.Spec.ConfigurationSpec.Template.ObjectMeta.Annotations[testconsts.KnativeAutoscaleTargetKey] == cappConfig.Spec.AutoscaleConfig.Concurrency &&
+				ksvc.Spec.ConfigurationSpec.Template.ObjectMeta.Annotations[testconsts.KnativeActivationScaleKey] == cappConfig.Spec.AutoscaleConfig.ActivationScale
+		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue())
 	})
 })

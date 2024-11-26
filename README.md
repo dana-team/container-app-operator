@@ -122,26 +122,43 @@ $ make docker-build docker-push IMG=<registry>/container-app-operator:<tag>
 
 ### Change target autoscaler default values
 
-To change the target values a `configMap` with the name `autoscale-default` in the namespace `capp-operator-system` needs to be created.
+The `autoscalerConfig` is defined within a `CappConfig CRD` named `capp-config` in the namespaces of the controller.
 
-The `configMap` should contain the scale metric types as keys and for the value the desired target values.
+To modify the target values for the `autoscaler`, modify the existing `CappConfig` resource, in the namespace capp-operator-system with the desired values.
 
-The `configMap` will affect the `ksvc` autoscale target value annotation `autoscaling.knative.dev/target`.
+The `autoscalerConfig` section of the `CappConfig` CRD specifies the scale metric types and their target values.
 
-#### Example
+### Using a Custom Hostname
 
+`Capp` enables using a custom hostname for the application. This in turn creates `DomainMapping`, a DNS Record object and a `Certificate` object if `TLS` is desired.
+
+To correctly create the resources, it is needed to provide the operator with the `DNS Config` where the application is exposed. 
+
+This is done using the `dnsConfig` section of the `CappConfig CRD` called `capp-config` which needs to be created in the operator namespace. 
+
+Note the trailing `.` which must be added to the zone name:
+
+
+## Example `CappConfig`:
 ```yaml
-kind: ConfigMap
-apiVersion: v1
+apiVersion: rcs.dana.io/v1alpha1
+kind: CappConfig
 metadata:
-  name: autoscale-defaults
+  name: capp-config
   namespace: capp-operator-system
-data:
-  rps: "200"
-  cpu: "80"
-  memory: "70"
-  concurrency: "10"
-  activationScale: "3"
+spec:
+  autoscalerConfig:
+    rps: "200"
+    cpu: "80"
+    memory: "70"
+    concurrency: "10"
+    activationScale: "3"
+  dnsConfig:
+    zone: capp-zone.com.
+    cname: ingress.capp-zone.com.
+    provider: dns-default
+    issuer: cert-issuer
+
 ```
 
 ### Enable Persistent Volume extension in Knative
@@ -157,23 +174,6 @@ It's possible to use the following one-liner:
 
 ```bash
 $ kubectl patch --namespace knative-serving configmap/config-features --type merge --patch '{"data":{"kubernetes.podspec-persistent-volume-claim": "enabled", "kubernetes.podspec-persistent-volume-write": "enabled"}}'
-```
-
-### Using a Custom Hostname
-
-`Capp` enables using a custom hostname for the application. This in turn creates `DomainMapping`, a DNS Record object and a `Certificate` object if `TLS` is desired.
-
-To correctly create the resources, it is needed to provider the operator with the `DNS Config` where the application is exposed. This is done using a `ConfigMap` called `dns-config` which needs to be created in the operator namespace. Note the trailing `.` which must be added to the zone name:
-
-```yaml
-kind: ConfigMap
-apiVersion: v1
-metadata:
-  name: dns-config
-  namespace: capp-operator-system
-data:
-  zone: "capp-zone.com."
-  cname: "ingress.capp-zone.com."
 ```
 
 ## Example Capp

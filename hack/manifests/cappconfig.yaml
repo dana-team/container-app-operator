@@ -1,0 +1,17 @@
+apiVersion: rcs.dana.io/v1alpha1
+kind: CappConfig
+metadata:
+  name: capp-config
+  namespace: capp-operator-system
+spec:
+  autoscalerConfig:
+    rps: "200"
+    cpu: "80"
+    memory: "70"
+    concurrency: "10"
+    activationScale: "3"
+  dnsConfig:
+    zone: capp-zone.com.
+    cname: ingress.capp-zone.com.
+    provider: dns-default
+    issuer: cert-issuer

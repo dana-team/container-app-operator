@@ -25,7 +25,6 @@ SHELL = /usr/bin/env bash -o pipefail
 all: build
 
 ##@ General
-
 # The help target prints out all targets with their descriptions organized
 # beneath their categories. The categories are represented by '##@' and the
 # target descriptions by '##'. The awk command is responsible for reading the
@@ -91,6 +90,7 @@ run: manifests generate fmt vet ## Run a controller from your host.
 # If you wish to build the manager image targeting other platforms you can use the --platform flag.
 # (i.e. docker build --platform linux/arm64). However, you must enable docker buildKit for it.
 # More info: https://docs.docker.com/develop/develop-images/build_enhancements/
+
 .PHONY: docker-build
 docker-build: ## Build docker image with the manager.
 	$(CONTAINER_TOOL) build -t ${IMG} .
@@ -202,6 +202,10 @@ uninstall-prereq-helmfile: helmfile helm helm-plugins
 .PHONY: doc-chart
 doc-chart: helm-docs helm
 	$(HELM_DOCS) charts/
+
+.PHONY: create-cappConfig
+create-cappConfig: ## Run the setup-cappConfig-deployer script
+	$(KUBECTL) apply -f $(shell pwd)/hack/manifests/cappconfig.yaml
 
 ##@ Dependencies
 

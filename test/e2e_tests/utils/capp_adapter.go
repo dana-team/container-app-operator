@@ -22,7 +22,8 @@ func CreateCapp(k8sClient client.Client, capp *cappv1alpha1.Capp) *cappv1alpha1.
 	newCapp.Name = cappName
 	Expect(k8sClient.Create(context.Background(), newCapp)).To(Succeed())
 	Eventually(func() string {
-		return GetCapp(k8sClient, newCapp.Name, newCapp.Namespace).Status.KnativeObjectStatus.ConfigurationStatusFields.LatestReadyRevisionName
+		result := GetCapp(k8sClient, newCapp.Name, newCapp.Namespace)
+		return result.Status.KnativeObjectStatus.ConfigurationStatusFields.LatestReadyRevisionName
 	}, timeoutCapp, cappCreationInterval).ShouldNot(Equal(""), "Should fetch capp")
 	return newCapp
 }

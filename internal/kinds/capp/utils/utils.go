@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -22,8 +23,9 @@ var (
 )
 
 const (
-	CappNS  = "capp-operator-system"
-	CappKey = "capp"
+	CappConfigName = "capp-config"
+	CappNS         = "capp-operator-system"
+	CappKey        = "capp"
 )
 
 // IsOnOpenshift returns true if the cluster has the openshift config group
@@ -97,4 +99,21 @@ func GetListOptions(set labels.Set) client.ListOptions {
 	}
 
 	return listOptions
+}
+
+// GetResource fetches an existing resource and returns an instance of it.
+func GetResource(k8sClient client.Client, obj client.Object, name, namespace string) error {
+	if err := k8sClient.Get(context.Background(), client.ObjectKey{Name: name, Namespace: namespace}, obj); err != nil {
+		return err
+	}
+	return nil
+}
+
+// GetCappConfig fetches and returns an existing instance of an existing cappConfig
+func GetCappConfig(k8sClient client.Client) (*cappv1alpha1.CappConfig, error) {
+	cappConfig := &cappv1alpha1.CappConfig{}
+	if err := GetResource(k8sClient, cappConfig, CappConfigName, CappNS); err != nil {
+		return nil, err
+	}
+	return cappConfig, nil
 }

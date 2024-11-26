@@ -31,11 +31,11 @@ spec:
           imagePullPolicy: {{ .Values.image.manager.pullPolicy }}
           command:
           {{- range .Values.manager.command }}
-          - {{ . | quote }}
+            - {{ . | quote }}
           {{- end }}
           args:
           {{- range .Values.manager.args }}
-          - {{ . | quote }}
+            - {{ . | quote }}
           {{- end }}
           securityContext:
             {{- toYaml .Values.manager.securityContext | nindent 12 }}
@@ -63,7 +63,7 @@ spec:
           imagePullPolicy: {{ .Values.image.kubeRbacProxy.pullPolicy }}
           args:
           {{- range .Values.kubeRbacProxy.args }}
-          - {{ . | quote }}
+            - {{ . | quote }}
           {{- end }}
           securityContext:
             {{- toYaml .Values.kubeRbacProxy.securityContext | nindent 12 }}

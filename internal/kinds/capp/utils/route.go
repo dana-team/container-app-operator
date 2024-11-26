@@ -5,23 +5,16 @@ import (
 	"fmt"
 	"strings"
 
+	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+
 	dnsrecordv1alpha1 "github.com/dana-team/provider-dns/apis/record/v1alpha1"
 
 	xpcommonv1 "github.com/crossplane/crossplane-runtime/apis/common/v1"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
-	dnsCM               = "dns-config"
-	zoneKey             = "zone"
-	cnameKey            = "cname"
-	issuerKey           = "issuer"
-	providerKey         = "provider"
-	placeholderZone     = "capp.com."
-	placeholderIssuer   = "cert-issuer"
-	placeholderProvider = "dns-default"
 	dot                 = "."
 	maxCommonNameLength = 64
 )
@@ -43,79 +36,56 @@ func IsDNSRecordAvailable(ctx context.Context, k8sClient client.Client, name, na
 	return available, nil
 }
 
-// GetDNSConfig returns the data of the DNS ConfigMap.
-func GetDNSConfig(ctx context.Context, k8sClient client.Client) (map[string]string, error) {
-	routeCM := corev1.ConfigMap{}
-	if err := k8sClient.Get(ctx, types.NamespacedName{Namespace: CappNS, Name: dnsCM}, &routeCM); err != nil {
-		return nil, fmt.Errorf("could not fetch configMap %q from namespace %q: %w", dnsCM, CappNS, err)
+// GetDNSConfig returns the data of the DNS for the CappConfig CRD.
+func GetDNSConfig(ctx context.Context, k8sClient client.Client) (cappv1alpha1.DNSConfig, error) {
+	cappConfig := cappv1alpha1.CappConfig{}
+	if err := k8sClient.Get(ctx, types.NamespacedName{Namespace: CappNS, Name: CappConfigName}, &cappConfig); err != nil {
+		return cappv1alpha1.DNSConfig{}, fmt.Errorf("could not fetch cappConfig %q from namespace %q: %w", CappConfigName, CappNS, err)
 	}
-
-	return routeCM.Data, nil
+	return cappConfig.Spec.DNSConfig, nil
 }
 
-// GetDNSRecordFromConfig returns the DNSRecord to be used for the record from a ConfigMap.
-func GetDNSRecordFromConfig(dnsConfig map[string]string) (string, error) {
-	dnsRecord := ""
-	var ok bool
+// GetDNSRecordFromConfig returns the DNSRecord to be used for the record from a CappConfig CRD.
+func GetDNSRecordFromConfig(dnsConfig cappv1alpha1.DNSConfig) (string, error) {
+	dnsRecord := dnsConfig.CNAME
 
-	if len(dnsConfig) > 0 {
-		dnsRecord, ok = dnsConfig[cnameKey]
-		if !ok {
-			return dnsRecord, fmt.Errorf("%q key is not set in ConfigMap %q", cnameKey, dnsCM)
-		} else if dnsRecord == "" {
-			return dnsRecord, fmt.Errorf("%q is empty in ConfigMap %q", cnameKey, dnsCM)
-		}
+	if dnsRecord == "" {
+		return "", fmt.Errorf("%q is empty in CappConfig DNSConfig data", "CNAME")
 	}
-
 	return dnsRecord, nil
 }
 
-// GetZoneFromConfig returns the zone to be used for the record from a ConfigMap.
-func GetZoneFromConfig(dnsConfig map[string]string) (string, error) {
-	var ok bool
-	zone := placeholderZone
-	if len(dnsConfig) > 0 {
-		zone, ok = dnsConfig[zoneKey]
-		if !ok {
-			return zone, fmt.Errorf("%q key is not set in ConfigMap %q", zoneKey, dnsCM)
-		} else if zone == "" {
-			return zone, fmt.Errorf("%q is empty in ConfigMap %q", zoneKey, dnsCM)
-		} else if !strings.HasSuffix(zone, dot) {
-			return zone, fmt.Errorf("%q value must end with a %q in ConfigMap %q", zoneKey, dot, dnsCM)
-		}
+// GetZoneFromConfig returns the zone to be used for the record from the CappConfig CRD.
+func GetZoneFromConfig(dnsConfig cappv1alpha1.DNSConfig) (string, error) {
+	zone := dnsConfig.Zone
+
+	if zone == "" {
+		return "", fmt.Errorf("%q is empty in CappConfig DNSConfig data", "Zone")
+	} else if !strings.HasSuffix(zone, dot) {
+		return "", fmt.Errorf("%q value must end with a %q in CappConfig DNSConfig data", "Zone", dot)
 	}
 
 	return zone, nil
 }
 
-// GetXPProviderFromConfig returns the Crossplane provider to be used for the record from a ConfigMap.
-func GetXPProviderFromConfig(dnsConfig map[string]string) (string, error) {
-	var ok bool
-	provider := placeholderProvider
-	if len(dnsConfig) > 0 {
-		provider, ok = dnsConfig[providerKey]
-		if !ok {
-			return provider, fmt.Errorf("%q key is not set in ConfigMap %q", providerKey, dnsCM)
-		} else if provider == "" {
-			return provider, fmt.Errorf("%q is empty in ConfigMap %q", providerKey, dnsCM)
-		}
+// GetXPProviderFromConfig returns the Crossplane provider to be used for the record from the CappConfig CRD.
+func GetXPProviderFromConfig(dnsConfig cappv1alpha1.DNSConfig) (string, error) {
+	provider := dnsConfig.Provider
+
+	if provider == "" {
+		return "", fmt.Errorf("%q is empty in CappConfig DNSConfig data", "Provider")
 	}
 
 	return provider, nil
 }
 
 // GetIssuerNameFromConfig returns the name of the Certificate Issuer
-// to be used for the Certificate from a ConfigMap.
-func GetIssuerNameFromConfig(dnsConfig map[string]string) (string, error) {
-	var ok bool
-	issuer := placeholderIssuer
-	if len(dnsConfig) > 0 {
-		issuer, ok = dnsConfig[issuerKey]
-		if !ok {
-			return issuer, fmt.Errorf("%q key is not set in ConfigMap %q", issuerKey, dnsCM)
-		} else if issuer == "" {
-			return issuer, fmt.Errorf("%q is empty in ConfigMap %q", issuerKey, dnsCM)
-		}
+// to be used for the Certificate from a CappConfig CRD.
+func GetIssuerNameFromConfig(dnsConfig cappv1alpha1.DNSConfig) (string, error) {
+	issuer := dnsConfig.Issuer
+
+	if issuer == "" {
+		return "", fmt.Errorf("%q is empty in CappConfig DNSConfig data", "Issuer")
 	}
 
 	return issuer, nil
