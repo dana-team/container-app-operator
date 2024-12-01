@@ -15,7 +15,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.21.0
 	github.com/onsi/gomega v1.35.1
 	github.com/openshift/api v0.0.0-20241007111039-82e082220d91
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 	go.elastic.co/ecszap v1.0.3
 	go.uber.org/zap v1.27.0
 	golang.org/x/net v0.30.0
