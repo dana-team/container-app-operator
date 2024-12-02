@@ -5,7 +5,7 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 // CappConfigSpec defines the desired state of CappConfig
 type CappConfigSpec struct {
 	DNSConfig       DNSConfig       `json:"dnsConfig"`
-	AutoscaleConfig AutoscaleConfig `json:"autoscalerConfig"`
+	AutoscaleConfig AutoscaleConfig `json:"autoscaleConfig"`
 }
 
 type DNSConfig struct {

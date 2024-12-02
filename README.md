@@ -122,11 +122,11 @@ $ make docker-build docker-push IMG=<registry>/container-app-operator:<tag>
 
 ### Change target autoscaler default values
 
-The `autoscalerConfig` is defined within a `CappConfig CRD` named `capp-config` in the namespaces of the controller.
+The `autoscaleConfig` is defined within a `CappConfig CRD` named `capp-config` in the namespaces of the controller.
 
 To modify the target values for the `autoscaler`, modify the existing `CappConfig` resource, in the namespace capp-operator-system with the desired values.
 
-The `autoscalerConfig` section of the `CappConfig` CRD specifies the scale metric types and their target values.
+The `autoscaleConfig` section of the `CappConfig` CRD specifies the scale metric types and their target values.
 
 ### Using a Custom Hostname
 
@@ -147,7 +147,7 @@ metadata:
   name: capp-config
   namespace: capp-operator-system
 spec:
-  autoscalerConfig:
+  autoscaleConfig:
     rps: "200"
     cpu: "80"
     memory: "70"

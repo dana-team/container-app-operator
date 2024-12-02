@@ -39,7 +39,7 @@ spec:
             spec:
               description: CappConfigSpec defines the desired state of CappConfig
               properties:
-                autoscalerConfig:
+                autoscaleConfig:
                   properties:
                     activationScale:
                       type: string
@@ -75,7 +75,7 @@ spec:
                     - zone
                   type: object
               required:
-                - autoscalerConfig
+                - autoscaleConfig
                 - dnsConfig
               type: object
             status:
