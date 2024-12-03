@@ -151,12 +151,12 @@ config:
       issuer: cert-issuer
     autoscaleConfig:
       # -- The default Requests Per Second (RPS) threshold for autoscaling.
-      rps: "200"
+      rps: 200
       # -- The default CPU utilization percentage for autoscaling.
-      cpu: "80"
+      cpu: 80
       # -- The default memory utilization percentage for autoscaling.
-      memory: "70"
+      memory: 70
       # -- The default concurrency limit for autoscaling.
-      concurrency: "10"
+      concurrency: 10
       # -- The default activationScale for autoscaling.
-      activationScale: "3"
+      activationScale: 3

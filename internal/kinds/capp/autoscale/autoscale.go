@@ -1,6 +1,8 @@
 package autoscale
 
 import (
+	"fmt"
+
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 	"k8s.io/utils/strings/slices"
@@ -20,11 +22,11 @@ const (
 )
 
 var TargetDefaultValues = cappv1alpha1.AutoscaleConfig{
-	RPS:             "200",
-	CPU:             "80",
-	Memory:          "70",
-	Concurrency:     "10",
-	ActivationScale: "3",
+	RPS:             200,
+	CPU:             80,
+	Memory:          70,
+	Concurrency:     10,
+	ActivationScale: 3,
 }
 
 var KPAMetrics = []string{"rps", "concurrency"}
@@ -48,7 +50,7 @@ func SetAutoScaler(capp cappv1alpha1.Capp, defaults cappv1alpha1.AutoscaleConfig
 	autoScaleAnnotations[KnativeAutoscaleClassKey] = getAutoScaleClassByMetric(scaleMetric)
 	autoScaleAnnotations[KnativeMetricKey] = scaleMetric
 	autoScaleAnnotations[KnativeAutoscaleTargetKey] = getTargetValue(scaleMetric, defaults)
-	autoScaleAnnotations[KnativeActivationScaleKey] = activationScale
+	autoScaleAnnotations[KnativeActivationScaleKey] = fmt.Sprintf("%d", activationScale)
 	autoScaleAnnotations = utils.MergeMaps(autoScaleAnnotations, givenAutoScaleAnnotation)
 
 	return autoScaleAnnotations
@@ -60,13 +62,13 @@ func getTargetValue(scaleMetric string, autoscale cappv1alpha1.AutoscaleConfig) 
 	var targetValue string
 	switch scaleMetric {
 	case rpsScaleKey:
-		targetValue = autoscale.RPS
+		targetValue = fmt.Sprintf("%d", autoscale.RPS)
 	case cpuScaleKey:
-		targetValue = autoscale.CPU
+		targetValue = fmt.Sprintf("%d", autoscale.CPU)
 	case memoryScaleKey:
-		targetValue = autoscale.Memory
+		targetValue = fmt.Sprintf("%d", autoscale.Memory)
 	case concurrencyScaleKey:
-		targetValue = autoscale.Concurrency
+		targetValue = fmt.Sprintf("%d", autoscale.Concurrency)
 	default:
 		targetValue = "" // handle unknown scale metrics
 	}
@@ -75,7 +77,7 @@ func getTargetValue(scaleMetric string, autoscale cappv1alpha1.AutoscaleConfig) 
 
 // isAutoScaleEmpty checks if all the values of the AutoscaleConfig are empty.
 func isAutoScaleEmpty(config cappv1alpha1.AutoscaleConfig) bool {
-	return config.RPS == "" && config.CPU == "" && config.Memory == "" && config.Concurrency == "" && config.ActivationScale == ""
+	return config.RPS == 0 && config.CPU == 0 && config.Memory == 0 && config.Concurrency == 0 && config.ActivationScale == 0
 }
 
 // Determines the autoscaling class based on the metric provided. Returns "kpa.autoscaling.knative.dev" if the metric is in KPAMetrics, "hpa.autoscaling.knative.dev" otherwise.
