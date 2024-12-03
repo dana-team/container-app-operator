@@ -17,10 +17,23 @@ rules:
 - apiGroups:
   - ""
   resources:
-  - events
   - secrets
   verbs:
   - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  - events.k8s.io
+  resources:
+  - events
+  verbs:
+  - create
+  - delete
   - get
   - list
   - patch
@@ -36,17 +49,7 @@ rules:
   - get
   - list
   - update
-  - watch
-- apiGroups:
-  - events.k8s.io
-  resources:
-  - events
-  verbs:
-  - create
-  - get
-  - list
   - patch
-  - update
   - watch
 - apiGroups:
   - logging.banzaicloud.io
@@ -70,6 +73,14 @@ rules:
   - get
   - list
   - update
+  - watch
+- apiGroups:
+  - rcs.dana.io
+  resources:
+  - cappconfigs
+  verbs:
+  - get
+  - list
   - watch
 - apiGroups:
   - rcs.dana.io

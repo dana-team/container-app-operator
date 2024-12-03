@@ -42,15 +42,22 @@ spec:
                 autoscaleConfig:
                   properties:
                     activationScale:
-                      type: string
+                      description: ActivationScale is the default scale.
+                      type: integer
                     concurrency:
-                      type: string
+                      description: Concurrency is the maximum concurrency of a Capp.
+                      type: integer
                     cpu:
-                      type: string
+                      description: CPU is the desired CPU utilization to trigger upscaling.
+                      type: integer
                     memory:
-                      type: string
+                      description: Memory is the desired memory utilization to trigger
+                        upscaling.
+                      type: integer
                     rps:
-                      type: string
+                      description: RPS is the desired requests per second to trigger
+                        upscaling.
+                      type: integer
                   required:
                     - activationScale
                     - concurrency
@@ -61,12 +68,17 @@ spec:
                 dnsConfig:
                   properties:
                     cname:
+                      description: CNAME defines the CNAME record that will be used
+                        for Capp Hostnames
                       type: string
                     issuer:
+                      description: Issuer defines the certificate issuer
                       type: string
                     provider:
+                      description: Provider defines the DNS provider
                       type: string
                     zone:
+                      description: Zone defines the DNS zone for Capp Hostnames
                       type: string
                   required:
                     - cname

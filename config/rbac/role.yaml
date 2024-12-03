@@ -75,6 +75,13 @@ rules:
   - rcs.dana.io
   resources:
   - cappconfigs
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - rcs.dana.io
+  resources:
   - capprevisions
   - capps
   verbs:

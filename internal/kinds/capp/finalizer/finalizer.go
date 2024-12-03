@@ -9,12 +9,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-const FinalizerCleanupCapp = "dana.io/capp-cleanup"
+const CappCleanupFinalizer = "dana.io/capp-cleanup"
 
 // HandleResourceDeletion manages the Capp deletion.
 func HandleResourceDeletion(ctx context.Context, capp cappv1alpha1.Capp, r client.Client, resourceManagers map[string]rmanagers.ResourceManager) (error, bool) {
 	if capp.ObjectMeta.DeletionTimestamp != nil {
-		if controllerutil.ContainsFinalizer(&capp, FinalizerCleanupCapp) {
+		if controllerutil.ContainsFinalizer(&capp, CappCleanupFinalizer) {
 			if err := finalizeCapp(capp, resourceManagers); err != nil {
 				return err, false
 			}
@@ -26,7 +26,7 @@ func HandleResourceDeletion(ctx context.Context, capp cappv1alpha1.Capp, r clien
 
 // RemoveFinalizer removes the finalizer from the Capp manifest.
 func RemoveFinalizer(ctx context.Context, capp cappv1alpha1.Capp, r client.Client) error {
-	controllerutil.RemoveFinalizer(&capp, FinalizerCleanupCapp)
+	controllerutil.RemoveFinalizer(&capp, CappCleanupFinalizer)
 	if err := r.Update(ctx, &capp); err != nil {
 		return err
 	}
@@ -45,8 +45,8 @@ func finalizeCapp(capp cappv1alpha1.Capp, resourceManagers map[string]rmanagers.
 
 // EnsureFinalizer ensures the service has the finalizer.
 func EnsureFinalizer(ctx context.Context, service cappv1alpha1.Capp, r client.Client) error {
-	if !controllerutil.ContainsFinalizer(&service, FinalizerCleanupCapp) {
-		controllerutil.AddFinalizer(&service, FinalizerCleanupCapp)
+	if !controllerutil.ContainsFinalizer(&service, CappCleanupFinalizer) {
+		controllerutil.AddFinalizer(&service, CappCleanupFinalizer)
 		if err := r.Update(ctx, &service); err != nil {
 			return err
 		}

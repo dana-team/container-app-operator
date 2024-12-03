@@ -148,16 +148,16 @@ metadata:
   namespace: capp-operator-system
 spec:
   autoscaleConfig:
-    rps: "200"
-    cpu: "80"
-    memory: "70"
-    concurrency: "10"
-    activationScale: "3"
+    rps: 200
+    cpu: 80
+    memory: 70
+    concurrency: 10
+    activationScale: 3
   dnsConfig:
-    zone: capp-zone.com.
-    cname: ingress.capp-zone.com.
-    provider: dns-default
-    issuer: cert-issuer
+    zone: "capp-zone.com."
+    cname: "ingress.capp-zone.com."
+    provider: "dns-default"
+    issuer: "cert-issuer"
 
 ```
 
