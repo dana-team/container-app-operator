@@ -139,8 +139,7 @@ klusterlet:
 
 # -- Configuration for Cappconfig CRD
 config:
-  config:
-    dns:
+    dnsConfig:
       # -- The DNS zone for the application.
       zone: capp-zone.com.
       # -- The canonical name that CNAMEs created by the operator should point at.

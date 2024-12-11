@@ -6,13 +6,13 @@ metadata:
     {{- include "container-app-operator.labels" . | nindent 4 }}
 spec:
   autoscaleConfig:
-    rps: {{ .Values.config.config.autoscaleConfig.rps }}
-    cpu: {{ .Values.config.config.autoscaleConfig.cpu }}
-    memory: {{ .Values.config.config.autoscaleConfig.memory }}
-    concurrency: {{ .Values.config.config.autoscaleConfig.concurrency }}
-    activationScale: {{ .Values.config.config.autoscaleConfig.activationScale }}
+    rps: {{ .Values.config.autoscaleConfig.rps }}
+    cpu: {{ .Values.config.autoscaleConfig.cpu }}
+    memory: {{ .Values.config.autoscaleConfig.memory }}
+    concurrency: {{ .Values.config.autoscaleConfig.concurrency }}
+    activationScale: {{ .Values.config.autoscaleConfig.activationScale }}
   dnsConfig:
-    zone: "{{ .Values.config.config.dns.zone }}"
-    cname: "{{ .Values.config.config.dns.cname }}"
-    provider: "{{ .Values.config.config.dns.provider }}"
-    issuer: "{{ .Values.config.config.dns.issuer }}"
+    zone: "{{ .Values.config.dnsConfig.zone }}"
+    cname: "{{ .Values.config.dnsConfig.cname }}"
+    provider: "{{ .Values.config.dnsConfig.provider }}"
+    issuer: "{{ .Values.config.dnsConfig.issuer }}"

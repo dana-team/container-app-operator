@@ -11,13 +11,13 @@ type CappConfigSpec struct {
 }
 
 type DNSConfig struct {
-	//Zone defines the DNS zone for Capp Hostnames
+	// Zone defines the DNS zone for Capp Hostnames
 	Zone string `json:"zone"`
-	//CNAME defines the CNAME record that will be used for Capp Hostnames
+	// CNAME defines the CNAME record that will be used for Capp Hostnames
 	CNAME string `json:"cname"`
-	//Provider defines the DNS provider
+	// Provider defines the DNS provider
 	Provider string `json:"provider"`
-	//Issuer defines the certificate issuer
+	// Issuer defines the certificate issuer
 	Issuer string `json:"issuer"`
 }
 
