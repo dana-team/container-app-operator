@@ -1,13 +1,12 @@
 module github.com/dana-team/container-app-operator
 
 go 1.22.2
-
 require (
 	github.com/cert-manager/cert-manager v1.16.2
 	github.com/cisco-open/operator-tools v0.37.0
 	github.com/crossplane/crossplane-runtime v1.18.0
 	github.com/dana-team/cert-external-issuer v0.1.5
-	github.com/dana-team/nfspvc-operator v0.4.3
+	github.com/dana-team/nfspvc-operator v0.5.0
 	github.com/dana-team/provider-dns v0.1.3
 	github.com/go-logr/logr v1.4.2
 	github.com/go-logr/zapr v1.3.0
