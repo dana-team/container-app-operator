@@ -408,8 +408,8 @@ knative.dev/pkg v0.0.0-20241021183759-9b9d535af5ad h1:Nrjtr2H168rJeamH4QdyLMV1lE
 knative.dev/pkg v0.0.0-20241021183759-9b9d535af5ad/go.mod h1:StJI72GWcm/iErmk4RqFJiOo8RLbVqPbHxUqeVwAzeo=
 knative.dev/serving v0.43.0 h1:S+nCHYBaKo8r1kge6zF7hDxQrag5rwMkQTSZyDmrYIc=
 knative.dev/serving v0.43.0/go.mod h1:qYjwZdjv3SD7t+Tk/hvxml824G5njXZrycmCBBALpJk=
-sigs.k8s.io/controller-runtime v0.19.2 h1:3sPrF58XQEPzbE8T81TN6selQIMGbtYwuaJ6eDssDF8=
-sigs.k8s.io/controller-runtime v0.19.2/go.mod h1:iRmWllt8IlaLjvTTDLhRBXIEtkCK6hwVBJJsYS9Ajf4=
+sigs.k8s.io/controller-runtime v0.19.3 h1:XO2GvC9OPftRst6xWCpTgBZO04S2cbp0Qqkj8bX1sPw=
+sigs.k8s.io/controller-runtime v0.19.3/go.mod h1:j4j87DqtsThvwTv5/Tc5NFRyyF/RF0ip4+62tbTSIUM=
 sigs.k8s.io/controller-tools v0.16.0 h1:EJPB+a5Bve861SPBPPWRbP6bbKyNxqK12oYT5zEns9s=
 sigs.k8s.io/controller-tools v0.16.0/go.mod h1:0I0xqjR65YTfoO12iR+mZR6s6UAVcUARgXRlsu0ljB0=
 sigs.k8s.io/gateway-api v1.1.0 h1:DsLDXCi6jR+Xz8/xd0Z1PYl2Pn0TyaFMOPPZIj4inDM=
