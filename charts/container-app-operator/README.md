@@ -9,24 +9,17 @@ A Helm chart for container-app-operator
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | affinity | object | `{}` | Node affinity rules for scheduling pods. Allows you to specify advanced node selection constraints. |
-| autoscaleConfig | object | `{"activationScale":"3","concurrency":"10","cpu":"80","memory":"70","name":"autoscale-defaults","rps":"200"}` | Configuration for the ConfigMap used to set autoscaling defaults. |
-| autoscaleConfig.activationScale | string | `"3"` | The default activationScale for autoscaling. |
-| autoscaleConfig.concurrency | string | `"10"` | The default concurrency limit for autoscaling. |
-| autoscaleConfig.cpu | string | `"80"` | The default CPU utilization percentage for autoscaling. |
-| autoscaleConfig.memory | string | `"70"` | The default memory utilization percentage for autoscaling. |
-| autoscaleConfig.name | string | `"autoscale-defaults"` | The name of the ConfigMap containing autoscale defaults. |
-| autoscaleConfig.rps | string | `"200"` | The default Requests Per Second (RPS) threshold for autoscaling. |
-| dnsConfig | object | `{"data":{"cname":"ingress.capp-zone.com.","issuer":"cert-issuer","provider":"dns-default","zone":"capp-zone.com."},"name":"dns-config"}` | Configuration for the DNS. |
-| dnsConfig.data | object | `{"cname":"ingress.capp-zone.com.","issuer":"cert-issuer","provider":"dns-default","zone":"capp-zone.com."}` | The data for the DNS configMap. |
-| dnsConfig.data.cname | string | `"ingress.capp-zone.com."` | The canonical name that CNAMEs created by the operator should point at. |
-| dnsConfig.data.issuer | string | `"cert-issuer"` | The name of the Certificate External Issuer name |
-| dnsConfig.data.provider | string | `"dns-default"` | The name of the Crossplane DNS provider config. |
-| dnsConfig.data.zone | string | `"capp-zone.com."` | The DNS zone for the application. |
-| dnsConfig.name | string | `"dns-config"` | The name of the DNS configMap. |
+| config | object | `{"autoscaleConfig":{"activationScale":3,"concurrency":10,"cpu":80,"memory":70,"rps":200},"dnsConfig":{"cname":"ingress.capp-zone.com.","issuer":"cert-issuer","provider":"dns-default","zone":"capp-zone.com."}}` | Configuration for Cappconfig CRD |
+| config.autoscaleConfig.activationScale | int | `3` | The default activationScale for autoscaling. |
+| config.autoscaleConfig.concurrency | int | `10` | The default concurrency limit for autoscaling. |
+| config.autoscaleConfig.cpu | int | `80` | The default CPU utilization percentage for autoscaling. |
+| config.autoscaleConfig.memory | int | `70` | The default memory utilization percentage for autoscaling. |
+| config.autoscaleConfig.rps | int | `200` | The default Requests Per Second (RPS) threshold for autoscaling. |
+| config.dnsConfig.cname | string | `"ingress.capp-zone.com."` | The canonical name that CNAMEs created by the operator should point at. |
+| config.dnsConfig.issuer | string | `"cert-issuer"` | The name of the Certificate External Issuer name |
+| config.dnsConfig.provider | string | `"dns-default"` | The name of the Crossplane DNS provider config. |
+| config.dnsConfig.zone | string | `"capp-zone.com."` | The DNS zone for the application. |
 | fullnameOverride | string | `""` |  |
-| image.kubeRbacProxy.pullPolicy | string | `"IfNotPresent"` | The pull policy for the image. |
-| image.kubeRbacProxy.repository | string | `"gcr.io/kubebuilder/kube-rbac-proxy"` | The repository of the kube-rbac-proxy container image. |
-| image.kubeRbacProxy.tag | string | `"v0.14.1"` | The tag of the kube-rbac-proxy container image. |
 | image.manager.pullPolicy | string | `"IfNotPresent"` | The pull policy for the image. |
 | image.manager.repository | string | `"ghcr.io/dana-team/container-app-operator"` | The repository of the manager container image. |
 | image.manager.tag | string | `""` | The tag of the manager container image. |
@@ -34,13 +27,6 @@ A Helm chart for container-app-operator
 | klusterlet.enabled | bool | `true` | Flag to indiciate whether to deploy Klusterlet-related resources (defaults to true) |
 | klusterlet.namespace | string | `"open-cluster-management-agent"` | The namespace where the service account resides. |
 | klusterlet.serviceAccountName | string | `"klusterlet-work-sa"` | The name of the Klusterset service account. |
-| kubeRbacProxy | object | `{"args":["--secure-listen-address=0.0.0.0:8443","--upstream=http://127.0.0.1:8080/","--logtostderr=true","--v=0"],"ports":{"https":{"containerPort":8443,"name":"https","protocol":"TCP"}},"resources":{"limits":{"cpu":"500m","memory":"128Mi"},"requests":{"cpu":"5m","memory":"64Mi"}},"securityContext":{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]}}}` | Configuration for the kube-rbac-proxy container. |
-| kubeRbacProxy.args | list | `["--secure-listen-address=0.0.0.0:8443","--upstream=http://127.0.0.1:8080/","--logtostderr=true","--v=0"]` | Command-line arguments passed to the kube-rbac-proxy container. |
-| kubeRbacProxy.ports.https.containerPort | int | `8443` | The port for the HTTPS endpoint. |
-| kubeRbacProxy.ports.https.name | string | `"https"` | The name of the HTTPS port. |
-| kubeRbacProxy.ports.https.protocol | string | `"TCP"` | The protocol used by the HTTPS endpoint. |
-| kubeRbacProxy.resources | object | `{"limits":{"cpu":"500m","memory":"128Mi"},"requests":{"cpu":"5m","memory":"64Mi"}}` | Resource requests and limits for the kube-rbac-proxy container. |
-| kubeRbacProxy.securityContext | object | `{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]}}` | Security settings for the kube-rbac-proxy container. |
 | livenessProbe | object | `{"initialDelaySeconds":15,"periodSeconds":20}` | Configuration for the liveness probe. |
 | livenessProbe.initialDelaySeconds | int | `15` | The initial delay before the liveness probe is initiated. |
 | livenessProbe.periodSeconds | int | `20` | The frequency (in seconds) with which the probe will be performed. |

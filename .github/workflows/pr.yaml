@@ -27,8 +27,8 @@ jobs:
     timeout-minutes: 20
     env:
       IMAGE_REGISTRY: kind-registry:5000
-      KIND_VERSION: v0.18.0
-      K8S_VERSION: v1.26.3
+      KIND_VERSION: v0.25.0
+      K8S_VERSION: v1.30.4
     steps:
       - name: Checkout
         uses: actions/checkout@v4.2.2

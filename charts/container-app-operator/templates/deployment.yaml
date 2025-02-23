@@ -58,24 +58,4 @@ spec:
             requests:
               cpu: {{ .Values.manager.resources.requests.cpu }}
               memory: {{ .Values.manager.resources.requests.memory }}
-        - name: kube-rbac-proxy
-          image: {{ .Values.image.kubeRbacProxy.repository }}:{{ .Values.image.kubeRbacProxy.tag }}
-          imagePullPolicy: {{ .Values.image.kubeRbacProxy.pullPolicy }}
-          args:
-          {{- range .Values.kubeRbacProxy.args }}
-            - {{ . | quote }}
-          {{- end }}
-          securityContext:
-            {{- toYaml .Values.kubeRbacProxy.securityContext | nindent 12 }}
-          ports:
-            - name: {{ .Values.kubeRbacProxy.ports.https.name }}
-              containerPort: {{ .Values.kubeRbacProxy.ports.https.containerPort }}
-              protocol: {{ .Values.kubeRbacProxy.ports.https.protocol }}
-          resources:
-            limits:
-              cpu: {{ .Values.kubeRbacProxy.resources.limits.cpu }}
-              memory: {{ .Values.kubeRbacProxy.resources.limits.memory }}
-            requests:
-              cpu: {{ .Values.kubeRbacProxy.resources.requests.cpu }}
-              memory: {{ .Values.kubeRbacProxy.resources.requests.memory }}
       serviceAccountName: {{ include "container-app-operator.fullname" . }}-controller-manager
