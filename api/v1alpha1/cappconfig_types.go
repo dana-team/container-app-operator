@@ -37,7 +37,7 @@ type AutoscaleConfig struct {
 // CappConfigStatus defines the observed state of CappConfig
 type CappConfigStatus struct{}
 
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
 // CappConfig is the Schema for the cappconfigs API
 type CappConfig struct {
@@ -48,7 +48,7 @@ type CappConfig struct {
 	Status CappConfigStatus `json:"status,omitempty"`
 }
 
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
 // CappConfigList contains a list of CappConfig
 type CappConfigList struct {

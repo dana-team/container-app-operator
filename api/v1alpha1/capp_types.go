@@ -246,11 +246,11 @@ type CappStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 // +kubebuilder:printcolumn:name="Site",type="string",JSONPath=".status.applicationLinks.site",description="cluster of the resource"
 // +kubebuilder:printcolumn:name="Custom URL",type="string",JSONPath=".spec.routeSpec.hostname",description="shorten url"
 // +kubebuilder:printcolumn:name="AutoScale Type",type="string",JSONPath=".spec.scaleMetric",description="autoscale metric"
-//+kubebuilder:subresource:status
+// +kubebuilder:subresource:status
 
 // Capp is the Schema for the capps API.
 type Capp struct {
@@ -266,7 +266,7 @@ type Capp struct {
 	Status CappStatus `json:"status,omitempty"`
 }
 
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
 // CappList contains a list of Capp.
 type CappList struct {

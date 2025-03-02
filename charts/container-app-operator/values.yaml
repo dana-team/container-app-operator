@@ -11,13 +11,6 @@ image:
     # -- The pull policy for the image.
     pullPolicy: IfNotPresent
 
-  kubeRbacProxy:
-    # -- The repository of the kube-rbac-proxy container image.
-    repository: gcr.io/kubebuilder/kube-rbac-proxy
-    # -- The tag of the kube-rbac-proxy container image.
-    tag: v0.14.1
-    # -- The pull policy for the image.
-    pullPolicy: IfNotPresent
 
 # Override the name of the deployment
 nameOverride: ""
@@ -82,37 +75,6 @@ manager:
       memory: 128Mi
     requests:
       cpu: 10m
-      memory: 64Mi
-
-# -- Configuration for the kube-rbac-proxy container.
-kubeRbacProxy:
-  # -- Command-line arguments passed to the kube-rbac-proxy container.
-  args:
-    - "--secure-listen-address=0.0.0.0:8443"
-    - "--upstream=http://127.0.0.1:8080/"
-    - "--logtostderr=true"
-    - "--v=0"
-  ports:
-    https:
-      # -- The port for the HTTPS endpoint.
-      containerPort: 8443
-      # -- The protocol used by the HTTPS endpoint.
-      protocol: TCP
-      # -- The name of the HTTPS port.
-      name: https
-  # -- Security settings for the kube-rbac-proxy container.
-  securityContext:
-    allowPrivilegeEscalation: false
-    capabilities:
-      drop:
-        - "ALL"
-  # -- Resource requests and limits for the kube-rbac-proxy container.
-  resources:
-    limits:
-      cpu: 500m
-      memory: 128Mi
-    requests:
-      cpu: 5m
       memory: 64Mi
 
 # -- Pod-level security context for the entire pod.

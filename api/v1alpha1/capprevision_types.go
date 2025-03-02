@@ -30,8 +30,7 @@ type CappRevisionSpec struct {
 }
 
 // CappRevisionStatus defines the observed state of CappRevision
-type CappRevisionStatus struct {
-}
+type CappRevisionStatus struct{}
 
 // CappTemplate template of Capp.
 type CappTemplate struct {
@@ -47,8 +46,8 @@ type CappTemplate struct {
 	Annotations map[string]string `json:"annotations,omitempty"`
 }
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
 
 // CappRevision is the Schema for the CappRevisions API
 type CappRevision struct {
@@ -59,7 +58,7 @@ type CappRevision struct {
 	Status CappRevisionStatus `json:"status,omitempty"`
 }
 
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
 // CappRevisionList contains a list of CappRevision
 type CappRevisionList struct {
