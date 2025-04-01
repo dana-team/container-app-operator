@@ -2,6 +2,8 @@ module github.com/dana-team/container-app-operator
 
 go 1.23.4
 
+toolchain go1.24.1
+
 require (
 	github.com/cert-manager/cert-manager v1.17.1
 	github.com/cisco-open/operator-tools v0.37.0
@@ -12,7 +14,7 @@ require (
 	github.com/go-logr/logr v1.4.2
 	github.com/go-logr/zapr v1.3.0
 	github.com/kube-logging/logging-operator/pkg/sdk v0.11.1-0.20240314152935-421fefebc813
-	github.com/onsi/ginkgo/v2 v2.22.2
+	github.com/onsi/ginkgo/v2 v2.23.3
 	github.com/onsi/gomega v1.36.2
 	github.com/openshift/api v0.0.0-20250220103441-744790f2cff7
 	github.com/stretchr/testify v1.10.0
