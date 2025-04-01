@@ -2,6 +2,8 @@ module github.com/dana-team/container-app-operator
 
 go 1.23.4
 
+toolchain go1.24.1
+
 require (
 	github.com/cert-manager/cert-manager v1.17.1
 	github.com/cisco-open/operator-tools v0.37.0
@@ -19,9 +21,9 @@ require (
 	go.elastic.co/ecszap v1.0.3
 	go.uber.org/zap v1.27.0
 	golang.org/x/net v0.36.0
-	k8s.io/api v0.32.2
-	k8s.io/apimachinery v0.32.2
-	k8s.io/client-go v0.32.2
+	k8s.io/api v0.32.3
+	k8s.io/apimachinery v0.32.3
+	k8s.io/client-go v0.32.3
 	k8s.io/utils v0.0.0-20241210054802-24370beab758
 	knative.dev/pkg v0.0.0-20250219013713-9e265611c097
 	knative.dev/serving v0.44.0
