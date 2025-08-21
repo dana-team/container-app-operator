@@ -1,13 +1,26 @@
 package v1alpha1
 
-import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+import (
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
 
 // CappConfigSpec defines the desired state of CappConfig
 type CappConfigSpec struct {
 	// +kubebuilder:validation:Required
 	DNSConfig DNSConfig `json:"dnsConfig"`
+
 	// +kubebuilder:validation:Required
 	AutoscaleConfig AutoscaleConfig `json:"autoscaleConfig"`
+
+	// DefaultResources is the default resources to be assigned to Capp.
+	// If other resources are specified then they override the default values.
+	DefaultResources corev1.ResourceRequirements `json:"defaultResources"`
+
+	// InvalidHostnamePatterns is an optional slice of regex patterns to be used to validate the hostname of the Capp.
+	// If the Capp hostname matches a pattern, it is blocked from being created.
+	// +kubebuilder:default:={}
+	InvalidHostnamePatterns []string `json:"invalidHostnamePatterns"`
 }
 
 type DNSConfig struct {
