@@ -25,10 +25,6 @@ import (
 
 	dnsrecordv1alpha1 "github.com/dana-team/provider-dns/apis/record/v1alpha1"
 
-	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
-	cappcontroller "github.com/dana-team/container-app-operator/internal/kinds/capp/controllers"
-	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
-	crcontroller "github.com/dana-team/container-app-operator/internal/kinds/capprevision/controllers"
 	nfspvcv1alpha1 "github.com/dana-team/nfspvc-operator/api/v1alpha1"
 	"github.com/go-logr/zapr"
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
@@ -47,6 +43,13 @@ import (
 	runtimezap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+
+	rcsv1alpha1 "github.com/dana-team/container-app-operator/api/rcs/v1alpha1"
+	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	cappcontroller "github.com/dana-team/container-app-operator/internal/kinds/capp/controllers"
+	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
+	crcontroller "github.com/dana-team/container-app-operator/internal/kinds/capprevision/controllers"
+	webhookrcsv1alpha1 "github.com/dana-team/container-app-operator/internal/webhook/rcs/v1alpha1"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -65,6 +68,7 @@ func init() {
 	utilruntime.Must(cmapi.AddToScheme(scheme))
 	utilruntime.Must(dnsrecordv1alpha1.AddToScheme(scheme))
 
+	utilruntime.Must(rcsv1alpha1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 
@@ -172,6 +176,13 @@ func main() {
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "CappRevision")
 		os.Exit(1)
+	}
+	// nolint:goconst
+	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
+		if err = webhookrcsv1alpha1.SetupCappConfigWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "CappConfig")
+			os.Exit(1)
+		}
 	}
 	// +kubebuilder:scaffold:builder
 
