@@ -1,4 +1,5 @@
 # container-app-operator
+
 The `container-app-operator` is an operator that reconciles `Capp` CRs.
 
 `Capp` (or ContainerApp) provides a higher-level abstraction for deploying containerized Serverless workload, making it easier for end-users to deploy workloads on Kubernetes without being knowledgeable in Kubernetes concepts, while adhering to the standards required by the infrastructure and platform teams without any extra burden on the users.

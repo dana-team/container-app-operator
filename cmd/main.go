@@ -179,10 +179,17 @@ func main() {
 	}
 	// nolint:goconst
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
-		if err = webhookrcsv1alpha1.SetupCappConfigWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "CappConfig")
-			os.Exit(1)
-		}
+		hookServer := mgr.GetWebhookServer()
+		decoder := admission.NewDecoder(scheme)
+		hookServer.Register(rcswebhooks.ValidatorServingPath, &webhook.Admission{Handler: &rcswebhooks.CappValidator{
+			Client:  mgr.GetClient(),
+			Decoder: decoder,
+		}})
+
+		hookServer.Register(rcswebhooks.MutatorServingPath, &webhook.Admission{Handler: &rcswebhooks.CappMutator{
+			Client:  mgr.GetClient(),
+			Decoder: decoder,
+		}})
 	}
 	// +kubebuilder:scaffold:builder
 
