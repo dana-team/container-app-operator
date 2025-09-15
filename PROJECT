@@ -28,7 +28,7 @@ resources:
 - api:
     crdVersion: v1
     namespaced: true
-  domain: rcs.dana.io
+  domain: dana.io
   group: rcs
   kind: CappConfig
   path: github.com/dana-team/container-app-operator/api/rcs/v1alpha1

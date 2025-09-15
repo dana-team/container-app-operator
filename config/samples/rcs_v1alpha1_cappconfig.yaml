@@ -1,4 +1,4 @@
-apiVersion: rcs.rcs.dana.io/v1alpha1
+apiVersion: rcs.dana.io/v1alpha1
 kind: CappConfig
 metadata:
   labels:

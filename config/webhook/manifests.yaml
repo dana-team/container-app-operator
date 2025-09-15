@@ -6,24 +6,25 @@ metadata:
 webhooks:
 - admissionReviewVersions:
   - v1
+  - v1beta1
   clientConfig:
     service:
       name: webhook-service
       namespace: system
-      path: /mutate-rcs-rcs-dana-io-v1alpha1-cappconfig
+      path: /mutate-capp
   failurePolicy: Fail
-  name: mcappconfig-v1alpha1.kb.io
+  name: capp.dana.io
   rules:
   - apiGroups:
-    - rcs.rcs.dana.io
+    - rcs.dana.io
     apiVersions:
     - v1alpha1
     operations:
     - CREATE
     - UPDATE
     resources:
-    - cappconfigs
-  sideEffects: None
+    - capps
+  sideEffects: NoneOnDryRun
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
@@ -32,21 +33,22 @@ metadata:
 webhooks:
 - admissionReviewVersions:
   - v1
+  - v1beta1
   clientConfig:
     service:
       name: webhook-service
       namespace: system
-      path: /validate-rcs-rcs-dana-io-v1alpha1-cappconfig
+      path: /validate-capp
   failurePolicy: Fail
-  name: vcappconfig-v1alpha1.kb.io
+  name: capp.validate.rcs.dana.io
   rules:
   - apiGroups:
-    - rcs.rcs.dana.io
+    - rcs.dana.io
     apiVersions:
     - v1alpha1
     operations:
     - CREATE
     - UPDATE
     resources:
-    - cappconfigs
-  sideEffects: None
+    - capps
+  sideEffects: NoneOnDryRun

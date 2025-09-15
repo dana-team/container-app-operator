@@ -1,55 +1,27 @@
-package webhooks
+package common
 
 import (
 	"context"
 	"fmt"
+
 	"net"
 	"regexp"
 	"strings"
 
-	rcsv1alpha1 "github.com/dana-team/rcs-ocm-deployer/api/v1alpha1"
-	"github.com/dana-team/rcs-ocm-deployer/internal/utils"
+	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 	"k8s.io/apimachinery/pkg/types"
 
-	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	v1alpha2 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/strings/slices"
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/network"
-	clusterv1 "open-cluster-management.io/api/cluster/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// isSiteValid checks if the specified site cluster name is valid or not.
-// It takes a cappv1alpha1.Capp object, a list of placements, a Kubernetes client.Client, and a context.Context.
-// The function returns a boolean value based on the validity of the specified site cluster name.
-func isSiteValid(capp cappv1alpha1.Capp, placements []string, r client.Client, ctx context.Context) bool {
-	if capp.Spec.Site == "" {
-		return true
-	}
-	clusters, _ := getManagedClusters(r, ctx)
-	return slices.Contains(clusters, capp.Spec.Site) || slices.Contains(placements, capp.Spec.Site)
-}
-
-// getManagedClusters retrieves the list of managed clusters from the Kubernetes API server
-// and returns the list of cluster names as a slice of strings.
-// If there is an error while retrieving the list of managed clusters, the function returns an error.
-func getManagedClusters(r client.Client, ctx context.Context) ([]string, error) {
-	var clusterNames []string
-	clusters := clusterv1.ManagedClusterList{}
-	if err := r.List(ctx, &clusters); err != nil {
-		return clusterNames, err
-	}
-	for _, cluster := range clusters.Items {
-		clusterNames = append(clusterNames, cluster.Name)
-	}
-	return clusterNames, nil
-}
-
-// validateDomainName checks if the hostname is valid domain name and not part of the cluster's domain.
+// ValidateDomainName checks if the hostname is valid domain name and not part of the cluster's domain.
 // it returns aggregated error if any of the validations falied.
-func validateDomainName(domainName string, invalidPatterns []string) (errs *apis.FieldError) {
+func ValidateDomainName(domainName string, invalidPatterns []string) (errs *apis.FieldError) {
 	if domainName == "" {
 		return nil
 	}
@@ -97,8 +69,8 @@ func isDomainNameTaken(domainName string) (bool, error) {
 	return true, nil
 }
 
-// validateLogSpec checks if the LogSpec is valid based on the Type field.
-func validateLogSpec(logSpec cappv1alpha1.LogSpec) *apis.FieldError {
+// ValidateLogSpec checks if the LogSpec is valid based on the Type field.
+func ValidateLogSpec(logSpec v1alpha2.LogSpec) *apis.FieldError {
 	requiredFields := map[string][]string{
 		"elastic": {"Host", "Index", "User", "PasswordSecret"},
 	}
@@ -122,7 +94,7 @@ func validateLogSpec(logSpec cappv1alpha1.LogSpec) *apis.FieldError {
 }
 
 // findMissingFields checks for missing fields in LogSpec.
-func findMissingFields(logSpec cappv1alpha1.LogSpec, required []string) []string {
+func findMissingFields(logSpec v1alpha2.LogSpec, required []string) []string {
 	var missingFields []string
 	fieldValues := map[string]string{
 		"Host":           logSpec.Host,
@@ -138,10 +110,10 @@ func findMissingFields(logSpec cappv1alpha1.LogSpec, required []string) []string
 	return missingFields
 }
 
-// getRCSConfig returns an instance of RCS Config.
-func getRCSConfig(ctx context.Context, k8sClient client.Client) (*rcsv1alpha1.RCSConfig, error) {
-	config := rcsv1alpha1.RCSConfig{}
-	key := types.NamespacedName{Name: utils.RCSConfigName, Namespace: utils.RCSConfigNamespace}
+// GetCappConfig returns an instance of RCS Config.
+func GetCappConfig(ctx context.Context, k8sClient client.Client) (*v1alpha2.CappConfig, error) {
+	config := v1alpha2.CappConfig{}
+	key := types.NamespacedName{Name: utils.CappConfigName, Namespace: utils.CappNS}
 	if err := k8sClient.Get(ctx, key, &config); err != nil {
 		return nil, err
 	}
