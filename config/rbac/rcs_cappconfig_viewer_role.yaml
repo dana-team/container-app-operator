@@ -8,7 +8,7 @@ metadata:
   name: rcs-cappconfig-viewer-role
 rules:
 - apiGroups:
-  - rcs.rcs.dana.io
+  - rcs.dana.io
   resources:
   - cappconfigs
   verbs:
@@ -16,7 +16,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - rcs.rcs.dana.io
+  - rcs.dana.io
   resources:
   - cappconfigs/status
   verbs:

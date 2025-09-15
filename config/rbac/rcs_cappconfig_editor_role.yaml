@@ -8,7 +8,7 @@ metadata:
   name: rcs-cappconfig-editor-role
 rules:
 - apiGroups:
-  - rcs.rcs.dana.io
+  - rcs.dana.io
   resources:
   - cappconfigs
   verbs:
@@ -20,7 +20,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - rcs.rcs.dana.io
+  - rcs.dana.io
   resources:
   - cappconfigs/status
   verbs:
