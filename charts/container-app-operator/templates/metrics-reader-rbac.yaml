@@ -3,9 +3,9 @@ kind: ClusterRole
 metadata:
   name: {{ include "container-app-operator.fullname" . }}-metrics-reader
   labels:
-    {{- include "container-app-operator.labels" . | nindent 4 }}
+  {{- include "container-app-operator.labels" . | nindent 4 }}
 rules:
 - nonResourceURLs:
-  - "/metrics"
+  - /metrics
   verbs:
   - get

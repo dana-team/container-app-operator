@@ -177,3 +177,5 @@ require (
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.0 // indirect
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )
+
+replace github.com/kube-logging/logging-operator/pkg/sdk/logging/model/syslogng/config => github.com/kube-logging/logging-operator/pkg/sdk/logging/model/syslogng/config v0.1.0
