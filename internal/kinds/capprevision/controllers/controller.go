@@ -42,6 +42,7 @@ func (r *CappRevisionReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&cappv1alpha1.Capp{}).
 		Named(cappRevisionControllerName).
+		WithEventFilter(NewCappPredicates()).
 		Complete(r)
 }
 
@@ -81,5 +82,6 @@ func syncCappRevision(ctx context.Context, k8sClient client.Client, capp cappv1a
 	if len(cappRevisions) == 0 {
 		return actionmanagers.HandleCappCreation(ctx, k8sClient, capp, logger)
 	}
+
 	return actionmanagers.HandleCappUpdate(ctx, k8sClient, capp, logger, cappRevisions)
 }

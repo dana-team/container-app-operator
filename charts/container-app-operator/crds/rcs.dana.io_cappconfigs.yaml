@@ -1,10 +1,13 @@
----
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  annotations:
-    controller-gen.kubebuilder.io/version: v0.16.2
   name: cappconfigs.rcs.dana.io
+  annotations:
+    cert-manager.io/inject-ca-from: '{{ .Release.Namespace }}/{{ include "container-app-operator.fullname"
+      . }}-serving-cert'
+    controller-gen.kubebuilder.io/version: v0.16.4
+  labels:
+  {{- include "container-app-operator.labels" . | nindent 4 }}
 spec:
   group: rcs.dana.io
   names:
@@ -55,8 +58,7 @@ spec:
                         upscaling.
                       type: integer
                     rps:
-                      description: RPS is the desired requests per second to trigger
-                        upscaling.
+                      description: RPS is the desired requests per second to trigger upscaling.
                       type: integer
                   required:
                     - activationScale
@@ -65,11 +67,72 @@ spec:
                     - memory
                     - rps
                   type: object
+                defaultResources:
+                  description: |-
+                    DefaultResources is the default resources to be assigned to Capp.
+                    If other resources are specified then they override the default values.
+                  properties:
+                    claims:
+                      description: |-
+                        Claims lists the names of resources, defined in spec.resourceClaims,
+                        that are used by this container.
+
+                        This field depends on the
+                        DynamicResourceAllocation feature gate.
+
+                        This field is immutable. It can only be set for containers.
+                      items:
+                        description: ResourceClaim references one entry in PodSpec.ResourceClaims.
+                        properties:
+                          name:
+                            description: |-
+                              Name must match the name of one entry in pod.spec.resourceClaims of
+                              the Pod where this field is used. It makes that resource available
+                              inside a container.
+                            type: string
+                          request:
+                            description: |-
+                              Request is the name chosen for a request in the referenced claim.
+                              If empty, everything from the claim is made available, otherwise
+                              only the result of this request.
+                            type: string
+                        required:
+                          - name
+                        type: object
+                      type: array
+                      x-kubernetes-list-map-keys:
+                        - name
+                      x-kubernetes-list-type: map
+                    limits:
+                      additionalProperties:
+                        anyOf:
+                          - type: integer
+                          - type: string
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
+                      description: |-
+                        Limits describes the maximum amount of compute resources allowed.
+                        More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                      type: object
+                    requests:
+                      additionalProperties:
+                        anyOf:
+                          - type: integer
+                          - type: string
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
+                      description: |-
+                        Requests describes the minimum amount of compute resources required.
+                        If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
+                        otherwise to an implementation-defined value. Requests cannot exceed Limits.
+                        More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                      type: object
+                  type: object
                 dnsConfig:
                   properties:
                     cname:
-                      description: CNAME defines the CNAME record that will be used
-                        for Capp Hostnames
+                      description: CNAME defines the CNAME record that will be used for
+                        Capp Hostnames
                       type: string
                     issuer:
                       description: Issuer defines the certificate issuer
@@ -86,9 +149,19 @@ spec:
                     - provider
                     - zone
                   type: object
+                invalidHostnamePatterns:
+                  default: []
+                  description: |-
+                    InvalidHostnamePatterns is an optional slice of regex patterns to be used to validate the hostname of the Capp.
+                    If the Capp hostname matches a pattern, it is blocked from being created.
+                  items:
+                    type: string
+                  type: array
               required:
                 - autoscaleConfig
+                - defaultResources
                 - dnsConfig
+                - invalidHostnamePatterns
               type: object
             status:
               description: CappConfigStatus defines the observed state of CappConfig
@@ -96,3 +169,9 @@ spec:
           type: object
       served: true
       storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

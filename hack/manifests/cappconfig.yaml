@@ -15,3 +15,13 @@ spec:
     cname: "ingress.capp-zone.com."
     provider: "dns-default"
     issuer: "cert-issuer"
+  defaultResources:
+    limits:
+      cpu: "1"
+      memory: "1Gi"
+    requests:
+      cpu: "500m"
+      memory: "512Mi"
+  invalidHostnamePatterns:
+    - ".*\\.example\\.com"
+    - "^test-.*"
