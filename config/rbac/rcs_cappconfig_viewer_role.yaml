@@ -1,0 +1,23 @@
+# permissions for end users to view cappconfigs.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: container-app-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: rcs-cappconfig-viewer-role
+rules:
+- apiGroups:
+  - rcs.dana.io
+  resources:
+  - cappconfigs
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - rcs.dana.io
+  resources:
+  - cappconfigs/status
+  verbs:
+  - get

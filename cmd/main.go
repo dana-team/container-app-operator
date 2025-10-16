@@ -21,14 +21,14 @@ import (
 	"flag"
 	"os"
 
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 
 	dnsrecordv1alpha1 "github.com/dana-team/provider-dns/apis/record/v1alpha1"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
-	cappcontroller "github.com/dana-team/container-app-operator/internal/kinds/capp/controllers"
-	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
-	crcontroller "github.com/dana-team/container-app-operator/internal/kinds/capprevision/controllers"
 	nfspvcv1alpha1 "github.com/dana-team/nfspvc-operator/api/v1alpha1"
 	"github.com/go-logr/zapr"
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
@@ -47,6 +47,11 @@ import (
 	runtimezap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+
+	cappcontroller "github.com/dana-team/container-app-operator/internal/kinds/capp/controllers"
+	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
+	crcontroller "github.com/dana-team/container-app-operator/internal/kinds/capprevision/controllers"
+	webhooks "github.com/dana-team/container-app-operator/internal/webhook/rcs/v1alpha1"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -172,6 +177,21 @@ func main() {
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "CappRevision")
 		os.Exit(1)
+	}
+
+	// nolint:goconst
+	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
+		hookServer := mgr.GetWebhookServer()
+		decoder := admission.NewDecoder(scheme)
+		hookServer.Register("/validate-capp", &webhook.Admission{Handler: &webhooks.CappValidator{
+			Client:  mgr.GetClient(),
+			Decoder: decoder,
+		}})
+
+		hookServer.Register("/mutate-capp", &webhook.Admission{Handler: &webhooks.CappMutator{
+			Client:  mgr.GetClient(),
+			Decoder: decoder,
+		}})
 	}
 	// +kubebuilder:scaffold:builder
 

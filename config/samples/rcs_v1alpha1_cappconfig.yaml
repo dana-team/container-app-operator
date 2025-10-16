@@ -1,0 +1,9 @@
+apiVersion: rcs.dana.io/v1alpha1
+kind: CappConfig
+metadata:
+  labels:
+    app.kubernetes.io/name: container-app-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: cappconfig-sample
+spec:
+  # TODO(user): Add fields here

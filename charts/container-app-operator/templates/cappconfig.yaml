@@ -1,9 +1,10 @@
+{{- if .Values.config.enabled }}
 apiVersion: rcs.dana.io/v1alpha1
 kind: CappConfig
 metadata:
   name: "capp-config"
   labels:
-    {{- include "container-app-operator.labels" . | nindent 4 }}
+    {{ include "container-app-operator.labels" . | nindent 4 }}
 spec:
   autoscaleConfig:
     rps: {{ .Values.config.autoscaleConfig.rps }}
@@ -16,3 +17,17 @@ spec:
     cname: "{{ .Values.config.dnsConfig.cname }}"
     provider: "{{ .Values.config.dnsConfig.provider }}"
     issuer: "{{ .Values.config.dnsConfig.issuer }}"
+  defaultResources:
+    requests:
+      cpu: "{{ .Values.config.defaultResources.requests.cpu }}"
+      memory: "{{ .Values.config.defaultResources.requests.memory }}"
+    limits:
+      cpu: "{{ .Values.config.defaultResources.limits.cpu }}"
+      memory: "{{ .Values.config.defaultResources.limits.memory }}"
+  invalidHostnamePatterns:
+    {{- if .Values.config.invalidHostnamePatterns }}
+    {{ toYaml .Values.config.invalidHostnamePatterns | nindent 4 }}
+    {{- else }}
+    []
+    {{- end }}
+{{- end }}
