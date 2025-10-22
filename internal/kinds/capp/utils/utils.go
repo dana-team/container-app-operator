@@ -24,7 +24,7 @@ var (
 
 const (
 	CappConfigName = "capp-config"
-	CappNS         = "capp-operator-system"
+	CappNS         = "container-app-operator-system"
 	CappKey        = "capp"
 )
 
