@@ -63,7 +63,7 @@ jobs:
         uses: jupyterhub/action-k8s-await-workloads@v3
         with:
           workloads: ""
-          namespace: "capp-operator-system"
+          namespace: "container-app-operator-system"
           max-restarts: 0
 
       - name: Run e2e tests
