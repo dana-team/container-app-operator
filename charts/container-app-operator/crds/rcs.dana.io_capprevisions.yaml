@@ -3,11 +3,7 @@ kind: CustomResourceDefinition
 metadata:
   name: capprevisions.rcs.dana.io
   annotations:
-    cert-manager.io/inject-ca-from: '{{ .Release.Namespace }}/{{ include "container-app-operator.fullname"
-      . }}-serving-cert'
     controller-gen.kubebuilder.io/version: v0.16.4
-  labels:
-  {{- include "container-app-operator.labels" . | nindent 4 }}
 spec:
   group: rcs.dana.io
   names:

@@ -2,7 +2,7 @@ apiVersion: rcs.dana.io/v1alpha1
 kind: CappConfig
 metadata:
   name: capp-config
-  namespace: capp-operator-system
+  namespace: container-app-operator-system
 spec:
   autoscaleConfig:
     rps: 200
