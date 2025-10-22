@@ -14,7 +14,7 @@ const (
 	RPSScaleMetric = "rps"
 	SecretKey      = "extra"
 	SecretValue    = "YmFyCg=="
-	ControllerNS   = "capp-operator-system"
+	ControllerNS   = "container-app-operator-system"
 	ProviderValue  = "dns-provider"
 	IssuerValue    = "cert-issuer"
 	ZoneValue      = "capp-zone.com."

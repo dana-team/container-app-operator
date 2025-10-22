@@ -103,7 +103,7 @@ $ make prereq PROVIDER_DNS_REALM=<value> PROVIDER_DNS_KDC=<value> PROVIDER_DNS_P
 Use `Helm` to deploy `Capp` with all the needed resources. Only deploy it after installing the [prereq](#prerequisites).
 
 ```bash
-$ helm upgrade --install capp-operator --namespace capp-operator-system --create-namespace oci://ghcr.io/dana-team/helm-charts/container-app-operator --version <release>
+$ helm upgrade --install capp-operator --namespace container-app-operator-system --create-namespace oci://ghcr.io/dana-team/helm-charts/container-app-operator --version <release>
 ```
 
 #### Deploy with Makefile
@@ -124,7 +124,7 @@ $ make docker-build docker-push IMG=<registry>/container-app-operator:<tag>
 
 The `autoscaleConfig` is defined within a `CappConfig CRD` named `capp-config` in the namespaces of the controller.
 
-To modify the target values for the `autoscaler`, modify the existing `CappConfig` resource, in the namespace capp-operator-system with the desired values.
+To modify the target values for the `autoscaler`, modify the existing `CappConfig` resource, in the namespace container-app-operator-system with the desired values.
 
 The `autoscaleConfig` section of the `CappConfig` CRD specifies the scale metric types and their target values.
 
@@ -145,7 +145,7 @@ apiVersion: rcs.dana.io/v1alpha1
 kind: CappConfig
 metadata:
   name: capp-config
-  namespace: capp-operator-system
+  namespace: container-app-operator-system
 spec:
   autoscaleConfig:
     rps: 200
