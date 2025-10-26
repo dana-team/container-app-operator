@@ -59,6 +59,8 @@ type CappSpec struct {
 
 	// VolumesSpec defines the volumes specification for the Capp.
 	VolumesSpec VolumesSpec `json:"volumesSpec,omitempty"`
+
+	Sources Sources `json:"sources,omitempty"`
 }
 
 // VolumesSpec defines the volumes specification for the Capp.
@@ -208,6 +210,49 @@ type NFSVolumeStatus struct {
 
 	// NFSPVCStatus is the status of the underlying NfsPvc object.
 	NFSPVCStatus nfspvcv1alpha1.NfsPvcStatus `json:"nfsPvcStatus,omitempty"`
+}
+
+// Sources define the configuration and status of event sources
+type Sources struct {
+	KafkaSource KafkaSource `json:"kafkaSource,omitempty"`
+}
+
+// KafkaSource define the configuration of a Kafka sources
+type KafkaSource struct {
+	// BootstrapServers is a list of Kafka broker addresses used to connect to the cluster.
+	BootstrapServers []string `json:"bootstrapServers,omitempty"`
+
+	// Topic is the Kafka topic from which messages are consumed.
+	Topic string `json:"topic,omitempty"`
+
+	// KafkaStatus represents the current observed state of the Kafka source.
+	KafkaAuth *KafkaAuth `json:"kafkaAuth,omitempty"`
+}
+
+// SourceStatus defines the status of a event sources
+type SourceStatus struct {
+
+	// KafkaStatus defines the status of a Kafka source
+	KafkaStatus KafkaStatus `json:"kafkaStatus,omitempty"`
+}
+
+// KafkaStatus defines the status of a Kafka source
+type KafkaStatus struct {
+	// Conditions contain details about the current state of the Capp.
+	// +optional
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
+}
+
+// KafkaAuth defines the data required to create a secret with the user's credentials
+type KafkaAuth struct {
+	// SecretName is the name of the Kubernetes Secret containing user's credentials.
+	SecretName string `json:"secretName,omitempty"`
+
+	// Username used for authenticating
+	Username string `json:"username,omitempty"`
+
+	// Password used for authenticating
+	Password string `json:"password,omitempty"`
 }
 
 // CappStatus defines the observed state of Capp.
