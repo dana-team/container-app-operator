@@ -289,6 +289,9 @@ type CappStatus struct {
 	// Conditions contain details about the current state of the Capp.
 	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
+
+	// SourceStatus contains details about the current state of a source.
+	SourceStatus SourceStatus `json:"sourceStatus,omitempty"`
 }
 
 // +kubebuilder:object:root=true

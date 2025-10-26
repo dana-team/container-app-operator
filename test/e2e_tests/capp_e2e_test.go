@@ -3,6 +3,7 @@ package e2e_tests
 import (
 	"context"
 
+	"github.com/dana-team/container-app-operator/api/v1alpha1"
 	"k8s.io/client-go/util/retry"
 
 	_ "github.com/dana-team/container-app-operator/api/v1alpha1"
@@ -115,5 +116,28 @@ var _ = Describe("Validate capp creation", func() {
 
 		By("Checking if the revision is ready")
 		checkRevisionReadiness(revisionName, true)
+	})
+
+	It("Should create a Capp with a Kafka source", func() {
+		By("Creating a Capp instance with a Kafka source")
+
+		// Create a base Capp
+		testCapp := mocks.CreateBaseCapp()
+
+		// Populate the Kafka source
+		testCapp.Spec.Sources.KafkaSource = v1alpha1.KafkaSource{
+			BootstrapServers: []string{"kafka-broker:9092"},
+			Topic:            "test-topic",
+			KafkaAuth: &v1alpha1.KafkaAuth{
+				SecretName: "kafka-secret",
+				Username:   "user",
+				Password:   "pass",
+			},
+		}
+
+		createdCapp := utilst.CreateCapp(k8sClient, testCapp)
+
+		By("Checking if the Capp instance has a Kafka source")
+		Expect(createdCapp.Spec.Sources.KafkaSource.Topic).Should(Equal("test-topic"))
 	})
 })
