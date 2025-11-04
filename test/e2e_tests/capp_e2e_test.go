@@ -36,7 +36,7 @@ var _ = Describe("Validate capp creation", func() {
 		By("Checks if Capp updated successfully")
 		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			assertionCapp := utilst.GetCapp(k8sClient, desiredCapp.Name, desiredCapp.Namespace)
-			assertionCapp.Spec.ScaleMetric = mocks.RPSScaleMetric
+			assertionCapp.Spec.ScaleMetric = testconsts.RPSScaleMetric
 
 			return utilst.UpdateResource(k8sClient, assertionCapp)
 		})
@@ -45,7 +45,7 @@ var _ = Describe("Validate capp creation", func() {
 		Eventually(func() string {
 			assertionCapp = utilst.GetCapp(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
 			return assertionCapp.Spec.ScaleMetric
-		}, testconsts.Timeout, testconsts.Interval).Should(Equal(mocks.RPSScaleMetric), "Should fetch capp.")
+		}, testconsts.Timeout, testconsts.Interval).Should(Equal(testconsts.RPSScaleMetric), "Should fetch capp.")
 
 		By("Checks if deleted successfully")
 		utilst.DeleteCapp(k8sClient, assertionCapp)

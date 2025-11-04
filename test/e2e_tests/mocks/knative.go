@@ -1,19 +1,18 @@
 package mocks
 
 import (
+	"github.com/dana-team/container-app-operator/test/e2e_tests/testconsts"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 )
-
-var passEnvName = "PASSWORD"
 
 // CreateRevisionObject returns an empty KnativeRevision object.
 func CreateRevisionObject(name string) *knativev1.Revision {
 	return &knativev1.Revision{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: NSName,
+			Namespace: testconsts.NSName,
 		},
 	}
 }
@@ -22,13 +21,13 @@ func CreateRevisionObject(name string) *knativev1.Revision {
 func CreateEnvVarObject(refName string) *[]corev1.EnvVar {
 	return &[]corev1.EnvVar{
 		{
-			Name: passEnvName,
+			Name: testconsts.PassEnvName,
 			ValueFrom: &corev1.EnvVarSource{
 				SecretKeyRef: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
 						Name: refName,
 					},
-					Key: SecretKey,
+					Key: testconsts.SecretKey,
 				},
 			},
 		},
@@ -40,7 +39,7 @@ func CreateKnativeServiceObject(name string) *knativev1.Service {
 	return &knativev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: NSName,
+			Namespace: testconsts.NSName,
 		},
 	}
 }

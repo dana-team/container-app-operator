@@ -6,6 +6,8 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/dana-team/container-app-operator/test/e2e_tests/testconsts"
+
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -15,20 +17,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const (
-	charset        = "abcdefghijklmnopqrstuvwxyz0123456789"
-	randStrLength  = 10
-	routeHostname  = "test.dev"
-	routeTLSSecret = "https-capp-secret"
-)
-
 var seededRand = rand.New(rand.NewSource(time.Now().UnixNano()))
 
-// generateRandomString returns a random string of the specified length using characters from the charset.
+// generateRandomString returns a random string of the specified length using characters from the Charset.
 func generateRandomString(length int) string {
 	b := make([]byte, length)
 	for i := range b {
-		b[i] = charset[seededRand.Intn(len(charset))]
+		b[i] = testconsts.Charset[seededRand.Intn(len(testconsts.Charset))]
 	}
 	return string(b)
 }
@@ -59,7 +54,7 @@ func GetClusterResource(k8sClient client.Client, obj client.Object, name string)
 // generateName generates a new name by combining the given baseName
 // with a randomly generated string of a specified length.
 func generateName(baseName string) string {
-	randString := generateRandomString(randStrLength)
+	randString := generateRandomString(testconsts.RandStrLength)
 	return baseName + "-" + randString
 }
 
@@ -68,11 +63,6 @@ func GetSecret(k8sClient client.Client, name string, namespace string) *corev1.S
 	secret := &corev1.Secret{}
 	GetResource(k8sClient, secret, name, namespace)
 	return secret
-}
-
-// CreateSecret creates a new secret.
-func CreateSecret(k8sClient client.Client, secret *corev1.Secret) {
-	Expect(k8sClient.Create(context.Background(), secret)).To(Succeed())
 }
 
 // GetCappConfig fetches and returns an existing instance of an existing cappConfig
@@ -85,13 +75,13 @@ func GetCappConfig(k8sClient client.Client, name string, namespace string) *capp
 // GenerateRouteHostname generates a new route hostname by calling
 // generateName with the predefined RouteHostname as the baseName.
 func GenerateRouteHostname() string {
-	return generateName(routeHostname)
+	return generateName(testconsts.RouteHostname)
 }
 
 // GenerateSecretName generates a new secret name by calling
 // generateName with the predefined RouteTlsSecret as the baseName.
 func GenerateSecretName() string {
-	return generateName(routeTLSSecret)
+	return generateName(testconsts.RouteTLSSecret)
 }
 
 // GenerateCertSecretName generates a capp cert secret name.
@@ -102,4 +92,15 @@ func GenerateCertSecretName(hostname string) string {
 // UpdateResource updates an existing resource.
 func UpdateResource(k8sClient client.Client, object client.Object) error {
 	return k8sClient.Update(context.Background(), object)
+}
+
+// CreateSecret creates a new secret.
+func CreateSecret(k8sClient client.Client, secret *corev1.Secret) {
+	Expect(k8sClient.Create(context.Background(), secret)).To(Succeed())
+}
+
+// CreateCappConfig creates a cappv1alpha1.CappConfig object and returns it.
+func CreateCappConfig(k8sClient client.Client, cappConfig *cappv1alpha1.CappConfig) *cappv1alpha1.CappConfig {
+	Expect(k8sClient.Create(context.Background(), cappConfig)).To(Succeed())
+	return cappConfig
 }
