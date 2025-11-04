@@ -95,7 +95,7 @@ var _ = Describe("Validate knative functionality", func() {
 		checkRevisionReadiness(assertionCapp.Name+testconsts.FirstRevisionSuffix, true)
 
 		By("Checking the ksvc has the needed labels")
-		ksvcObject = utilst.GetKSVC(k8sClient, assertionCapp.Name, mocks.NSName)
+		ksvcObject = utilst.GetKSVC(k8sClient, assertionCapp.Name, testconsts.NSName)
 		Expect(ksvcObject.Labels[testconsts.CappResourceKey]).Should(Equal(assertionCapp.Name))
 		Expect(ksvcObject.Labels[testconsts.ManagedByLabelKey]).Should(Equal(testconsts.CappKey))
 
@@ -263,7 +263,7 @@ var _ = Describe("Validate knative functionality", func() {
 		By("Updating the secret")
 		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			secretObject := utilst.GetSecret(k8sClient, secretObject.Name, secretObject.Namespace)
-			secretObject.Data = map[string][]byte{testconsts.NewSecretKey: []byte(mocks.SecretValue)}
+			secretObject.Data = map[string][]byte{testconsts.NewSecretKey: []byte(testconsts.SecretValue)}
 
 			return utilst.UpdateResource(k8sClient, secretObject)
 		})
@@ -390,7 +390,7 @@ var _ = Describe("Validate knative functionality", func() {
 		createdCapp := utilst.CreateCapp(k8sClient, testCapp)
 		assertionCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
 
-		cappConfig := utilst.GetCappConfig(k8sClient, mocks.CappConfigName, mocks.ControllerNS)
+		cappConfig := utilst.GetCappConfig(k8sClient, testconsts.CappConfigName, testconsts.ControllerNS)
 
 		By("Checking if the ksvc's annotation is equal to the cappConfig's autoScale")
 		Eventually(func() bool {

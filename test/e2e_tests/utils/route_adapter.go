@@ -13,8 +13,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const dot = "."
-
 // CreateCappWithHTTPHostname creates a Capp with a Hostname.
 func CreateCappWithHTTPHostname(k8sClient client.Client) (*cappv1alpha1.Capp, string) {
 	httpsCapp := mock.CreateBaseCapp()
@@ -60,10 +58,10 @@ func GetCertificate(k8sClient client.Client, name string, namespace string) *cma
 // GenerateResourceName generates the hostname based on the provided suffix and a dot (".") trailing character.
 // It returns the adjusted hostname, where the suffix (minus the trailing character) is added if not already present.
 func GenerateResourceName(hostname, suffix string) string {
-	suffixWithoutTrailingChar := suffix[:len(suffix)-len(dot)]
+	suffixWithoutTrailingChar := suffix[:len(suffix)-len(".")]
 
 	if !strings.HasSuffix(hostname, suffixWithoutTrailingChar) {
-		return hostname + dot + suffixWithoutTrailingChar
+		return hostname + "." + suffixWithoutTrailingChar
 	}
 
 	return hostname
