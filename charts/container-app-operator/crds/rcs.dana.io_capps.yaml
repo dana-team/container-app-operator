@@ -1,9 +1,10 @@
+---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  name: capps.rcs.dana.io
   annotations:
     controller-gen.kubebuilder.io/version: v0.16.4
+  name: capps.rcs.dana.io
 spec:
   group: rcs.dana.io
   names:
@@ -101,8 +102,8 @@ spec:
                                               with the corresponding weight.
                                             properties:
                                               matchExpressions:
-                                                description: A list of node selector requirements
-                                                  by node's labels.
+                                                description: A list of node selector
+                                                  requirements by node's labels.
                                                 items:
                                                   description: |-
                                                     A node selector requirement is a selector that contains values, a key, and an operator
@@ -135,8 +136,8 @@ spec:
                                                 type: array
                                                 x-kubernetes-list-type: atomic
                                               matchFields:
-                                                description: A list of node selector requirements
-                                                  by node's fields.
+                                                description: A list of node selector
+                                                  requirements by node's fields.
                                                 items:
                                                   description: |-
                                                     A node selector requirement is a selector that contains values, a key, and an operator
@@ -172,8 +173,8 @@ spec:
                                             x-kubernetes-map-type: atomic
                                           weight:
                                             description: Weight associated with matching
-                                              the corresponding nodeSelectorTerm, in the
-                                              range 1-100.
+                                              the corresponding nodeSelectorTerm, in
+                                              the range 1-100.
                                             format: int32
                                             type: integer
                                         required:
@@ -200,8 +201,8 @@ spec:
                                               The TopologySelectorTerm type implements a subset of the NodeSelectorTerm.
                                             properties:
                                               matchExpressions:
-                                                description: A list of node selector requirements
-                                                  by node's labels.
+                                                description: A list of node selector
+                                                  requirements by node's labels.
                                                 items:
                                                   description: |-
                                                     A node selector requirement is a selector that contains values, a key, and an operator
@@ -234,8 +235,8 @@ spec:
                                                 type: array
                                                 x-kubernetes-list-type: atomic
                                               matchFields:
-                                                description: A list of node selector requirements
-                                                  by node's fields.
+                                                description: A list of node selector
+                                                  requirements by node's fields.
                                                 items:
                                                   description: |-
                                                     A node selector requirement is a selector that contains values, a key, and an operator
@@ -278,8 +279,8 @@ spec:
                                   type: object
                                 podAffinity:
                                   description: Describes pod affinity scheduling rules
-                                    (e.g. co-locate this pod in the same node, zone, etc.
-                                    as some other pod(s)).
+                                    (e.g. co-locate this pod in the same node, zone,
+                                    etc. as some other pod(s)).
                                   properties:
                                     preferredDuringSchedulingIgnoredDuringExecution:
                                       description: |-
@@ -307,8 +308,8 @@ spec:
                                                   If it's null, this PodAffinityTerm matches with no Pods.
                                                 properties:
                                                   matchExpressions:
-                                                    description: matchExpressions is a
-                                                      list of label selector requirements.
+                                                    description: matchExpressions is
+                                                      a list of label selector requirements.
                                                       The requirements are ANDed.
                                                     items:
                                                       description: |-
@@ -388,8 +389,8 @@ spec:
                                                   An empty selector ({}) matches all namespaces.
                                                 properties:
                                                   matchExpressions:
-                                                    description: matchExpressions is a
-                                                      list of label selector requirements.
+                                                    description: matchExpressions is
+                                                      a list of label selector requirements.
                                                       The requirements are ANDed.
                                                     items:
                                                       description: |-
@@ -498,8 +499,9 @@ spec:
                                                     relates the key and values.
                                                   properties:
                                                     key:
-                                                      description: key is the label key
-                                                        that the selector applies to.
+                                                      description: key is the label
+                                                        key that the selector applies
+                                                        to.
                                                       type: string
                                                     operator:
                                                       description: |-
@@ -578,8 +580,9 @@ spec:
                                                     relates the key and values.
                                                   properties:
                                                     key:
-                                                      description: key is the label key
-                                                        that the selector applies to.
+                                                      description: key is the label
+                                                        key that the selector applies
+                                                        to.
                                                       type: string
                                                     operator:
                                                       description: |-
@@ -667,8 +670,8 @@ spec:
                                                   If it's null, this PodAffinityTerm matches with no Pods.
                                                 properties:
                                                   matchExpressions:
-                                                    description: matchExpressions is a
-                                                      list of label selector requirements.
+                                                    description: matchExpressions is
+                                                      a list of label selector requirements.
                                                       The requirements are ANDed.
                                                     items:
                                                       description: |-
@@ -748,8 +751,8 @@ spec:
                                                   An empty selector ({}) matches all namespaces.
                                                 properties:
                                                   matchExpressions:
-                                                    description: matchExpressions is a
-                                                      list of label selector requirements.
+                                                    description: matchExpressions is
+                                                      a list of label selector requirements.
                                                       The requirements are ANDed.
                                                     items:
                                                       description: |-
@@ -858,8 +861,9 @@ spec:
                                                     relates the key and values.
                                                   properties:
                                                     key:
-                                                      description: key is the label key
-                                                        that the selector applies to.
+                                                      description: key is the label
+                                                        key that the selector applies
+                                                        to.
                                                       type: string
                                                     operator:
                                                       description: |-
@@ -938,8 +942,9 @@ spec:
                                                     relates the key and values.
                                                   properties:
                                                     key:
-                                                      description: key is the label key
-                                                        that the selector applies to.
+                                                      description: key is the label
+                                                        key that the selector applies
+                                                        to.
                                                       type: string
                                                     operator:
                                                       description: |-
@@ -1016,8 +1021,8 @@ spec:
                                 There must be at least one container in a Pod.
                                 Cannot be updated.
                               items:
-                                description: A single application container that you want
-                                  to run within a pod.
+                                description: A single application container that you
+                                  want to run within a pod.
                                 properties:
                                   args:
                                     description: |-
@@ -1052,8 +1057,8 @@ spec:
                                       List of environment variables to set in the container.
                                       Cannot be updated.
                                     items:
-                                      description: EnvVar represents an environment variable
-                                        present in a Container.
+                                      description: EnvVar represents an environment
+                                        variable present in a Container.
                                       properties:
                                         name:
                                           description: |-
@@ -1105,13 +1110,13 @@ spec:
                                                 spec.nodeName, spec.serviceAccountName, status.hostIP, status.podIP, status.podIPs.
                                               properties:
                                                 apiVersion:
-                                                  description: Version of the schema the
-                                                    FieldPath is written in terms of,
-                                                    defaults to "v1".
+                                                  description: Version of the schema
+                                                    the FieldPath is written in terms
+                                                    of, defaults to "v1".
                                                   type: string
                                                 fieldPath:
-                                                  description: Path of the field to select
-                                                    in the specified API version.
+                                                  description: Path of the field to
+                                                    select in the specified API version.
                                                   type: string
                                               required:
                                                 - fieldPath
@@ -1135,7 +1140,7 @@ spec:
                                                     does not exist, then the env var is not published.
                                                     If optional is set to true and the specified key does not exist,
                                                     the environment variable will not be set in the Pod's containers.
-
+                                                    
                                                     If optional is set to false and the specified key does not exist,
                                                     an error will be returned during Pod creation.
                                                   type: boolean
@@ -1167,9 +1172,9 @@ spec:
                                                   anyOf:
                                                     - type: integer
                                                     - type: string
-                                                  description: Specifies the output format
-                                                    of the exposed resources, defaults
-                                                    to "1"
+                                                  description: Specifies the output
+                                                    format of the exposed resources,
+                                                    defaults to "1"
                                                   pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                                   x-kubernetes-int-or-string: true
                                                 resource:
@@ -1181,13 +1186,13 @@ spec:
                                               type: object
                                               x-kubernetes-map-type: atomic
                                             secretKeyRef:
-                                              description: Selects a key of a secret in
-                                                the pod's namespace
+                                              description: Selects a key of a secret
+                                                in the pod's namespace
                                               properties:
                                                 key:
-                                                  description: The key of the secret to
-                                                    select from.  Must be a valid secret
-                                                    key.
+                                                  description: The key of the secret
+                                                    to select from.  Must be a valid
+                                                    secret key.
                                                   type: string
                                                 name:
                                                   default: ""
@@ -1298,8 +1303,8 @@ spec:
                                           More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks
                                         properties:
                                           exec:
-                                            description: Exec specifies a command to execute
-                                              in the container.
+                                            description: Exec specifies a command to
+                                              execute in the container.
                                             properties:
                                               command:
                                                 description: |-
@@ -1324,10 +1329,12 @@ spec:
                                                 type: string
                                               httpHeaders:
                                                 description: Custom headers to set in
-                                                  the request. HTTP allows repeated headers.
+                                                  the request. HTTP allows repeated
+                                                  headers.
                                                 items:
-                                                  description: HTTPHeader describes a
-                                                    custom header to be used in HTTP probes
+                                                  description: HTTPHeader describes
+                                                    a custom header to be used in HTTP
+                                                    probes
                                                   properties:
                                                     name:
                                                       description: |-
@@ -1335,7 +1342,8 @@ spec:
                                                         This will be canonicalized upon output, so case-variant names will be understood as the same header.
                                                       type: string
                                                     value:
-                                                      description: The header field value
+                                                      description: The header field
+                                                        value
                                                       type: string
                                                   required:
                                                     - name
@@ -1365,8 +1373,8 @@ spec:
                                               - port
                                             type: object
                                           sleep:
-                                            description: Sleep represents a duration that
-                                              the container should sleep.
+                                            description: Sleep represents a duration
+                                              that the container should sleep.
                                             properties:
                                               seconds:
                                                 description: Seconds is the number of
@@ -1383,8 +1391,8 @@ spec:
                                               lifecycle hooks will fail at runtime when it is specified.
                                             properties:
                                               host:
-                                                description: 'Optional: Host name to connect
-                                                to, defaults to the pod IP.'
+                                                description: 'Optional: Host name to
+                                                connect to, defaults to the pod IP.'
                                                 type: string
                                               port:
                                                 anyOf:
@@ -1412,8 +1420,8 @@ spec:
                                           More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks
                                         properties:
                                           exec:
-                                            description: Exec specifies a command to execute
-                                              in the container.
+                                            description: Exec specifies a command to
+                                              execute in the container.
                                             properties:
                                               command:
                                                 description: |-
@@ -1438,10 +1446,12 @@ spec:
                                                 type: string
                                               httpHeaders:
                                                 description: Custom headers to set in
-                                                  the request. HTTP allows repeated headers.
+                                                  the request. HTTP allows repeated
+                                                  headers.
                                                 items:
-                                                  description: HTTPHeader describes a
-                                                    custom header to be used in HTTP probes
+                                                  description: HTTPHeader describes
+                                                    a custom header to be used in HTTP
+                                                    probes
                                                   properties:
                                                     name:
                                                       description: |-
@@ -1449,7 +1459,8 @@ spec:
                                                         This will be canonicalized upon output, so case-variant names will be understood as the same header.
                                                       type: string
                                                     value:
-                                                      description: The header field value
+                                                      description: The header field
+                                                        value
                                                       type: string
                                                   required:
                                                     - name
@@ -1479,8 +1490,8 @@ spec:
                                               - port
                                             type: object
                                           sleep:
-                                            description: Sleep represents a duration that
-                                              the container should sleep.
+                                            description: Sleep represents a duration
+                                              that the container should sleep.
                                             properties:
                                               seconds:
                                                 description: Seconds is the number of
@@ -1497,8 +1508,8 @@ spec:
                                               lifecycle hooks will fail at runtime when it is specified.
                                             properties:
                                               host:
-                                                description: 'Optional: Host name to connect
-                                                to, defaults to the pod IP.'
+                                                description: 'Optional: Host name to
+                                                connect to, defaults to the pod IP.'
                                                 type: string
                                               port:
                                                 anyOf:
@@ -1562,7 +1573,7 @@ spec:
                                             description: |-
                                               Service is the name of the service to place in the gRPC HealthCheckRequest
                                               (see https://github.com/grpc/grpc/blob/master/doc/health-checking.md).
-
+                                              
                                               If this is not specified, the default behavior is defined by gRPC.
                                             type: string
                                         required:
@@ -1599,7 +1610,8 @@ spec:
                                             type: array
                                             x-kubernetes-list-type: atomic
                                           path:
-                                            description: Path to access on the HTTP server.
+                                            description: Path to access on the HTTP
+                                              server.
                                             type: string
                                           port:
                                             anyOf:
@@ -1777,7 +1789,7 @@ spec:
                                             description: |-
                                               Service is the name of the service to place in the gRPC HealthCheckRequest
                                               (see https://github.com/grpc/grpc/blob/master/doc/health-checking.md).
-
+                                              
                                               If this is not specified, the default behavior is defined by gRPC.
                                             type: string
                                         required:
@@ -1814,7 +1826,8 @@ spec:
                                             type: array
                                             x-kubernetes-list-type: atomic
                                           path:
-                                            description: Path to access on the HTTP server.
+                                            description: Path to access on the HTTP
+                                              server.
                                             type: string
                                           port:
                                             anyOf:
@@ -1896,8 +1909,8 @@ spec:
                                   resizePolicy:
                                     description: Resources resize policy for the container.
                                     items:
-                                      description: ContainerResizePolicy represents resource
-                                        resize policy for the container.
+                                      description: ContainerResizePolicy represents
+                                        resource resize policy for the container.
                                       properties:
                                         resourceName:
                                           description: |-
@@ -1925,14 +1938,14 @@ spec:
                                         description: |-
                                           Claims lists the names of resources, defined in spec.resourceClaims,
                                           that are used by this container.
-
+                                          
                                           This field depends on the
                                           DynamicResourceAllocation feature gate.
-
+                                          
                                           This field is immutable. It can only be set for containers.
                                         items:
-                                          description: ResourceClaim references one entry
-                                            in PodSpec.ResourceClaims.
+                                          description: ResourceClaim references one
+                                            entry in PodSpec.ResourceClaims.
                                           properties:
                                             name:
                                               description: |-
@@ -2020,8 +2033,8 @@ spec:
                                             container.
                                           type: string
                                         exitCodes:
-                                          description: Represents the exit codes to check
-                                            on container exits.
+                                          description: Represents the exit codes to
+                                            check on container exits.
                                           properties:
                                             operator:
                                               description: |-
@@ -2203,7 +2216,7 @@ spec:
                                             description: |-
                                               type indicates which kind of seccomp profile will be applied.
                                               Valid options are:
-
+                                              
                                               Localhost - a profile defined in a file on the node should be used.
                                               RuntimeDefault - the container runtime default profile should be used.
                                               Unconfined - no profile should be applied.
@@ -2289,7 +2302,7 @@ spec:
                                             description: |-
                                               Service is the name of the service to place in the gRPC HealthCheckRequest
                                               (see https://github.com/grpc/grpc/blob/master/doc/health-checking.md).
-
+                                              
                                               If this is not specified, the default behavior is defined by gRPC.
                                             type: string
                                         required:
@@ -2326,7 +2339,8 @@ spec:
                                             type: array
                                             x-kubernetes-list-type: atomic
                                           path:
-                                            description: Path to access on the HTTP server.
+                                            description: Path to access on the HTTP
+                                              server.
                                             type: string
                                           port:
                                             anyOf:
@@ -2447,20 +2461,20 @@ spec:
                                       Default is false.
                                     type: boolean
                                   volumeDevices:
-                                    description: volumeDevices is the list of block devices
-                                      to be used by the container.
+                                    description: volumeDevices is the list of block
+                                      devices to be used by the container.
                                     items:
-                                      description: volumeDevice describes a mapping of
-                                        a raw block device within a container.
+                                      description: volumeDevice describes a mapping
+                                        of a raw block device within a container.
                                       properties:
                                         devicePath:
-                                          description: devicePath is the path inside of
-                                            the container that the device will be mapped
-                                            to.
+                                          description: devicePath is the path inside
+                                            of the container that the device will be
+                                            mapped to.
                                           type: string
                                         name:
-                                          description: name must match the name of a persistentVolumeClaim
-                                            in the pod
+                                          description: name must match the name of a
+                                            persistentVolumeClaim in the pod
                                           type: string
                                       required:
                                         - devicePath
@@ -2475,8 +2489,8 @@ spec:
                                       Pod volumes to mount into the container's filesystem.
                                       Cannot be updated.
                                     items:
-                                      description: VolumeMount describes a mounting of
-                                        a Volume within a container.
+                                      description: VolumeMount describes a mounting
+                                        of a Volume within a container.
                                       properties:
                                         mountPath:
                                           description: |-
@@ -2493,7 +2507,8 @@ spec:
                                             (which defaults to None).
                                           type: string
                                         name:
-                                          description: This must match the Name of a Volume.
+                                          description: This must match the Name of a
+                                            Volume.
                                           type: string
                                         readOnly:
                                           description: |-
@@ -2504,19 +2519,19 @@ spec:
                                           description: |-
                                             RecursiveReadOnly specifies whether read-only mounts should be handled
                                             recursively.
-
+                                            
                                             If ReadOnly is false, this field has no meaning and must be unspecified.
-
+                                            
                                             If ReadOnly is true, and this field is set to Disabled, the mount is not made
                                             recursively read-only.  If this field is set to IfPossible, the mount is made
                                             recursively read-only, if it is supported by the container runtime.  If this
                                             field is set to Enabled, the mount is made recursively read-only if it is
                                             supported by the container runtime, otherwise the pod will not be started and
                                             an error will be generated to indicate the reason.
-
+                                            
                                             If this field is set to IfPossible or Enabled, MountPropagation must be set to
                                             None (or be unspecified, which defaults to None).
-
+                                            
                                             If this field is not specified, it is treated as an equivalent of Disabled.
                                           type: string
                                         subPath:
@@ -2628,7 +2643,7 @@ spec:
                                   scheduling guarantees, and they will not be restarted when they exit or when a Pod is
                                   removed or restarted. The kubelet may evict a Pod if an ephemeral container causes the
                                   Pod to exceed its resource allocation.
-
+                                  
                                   To add an ephemeral container, use the ephemeralcontainers subresource of an existing
                                   Pod. Ephemeral containers may not be removed or restarted.
                                 properties:
@@ -2665,8 +2680,8 @@ spec:
                                       List of environment variables to set in the container.
                                       Cannot be updated.
                                     items:
-                                      description: EnvVar represents an environment variable
-                                        present in a Container.
+                                      description: EnvVar represents an environment
+                                        variable present in a Container.
                                       properties:
                                         name:
                                           description: |-
@@ -2718,13 +2733,13 @@ spec:
                                                 spec.nodeName, spec.serviceAccountName, status.hostIP, status.podIP, status.podIPs.
                                               properties:
                                                 apiVersion:
-                                                  description: Version of the schema the
-                                                    FieldPath is written in terms of,
-                                                    defaults to "v1".
+                                                  description: Version of the schema
+                                                    the FieldPath is written in terms
+                                                    of, defaults to "v1".
                                                   type: string
                                                 fieldPath:
-                                                  description: Path of the field to select
-                                                    in the specified API version.
+                                                  description: Path of the field to
+                                                    select in the specified API version.
                                                   type: string
                                               required:
                                                 - fieldPath
@@ -2748,7 +2763,7 @@ spec:
                                                     does not exist, then the env var is not published.
                                                     If optional is set to true and the specified key does not exist,
                                                     the environment variable will not be set in the Pod's containers.
-
+                                                    
                                                     If optional is set to false and the specified key does not exist,
                                                     an error will be returned during Pod creation.
                                                   type: boolean
@@ -2780,9 +2795,9 @@ spec:
                                                   anyOf:
                                                     - type: integer
                                                     - type: string
-                                                  description: Specifies the output format
-                                                    of the exposed resources, defaults
-                                                    to "1"
+                                                  description: Specifies the output
+                                                    format of the exposed resources,
+                                                    defaults to "1"
                                                   pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                                   x-kubernetes-int-or-string: true
                                                 resource:
@@ -2794,13 +2809,13 @@ spec:
                                               type: object
                                               x-kubernetes-map-type: atomic
                                             secretKeyRef:
-                                              description: Selects a key of a secret in
-                                                the pod's namespace
+                                              description: Selects a key of a secret
+                                                in the pod's namespace
                                               properties:
                                                 key:
-                                                  description: The key of the secret to
-                                                    select from.  Must be a valid secret
-                                                    key.
+                                                  description: The key of the secret
+                                                    to select from.  Must be a valid
+                                                    secret key.
                                                   type: string
                                                 name:
                                                   default: ""
@@ -2908,8 +2923,8 @@ spec:
                                           More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks
                                         properties:
                                           exec:
-                                            description: Exec specifies a command to execute
-                                              in the container.
+                                            description: Exec specifies a command to
+                                              execute in the container.
                                             properties:
                                               command:
                                                 description: |-
@@ -2934,10 +2949,12 @@ spec:
                                                 type: string
                                               httpHeaders:
                                                 description: Custom headers to set in
-                                                  the request. HTTP allows repeated headers.
+                                                  the request. HTTP allows repeated
+                                                  headers.
                                                 items:
-                                                  description: HTTPHeader describes a
-                                                    custom header to be used in HTTP probes
+                                                  description: HTTPHeader describes
+                                                    a custom header to be used in HTTP
+                                                    probes
                                                   properties:
                                                     name:
                                                       description: |-
@@ -2945,7 +2962,8 @@ spec:
                                                         This will be canonicalized upon output, so case-variant names will be understood as the same header.
                                                       type: string
                                                     value:
-                                                      description: The header field value
+                                                      description: The header field
+                                                        value
                                                       type: string
                                                   required:
                                                     - name
@@ -2975,8 +2993,8 @@ spec:
                                               - port
                                             type: object
                                           sleep:
-                                            description: Sleep represents a duration that
-                                              the container should sleep.
+                                            description: Sleep represents a duration
+                                              that the container should sleep.
                                             properties:
                                               seconds:
                                                 description: Seconds is the number of
@@ -2993,8 +3011,8 @@ spec:
                                               lifecycle hooks will fail at runtime when it is specified.
                                             properties:
                                               host:
-                                                description: 'Optional: Host name to connect
-                                                to, defaults to the pod IP.'
+                                                description: 'Optional: Host name to
+                                                connect to, defaults to the pod IP.'
                                                 type: string
                                               port:
                                                 anyOf:
@@ -3022,8 +3040,8 @@ spec:
                                           More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks
                                         properties:
                                           exec:
-                                            description: Exec specifies a command to execute
-                                              in the container.
+                                            description: Exec specifies a command to
+                                              execute in the container.
                                             properties:
                                               command:
                                                 description: |-
@@ -3048,10 +3066,12 @@ spec:
                                                 type: string
                                               httpHeaders:
                                                 description: Custom headers to set in
-                                                  the request. HTTP allows repeated headers.
+                                                  the request. HTTP allows repeated
+                                                  headers.
                                                 items:
-                                                  description: HTTPHeader describes a
-                                                    custom header to be used in HTTP probes
+                                                  description: HTTPHeader describes
+                                                    a custom header to be used in HTTP
+                                                    probes
                                                   properties:
                                                     name:
                                                       description: |-
@@ -3059,7 +3079,8 @@ spec:
                                                         This will be canonicalized upon output, so case-variant names will be understood as the same header.
                                                       type: string
                                                     value:
-                                                      description: The header field value
+                                                      description: The header field
+                                                        value
                                                       type: string
                                                   required:
                                                     - name
@@ -3089,8 +3110,8 @@ spec:
                                               - port
                                             type: object
                                           sleep:
-                                            description: Sleep represents a duration that
-                                              the container should sleep.
+                                            description: Sleep represents a duration
+                                              that the container should sleep.
                                             properties:
                                               seconds:
                                                 description: Seconds is the number of
@@ -3107,8 +3128,8 @@ spec:
                                               lifecycle hooks will fail at runtime when it is specified.
                                             properties:
                                               host:
-                                                description: 'Optional: Host name to connect
-                                                to, defaults to the pod IP.'
+                                                description: 'Optional: Host name to
+                                                connect to, defaults to the pod IP.'
                                                 type: string
                                               port:
                                                 anyOf:
@@ -3169,7 +3190,7 @@ spec:
                                             description: |-
                                               Service is the name of the service to place in the gRPC HealthCheckRequest
                                               (see https://github.com/grpc/grpc/blob/master/doc/health-checking.md).
-
+                                              
                                               If this is not specified, the default behavior is defined by gRPC.
                                             type: string
                                         required:
@@ -3206,7 +3227,8 @@ spec:
                                             type: array
                                             x-kubernetes-list-type: atomic
                                           path:
-                                            description: Path to access on the HTTP server.
+                                            description: Path to access on the HTTP
+                                              server.
                                             type: string
                                           port:
                                             anyOf:
@@ -3291,7 +3313,8 @@ spec:
                                       This name must be unique among all containers, init containers and ephemeral containers.
                                     type: string
                                   ports:
-                                    description: Ports are not allowed for ephemeral containers.
+                                    description: Ports are not allowed for ephemeral
+                                      containers.
                                     items:
                                       description: ContainerPort represents a network
                                         port in a single container.
@@ -3373,7 +3396,7 @@ spec:
                                             description: |-
                                               Service is the name of the service to place in the gRPC HealthCheckRequest
                                               (see https://github.com/grpc/grpc/blob/master/doc/health-checking.md).
-
+                                              
                                               If this is not specified, the default behavior is defined by gRPC.
                                             type: string
                                         required:
@@ -3410,7 +3433,8 @@ spec:
                                             type: array
                                             x-kubernetes-list-type: atomic
                                           path:
-                                            description: Path to access on the HTTP server.
+                                            description: Path to access on the HTTP
+                                              server.
                                             type: string
                                           port:
                                             anyOf:
@@ -3492,8 +3516,8 @@ spec:
                                   resizePolicy:
                                     description: Resources resize policy for the container.
                                     items:
-                                      description: ContainerResizePolicy represents resource
-                                        resize policy for the container.
+                                      description: ContainerResizePolicy represents
+                                        resource resize policy for the container.
                                       properties:
                                         resourceName:
                                           description: |-
@@ -3520,14 +3544,14 @@ spec:
                                         description: |-
                                           Claims lists the names of resources, defined in spec.resourceClaims,
                                           that are used by this container.
-
+                                          
                                           This field depends on the
                                           DynamicResourceAllocation feature gate.
-
+                                          
                                           This field is immutable. It can only be set for containers.
                                         items:
-                                          description: ResourceClaim references one entry
-                                            in PodSpec.ResourceClaims.
+                                          description: ResourceClaim references one
+                                            entry in PodSpec.ResourceClaims.
                                           properties:
                                             name:
                                               description: |-
@@ -3595,8 +3619,8 @@ spec:
                                             container.
                                           type: string
                                         exitCodes:
-                                          description: Represents the exit codes to check
-                                            on container exits.
+                                          description: Represents the exit codes to
+                                            check on container exits.
                                           properties:
                                             operator:
                                               description: |-
@@ -3777,7 +3801,7 @@ spec:
                                             description: |-
                                               type indicates which kind of seccomp profile will be applied.
                                               Valid options are:
-
+                                              
                                               Localhost - a profile defined in a file on the node should be used.
                                               RuntimeDefault - the container runtime default profile should be used.
                                               Unconfined - no profile should be applied.
@@ -3857,7 +3881,7 @@ spec:
                                             description: |-
                                               Service is the name of the service to place in the gRPC HealthCheckRequest
                                               (see https://github.com/grpc/grpc/blob/master/doc/health-checking.md).
-
+                                              
                                               If this is not specified, the default behavior is defined by gRPC.
                                             type: string
                                         required:
@@ -3894,7 +3918,8 @@ spec:
                                             type: array
                                             x-kubernetes-list-type: atomic
                                           path:
-                                            description: Path to access on the HTTP server.
+                                            description: Path to access on the HTTP
+                                              server.
                                             type: string
                                           port:
                                             anyOf:
@@ -3994,7 +4019,7 @@ spec:
                                       If set, the name of the container from PodSpec that this ephemeral container targets.
                                       The ephemeral container will be run in the namespaces (IPC, PID, etc) of this container.
                                       If not set then the ephemeral container uses the namespaces configured in the Pod spec.
-
+                                      
                                       The container runtime must implement support for this feature. If the runtime does not
                                       support namespace targeting then the result of setting this field is undefined.
                                     type: string
@@ -4024,20 +4049,20 @@ spec:
                                       Default is false.
                                     type: boolean
                                   volumeDevices:
-                                    description: volumeDevices is the list of block devices
-                                      to be used by the container.
+                                    description: volumeDevices is the list of block
+                                      devices to be used by the container.
                                     items:
-                                      description: volumeDevice describes a mapping of
-                                        a raw block device within a container.
+                                      description: volumeDevice describes a mapping
+                                        of a raw block device within a container.
                                       properties:
                                         devicePath:
-                                          description: devicePath is the path inside of
-                                            the container that the device will be mapped
-                                            to.
+                                          description: devicePath is the path inside
+                                            of the container that the device will be
+                                            mapped to.
                                           type: string
                                         name:
-                                          description: name must match the name of a persistentVolumeClaim
-                                            in the pod
+                                          description: name must match the name of a
+                                            persistentVolumeClaim in the pod
                                           type: string
                                       required:
                                         - devicePath
@@ -4052,8 +4077,8 @@ spec:
                                       Pod volumes to mount into the container's filesystem. Subpath mounts are not allowed for ephemeral containers.
                                       Cannot be updated.
                                     items:
-                                      description: VolumeMount describes a mounting of
-                                        a Volume within a container.
+                                      description: VolumeMount describes a mounting
+                                        of a Volume within a container.
                                       properties:
                                         mountPath:
                                           description: |-
@@ -4070,7 +4095,8 @@ spec:
                                             (which defaults to None).
                                           type: string
                                         name:
-                                          description: This must match the Name of a Volume.
+                                          description: This must match the Name of a
+                                            Volume.
                                           type: string
                                         readOnly:
                                           description: |-
@@ -4081,19 +4107,19 @@ spec:
                                           description: |-
                                             RecursiveReadOnly specifies whether read-only mounts should be handled
                                             recursively.
-
+                                            
                                             If ReadOnly is false, this field has no meaning and must be unspecified.
-
+                                            
                                             If ReadOnly is true, and this field is set to Disabled, the mount is not made
                                             recursively read-only.  If this field is set to IfPossible, the mount is made
                                             recursively read-only, if it is supported by the container runtime.  If this
                                             field is set to Enabled, the mount is made recursively read-only if it is
                                             supported by the container runtime, otherwise the pod will not be started and
                                             an error will be generated to indicate the reason.
-
+                                            
                                             If this field is set to IfPossible or Enabled, MountPropagation must be set to
                                             None (or be unspecified, which defaults to None).
-
+                                            
                                             If this field is not specified, it is treated as an equivalent of Disabled.
                                           type: string
                                         subPath:
@@ -4199,7 +4225,7 @@ spec:
                                 - The Pod's hostname will be set to this value.
                                 - `setHostnameAsFQDN` must be nil or set to false.
                                 - `hostNetwork` must be set to false.
-
+                                
                                 This field must be a valid DNS subdomain as defined in RFC 1123 and contain at most 64 characters.
                                 Requires the HostnameOverride feature gate to be enabled.
                               type: string
@@ -4251,8 +4277,8 @@ spec:
                                 Cannot be updated.
                                 More info: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
                               items:
-                                description: A single application container that you want
-                                  to run within a pod.
+                                description: A single application container that you
+                                  want to run within a pod.
                                 properties:
                                   args:
                                     description: |-
@@ -4287,8 +4313,8 @@ spec:
                                       List of environment variables to set in the container.
                                       Cannot be updated.
                                     items:
-                                      description: EnvVar represents an environment variable
-                                        present in a Container.
+                                      description: EnvVar represents an environment
+                                        variable present in a Container.
                                       properties:
                                         name:
                                           description: |-
@@ -4340,13 +4366,13 @@ spec:
                                                 spec.nodeName, spec.serviceAccountName, status.hostIP, status.podIP, status.podIPs.
                                               properties:
                                                 apiVersion:
-                                                  description: Version of the schema the
-                                                    FieldPath is written in terms of,
-                                                    defaults to "v1".
+                                                  description: Version of the schema
+                                                    the FieldPath is written in terms
+                                                    of, defaults to "v1".
                                                   type: string
                                                 fieldPath:
-                                                  description: Path of the field to select
-                                                    in the specified API version.
+                                                  description: Path of the field to
+                                                    select in the specified API version.
                                                   type: string
                                               required:
                                                 - fieldPath
@@ -4370,7 +4396,7 @@ spec:
                                                     does not exist, then the env var is not published.
                                                     If optional is set to true and the specified key does not exist,
                                                     the environment variable will not be set in the Pod's containers.
-
+                                                    
                                                     If optional is set to false and the specified key does not exist,
                                                     an error will be returned during Pod creation.
                                                   type: boolean
@@ -4402,9 +4428,9 @@ spec:
                                                   anyOf:
                                                     - type: integer
                                                     - type: string
-                                                  description: Specifies the output format
-                                                    of the exposed resources, defaults
-                                                    to "1"
+                                                  description: Specifies the output
+                                                    format of the exposed resources,
+                                                    defaults to "1"
                                                   pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                                   x-kubernetes-int-or-string: true
                                                 resource:
@@ -4416,13 +4442,13 @@ spec:
                                               type: object
                                               x-kubernetes-map-type: atomic
                                             secretKeyRef:
-                                              description: Selects a key of a secret in
-                                                the pod's namespace
+                                              description: Selects a key of a secret
+                                                in the pod's namespace
                                               properties:
                                                 key:
-                                                  description: The key of the secret to
-                                                    select from.  Must be a valid secret
-                                                    key.
+                                                  description: The key of the secret
+                                                    to select from.  Must be a valid
+                                                    secret key.
                                                   type: string
                                                 name:
                                                   default: ""
@@ -4533,8 +4559,8 @@ spec:
                                           More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks
                                         properties:
                                           exec:
-                                            description: Exec specifies a command to execute
-                                              in the container.
+                                            description: Exec specifies a command to
+                                              execute in the container.
                                             properties:
                                               command:
                                                 description: |-
@@ -4559,10 +4585,12 @@ spec:
                                                 type: string
                                               httpHeaders:
                                                 description: Custom headers to set in
-                                                  the request. HTTP allows repeated headers.
+                                                  the request. HTTP allows repeated
+                                                  headers.
                                                 items:
-                                                  description: HTTPHeader describes a
-                                                    custom header to be used in HTTP probes
+                                                  description: HTTPHeader describes
+                                                    a custom header to be used in HTTP
+                                                    probes
                                                   properties:
                                                     name:
                                                       description: |-
@@ -4570,7 +4598,8 @@ spec:
                                                         This will be canonicalized upon output, so case-variant names will be understood as the same header.
                                                       type: string
                                                     value:
-                                                      description: The header field value
+                                                      description: The header field
+                                                        value
                                                       type: string
                                                   required:
                                                     - name
@@ -4600,8 +4629,8 @@ spec:
                                               - port
                                             type: object
                                           sleep:
-                                            description: Sleep represents a duration that
-                                              the container should sleep.
+                                            description: Sleep represents a duration
+                                              that the container should sleep.
                                             properties:
                                               seconds:
                                                 description: Seconds is the number of
@@ -4618,8 +4647,8 @@ spec:
                                               lifecycle hooks will fail at runtime when it is specified.
                                             properties:
                                               host:
-                                                description: 'Optional: Host name to connect
-                                                to, defaults to the pod IP.'
+                                                description: 'Optional: Host name to
+                                                connect to, defaults to the pod IP.'
                                                 type: string
                                               port:
                                                 anyOf:
@@ -4647,8 +4676,8 @@ spec:
                                           More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks
                                         properties:
                                           exec:
-                                            description: Exec specifies a command to execute
-                                              in the container.
+                                            description: Exec specifies a command to
+                                              execute in the container.
                                             properties:
                                               command:
                                                 description: |-
@@ -4673,10 +4702,12 @@ spec:
                                                 type: string
                                               httpHeaders:
                                                 description: Custom headers to set in
-                                                  the request. HTTP allows repeated headers.
+                                                  the request. HTTP allows repeated
+                                                  headers.
                                                 items:
-                                                  description: HTTPHeader describes a
-                                                    custom header to be used in HTTP probes
+                                                  description: HTTPHeader describes
+                                                    a custom header to be used in HTTP
+                                                    probes
                                                   properties:
                                                     name:
                                                       description: |-
@@ -4684,7 +4715,8 @@ spec:
                                                         This will be canonicalized upon output, so case-variant names will be understood as the same header.
                                                       type: string
                                                     value:
-                                                      description: The header field value
+                                                      description: The header field
+                                                        value
                                                       type: string
                                                   required:
                                                     - name
@@ -4714,8 +4746,8 @@ spec:
                                               - port
                                             type: object
                                           sleep:
-                                            description: Sleep represents a duration that
-                                              the container should sleep.
+                                            description: Sleep represents a duration
+                                              that the container should sleep.
                                             properties:
                                               seconds:
                                                 description: Seconds is the number of
@@ -4732,8 +4764,8 @@ spec:
                                               lifecycle hooks will fail at runtime when it is specified.
                                             properties:
                                               host:
-                                                description: 'Optional: Host name to connect
-                                                to, defaults to the pod IP.'
+                                                description: 'Optional: Host name to
+                                                connect to, defaults to the pod IP.'
                                                 type: string
                                               port:
                                                 anyOf:
@@ -4797,7 +4829,7 @@ spec:
                                             description: |-
                                               Service is the name of the service to place in the gRPC HealthCheckRequest
                                               (see https://github.com/grpc/grpc/blob/master/doc/health-checking.md).
-
+                                              
                                               If this is not specified, the default behavior is defined by gRPC.
                                             type: string
                                         required:
@@ -4834,7 +4866,8 @@ spec:
                                             type: array
                                             x-kubernetes-list-type: atomic
                                           path:
-                                            description: Path to access on the HTTP server.
+                                            description: Path to access on the HTTP
+                                              server.
                                             type: string
                                           port:
                                             anyOf:
@@ -5012,7 +5045,7 @@ spec:
                                             description: |-
                                               Service is the name of the service to place in the gRPC HealthCheckRequest
                                               (see https://github.com/grpc/grpc/blob/master/doc/health-checking.md).
-
+                                              
                                               If this is not specified, the default behavior is defined by gRPC.
                                             type: string
                                         required:
@@ -5049,7 +5082,8 @@ spec:
                                             type: array
                                             x-kubernetes-list-type: atomic
                                           path:
-                                            description: Path to access on the HTTP server.
+                                            description: Path to access on the HTTP
+                                              server.
                                             type: string
                                           port:
                                             anyOf:
@@ -5131,8 +5165,8 @@ spec:
                                   resizePolicy:
                                     description: Resources resize policy for the container.
                                     items:
-                                      description: ContainerResizePolicy represents resource
-                                        resize policy for the container.
+                                      description: ContainerResizePolicy represents
+                                        resource resize policy for the container.
                                       properties:
                                         resourceName:
                                           description: |-
@@ -5160,14 +5194,14 @@ spec:
                                         description: |-
                                           Claims lists the names of resources, defined in spec.resourceClaims,
                                           that are used by this container.
-
+                                          
                                           This field depends on the
                                           DynamicResourceAllocation feature gate.
-
+                                          
                                           This field is immutable. It can only be set for containers.
                                         items:
-                                          description: ResourceClaim references one entry
-                                            in PodSpec.ResourceClaims.
+                                          description: ResourceClaim references one
+                                            entry in PodSpec.ResourceClaims.
                                           properties:
                                             name:
                                               description: |-
@@ -5255,8 +5289,8 @@ spec:
                                             container.
                                           type: string
                                         exitCodes:
-                                          description: Represents the exit codes to check
-                                            on container exits.
+                                          description: Represents the exit codes to
+                                            check on container exits.
                                           properties:
                                             operator:
                                               description: |-
@@ -5438,7 +5472,7 @@ spec:
                                             description: |-
                                               type indicates which kind of seccomp profile will be applied.
                                               Valid options are:
-
+                                              
                                               Localhost - a profile defined in a file on the node should be used.
                                               RuntimeDefault - the container runtime default profile should be used.
                                               Unconfined - no profile should be applied.
@@ -5524,7 +5558,7 @@ spec:
                                             description: |-
                                               Service is the name of the service to place in the gRPC HealthCheckRequest
                                               (see https://github.com/grpc/grpc/blob/master/doc/health-checking.md).
-
+                                              
                                               If this is not specified, the default behavior is defined by gRPC.
                                             type: string
                                         required:
@@ -5561,7 +5595,8 @@ spec:
                                             type: array
                                             x-kubernetes-list-type: atomic
                                           path:
-                                            description: Path to access on the HTTP server.
+                                            description: Path to access on the HTTP
+                                              server.
                                             type: string
                                           port:
                                             anyOf:
@@ -5682,20 +5717,20 @@ spec:
                                       Default is false.
                                     type: boolean
                                   volumeDevices:
-                                    description: volumeDevices is the list of block devices
-                                      to be used by the container.
+                                    description: volumeDevices is the list of block
+                                      devices to be used by the container.
                                     items:
-                                      description: volumeDevice describes a mapping of
-                                        a raw block device within a container.
+                                      description: volumeDevice describes a mapping
+                                        of a raw block device within a container.
                                       properties:
                                         devicePath:
-                                          description: devicePath is the path inside of
-                                            the container that the device will be mapped
-                                            to.
+                                          description: devicePath is the path inside
+                                            of the container that the device will be
+                                            mapped to.
                                           type: string
                                         name:
-                                          description: name must match the name of a persistentVolumeClaim
-                                            in the pod
+                                          description: name must match the name of a
+                                            persistentVolumeClaim in the pod
                                           type: string
                                       required:
                                         - devicePath
@@ -5710,8 +5745,8 @@ spec:
                                       Pod volumes to mount into the container's filesystem.
                                       Cannot be updated.
                                     items:
-                                      description: VolumeMount describes a mounting of
-                                        a Volume within a container.
+                                      description: VolumeMount describes a mounting
+                                        of a Volume within a container.
                                       properties:
                                         mountPath:
                                           description: |-
@@ -5728,7 +5763,8 @@ spec:
                                             (which defaults to None).
                                           type: string
                                         name:
-                                          description: This must match the Name of a Volume.
+                                          description: This must match the Name of a
+                                            Volume.
                                           type: string
                                         readOnly:
                                           description: |-
@@ -5739,19 +5775,19 @@ spec:
                                           description: |-
                                             RecursiveReadOnly specifies whether read-only mounts should be handled
                                             recursively.
-
+                                            
                                             If ReadOnly is false, this field has no meaning and must be unspecified.
-
+                                            
                                             If ReadOnly is true, and this field is set to Disabled, the mount is not made
                                             recursively read-only.  If this field is set to IfPossible, the mount is made
                                             recursively read-only, if it is supported by the container runtime.  If this
                                             field is set to Enabled, the mount is made recursively read-only if it is
                                             supported by the container runtime, otherwise the pod will not be started and
                                             an error will be generated to indicate the reason.
-
+                                            
                                             If this field is set to IfPossible or Enabled, MountPropagation must be set to
                                             None (or be unspecified, which defaults to None).
-
+                                            
                                             If this field is not specified, it is treated as an equivalent of Disabled.
                                           type: string
                                         subPath:
@@ -5809,10 +5845,10 @@ spec:
                               description: |-
                                 Specifies the OS of the containers in the pod.
                                 Some pod and container fields are restricted if this is set.
-
+                                
                                 If the OS field is set to linux, the following fields must be unset:
                                 -securityContext.windowsOptions
-
+                                
                                 If the OS field is set to windows, following fields must be unset:
                                 - spec.hostPID
                                 - spec.hostIPC
@@ -5897,12 +5933,12 @@ spec:
                                 all conditions specified in the readiness gates have status equal to "True"
                                 More info: https://git.k8s.io/enhancements/keps/sig-network/580-pod-readiness-gates
                               items:
-                                description: PodReadinessGate contains the reference to
-                                  a pod condition
+                                description: PodReadinessGate contains the reference
+                                  to a pod condition
                                 properties:
                                   conditionType:
-                                    description: ConditionType refers to a condition in
-                                      the pod's condition list with matching type.
+                                    description: ConditionType refers to a condition
+                                      in the pod's condition list with matching type.
                                     type: string
                                 required:
                                   - conditionType
@@ -5915,17 +5951,17 @@ spec:
                                 and reserved before the Pod is allowed to start. The resources
                                 will be made available to those containers which consume them
                                 by name.
-
+                                
                                 This is an alpha field and requires enabling the
                                 DynamicResourceAllocation feature gate.
-
+                                
                                 This field is immutable.
                               items:
                                 description: |-
                                   PodResourceClaim references exactly one ResourceClaim, either directly
                                   or by naming a ResourceClaimTemplate which is then turned into a ResourceClaim
                                   for the pod.
-
+                                  
                                   It adds a name to it that uniquely identifies the ResourceClaim inside the Pod.
                                   Containers that need access to the ResourceClaim reference it with this name.
                                 properties:
@@ -5938,7 +5974,7 @@ spec:
                                     description: |-
                                       ResourceClaimName is the name of a ResourceClaim object in the same
                                       namespace as this pod.
-
+                                      
                                       Exactly one of ResourceClaimName and ResourceClaimTemplateName must
                                       be set.
                                     type: string
@@ -5946,17 +5982,17 @@ spec:
                                     description: |-
                                       ResourceClaimTemplateName is the name of a ResourceClaimTemplate
                                       object in the same namespace as this pod.
-
+                                      
                                       The template will be used to create a new ResourceClaim, which will
                                       be bound to this pod. When this pod is deleted, the ResourceClaim
                                       will also be deleted. The pod name and resource name, along with a
                                       generated component, will be used to form a unique name for the
                                       ResourceClaim, which will be recorded in pod.status.resourceClaimStatuses.
-
+                                      
                                       This field is immutable and no changes will be made to the
                                       corresponding ResourceClaim by the control plane after creating the
                                       ResourceClaim.
-
+                                      
                                       Exactly one of ResourceClaimName and ResourceClaimTemplateName must
                                       be set.
                                     type: string
@@ -5972,10 +6008,10 @@ spec:
                                 Resources is the total amount of CPU and Memory resources required by all
                                 containers in the pod. It supports specifying Requests and Limits for
                                 "cpu", "memory" and "hugepages-" resource names only. ResourceClaims are not supported.
-
+                                
                                 This field enables fine-grained control over resource allocation for the
                                 entire pod, allowing resource sharing among containers in a pod.
-
+                                
                                 This is an alpha field and requires enabling the PodLevelResources feature
                                 gate.
                               properties:
@@ -5983,14 +6019,14 @@ spec:
                                   description: |-
                                     Claims lists the names of resources, defined in spec.resourceClaims,
                                     that are used by this container.
-
+                                    
                                     This field depends on the
                                     DynamicResourceAllocation feature gate.
-
+                                    
                                     This field is immutable. It can only be set for containers.
                                   items:
-                                    description: ResourceClaim references one entry in
-                                      PodSpec.ResourceClaims.
+                                    description: ResourceClaim references one entry
+                                      in PodSpec.ResourceClaims.
                                     properties:
                                       name:
                                         description: |-
@@ -6068,7 +6104,7 @@ spec:
                                 SchedulingGates is an opaque list of values that if specified will block scheduling the pod.
                                 If schedulingGates is not empty, the pod will stay in the SchedulingGated state and the
                                 scheduler will not attempt to schedule the pod.
-
+                                
                                 SchedulingGates can only be set at pod creation time, and be removed only afterwards.
                               items:
                                 description: PodSchedulingGate is associated to a Pod
@@ -6119,11 +6155,11 @@ spec:
                                     A special supplemental group that applies to all containers in a pod.
                                     Some volume types allow the Kubelet to change the ownership of that volume
                                     to be owned by the pod:
-
+                                    
                                     1. The owning GID will be the FSGroup
                                     2. The setgid bit is set (new files created in the volume will be owned by FSGroup)
                                     3. The permission bits are OR'd with rw-rw----
-
+                                    
                                     If unset, the Kubelet will not modify the ownership and permissions of any volume.
                                     Note that this field cannot be set when spec.os.name is windows.
                                   format: int64
@@ -6172,10 +6208,10 @@ spec:
                                     seLinuxChangePolicy defines how the container's SELinux label is applied to all volumes used by the Pod.
                                     It has no effect on nodes that do not support SELinux or to volumes does not support SELinux.
                                     Valid values are "MountOption" and "Recursive".
-
+                                    
                                     "Recursive" means relabeling of all files on all Pod volumes by the container runtime.
                                     This may be slow for large volumes, but allows mixing privileged and unprivileged Pods sharing the same volume on the same node.
-
+                                    
                                     "MountOption" mounts all eligible Pod volumes with `-o context` mount option.
                                     This requires all Pods that share the same volume to use the same SELinux label.
                                     It is not possible to share the same volume among privileged and unprivileged Pods.
@@ -6183,13 +6219,13 @@ spec:
                                     whose CSI driver announces SELinux support by setting spec.seLinuxMount: true in their
                                     CSIDriver instance. Other volumes are always re-labelled recursively.
                                     "MountOption" value is allowed only when SELinuxMount feature gate is enabled.
-
+                                    
                                     If not specified and SELinuxMount feature gate is enabled, "MountOption" is used.
                                     If not specified and SELinuxMount feature gate is disabled, "MountOption" is used for ReadWriteOncePod volumes
                                     and "Recursive" for all other volumes.
-
+                                    
                                     This field affects only Pods that have SELinux label set, either in PodSecurityContext or in SecurityContext of all containers.
-
+                                    
                                     All Pods that use the same volume should use the same seLinuxChangePolicy, otherwise some pods can get stuck in ContainerCreating state.
                                     Note that this field cannot be set when spec.os.name is windows.
                                   type: string
@@ -6203,20 +6239,20 @@ spec:
                                     Note that this field cannot be set when spec.os.name is windows.
                                   properties:
                                     level:
-                                      description: Level is SELinux level label that applies
-                                        to the container.
+                                      description: Level is SELinux level label that
+                                        applies to the container.
                                       type: string
                                     role:
-                                      description: Role is a SELinux role label that applies
-                                        to the container.
+                                      description: Role is a SELinux role label that
+                                        applies to the container.
                                       type: string
                                     type:
-                                      description: Type is a SELinux type label that applies
-                                        to the container.
+                                      description: Type is a SELinux type label that
+                                        applies to the container.
                                       type: string
                                     user:
-                                      description: User is a SELinux user label that applies
-                                        to the container.
+                                      description: User is a SELinux user label that
+                                        applies to the container.
                                       type: string
                                   type: object
                                 seccompProfile:
@@ -6235,7 +6271,7 @@ spec:
                                       description: |-
                                         type indicates which kind of seccomp profile will be applied.
                                         Valid options are:
-
+                                        
                                         Localhost - a profile defined in a file on the node should be used.
                                         RuntimeDefault - the container runtime default profile should be used.
                                         Unconfined - no profile should be applied.
@@ -6417,8 +6453,8 @@ spec:
                                 domains. Scheduler will schedule pods in a way which abides by the constraints.
                                 All topologySpreadConstraints are ANDed.
                               items:
-                                description: TopologySpreadConstraint specifies how to
-                                  spread matching pods among the given topology.
+                                description: TopologySpreadConstraint specifies how
+                                  to spread matching pods among the given topology.
                                 properties:
                                   labelSelector:
                                     description: |-
@@ -6436,8 +6472,8 @@ spec:
                                             relates the key and values.
                                           properties:
                                             key:
-                                              description: key is the label key that the
-                                                selector applies to.
+                                              description: key is the label key that
+                                                the selector applies to.
                                               type: string
                                             operator:
                                               description: |-
@@ -6480,7 +6516,7 @@ spec:
                                       MatchLabelKeys cannot be set when LabelSelector isn't set.
                                       Keys that don't exist in the incoming pod labels will
                                       be ignored. A null or empty list means only match against labelSelector.
-
+                                      
                                       This is a beta field and requires the MatchLabelKeysInPodTopologySpread feature gate to be enabled (enabled by default).
                                     items:
                                       type: string
@@ -6519,7 +6555,7 @@ spec:
                                       If value is nil, the constraint behaves as if MinDomains is equal to 1.
                                       Valid values are integers greater than 0.
                                       When value is not nil, WhenUnsatisfiable must be DoNotSchedule.
-
+                                      
                                       For example, in a 3-zone cluster, MaxSkew is set to 2, MinDomains is set to 5 and pods with the same
                                       labelSelector spread as 2/2/2:
                                       | zone1 | zone2 | zone3 |
@@ -6536,7 +6572,7 @@ spec:
                                       when calculating pod topology spread skew. Options are:
                                       - Honor: only nodes matching nodeAffinity/nodeSelector are included in the calculations.
                                       - Ignore: nodeAffinity/nodeSelector are ignored. All nodes are included in the calculations.
-
+                                      
                                       If this value is nil, the behavior is equivalent to the Honor policy.
                                     type: string
                                   nodeTaintsPolicy:
@@ -6546,7 +6582,7 @@ spec:
                                       - Honor: nodes without taints, along with tainted nodes for which the incoming pod
                                       has a toleration, are included.
                                       - Ignore: node taints are ignored. All nodes are included.
-
+                                      
                                       If this value is nil, the behavior is equivalent to the Ignore policy.
                                     type: string
                                   topologyKey:
@@ -6652,8 +6688,8 @@ spec:
                                           disk in the blob storage
                                         type: string
                                       diskURI:
-                                        description: diskURI is the URI of data disk in
-                                          the blob storage
+                                        description: diskURI is the URI of data disk
+                                          in the blob storage
                                         type: string
                                       fsType:
                                         default: ext4
@@ -6716,9 +6752,9 @@ spec:
                                         type: array
                                         x-kubernetes-list-type: atomic
                                       path:
-                                        description: 'path is Optional: Used as the mounted
-                                        root, rather than the full Ceph tree, default
-                                        is /'
+                                        description: 'path is Optional: Used as the
+                                        mounted root, rather than the full Ceph tree,
+                                        default is /'
                                         type: string
                                       readOnly:
                                         description: |-
@@ -6919,8 +6955,8 @@ spec:
                                       - driver
                                     type: object
                                   downwardAPI:
-                                    description: downwardAPI represents downward API about
-                                      the pod that should populate this volume
+                                    description: downwardAPI represents downward API
+                                      about the pod that should populate this volume
                                     properties:
                                       defaultMode:
                                         description: |-
@@ -6935,8 +6971,8 @@ spec:
                                         format: int32
                                         type: integer
                                       items:
-                                        description: Items is a list of downward API volume
-                                          file
+                                        description: Items is a list of downward API
+                                          volume file
                                         items:
                                           description: DownwardAPIVolumeFile represents
                                             information to create the file containing
@@ -6948,13 +6984,13 @@ spec:
                                               name, namespace and uid are supported.'
                                               properties:
                                                 apiVersion:
-                                                  description: Version of the schema the
-                                                    FieldPath is written in terms of,
-                                                    defaults to "v1".
+                                                  description: Version of the schema
+                                                    the FieldPath is written in terms
+                                                    of, defaults to "v1".
                                                   type: string
                                                 fieldPath:
-                                                  description: Path of the field to select
-                                                    in the specified API version.
+                                                  description: Path of the field to
+                                                    select in the specified API version.
                                                   type: string
                                               required:
                                                 - fieldPath
@@ -6972,11 +7008,11 @@ spec:
                                               type: integer
                                             path:
                                               description: 'Required: Path is  the relative
-                                              path name of the file to be created. Must
-                                              not be absolute or contain the ''..''
-                                              path. Must be utf-8 encoded. The first
-                                              item of the relative path must not start
-                                              with ''..'''
+                                              path name of the file to be created.
+                                              Must not be absolute or contain the
+                                              ''..'' path. Must be utf-8 encoded.
+                                              The first item of the relative path
+                                              must not start with ''..'''
                                               type: string
                                             resourceFieldRef:
                                               description: |-
@@ -6991,9 +7027,9 @@ spec:
                                                   anyOf:
                                                     - type: integer
                                                     - type: string
-                                                  description: Specifies the output format
-                                                    of the exposed resources, defaults
-                                                    to "1"
+                                                  description: Specifies the output
+                                                    format of the exposed resources,
+                                                    defaults to "1"
                                                   pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                                   x-kubernetes-int-or-string: true
                                                 resource:
@@ -7041,7 +7077,7 @@ spec:
                                       ephemeral represents a volume that is handled by a cluster storage driver.
                                       The volume's lifecycle is tied to the pod that defines it - it will be created before the pod starts,
                                       and deleted when the pod is removed.
-
+                                      
                                       Use this if:
                                       a) the volume is only needed while the pod runs,
                                       b) features of normal volumes like restoring from snapshot or capacity
@@ -7051,15 +7087,15 @@ spec:
                                          a PersistentVolumeClaim (see EphemeralVolumeSource for more
                                          information on the connection between this volume type
                                          and PersistentVolumeClaim).
-
+                                      
                                       Use PersistentVolumeClaim or one of the vendor-specific
                                       APIs for volumes that persist for longer than the lifecycle
                                       of an individual pod.
-
+                                      
                                       Use CSI for light-weight local ephemeral volumes if the CSI driver is meant to
                                       be used that way - see the documentation of the driver for
                                       more information.
-
+                                      
                                       A pod can use both types of ephemeral volumes and
                                       persistent volumes at the same time.
                                     properties:
@@ -7072,7 +7108,7 @@ spec:
                                           `<volume name>` is the name from the `PodSpec.Volumes` array
                                           entry. Pod validation will reject the pod if the concatenated name
                                           is not valid for a PVC (for example, too long).
-
+                                          
                                           An existing PVC with that name that is not owned by the pod
                                           will *not* be used for the pod to avoid using an unrelated
                                           volume by mistake. Starting the pod is then blocked until
@@ -7081,10 +7117,10 @@ spec:
                                           owner reference to the pod once the pod exists. Normally
                                           this should not be necessary, but it may be useful when
                                           manually reconstructing a broken cluster.
-
+                                          
                                           This field is read-only and no changes will be made by Kubernetes
                                           to the PVC after it has been created.
-
+                                          
                                           Required, must not be nil.
                                         properties:
                                           metadata:
@@ -7126,12 +7162,12 @@ spec:
                                                       For any other third-party types, APIGroup is required.
                                                     type: string
                                                   kind:
-                                                    description: Kind is the type of resource
-                                                      being referenced
+                                                    description: Kind is the type of
+                                                      resource being referenced
                                                     type: string
                                                   name:
-                                                    description: Name is the name of resource
-                                                      being referenced
+                                                    description: Name is the name of
+                                                      resource being referenced
                                                     type: string
                                                 required:
                                                   - kind
@@ -7171,12 +7207,12 @@ spec:
                                                       For any other third-party types, APIGroup is required.
                                                     type: string
                                                   kind:
-                                                    description: Kind is the type of resource
-                                                      being referenced
+                                                    description: Kind is the type of
+                                                      resource being referenced
                                                     type: string
                                                   name:
-                                                    description: Name is the name of resource
-                                                      being referenced
+                                                    description: Name is the name of
+                                                      resource being referenced
                                                     type: string
                                                   namespace:
                                                     description: |-
@@ -7226,8 +7262,8 @@ spec:
                                                   over volumes to consider for binding.
                                                 properties:
                                                   matchExpressions:
-                                                    description: matchExpressions is a
-                                                      list of label selector requirements.
+                                                    description: matchExpressions is
+                                                      a list of label selector requirements.
                                                       The requirements are ANDed.
                                                     items:
                                                       description: |-
@@ -7295,8 +7331,8 @@ spec:
                                                 type: string
                                               volumeName:
                                                 description: volumeName is the binding
-                                                  reference to the PersistentVolume backing
-                                                  this claim.
+                                                  reference to the PersistentVolume
+                                                  backing this claim.
                                                 type: string
                                             type: object
                                         required:
@@ -7315,7 +7351,8 @@ spec:
                                           Ex. "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
                                         type: string
                                       lun:
-                                        description: 'lun is Optional: FC target lun number'
+                                        description: 'lun is Optional: FC target lun
+                                        number'
                                         format: int32
                                         type: integer
                                       readOnly:
@@ -7399,8 +7436,9 @@ spec:
                                           should be considered as deprecated
                                         type: string
                                       datasetUUID:
-                                        description: datasetUUID is the UUID of the dataset.
-                                          This is unique identifier of a Flocker dataset
+                                        description: datasetUUID is the UUID of the
+                                          dataset. This is unique identifier of a Flocker
+                                          dataset
                                         type: string
                                     type: object
                                   gcePersistentDisk:
@@ -7459,8 +7497,8 @@ spec:
                                         description: repository is the URL
                                         type: string
                                       revision:
-                                        description: revision is the commit hash for the
-                                          specified revision.
+                                        description: revision is the commit hash for
+                                          the specified revision.
                                         type: string
                                     required:
                                       - repository
@@ -7471,8 +7509,8 @@ spec:
                                       Deprecated: Glusterfs is deprecated and the in-tree glusterfs type is no longer supported.
                                     properties:
                                       endpoints:
-                                        description: endpoints is the endpoint name that
-                                          details Glusterfs topology.
+                                        description: endpoints is the endpoint name
+                                          that details Glusterfs topology.
                                         type: string
                                       path:
                                         description: |-
@@ -7516,11 +7554,11 @@ spec:
                                     description: |-
                                       image represents an OCI object (a container image or artifact) pulled and mounted on the kubelet's host machine.
                                       The volume is resolved at pod startup depending on which PullPolicy value is provided:
-
+                                      
                                       - Always: the kubelet always attempts to pull the reference. Container creation will fail If the pull fails.
                                       - Never: the kubelet never pulls the reference and only uses a local image or artifact. Container creation will fail if the reference isn't present.
                                       - IfNotPresent: the kubelet pulls if the reference isn't already present on disk. Container creation will fail if the reference isn't present and the pull fails.
-
+                                      
                                       The volume gets re-resolved if the pod gets deleted and recreated, which means that new remote content will become available on pod recreation.
                                       A failure to resolve or pull the image during pod startup will block containers from starting and may add significant latency. Failures will be retried using normal volume backoff and will be reported on the pod reason and message.
                                       The types of objects that may be mounted by this volume are defined by the container runtime implementation on a host machine and at minimum must include all valid types supported by the container image field.
@@ -7558,8 +7596,8 @@ spec:
                                           support iSCSI Discovery CHAP authentication
                                         type: boolean
                                       chapAuthSession:
-                                        description: chapAuthSession defines whether support
-                                          iSCSI Session CHAP authentication
+                                        description: chapAuthSession defines whether
+                                          support iSCSI Session CHAP authentication
                                         type: boolean
                                       fsType:
                                         description: |-
@@ -7585,7 +7623,8 @@ spec:
                                           Defaults to 'default' (tcp).
                                         type: string
                                       lun:
-                                        description: lun represents iSCSI Target Lun number.
+                                        description: lun represents iSCSI Target Lun
+                                          number.
                                         format: int32
                                         type: integer
                                       portals:
@@ -7688,8 +7727,8 @@ spec:
                                           Ex. "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
                                         type: string
                                       pdID:
-                                        description: pdID is the ID that identifies Photon
-                                          Controller persistent disk
+                                        description: pdID is the ID that identifies
+                                          Photon Controller persistent disk
                                         type: string
                                     required:
                                       - pdID
@@ -7713,8 +7752,8 @@ spec:
                                           the ReadOnly setting in VolumeMounts.
                                         type: boolean
                                       volumeID:
-                                        description: volumeID uniquely identifies a Portworx
-                                          volume
+                                        description: volumeID uniquely identifies a
+                                          Portworx volume
                                         type: string
                                     required:
                                       - volumeID
@@ -7746,12 +7785,12 @@ spec:
                                               description: |-
                                                 ClusterTrustBundle allows a pod to access the `.spec.trustBundle` field
                                                 of ClusterTrustBundle objects in an auto-updating file.
-
+                                                
                                                 Alpha, gated by the ClusterTrustBundleProjection feature gate.
-
+                                                
                                                 ClusterTrustBundle objects can either be selected by name, or by the
                                                 combination of signer name and a label selector.
-
+                                                
                                                 Kubelet performs aggressive normalization of the PEM contents written
                                                 into the pod filesystem.  Esoteric PEM features such as inter-block
                                                 comments and block headers are stripped.  Certificates are deduplicated.
@@ -7766,18 +7805,19 @@ spec:
                                                     everything".
                                                   properties:
                                                     matchExpressions:
-                                                      description: matchExpressions is
-                                                        a list of label selector requirements.
-                                                        The requirements are ANDed.
+                                                      description: matchExpressions
+                                                        is a list of label selector
+                                                        requirements. The requirements
+                                                        are ANDed.
                                                       items:
                                                         description: |-
                                                           A label selector requirement is a selector that contains values, a key, and an operator that
                                                           relates the key and values.
                                                         properties:
                                                           key:
-                                                            description: key is the label
-                                                              key that the selector applies
-                                                              to.
+                                                            description: key is the
+                                                              label key that the selector
+                                                              applies to.
                                                             type: string
                                                           operator:
                                                             description: |-
@@ -7854,8 +7894,8 @@ spec:
                                                       a path within a volume.
                                                     properties:
                                                       key:
-                                                        description: key is the key to
-                                                          project.
+                                                        description: key is the key
+                                                          to project.
                                                         type: string
                                                       mode:
                                                         description: |-
@@ -7915,15 +7955,15 @@ spec:
                                                         uid are supported.'
                                                         properties:
                                                           apiVersion:
-                                                            description: Version of the
-                                                              schema the FieldPath is
-                                                              written in terms of, defaults
-                                                              to "v1".
+                                                            description: Version of
+                                                              the schema the FieldPath
+                                                              is written in terms of,
+                                                              defaults to "v1".
                                                             type: string
                                                           fieldPath:
-                                                            description: Path of the field
-                                                              to select in the specified
-                                                              API version.
+                                                            description: Path of the
+                                                              field to select in the
+                                                              specified API version.
                                                             type: string
                                                         required:
                                                           - fieldPath
@@ -7940,13 +7980,14 @@ spec:
                                                         format: int32
                                                         type: integer
                                                       path:
-                                                        description: 'Required: Path is  the
-                                                        relative path name of the file
-                                                        to be created. Must not be absolute
-                                                        or contain the ''..'' path.
-                                                        Must be utf-8 encoded. The first
-                                                        item of the relative path must
-                                                        not start with ''..'''
+                                                        description: 'Required: Path
+                                                        is  the relative path name
+                                                        of the file to be created.
+                                                        Must not be absolute or contain
+                                                        the ''..'' path. Must be utf-8
+                                                        encoded. The first item of
+                                                        the relative path must not
+                                                        start with ''..'''
                                                         type: string
                                                       resourceFieldRef:
                                                         description: |-
@@ -7954,9 +7995,9 @@ spec:
                                                           (limits.cpu, limits.memory, requests.cpu and requests.memory) are currently supported.
                                                         properties:
                                                           containerName:
-                                                            description: 'Container name:
-                                                            required for volumes, optional
-                                                            for env vars'
+                                                            description: 'Container
+                                                            name: required for volumes,
+                                                            optional for env vars'
                                                             type: string
                                                           divisor:
                                                             anyOf:
@@ -7964,12 +8005,13 @@ spec:
                                                               - type: string
                                                             description: Specifies the
                                                               output format of the exposed
-                                                              resources, defaults to "1"
+                                                              resources, defaults to
+                                                              "1"
                                                             pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                                             x-kubernetes-int-or-string: true
                                                           resource:
-                                                            description: 'Required: resource
-                                                            to select'
+                                                            description: 'Required:
+                                                            resource to select'
                                                             type: string
                                                         required:
                                                           - resource
@@ -7985,27 +8027,27 @@ spec:
                                               description: |-
                                                 Projects an auto-rotating credential bundle (private key and certificate
                                                 chain) that the pod can use either as a TLS client or server.
-
+                                                
                                                 Kubelet generates a private key and uses it to send a
                                                 PodCertificateRequest to the named signer.  Once the signer approves the
                                                 request and issues a certificate chain, Kubelet writes the key and
                                                 certificate chain to the pod filesystem.  The pod does not start until
                                                 certificates have been issued for each podCertificate projected volume
                                                 source in its spec.
-
+                                                
                                                 Kubelet will begin trying to rotate the certificate at the time indicated
                                                 by the signer using the PodCertificateRequest.Status.BeginRefreshAt
                                                 timestamp.
-
+                                                
                                                 Kubelet can write a single file, indicated by the credentialBundlePath
                                                 field, or separate files, indicated by the keyPath and
                                                 certificateChainPath fields.
-
+                                                
                                                 The credential bundle is a single file in PEM format.  The first PEM
                                                 entry is the private key (in PKCS#8 format), and the remaining PEM
                                                 entries are the certificate chain issued by the signer (typically,
                                                 signers will return their certificate chain in leaf-to-root order).
-
+                                                
                                                 Prefer using the credential bundle format, since your application code
                                                 can read it atomically.  If you use keyPath and certificateChainPath,
                                                 your application must make two separate file reads. If these coincide
@@ -8013,7 +8055,7 @@ spec:
                                                 certificate you read may not correspond to each other.  Your application
                                                 will need to check for this condition, and re-read until they are
                                                 consistent.
-
+                                                
                                                 The named signer controls chooses the format of the certificate it
                                                 issues; consult the signer implementation's documentation to learn how to
                                                 use the certificates it issues.
@@ -8021,7 +8063,7 @@ spec:
                                                 certificateChainPath:
                                                   description: |-
                                                     Write the certificate chain at this path in the projected volume.
-
+                                                    
                                                     Most applications should use credentialBundlePath.  When using keyPath
                                                     and certificateChainPath, your application needs to check that the key
                                                     and leaf certificate are consistent, because it is possible to read the
@@ -8030,14 +8072,14 @@ spec:
                                                 credentialBundlePath:
                                                   description: |-
                                                     Write the credential bundle at this path in the projected volume.
-
+                                                    
                                                     The credential bundle is a single file that contains multiple PEM blocks.
                                                     The first PEM block is a PRIVATE KEY block, containing a PKCS#8 private
                                                     key.
-
+                                                    
                                                     The remaining blocks are CERTIFICATE blocks, containing the issued
                                                     certificate chain from the signer (leaf and any intermediates).
-
+                                                    
                                                     Using credentialBundlePath lets your Pod's application code make a single
                                                     atomic read that retrieves a consistent key and certificate chain.  If you
                                                     project them to separate files, your application code will need to
@@ -8046,7 +8088,7 @@ spec:
                                                 keyPath:
                                                   description: |-
                                                     Write the key at this path in the projected volume.
-
+                                                    
                                                     Most applications should use credentialBundlePath.  When using keyPath
                                                     and certificateChainPath, your application needs to check that the key
                                                     and leaf certificate are consistent, because it is possible to read the
@@ -8055,7 +8097,7 @@ spec:
                                                 keyType:
                                                   description: |-
                                                     The type of keypair Kubelet will generate for the pod.
-
+                                                    
                                                     Valid values are "RSA3072", "RSA4096", "ECDSAP256", "ECDSAP384",
                                                     "ECDSAP521", and "ED25519".
                                                   type: string
@@ -8063,14 +8105,14 @@ spec:
                                                   description: |-
                                                     maxExpirationSeconds is the maximum lifetime permitted for the
                                                     certificate.
-
+                                                    
                                                     Kubelet copies this value verbatim into the PodCertificateRequests it
                                                     generates for this projection.
-
+                                                    
                                                     If omitted, kube-apiserver will set it to 86400(24 hours). kube-apiserver
                                                     will reject values shorter than 3600 (1 hour).  The maximum allowable
                                                     value is 7862400 (91 days).
-
+                                                    
                                                     The signer implementation is then free to issue a certificate with any
                                                     lifetime *shorter* than MaxExpirationSeconds, but no shorter than 3600
                                                     seconds (1 hour).  This constraint is enforced by kube-apiserver.
@@ -8087,8 +8129,8 @@ spec:
                                                 - signerName
                                               type: object
                                             secret:
-                                              description: secret information about the
-                                                secret data to project
+                                              description: secret information about
+                                                the secret data to project
                                               properties:
                                                 items:
                                                   description: |-
@@ -8104,8 +8146,8 @@ spec:
                                                       a path within a volume.
                                                     properties:
                                                       key:
-                                                        description: key is the key to
-                                                          project.
+                                                        description: key is the key
+                                                          to project.
                                                         type: string
                                                       mode:
                                                         description: |-
@@ -8307,12 +8349,12 @@ spec:
                                           Default is "xfs".
                                         type: string
                                       gateway:
-                                        description: gateway is the host address of the
-                                          ScaleIO API Gateway.
+                                        description: gateway is the host address of
+                                          the ScaleIO API Gateway.
                                         type: string
                                       protectionDomain:
-                                        description: protectionDomain is the name of the
-                                          ScaleIO Protection Domain for the configured
+                                        description: protectionDomain is the name of
+                                          the ScaleIO Protection Domain for the configured
                                           storage.
                                         type: string
                                       readOnly:
@@ -8337,8 +8379,8 @@ spec:
                                         type: object
                                         x-kubernetes-map-type: atomic
                                       sslEnabled:
-                                        description: sslEnabled Flag enable/disable SSL
-                                          communication with Gateway, default false
+                                        description: sslEnabled Flag enable/disable
+                                          SSL communication with Gateway, default false
                                         type: boolean
                                       storageMode:
                                         default: ThinProvisioned
@@ -8420,8 +8462,8 @@ spec:
                                         type: array
                                         x-kubernetes-list-type: atomic
                                       optional:
-                                        description: optional field specify whether the
-                                          Secret or its keys must be defined
+                                        description: optional field specify whether
+                                          the Secret or its keys must be defined
                                         type: boolean
                                       secretName:
                                         description: |-
@@ -8489,9 +8531,9 @@ spec:
                                           Ex. "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
                                         type: string
                                       storagePolicyID:
-                                        description: storagePolicyID is the storage Policy
-                                          Based Management (SPBM) profile ID associated
-                                          with the StoragePolicyName.
+                                        description: storagePolicyID is the storage
+                                          Policy Based Management (SPBM) profile ID
+                                          associated with the StoragePolicyName.
                                         type: string
                                       storagePolicyName:
                                         description: storagePolicyName is the storage
@@ -8556,8 +8598,8 @@ spec:
                         Capp route.
                       type: boolean
                     trafficTarget:
-                      description: TrafficTarget holds a single entry of the routing table
-                        for the Capp route.
+                      description: TrafficTarget holds a single entry of the routing
+                        table for the Capp route.
                       properties:
                         configurationName:
                           description: |-
@@ -8621,6 +8663,71 @@ spec:
                     Site defines where to deploy the Capp.
                     It can be a specific cluster or a placement name.
                   type: string
+                sources:
+                  description: Sources define the configuration and status of event
+                    sources
+                  items:
+                    description: KafkaSource define the configuration of a Kafka sources
+                    properties:
+                      bootstrapServers:
+                        description: BootstrapServers is a list of Kafka broker addresses
+                          used to connect to the cluster.
+                        items:
+                          type: string
+                        type: array
+                      kafkaAuth:
+                        description: KafkaStatus represents the current observed state
+                          of the Kafka source.
+                        properties:
+                          passwordKey:
+                            description: PasswordKey used for authenticating
+                            properties:
+                              key:
+                                description: The key of the secret to select from.  Must
+                                  be a valid secret key.
+                                type: string
+                              name:
+                                default: ""
+                                description: |-
+                                  Name of the referent.
+                                  This field is effectively required, but due to backwards compatibility is
+                                  allowed to be empty. Instances of this type with an empty value here are
+                                  almost certainly wrong.
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                type: string
+                              optional:
+                                description: Specify whether the Secret or its key must
+                                  be defined
+                                type: boolean
+                            required:
+                              - key
+                            type: object
+                            x-kubernetes-map-type: atomic
+                          username:
+                            description: Username used for authenticating
+                            type: string
+                        required:
+                          - passwordKey
+                          - username
+                        type: object
+                      name:
+                        description: Name is the name of the Kafka source
+                        type: string
+                      topic:
+                        description: Topic is the Kafka topic from which messages are
+                          consumed.
+                        items:
+                          type: string
+                        type: array
+                      type:
+                        description: Type defines the type of the source
+                        type: string
+                    required:
+                      - name
+                      - topic
+                      - type
+                    type: object
+                  type: array
                 state:
                   default: enabled
                   description: |-
@@ -8631,13 +8738,14 @@ spec:
                     - disabled
                   type: string
                 volumesSpec:
-                  description: VolumesSpec defines the volumes specification for the Capp.
+                  description: VolumesSpec defines the volumes specification for the
+                    Capp.
                   properties:
                     nfsVolumes:
                       description: NFSVolumes is a list of NFS volumes to be mounted.
                       items:
-                        description: NFSVolume defines the NFS volume specification for
-                          the Capp.
+                        description: NFSVolume defines the NFS volume specification
+                          for the Capp.
                         properties:
                           capacity:
                             additionalProperties:
@@ -8655,8 +8763,8 @@ spec:
                             description: Path is the exported path on the NFS server.
                             type: string
                           server:
-                            description: Server is the hostname or IP address of the NFS
-                              server.
+                            description: Server is the hostname or IP address of the
+                              NFS server.
                             type: string
                         required:
                           - capacity
@@ -8687,8 +8795,8 @@ spec:
                       type: string
                   type: object
                 conditions:
-                  description: Conditions contain details about the current state of the
-                    Capp.
+                  description: Conditions contain details about the current state of
+                    the Capp.
                   items:
                     description: Condition contains details for one aspect of the current
                       state of this API Resource.
@@ -8749,8 +8857,8 @@ spec:
                     Service resource.
                   properties:
                     address:
-                      description: Address holds the information needed for a Route to
-                        be the target of an event.
+                      description: Address holds the information needed for a Route
+                        to be the target of an event.
                       properties:
                         CACerts:
                           description: |-
@@ -8776,8 +8884,8 @@ spec:
                         richer information outwards.
                       type: object
                     conditions:
-                      description: Conditions the latest available observations of a resource's
-                        current state.
+                      description: Conditions the latest available observations of a
+                        resource's current state.
                       items:
                         description: |-
                           Condition defines a readiness condition for a Knative resource.
@@ -8790,8 +8898,8 @@ spec:
                               differences (all other things held constant).
                             type: string
                           message:
-                            description: A human readable message indicating details about
-                              the transition.
+                            description: A human readable message indicating details
+                              about the transition.
                             type: string
                           reason:
                             description: The reason for the condition's last transition.
@@ -8990,12 +9098,12 @@ spec:
                         description: RevisionName is the name of the revision.
                         type: string
                       revisionsStatus:
-                        description: RevisionStatus communicates the observed state of
-                          the Revision (from the controller).
+                        description: RevisionStatus communicates the observed state
+                          of the Revision (from the controller).
                         properties:
                           actualReplicas:
-                            description: ActualReplicas reflects the amount of ready pods
-                              running this revision.
+                            description: ActualReplicas reflects the amount of ready
+                              pods running this revision.
                             format: int32
                             type: integer
                           annotations:
@@ -9034,8 +9142,8 @@ spec:
                                     When this is not specified, it defaults to Error.
                                   type: string
                                 status:
-                                  description: Status of the condition, one of True, False,
-                                    Unknown.
+                                  description: Status of the condition, one of True,
+                                    False, Unknown.
                                   type: string
                                 type:
                                   description: Type of condition.
@@ -9054,8 +9162,8 @@ spec:
                               for both serving and non serving containers.
                               ref: http://bit.ly/image-digests
                             items:
-                              description: ContainerStatus holds the information of container
-                                name and image digest value
+                              description: ContainerStatus holds the information of
+                                container name and image digest value
                               properties:
                                 imageDigest:
                                   type: string
@@ -9064,8 +9172,8 @@ spec:
                               type: object
                             type: array
                           desiredReplicas:
-                            description: DesiredReplicas reflects the desired amount of
-                              pods running this revision.
+                            description: DesiredReplicas reflects the desired amount
+                              of pods running this revision.
                             format: int32
                             type: integer
                           initContainerStatuses:
@@ -9077,8 +9185,8 @@ spec:
                               for both serving and non serving containers.
                               ref: http://bit.ly/image-digests
                             items:
-                              description: ContainerStatus holds the information of container
-                                name and image digest value
+                              description: ContainerStatus holds the information of
+                                container name and image digest value
                               properties:
                                 imageDigest:
                                   type: string
@@ -9150,8 +9258,8 @@ spec:
                                   - Unknown
                                 type: string
                               type:
-                                description: Type of the condition, known values are (`Ready`,
-                                  `Issuing`).
+                                description: Type of the condition, known values are
+                                  (`Ready`, `Issuing`).
                                 type: string
                             required:
                               - status
@@ -9209,14 +9317,14 @@ spec:
                         revision:
                           description: |-
                             The current 'revision' of the certificate as issued.
-
+                            
                             When a CertificateRequest resource is created, it will have the
                             `cert-manager.io/certificate-revision` set to one greater than the
                             current value of this field.
-
+                            
                             Upon issuance, this field will be set to the value of the annotation
                             on the CertificateRequest resource used to issue the certificate.
-
+                            
                             Persisting the value on the CertificateRequest resource allows the
                             certificates controller to know whether a request is part of an old
                             issuance or if it is part of the ongoing revision's issuance by
@@ -9229,8 +9337,8 @@ spec:
                         ARecordSet object
                       properties:
                         cnameRecordObjectStatus:
-                          description: CNAMERecordObjectStatus is the status of the underlying
-                            ARecordSet object
+                          description: CNAMERecordObjectStatus is the status of the
+                            underlying ARecordSet object
                           properties:
                             atProvider:
                               properties:
@@ -9283,8 +9391,8 @@ spec:
                                     format: int64
                                     type: integer
                                   reason:
-                                    description: A Reason for this condition's last transition
-                                      from one status to another.
+                                    description: A Reason for this condition's last
+                                      transition from one status to another.
                                     type: string
                                   status:
                                     description: Status of this condition; is it currently
@@ -9346,8 +9454,8 @@ spec:
                             richer information outwards.
                           type: object
                         conditions:
-                          description: Conditions the latest available observations of
-                            a resource's current state.
+                          description: Conditions the latest available observations
+                            of a resource's current state.
                           items:
                             description: |-
                               Condition defines a readiness condition for a Knative resource.
@@ -9394,6 +9502,73 @@ spec:
                           type: string
                       type: object
                   type: object
+                sourceStatus:
+                  description: SourceStatus contains details about the current state
+                    of a source.
+                  items:
+                    description: KafkaStatus defines the status of a Kafka source
+                    properties:
+                      conditions:
+                        description: Conditions contain details about the current state
+                          of the Capp.
+                        items:
+                          description: Condition contains details for one aspect of
+                            the current state of this API Resource.
+                          properties:
+                            lastTransitionTime:
+                              description: |-
+                                lastTransitionTime is the last time the condition transitioned from one status to another.
+                                This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                              format: date-time
+                              type: string
+                            message:
+                              description: |-
+                                message is a human readable message indicating details about the transition.
+                                This may be an empty string.
+                              maxLength: 32768
+                              type: string
+                            observedGeneration:
+                              description: |-
+                                observedGeneration represents the .metadata.generation that the condition was set based upon.
+                                For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                                with respect to the current state of the instance.
+                              format: int64
+                              minimum: 0
+                              type: integer
+                            reason:
+                              description: |-
+                                reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                                Producers of specific condition types may define expected values and meanings for this field,
+                                and whether the values are considered a guaranteed API.
+                                The value should be a CamelCase string.
+                                This field may not be empty.
+                              maxLength: 1024
+                              minLength: 1
+                              pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                              type: string
+                            status:
+                              description: status of the condition, one of True, False,
+                                Unknown.
+                              enum:
+                                - "True"
+                                - "False"
+                                - Unknown
+                              type: string
+                            type:
+                              description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                              maxLength: 316
+                              pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                              type: string
+                          required:
+                            - lastTransitionTime
+                            - message
+                            - reason
+                            - status
+                            - type
+                          type: object
+                        type: array
+                    type: object
+                  type: array
                 stateStatus:
                   description: StateStatus shows the current Capp state
                   properties:
@@ -9406,8 +9581,8 @@ spec:
                       type: string
                   type: object
                 volumesStatus:
-                  description: VolumesStatus shows the state of the Volumes objects linked
-                    to the Capp.
+                  description: VolumesStatus shows the state of the Volumes objects
+                    linked to the Capp.
                   properties:
                     nfsVolumesStatus:
                       description: NFSVolumeStatus is the status of the underlying NFSVolume
@@ -9439,9 +9614,3 @@ spec:
       storage: true
       subresources:
         status: {}
-status:
-  acceptedNames:
-    kind: ""
-    plural: ""
-  conditions: []
-  storedVersions: []

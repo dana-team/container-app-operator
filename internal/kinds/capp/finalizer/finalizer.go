@@ -13,7 +13,7 @@ const CappCleanupFinalizer = "dana.io/capp-cleanup"
 
 // HandleResourceDeletion manages the Capp deletion.
 func HandleResourceDeletion(ctx context.Context, capp cappv1alpha1.Capp, r client.Client, resourceManagers map[string]rmanagers.ResourceManager) (error, bool) {
-	if capp.ObjectMeta.DeletionTimestamp != nil {
+	if capp.DeletionTimestamp != nil {
 		if controllerutil.ContainsFinalizer(&capp, CappCleanupFinalizer) {
 			if err := finalizeCapp(capp, resourceManagers); err != nil {
 				return err, false

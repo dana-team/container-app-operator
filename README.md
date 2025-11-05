@@ -213,6 +213,17 @@ spec:
     index: main
     user: elastic
     passwordSecret: es-elastic-user
+  sources:
+    kafkaSource:
+      bootstrapServers:
+        - kafka:9092
+      topic: capp-test
+    kafkaAuth:
+      username: user
+      passwordKey:
+        name: es-elastic-user
+        key: password
   scaleMetric: concurrency
   state: enabled
+  
 ```

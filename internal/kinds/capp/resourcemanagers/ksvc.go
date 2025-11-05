@@ -69,7 +69,7 @@ func (k KnativeServiceManager) prepareResource(capp cappv1alpha1.Capp, ctx conte
 	knativeService.Spec.ConfigurationSpec.SetDefaults(ctx)
 	knativeService.Spec.RouteSpec.SetDefaults(ctx)
 	knativeService.Spec.Template.Spec.SetDefaults(ctx)
-	knativeService.Spec.ConfigurationSpec.Template.Spec.TimeoutSeconds = capp.Spec.RouteSpec.RouteTimeoutSeconds
+	knativeService.Spec.Template.Spec.TimeoutSeconds = capp.Spec.RouteSpec.RouteTimeoutSeconds
 
 	volumes := k.prepareVolumes(capp)
 	knativeService.Spec.Template.Spec.Volumes = append(knativeService.Spec.Template.Spec.Volumes, volumes...)
@@ -79,14 +79,15 @@ func (k KnativeServiceManager) prepareResource(capp cappv1alpha1.Capp, ctx conte
 		k.Log.Error(err, fmt.Sprintf("could not fetch cappConfig from namespace %q", utils.CappNS))
 	}
 
-	knativeService.Spec.Template.ObjectMeta.Annotations = utils.MergeMaps(knativeServiceAnnotations, autoscale.SetAutoScaler(capp, cappConfig.Spec.AutoscaleConfig))
-	knativeService.Spec.Template.ObjectMeta.Labels = knativeServiceLabels
+	knativeService.Spec.Template.Annotations = utils.MergeMaps(knativeServiceAnnotations, autoscale.SetAutoScaler(capp, cappConfig.Spec.AutoscaleConfig))
+	knativeService.Spec.Template.Labels = knativeServiceLabels
 
 	return knativeService
 }
 
 // prepareVolumes generates a list of volumes to be used in a Knative Service definition from a given Capp resource.
 func (k KnativeServiceManager) prepareVolumes(capp cappv1alpha1.Capp) []corev1.Volume {
+	//nolint:prealloc
 	var volumes []corev1.Volume
 	for _, nfsVolume := range capp.Spec.VolumesSpec.NFSVolumes {
 		volumes = append(volumes, corev1.Volume{

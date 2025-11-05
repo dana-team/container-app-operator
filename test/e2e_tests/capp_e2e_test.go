@@ -3,9 +3,10 @@ package e2e_tests
 import (
 	"context"
 
+	"github.com/dana-team/container-app-operator/api/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/util/retry"
 
-	_ "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/dana-team/container-app-operator/test/e2e_tests/mocks"
 	"github.com/dana-team/container-app-operator/test/e2e_tests/testconsts"
 	utilst "github.com/dana-team/container-app-operator/test/e2e_tests/utils"
@@ -18,11 +19,11 @@ var _ = Describe("Validate capp creation", func() {
 		baseCapp := mocks.CreateBaseCapp()
 		By("Creating Capp with no scale metric")
 		desiredCapp := utilst.CreateCapp(k8sClient, baseCapp)
-		Expect(desiredCapp.Spec.ScaleMetric).ShouldNot(Equal(nil))
+		Expect(desiredCapp.Spec.ScaleMetric).ShouldNot(BeNil())
 
 		By("Creating Capp with unsupported scale metric")
 		baseCapp.Spec.ScaleMetric = testconsts.UnsupportedScaleMetric
-		Expect(k8sClient.Create(context.Background(), baseCapp)).ShouldNot(Equal(nil))
+		Expect(k8sClient.Create(context.Background(), baseCapp)).ShouldNot(Succeed())
 	})
 
 	It("Should succeed all adapter functions", func() {
@@ -40,7 +41,7 @@ var _ = Describe("Validate capp creation", func() {
 
 			return utilst.UpdateResource(k8sClient, assertionCapp)
 		})
-		Expect(err).To(BeNil())
+		Expect(err).ToNot(HaveOccurred())
 
 		Eventually(func() string {
 			assertionCapp = utilst.GetCapp(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
@@ -82,7 +83,7 @@ var _ = Describe("Validate capp creation", func() {
 
 			return utilst.UpdateResource(k8sClient, assertionCapp)
 		})
-		Expect(err).To(BeNil())
+		Expect(err).ToNot(HaveOccurred())
 
 		By("Checking if the capp state is disabled")
 		Eventually(func() string {
@@ -106,7 +107,7 @@ var _ = Describe("Validate capp creation", func() {
 
 			return utilst.UpdateResource(k8sClient, assertionCapp)
 		})
-		Expect(err).To(BeNil())
+		Expect(err).ToNot(HaveOccurred())
 
 		By("Checking if the ksvc was recreated successfully")
 		Eventually(func() bool {
@@ -115,5 +116,39 @@ var _ = Describe("Validate capp creation", func() {
 
 		By("Checking if the revision is ready")
 		checkRevisionReadiness(revisionName, true)
+	})
+
+	It("Should create a Capp with a Kafka source", func() {
+		By("Creating a Capp instance with a Kafka source")
+
+		testCapp := mocks.CreateBaseCapp()
+
+		kafkaSource := v1alpha1.KafkaSource{
+			Name:             "test-source",
+			BootstrapServers: []string{"kafka-broker:9092"},
+			Topic:            []string{"test-topic"},
+			KafkaAuth: &v1alpha1.KafkaAuth{
+				Username: "user",
+				PasswordKeyRef: corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: "my-secret",
+					},
+					Key: "kafka-password",
+				},
+			},
+		}
+
+		testCapp.Spec.Sources = append(testCapp.Spec.Sources, kafkaSource)
+
+		createdCapp := utilst.CreateCapp(k8sClient, testCapp)
+
+		By("Checking if the Capp instance has a Kafka source")
+		Expect(createdCapp.Spec.Sources).Should(HaveLen(1))
+		Expect(createdCapp.Spec.Sources[0].Topic).Should(Equal([]string{"test-topic"}))
+		Expect(createdCapp.Spec.Sources[0].BootstrapServers).Should(Equal([]string{"kafka-broker:9092"}))
+		Expect(createdCapp.Spec.Sources[0].KafkaAuth).NotTo(BeNil())
+		Expect(createdCapp.Spec.Sources[0].KafkaAuth.Username).Should(Equal("user"))
+		Expect(createdCapp.Spec.Sources[0].KafkaAuth.PasswordKeyRef.Key).Should(Equal("kafka-password"))
+		Expect(createdCapp.Spec.Sources[0].KafkaAuth.PasswordKeyRef.LocalObjectReference.Name).Should(Equal("my-secret"))
 	})
 })
