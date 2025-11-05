@@ -82,7 +82,7 @@ func testCappWithLogger(logType string) {
 
 			return utilst.UpdateResource(k8sClient, toBeUpdatedCapp)
 		})
-		Expect(err).To(BeNil())
+		Expect(err).ToNot(HaveOccurred())
 
 		By("Checking if the SyslogNGOutput index was updated")
 		checkOutputIndexValue(logType, syslogNGOutputName, createdCapp.Namespace, testconsts.TestIndex)
@@ -130,7 +130,7 @@ func testCappWithLogger(logType string) {
 
 			return utilst.UpdateResource(k8sClient, toBeUpdatedCapp)
 		})
-		Expect(err).To(BeNil())
+		Expect(err).ToNot(HaveOccurred())
 
 		Eventually(func() bool {
 			return utilst.DoesResourceExist(k8sClient, syslogNGFlowObject)

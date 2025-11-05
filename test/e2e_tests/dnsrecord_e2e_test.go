@@ -37,7 +37,7 @@ var _ = Describe("Validate DNSRecord functionality", func() {
 
 			return utilst.UpdateResource(k8sClient, toBeUpdatedCapp)
 		})
-		Expect(err).To(BeNil())
+		Expect(err).ToNot(HaveOccurred())
 
 		updatedDNSRecord := dnsRecordObject
 		updatedDNSRecordName := utilst.GenerateResourceName(updatedRouteHostname, mocks.ZoneValue)
@@ -76,7 +76,7 @@ var _ = Describe("Validate DNSRecord functionality", func() {
 
 				return utilst.UpdateResource(k8sClient, toBeUpdatedCapp)
 			})
-			Expect(err).To(BeNil())
+			Expect(err).ToNot(HaveOccurred())
 
 			Eventually(func() bool {
 				return utilst.DoesResourceExist(k8sClient, dnsRecordObject)

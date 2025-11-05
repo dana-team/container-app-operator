@@ -50,7 +50,7 @@ func (r *CappRevisionReconciler) Reconcile(ctx context.Context, req reconcile.Re
 	logger := log.FromContext(ctx).WithValues("CappName", req.Name, "CappNamespace", req.Namespace)
 	logger.Info("Starting Reconcile")
 	capp := cappv1alpha1.Capp{}
-	if err := r.Client.Get(ctx, req.NamespacedName, &capp); err != nil {
+	if err := r.Get(ctx, req.NamespacedName, &capp); err != nil {
 		if errors.IsNotFound(err) {
 			logger.Info("Capp does not exist")
 			return ctrl.Result{}, nil

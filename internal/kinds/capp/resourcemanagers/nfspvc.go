@@ -35,6 +35,7 @@ type NFSPVCManager struct {
 
 // prepareResource prepares the NfsPvc resource based on the Capp object.
 func (n NFSPVCManager) prepareResource(capp cappv1alpha1.Capp) []nfspvcv1alpha1.NfsPvc {
+	//nolint:prealloc
 	var nfsPvcs []nfspvcv1alpha1.NfsPvc
 
 	for _, nfsVolume := range capp.Spec.VolumesSpec.NFSVolumes {

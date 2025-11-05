@@ -19,6 +19,7 @@ const (
 // It returns a slice of RevisionInfo structs.
 func buildRevisionsStatus(ctx context.Context, capp cappv1alpha1.Capp, r client.Client) ([]cappv1alpha1.RevisionInfo, error) {
 	knativeRevisions := knativev1.RevisionList{}
+	//nolint:prealloc
 	var revisionsInfo []cappv1alpha1.RevisionInfo
 
 	requirement, err := labels.NewRequirement(KnativeLabelKey, selection.Equals, []string{capp.Name})
