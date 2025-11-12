@@ -127,12 +127,12 @@ var _ = Describe("Validate knative functionality", func() {
 		var latestReadyRevisionBeforeUpdate string
 		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			assertionCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-			latestReadyRevisionBeforeUpdate = assertionCapp.Status.KnativeObjectStatus.ConfigurationStatusFields.LatestReadyRevisionName
+			latestReadyRevisionBeforeUpdate = assertionCapp.Status.KnativeObjectStatus.LatestReadyRevisionName
 
 			assertionCapp.Spec.ScaleMetric = "memory"
 			return utilst.UpdateResource(k8sClient, assertionCapp)
 		})
-		Expect(err).To(BeNil())
+		Expect(err).ToNot(HaveOccurred())
 
 		verifyLatestReadyRevision(true, createdCapp.Name, createdCapp.Namespace, latestReadyRevisionBeforeUpdate)
 
@@ -152,12 +152,12 @@ var _ = Describe("Validate knative functionality", func() {
 		var latestReadyRevisionBeforeUpdate string
 		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			assertionCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-			latestReadyRevisionBeforeUpdate = assertionCapp.Status.KnativeObjectStatus.ConfigurationStatusFields.LatestReadyRevisionName
+			latestReadyRevisionBeforeUpdate = assertionCapp.Status.KnativeObjectStatus.LatestReadyRevisionName
 
 			assertionCapp.Spec.ConfigurationSpec.Template.Spec.Containers[0].Name = testconsts.TestContainerName
 			return utilst.UpdateResource(k8sClient, assertionCapp)
 		})
-		Expect(err).To(BeNil())
+		Expect(err).ToNot(HaveOccurred())
 
 		verifyLatestReadyRevision(true, createdCapp.Name, createdCapp.Namespace, latestReadyRevisionBeforeUpdate)
 
@@ -177,12 +177,12 @@ var _ = Describe("Validate knative functionality", func() {
 		var latestReadyRevisionBeforeUpdate string
 		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			assertionCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-			latestReadyRevisionBeforeUpdate = assertionCapp.Status.KnativeObjectStatus.ConfigurationStatusFields.LatestReadyRevisionName
+			latestReadyRevisionBeforeUpdate = assertionCapp.Status.KnativeObjectStatus.LatestReadyRevisionName
 
 			assertionCapp.Spec.ConfigurationSpec.Template.Spec.Containers[0].Image = testconsts.ImageExample
 			return utilst.UpdateResource(k8sClient, assertionCapp)
 		})
-		Expect(err).To(BeNil())
+		Expect(err).ToNot(HaveOccurred())
 
 		verifyLatestReadyRevision(true, createdCapp.Name, createdCapp.Namespace, latestReadyRevisionBeforeUpdate)
 
@@ -205,12 +205,12 @@ var _ = Describe("Validate knative functionality", func() {
 		var latestReadyRevisionBeforeUpdate string
 		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			assertionCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-			latestReadyRevisionBeforeUpdate = assertionCapp.Status.KnativeObjectStatus.ConfigurationStatusFields.LatestReadyRevisionName
+			latestReadyRevisionBeforeUpdate = assertionCapp.Status.KnativeObjectStatus.LatestReadyRevisionName
 
 			assertionCapp.Annotations = cappAnnotations
 			return utilst.UpdateResource(k8sClient, assertionCapp)
 		})
-		Expect(err).To(BeNil())
+		Expect(err).ToNot(HaveOccurred())
 
 		verifyLatestReadyRevision(true, createdCapp.Name, createdCapp.Namespace, latestReadyRevisionBeforeUpdate)
 
@@ -230,12 +230,12 @@ var _ = Describe("Validate knative functionality", func() {
 		var latestReadyRevisionBeforeUpdate string
 		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			assertionCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-			latestReadyRevisionBeforeUpdate = assertionCapp.Status.KnativeObjectStatus.ConfigurationStatusFields.LatestReadyRevisionName
+			latestReadyRevisionBeforeUpdate = assertionCapp.Status.KnativeObjectStatus.LatestReadyRevisionName
 
 			assertionCapp.Spec.ConfigurationSpec.Template.Spec.Containers[0].Env[0].Value = testconsts.ExampleAppName
 			return utilst.UpdateResource(k8sClient, assertionCapp)
 		})
-		Expect(err).To(BeNil())
+		Expect(err).ToNot(HaveOccurred())
 
 		verifyLatestReadyRevision(true, createdCapp.Name, createdCapp.Namespace, latestReadyRevisionBeforeUpdate)
 
@@ -267,18 +267,18 @@ var _ = Describe("Validate knative functionality", func() {
 
 			return utilst.UpdateResource(k8sClient, secretObject)
 		})
-		Expect(err).To(BeNil())
+		Expect(err).ToNot(HaveOccurred())
 
 		By("Updating the capp secret environment variable")
 		var latestReadyRevisionBeforeUpdate string
 		err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			assertionCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-			latestReadyRevisionBeforeUpdate = assertionCapp.Status.KnativeObjectStatus.ConfigurationStatusFields.LatestReadyRevisionName
+			latestReadyRevisionBeforeUpdate = assertionCapp.Status.KnativeObjectStatus.LatestReadyRevisionName
 
 			assertionCapp.Spec.ConfigurationSpec.Template.Spec.Containers[0].Env[0].ValueFrom.SecretKeyRef.Key = testconsts.NewSecretKey
 			return utilst.UpdateResource(k8sClient, assertionCapp)
 		})
-		Expect(err).To(BeNil())
+		Expect(err).ToNot(HaveOccurred())
 
 		verifyLatestReadyRevision(true, createdCapp.Name, createdCapp.Namespace, latestReadyRevisionBeforeUpdate)
 	})
@@ -293,12 +293,12 @@ var _ = Describe("Validate knative functionality", func() {
 		var latestReadyRevisionBeforeUpdate string
 		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			assertionCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-			latestReadyRevisionBeforeUpdate = assertionCapp.Status.KnativeObjectStatus.ConfigurationStatusFields.LatestReadyRevisionName
+			latestReadyRevisionBeforeUpdate = assertionCapp.Status.KnativeObjectStatus.LatestReadyRevisionName
 
 			assertionCapp.Spec.ConfigurationSpec.Template.Spec.Containers[0].Image = testconsts.NonExistingImageExample
 			return utilst.UpdateResource(k8sClient, assertionCapp)
 		})
-		Expect(err).To(BeNil())
+		Expect(err).ToNot(HaveOccurred())
 
 		verifyLatestReadyRevision(false, createdCapp.Name, createdCapp.Namespace, latestReadyRevisionBeforeUpdate)
 
@@ -328,12 +328,12 @@ var _ = Describe("Validate knative functionality", func() {
 		var latestReadyRevisionBeforeUpdate string
 		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			assertionCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-			latestReadyRevisionBeforeUpdate = assertionCapp.Status.KnativeObjectStatus.ConfigurationStatusFields.LatestReadyRevisionName
+			latestReadyRevisionBeforeUpdate = assertionCapp.Status.KnativeObjectStatus.LatestReadyRevisionName
 
 			assertionCapp.Spec.ConfigurationSpec.Template.Spec.Containers[0].Env = *mocks.CreateEnvVarObject(nonExistingSecretName)
 			return utilst.UpdateResource(k8sClient, assertionCapp)
 		})
-		Expect(err).To(BeNil())
+		Expect(err).ToNot(HaveOccurred())
 
 		verifyLatestReadyRevision(false, createdCapp.Name, createdCapp.Namespace, latestReadyRevisionBeforeUpdate)
 	})
@@ -362,7 +362,7 @@ var _ = Describe("Validate knative functionality", func() {
 			testconsts.TestLabelKey:    "test",
 			testconsts.CappResourceKey: "test",
 		}
-		testCapp.ObjectMeta.Labels = labels
+		testCapp.Labels = labels
 		createdCapp := utilst.CreateCapp(k8sClient, testCapp)
 		assertionCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
 

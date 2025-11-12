@@ -42,7 +42,7 @@ var _ = Describe("Validate CappRevision creation", func() {
 
 			return utilst.UpdateResource(k8sClient, desiredCapp)
 		})
-		Expect(err).To(BeNil())
+		Expect(err).ToNot(HaveOccurred())
 
 		Eventually(func() bool {
 			cappRevisions, _ := utilst.GetCappRevisions(context.Background(), k8sClient, *desiredCapp)
@@ -79,7 +79,7 @@ var _ = Describe("Validate CappRevision creation", func() {
 
 				return utilst.UpdateResource(k8sClient, desiredCapp)
 			})
-			Expect(err).To(BeNil())
+			Expect(err).ToNot(HaveOccurred())
 
 			Eventually(func() string {
 				return utilst.GetCapp(k8sClient, desiredCapp.Name, desiredCapp.Namespace).Annotations["test"]

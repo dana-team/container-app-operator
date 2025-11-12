@@ -6,6 +6,7 @@ import (
 	dnsvrecord1alpha1 "github.com/dana-team/provider-dns/apis/record/v1alpha1"
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kafkasourcesv1 "knative.dev/eventing-kafka/pkg/apis/sources/v1beta1"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
 )
@@ -75,6 +76,16 @@ func GetBareDNSRecord(name string) dnsvrecord1alpha1.CNAMERecord {
 	return dnsvrecord1alpha1.CNAMERecord{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
+		},
+	}
+}
+
+// GetBareKafkaSource returns a KafkaSource object with only ObjectMeta set.
+func GetBareKafkaSource(name, namespace string) kafkasourcesv1.KafkaSource {
+	return kafkasourcesv1.KafkaSource{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
 		},
 	}
 }

@@ -45,7 +45,7 @@ var _ = Describe("Validate DomainMapping functionality", func() {
 
 			return utilst.UpdateResource(k8sClient, toBeUpdatedCapp)
 		})
-		Expect(err).To(BeNil())
+		Expect(err).ToNot(HaveOccurred())
 
 		Eventually(func() string {
 			capp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
@@ -93,7 +93,7 @@ var _ = Describe("Validate DomainMapping functionality", func() {
 
 			return utilst.UpdateResource(k8sClient, assertionCapp)
 		})
-		Expect(err).To(BeNil())
+		Expect(err).ToNot(HaveOccurred())
 
 		By("Checking if the secret reference exists at the domainMapping")
 		domainMappingName := utilst.GenerateResourceName(routeHostname, mocks.ZoneValue)
@@ -124,7 +124,7 @@ var _ = Describe("Validate DomainMapping functionality", func() {
 
 			return utilst.UpdateResource(k8sClient, toBeUpdatedCapp)
 		})
-		Expect(err).To(BeNil())
+		Expect(err).ToNot(HaveOccurred())
 
 		domainMappingObject := mocks.CreateDomainMappingObject(domainMappingName)
 		Eventually(func() bool {

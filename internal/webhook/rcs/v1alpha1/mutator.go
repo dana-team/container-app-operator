@@ -63,11 +63,11 @@ func (c *CappMutator) handle(capp *v1alpha2.Capp, cappConfig *v1alpha2.CappConfi
 
 // mutateAnnotations adds a last-updated-by annotation, indicating the username who last updated the Capp.
 func mutateAnnotations(capp *v1alpha2.Capp, username string) {
-	if capp.ObjectMeta.Annotations == nil {
-		capp.ObjectMeta.Annotations = make(map[string]string)
+	if capp.Annotations == nil {
+		capp.Annotations = make(map[string]string)
 	}
 
-	capp.ObjectMeta.Annotations[lastUpdatedByAnnotationKey] = username
+	capp.Annotations[lastUpdatedByAnnotationKey] = username
 }
 
 // mutateResources sets default values for the Capp container resources, if such do not already exist.

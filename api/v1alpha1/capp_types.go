@@ -27,6 +27,13 @@ import (
 	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
 )
 
+// SourceType is used to define Enum for the sources types
+type SourceType string
+
+const (
+	SourceKafka SourceType = "Kafka"
+)
+
 // CappSpec defines the desired state of Capp.
 type CappSpec struct {
 	// ScaleMetric defines which metric type is watched by the Autoscaler.
@@ -59,6 +66,9 @@ type CappSpec struct {
 
 	// VolumesSpec defines the volumes specification for the Capp.
 	VolumesSpec VolumesSpec `json:"volumesSpec,omitempty"`
+
+	// Sources define the configuration and status of event sources
+	Sources []KafkaSource `json:"sources,omitempty"`
 }
 
 // VolumesSpec defines the volumes specification for the Capp.
@@ -210,6 +220,41 @@ type NFSVolumeStatus struct {
 	NFSPVCStatus nfspvcv1alpha1.NfsPvcStatus `json:"nfsPvcStatus,omitempty"`
 }
 
+// KafkaSource define the configuration of a Kafka sources
+type KafkaSource struct {
+
+	// Name is the name of the Kafka source
+	Name string `json:"name"`
+
+	// Type defines the type of the source
+	Type SourceType `json:"type"`
+
+	// BootstrapServers is a list of Kafka broker addresses used to connect to the cluster.
+	BootstrapServers []string `json:"bootstrapServers,omitempty"`
+
+	// Topic is the Kafka topic from which messages are consumed.
+	Topic []string `json:"topic"`
+
+	// KafkaStatus represents the current observed state of the Kafka source.
+	KafkaAuth *KafkaAuth `json:"kafkaAuth,omitempty"`
+}
+
+// KafkaStatus defines the status of a Kafka source
+type KafkaStatus struct {
+	// Conditions contain details about the current state of the Capp.
+	// +optional
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
+}
+
+// KafkaAuth defines the data required to create a secret with the user's credentials
+type KafkaAuth struct {
+	// Username used for authenticating
+	Username string `json:"username"`
+
+	// PasswordKey used for authenticating
+	PasswordKeyRef corev1.SecretKeySelector `json:"passwordKey"`
+}
+
 // CappStatus defines the observed state of Capp.
 type CappStatus struct {
 	// ApplicationLinks contains relevant information about
@@ -244,6 +289,9 @@ type CappStatus struct {
 	// Conditions contain details about the current state of the Capp.
 	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
+
+	// SourceStatus contains details about the current state of a source.
+	SourceStatus []KafkaStatus `json:"sourceStatus,omitempty"`
 }
 
 // +kubebuilder:object:root=true

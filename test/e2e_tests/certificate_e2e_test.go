@@ -37,7 +37,7 @@ var _ = Describe("Validate Certificate functionality", func() {
 
 			return utilst.UpdateResource(k8sClient, toBeUpdatedCapp)
 		})
-		Expect(err).To(BeNil())
+		Expect(err).ToNot(HaveOccurred())
 
 		Eventually(func() string {
 			capp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
@@ -95,7 +95,7 @@ var _ = Describe("Validate Certificate functionality", func() {
 
 				return utilst.UpdateResource(k8sClient, toBeUpdatedCapp)
 			})
-			Expect(err).To(BeNil())
+			Expect(err).ToNot(HaveOccurred())
 
 			Eventually(func() bool {
 				return utilst.DoesResourceExist(k8sClient, certificateObject)
@@ -121,7 +121,7 @@ var _ = Describe("Validate Certificate functionality", func() {
 
 				return utilst.UpdateResource(k8sClient, toBeUpdatedCapp)
 			})
-			Expect(err).To(BeNil())
+			Expect(err).ToNot(HaveOccurred())
 
 			Eventually(func() bool {
 				return utilst.DoesResourceExist(k8sClient, certificateObject)

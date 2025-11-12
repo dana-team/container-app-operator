@@ -8850,6 +8850,72 @@ spec:
                           Site defines where to deploy the Capp.
                           It can be a specific cluster or a placement name.
                         type: string
+                      sources:
+                        description: Sources define the configuration and status of
+                          event sources
+                        items:
+                          description: KafkaSource define the configuration of a Kafka
+                            sources
+                          properties:
+                            bootstrapServers:
+                              description: BootstrapServers is a list of Kafka broker
+                                addresses used to connect to the cluster.
+                              items:
+                                type: string
+                              type: array
+                            kafkaAuth:
+                              description: KafkaStatus represents the current observed
+                                state of the Kafka source.
+                              properties:
+                                passwordKey:
+                                  description: PasswordKey used for authenticating
+                                  properties:
+                                    key:
+                                      description: The key of the secret to select
+                                        from.  Must be a valid secret key.
+                                      type: string
+                                    name:
+                                      default: ""
+                                      description: |-
+                                        Name of the referent.
+                                        This field is effectively required, but due to backwards compatibility is
+                                        allowed to be empty. Instances of this type with an empty value here are
+                                        almost certainly wrong.
+                                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                      type: string
+                                    optional:
+                                      description: Specify whether the Secret or its
+                                        key must be defined
+                                      type: boolean
+                                  required:
+                                  - key
+                                  type: object
+                                  x-kubernetes-map-type: atomic
+                                username:
+                                  description: Username used for authenticating
+                                  type: string
+                              required:
+                              - passwordKey
+                              - username
+                              type: object
+                            name:
+                              description: Name is the name of the Kafka source
+                              type: string
+                            topic:
+                              description: Topic is the Kafka topic from which messages
+                                are consumed.
+                              items:
+                                type: string
+                              type: array
+                            type:
+                              description: Type defines the type of the source
+                              type: string
+                          required:
+                          - name
+                          - topic
+                          - type
+                          type: object
+                        type: array
                       state:
                         default: enabled
                         description: |-

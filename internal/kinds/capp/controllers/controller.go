@@ -134,7 +134,7 @@ func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	logger := log.FromContext(ctx).WithValues("CappName", req.Name, "CappNamespace", req.Namespace)
 	logger.Info("Starting Reconcile")
 	capp := cappv1alpha1.Capp{}
-	if err := r.Client.Get(ctx, req.NamespacedName, &capp); err != nil {
+	if err := r.Get(ctx, req.NamespacedName, &capp); err != nil {
 		if errors.IsNotFound(err) {
 			logger.Info(fmt.Sprintf("Didn't find Capp: %s, from the namespace: %s", capp.Name, capp.Namespace))
 			return ctrl.Result{}, nil
