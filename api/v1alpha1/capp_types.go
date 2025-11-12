@@ -19,7 +19,7 @@ package v1alpha1
 import (
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	nfspvcv1alpha1 "github.com/dana-team/nfspvc-operator/api/v1alpha1"
-	dnsrecordv1alpha1 "github.com/dana-team/provider-dns/apis/record/v1alpha1"
+	dnsrecordv1alpha1 "github.com/dana-team/provider-dns-v2/apis/namespaced/record/v1alpha1"
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

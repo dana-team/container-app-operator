@@ -23,7 +23,7 @@ var _ = Describe("Validate DNSRecord functionality", func() {
 		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "Should find a resource.")
 
 		By("Checking the DNSRecord has the needed labels")
-		dnsRecordObject = utilst.GetDNSRecord(k8sClient, dnsRecordName)
+		dnsRecordObject = utilst.GetDNSRecord(k8sClient, dnsRecordName, createdCapp.Namespace)
 		Expect(dnsRecordObject.Labels[testconsts.CappResourceKey]).Should(Equal(createdCapp.Name))
 		Expect(dnsRecordObject.Labels[testconsts.CappNamespaceKey]).Should(Equal(createdCapp.Namespace))
 		Expect(dnsRecordObject.Labels[testconsts.ManagedByLabelKey]).Should(Equal(testconsts.CappKey))
@@ -42,7 +42,7 @@ var _ = Describe("Validate DNSRecord functionality", func() {
 		updatedDNSRecord := dnsRecordObject
 		updatedDNSRecordName := utilst.GenerateResourceName(updatedRouteHostname, testconsts.ZoneValue)
 		Eventually(func() *string {
-			updatedDNSRecord = utilst.GetDNSRecord(k8sClient, updatedDNSRecordName)
+			updatedDNSRecord = utilst.GetDNSRecord(k8sClient, updatedDNSRecordName, createdCapp.Namespace)
 			return updatedDNSRecord.Spec.ForProvider.Name
 		}, testconsts.Timeout, testconsts.Interval).Should(Equal(&updatedRouteHostname))
 

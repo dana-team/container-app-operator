@@ -5,7 +5,7 @@ import (
 
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 
-	dnsrecordv1alpha1 "github.com/dana-team/provider-dns/apis/record/v1alpha1"
+	dnsrecordv1alpha1 "github.com/dana-team/provider-dns-v2/apis/namespaced/record/v1alpha1"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	mock "github.com/dana-team/container-app-operator/test/e2e_tests/mocks"
@@ -41,10 +41,10 @@ func GetDomainMapping(k8sClient client.Client, name string, namespace string) *k
 	return domainMapping
 }
 
-// GetDNSRecord fetches and returns an existing instance of an CNAMERecord.
-func GetDNSRecord(k8sClient client.Client, name string) *dnsrecordv1alpha1.CNAMERecord {
+// GetDNSRecord fetches and returns an existing instance of a CNAMERecord.
+func GetDNSRecord(k8sClient client.Client, name, namespace string) *dnsrecordv1alpha1.CNAMERecord {
 	cnameRecord := &dnsrecordv1alpha1.CNAMERecord{}
-	GetClusterResource(k8sClient, cnameRecord, name)
+	GetResource(k8sClient, cnameRecord, name, namespace)
 	return cnameRecord
 }
 
