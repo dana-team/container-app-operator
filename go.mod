@@ -7,10 +7,10 @@ replace knative.dev/pkg => knative.dev/pkg v0.0.0-20240116073220-b488e7be5902
 require (
 	github.com/cert-manager/cert-manager v1.19.1
 	github.com/cisco-open/operator-tools v0.37.0
-	github.com/crossplane/crossplane-runtime v1.20.0
+	github.com/crossplane/crossplane-runtime/v2 v2.0.0
 	github.com/dana-team/cert-external-issuer v0.1.5
 	github.com/dana-team/nfspvc-operator v0.5.2
-	github.com/dana-team/provider-dns v0.1.3
+	github.com/dana-team/provider-dns-v2 v1.0.1
 	github.com/go-logr/logr v1.4.3
 	github.com/go-logr/zapr v1.3.0
 	github.com/kube-logging/logging-operator/pkg/sdk v0.12.0
@@ -46,7 +46,7 @@ require (
 	github.com/blendle/zapdriver v1.3.1 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
-	github.com/crossplane/upjet v1.9.0 // indirect
+	github.com/crossplane/upjet/v2 v2.0.1-0.20251009193737-0b7f640373c8 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/emicklei/go-restful/v3 v3.13.0 // indirect
 	github.com/evanphx/json-patch v5.9.11+incompatible // indirect

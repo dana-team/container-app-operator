@@ -9,7 +9,7 @@ import (
 
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 
-	dnsrecordv1alpha1 "github.com/dana-team/provider-dns/apis/record/v1alpha1"
+	dnsrecordv1alpha1 "github.com/dana-team/provider-dns-v2/apis/namespaced/record/v1alpha1"
 
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
 
@@ -67,7 +67,7 @@ type CappReconciler struct {
 // +kubebuilder:rbac:groups="",resources=events,verbs=get;list;watch;update;create;patch
 // +kubebuilder:rbac:groups="events.k8s.io",resources=events,verbs=get;list;watch;update;create;patch;
 // +kubebuilder:rbac:groups="nfspvc.dana.io",resources=nfspvcs,verbs=get;list;watch;update;create;delete
-// +kubebuilder:rbac:groups="record.dns.crossplane.io",resources=cnamerecords,verbs=get;list;watch;update;create;delete
+// +kubebuilder:rbac:groups="record.dns-v2.m.crossplane.io",resources=cnamerecords,verbs=get;list;watch;update;create;delete
 // +kubebuilder:rbac:groups="cert-manager.io",resources=certificates,verbs=get;list;watch;update;create;delete
 
 // SetupWithManager sets up the controller with the Manager.

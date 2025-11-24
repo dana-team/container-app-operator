@@ -108,7 +108,7 @@ rules:
   verbs:
   - update
 - apiGroups:
-  - record.dns.crossplane.io
+  - record.dns-v2.m.crossplane.io
   resources:
   - cnamerecords
   verbs:
