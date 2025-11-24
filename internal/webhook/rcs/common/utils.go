@@ -110,7 +110,7 @@ func findMissingFields(logSpec v1alpha2.LogSpec, required []string) []string {
 	return missingFields
 }
 
-// GetCappConfig returns an instance of RCS Config.
+// GetCappConfig returns an instance of Capp Config.
 func GetCappConfig(ctx context.Context, k8sClient client.Client) (*v1alpha2.CappConfig, error) {
 	config := v1alpha2.CappConfig{}
 	key := types.NamespacedName{Name: utils.CappConfigName, Namespace: utils.CappNS}

@@ -3,6 +3,7 @@ package utils
 import (
 	"github.com/dana-team/container-app-operator/api/v1alpha1"
 	mock "github.com/dana-team/container-app-operator/test/e2e_tests/mocks"
+	"github.com/dana-team/container-app-operator/test/e2e_tests/testconsts"
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -11,7 +12,7 @@ import (
 func CreateCappWithLogger(logType string, client client.Client) *v1alpha1.Capp {
 	capp := mock.CreateBaseCapp()
 	switch logType {
-	case mock.ElasticType:
+	case testconsts.ElasticType:
 		capp.Spec.LogSpec = mock.CreateElasticLogSpec()
 	}
 	return CreateCapp(client, capp)
@@ -20,7 +21,7 @@ func CreateCappWithLogger(logType string, client client.Client) *v1alpha1.Capp {
 // CreateCredentialsSecret creates a Kubernetes secret containing credentials for the specified logger type.
 func CreateCredentialsSecret(logType string, client client.Client) {
 	switch logType {
-	case mock.ElasticType:
+	case testconsts.ElasticType:
 		elasticSecret := mock.CreateElasticSecretObject()
 		CreateSecret(client, elasticSecret)
 	}

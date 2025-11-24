@@ -16,7 +16,7 @@ var _ = Describe("Validate DNSRecord functionality", func() {
 		createdCapp, _ := utilst.CreateCappWithHTTPHostname(k8sClient)
 
 		By("Checking if the DNSRecord was created successfully")
-		dnsRecordName := utilst.GenerateResourceName(createdCapp.Spec.RouteSpec.Hostname, mocks.ZoneValue)
+		dnsRecordName := utilst.GenerateResourceName(createdCapp.Spec.RouteSpec.Hostname, testconsts.ZoneValue)
 		dnsRecordObject := mocks.CreateDNSRecordObject(dnsRecordName)
 		Eventually(func() bool {
 			return utilst.DoesResourceExist(k8sClient, dnsRecordObject)
@@ -40,7 +40,7 @@ var _ = Describe("Validate DNSRecord functionality", func() {
 		Expect(err).ToNot(HaveOccurred())
 
 		updatedDNSRecord := dnsRecordObject
-		updatedDNSRecordName := utilst.GenerateResourceName(updatedRouteHostname, mocks.ZoneValue)
+		updatedDNSRecordName := utilst.GenerateResourceName(updatedRouteHostname, testconsts.ZoneValue)
 		Eventually(func() *string {
 			updatedDNSRecord = utilst.GetDNSRecord(k8sClient, updatedDNSRecordName)
 			return updatedDNSRecord.Spec.ForProvider.Name
@@ -63,7 +63,7 @@ var _ = Describe("Validate DNSRecord functionality", func() {
 		createdCapp, _ := utilst.CreateCappWithHTTPHostname(k8sClient)
 
 		By("Checking if the DNSRecord was created successfully")
-		dnsRecordName := utilst.GenerateResourceName(createdCapp.Spec.RouteSpec.Hostname, mocks.ZoneValue)
+		dnsRecordName := utilst.GenerateResourceName(createdCapp.Spec.RouteSpec.Hostname, testconsts.ZoneValue)
 		dnsRecordObject := mocks.CreateDNSRecordObject(dnsRecordName)
 		Eventually(func() bool {
 			return utilst.DoesResourceExist(k8sClient, dnsRecordObject)

@@ -56,7 +56,7 @@ var _ = Describe("Validate NFSPVC functionality", func() {
 		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "Should find a resource.")
 
 		By("Checking the NFSPVC has the needed labels")
-		nfspvcObject = utilst.GetNFSPVC(k8sClient, nfspvcName, mocks.NSName)
+		nfspvcObject = utilst.GetNFSPVC(k8sClient, nfspvcName, testconsts.NSName)
 		Expect(nfspvcObject.Labels[testconsts.CappResourceKey]).Should(Equal(testCapp.Name))
 		Expect(nfspvcObject.Labels[testconsts.ManagedByLabelKey]).Should(Equal(testconsts.CappKey))
 

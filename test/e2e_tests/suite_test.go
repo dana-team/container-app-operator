@@ -8,7 +8,6 @@ import (
 
 	"github.com/dana-team/container-app-operator/test/e2e_tests/testconsts"
 
-	mock "github.com/dana-team/container-app-operator/test/e2e_tests/mocks"
 	utilst "github.com/dana-team/container-app-operator/test/e2e_tests/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -30,11 +29,15 @@ var _ = SynchronizedBeforeSuite(func() {
 	initClient()
 	cleanUp()
 	createE2ETestNamespace()
+	utilst.CreateTestUser(k8sClient, testconsts.NSName)
+	utilst.CreateExcludedServiceAccount(k8sClient)
 }, func() {
 	initClient()
 })
 
 var _ = SynchronizedAfterSuite(func() {}, func() {
+	utilst.DeleteTestUser(k8sClient, testconsts.NSName)
+	utilst.DeleteExcludedServiceAccount(k8sClient)
 	cleanUp()
 })
 
@@ -42,7 +45,8 @@ var _ = SynchronizedAfterSuite(func() {}, func() {
 func initClient() {
 	log.SetLogger(logger)
 
-	cfg, err := config.GetConfig()
+	var err error
+	cfg, err = config.GetConfig()
 	Expect(err).NotTo(HaveOccurred())
 
 	k8sClient, err = client.New(cfg, client.Options{Scheme: newScheme()})
@@ -54,7 +58,7 @@ func initClient() {
 func createE2ETestNamespace() {
 	namespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: mock.NSName,
+			Name: testconsts.NSName,
 		},
 	}
 
@@ -68,14 +72,14 @@ func createE2ETestNamespace() {
 func cleanUp() {
 	namespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: mock.NSName,
+			Name: testconsts.NSName,
 		},
 	}
 
 	if utilst.DoesResourceExist(k8sClient, namespace) {
 		Expect(k8sClient.Delete(context.Background(), namespace)).To(Succeed())
 		Eventually(func() error {
-			return k8sClient.Get(context.Background(), client.ObjectKey{Name: mock.NSName}, namespace)
+			return k8sClient.Get(context.Background(), client.ObjectKey{Name: testconsts.NSName}, namespace)
 		}, testconsts.Timeout, testconsts.Interval).Should(HaveOccurred(), "The namespace should be deleted")
 	}
 }

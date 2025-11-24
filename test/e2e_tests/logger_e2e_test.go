@@ -20,7 +20,7 @@ import (
 // checkOutputIndexValue checks if the SyslogLogOutput index value matches the desired value based on the logger type.
 func checkOutputIndexValue(logType string, syslogNGOutputName string, syslogNGOutputNamespace string, IndexDesiredValue string) {
 	switch logType {
-	case mocks.ElasticType:
+	case testconsts.ElasticType:
 		Eventually(func() string {
 			syslogNGOutput := utilst.GetSyslogNGOutput(k8sClient, syslogNGOutputName, syslogNGOutputNamespace)
 			return syslogNGOutput.Spec.Elasticsearch.Index
@@ -66,7 +66,7 @@ func testCappWithLogger(logType string) {
 		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "Should find a resource.")
 
 		By("Checking the SyslogNGFlow has the needed labels")
-		syslogNGFlowObject = utilst.GetSyslogNGFlow(k8sClient, syslogNGFlowName, mocks.NSName)
+		syslogNGFlowObject = utilst.GetSyslogNGFlow(k8sClient, syslogNGFlowName, testconsts.NSName)
 		Expect(syslogNGFlowObject.Labels[testconsts.CappResourceKey]).Should(Equal(createdCapp.Name))
 		Expect(syslogNGFlowObject.Labels[testconsts.ManagedByLabelKey]).Should(Equal(testconsts.CappKey))
 
@@ -143,5 +143,5 @@ func testCappWithLogger(logType string) {
 }
 
 var _ = Describe("Validate Logger functionality", func() {
-	testCappWithLogger(mocks.ElasticType)
+	testCappWithLogger(testconsts.ElasticType)
 })
