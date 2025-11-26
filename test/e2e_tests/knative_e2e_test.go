@@ -16,17 +16,22 @@ import (
 // verifyLatestReadyRevision ensures the readiness of the latest Knative Revision
 // if shouldRevisionBeReady is true. It also checks and asserts the state of the LatestReadyRevision.
 func verifyLatestReadyRevision(shouldRevisionBeReady bool, name, namespace, latestReadyRevisionBeforeUpdate string) {
-	nextRevisionName := utilst.GetNextRevisionName(latestReadyRevisionBeforeUpdate)
-
 	if shouldRevisionBeReady {
-		checkRevisionReadiness(nextRevisionName, true)
-		By("Ensuring that the capp LatestReadyRevision is updated")
 		Eventually(func() string {
 			return utilst.GetCapp(k8sClient, name, namespace).Status.KnativeObjectStatus.ConfigurationStatusFields.LatestReadyRevisionName
-		}, testconsts.Timeout, testconsts.Interval).Should(Equal(nextRevisionName))
+		}, testconsts.Timeout, testconsts.Interval).ShouldNot(Equal(latestReadyRevisionBeforeUpdate))
+
+		actualNewRevision := utilst.GetCapp(k8sClient, name, namespace).Status.KnativeObjectStatus.ConfigurationStatusFields.LatestReadyRevisionName
+		checkRevisionReadiness(actualNewRevision, true)
 	} else {
+		Eventually(func() string {
+			return utilst.GetCapp(k8sClient, name, namespace).Status.KnativeObjectStatus.ConfigurationStatusFields.LatestCreatedRevisionName
+		}, testconsts.Timeout, testconsts.Interval).ShouldNot(Equal(latestReadyRevisionBeforeUpdate))
+
+		actualNewRevision := utilst.GetCapp(k8sClient, name, namespace).Status.KnativeObjectStatus.ConfigurationStatusFields.LatestCreatedRevisionName
+		checkRevisionReadiness(actualNewRevision, false)
+
 		By("Ensuring that the capp LatestReadyRevision is not updated")
-		checkRevisionReadiness(nextRevisionName, false)
 		Eventually(func() string {
 			return utilst.GetCapp(k8sClient, name, namespace).Status.KnativeObjectStatus.ConfigurationStatusFields.LatestReadyRevisionName
 		}, testconsts.Timeout, testconsts.Interval).Should(Equal(latestReadyRevisionBeforeUpdate))
