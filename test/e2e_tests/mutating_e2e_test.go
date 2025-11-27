@@ -7,6 +7,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/client-go/util/retry"
 
 	mock "github.com/dana-team/container-app-operator/test/e2e_tests/mocks"
 	utilst "github.com/dana-team/container-app-operator/test/e2e_tests/utils"
@@ -38,9 +39,16 @@ var _ = Describe("Validate the mutating webhook", func() {
 		Expect(annotation).To(Equal(adminAnnotationValue))
 
 		utilst.SwitchUser(&k8sClient, cfg, testconsts.NSName, newScheme(), testconsts.ServiceAccountName)
-		capp = utilst.GetCapp(k8sClient, capp.Name, capp.Namespace)
-		capp.ObjectMeta.Annotations["test"] = "test"
-		utilst.UpdateCapp(k8sClient, capp)
+
+		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			capp = utilst.GetCapp(k8sClient, capp.Name, capp.Namespace)
+			if capp.ObjectMeta.Annotations == nil {
+				capp.ObjectMeta.Annotations = map[string]string{}
+			}
+			capp.ObjectMeta.Annotations["test"] = "test"
+			return utilst.UpdateResource(k8sClient, capp)
+		})
+		Expect(err).ToNot(HaveOccurred())
 
 		updatedCapp := utilst.GetCapp(k8sClient, capp.Name, capp.Namespace)
 
