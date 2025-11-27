@@ -114,6 +114,9 @@ var _ = Describe("Validate DomainMapping functionality", func() {
 		By("Checking if the RouteStatus of the Capp was updated successfully")
 		Eventually(func() string {
 			capp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
+			if capp.Status.RouteStatus.DomainMappingObjectStatus.URL == nil {
+				return ""
+			}
 			return capp.Status.RouteStatus.DomainMappingObjectStatus.URL.Host
 		}, testconsts.Timeout, testconsts.Interval).Should(Equal(domainMappingName), "Should update Route Status of Capp")
 
