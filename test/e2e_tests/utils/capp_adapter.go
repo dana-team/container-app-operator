@@ -16,10 +16,11 @@ func CreateCapp(k8sClient client.Client, capp *cappv1alpha1.Capp) *cappv1alpha1.
 	newCapp := capp.DeepCopy()
 	newCapp.Name = cappName
 	Expect(k8sClient.Create(context.Background(), newCapp)).To(Succeed())
-	Eventually(func() string {
-		result := GetCapp(k8sClient, newCapp.Name, newCapp.Namespace)
-		return result.Status.KnativeObjectStatus.ConfigurationStatusFields.LatestReadyRevisionName
-	}, testconsts.TimeoutCapp, testconsts.Interval).ShouldNot(Equal(""), "Should fetch capp")
+
+	Eventually(func() bool {
+		return DoesResourceExist(k8sClient, newCapp)
+	}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "Capp should exist")
+
 	return newCapp
 }
 

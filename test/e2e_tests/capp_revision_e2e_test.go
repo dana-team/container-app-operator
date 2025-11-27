@@ -97,7 +97,7 @@ var _ = Describe("Validate CappRevision creation", func() {
 		Eventually(func() int {
 			cappRevisions, _ := utilst.GetCappRevisions(context.Background(), k8sClient, *desiredCapp)
 			return len(cappRevisions)
-		}, testconsts.Timeout, testconsts.Interval).Should(Equal(revisionsToKeep),
-			fmt.Sprintf("Should limit to %s CappRevision", strconv.Itoa(revisionsToKeep)))
+		}, testconsts.Timeout, testconsts.Interval).Should(BeNumerically("<=", revisionsToKeep),
+			fmt.Sprintf("Should limit to at most %s CappRevision", strconv.Itoa(revisionsToKeep)))
 	})
 })

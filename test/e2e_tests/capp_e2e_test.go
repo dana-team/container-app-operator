@@ -74,7 +74,7 @@ var _ = Describe("Validate capp creation", func() {
 
 		By("Checking if the revision is ready")
 		revisionName := createdCapp.Name + testconsts.FirstRevisionSuffix
-		checkRevisionReadiness(revisionName, true)
+		checkRevisionReadiness(revisionName)
 
 		By("Updating the capp status to be disabled")
 		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
@@ -115,7 +115,7 @@ var _ = Describe("Validate capp creation", func() {
 		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "Should find a resource.")
 
 		By("Checking if the revision is ready")
-		checkRevisionReadiness(revisionName, true)
+		checkRevisionReadiness(revisionName)
 	})
 
 	It("Should create a Capp with a Kafka source", func() {
