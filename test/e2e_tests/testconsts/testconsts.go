@@ -21,7 +21,6 @@ const (
 	DisabledState                   = "disabled"
 	KnativeMetricAnnotation         = "autoscaling.knative.dev/metric"
 	ImageExample                    = "danateam/autoscale-go"
-	NonExistingImageExample         = "invalid-registry.local/nonexistent-image:never-exists-v999"
 	ExampleAppName                  = "new-app-name"
 	NewSecretKey                    = "username"
 	ExampleDanaAnnotation           = "rcs.dana.io/app-name"
