@@ -19,9 +19,9 @@ controllerManager:
 
     image:
       # -- Controller manager container image repository.
-      repository: controller
+      repository: ghcr.io/dana-team/container-app-operator
       # -- Controller manager container image tag.
-      tag: latest
+      tag: main
       # -- Controller manager container image pull policy.
       imagePullPolicy: IfNotPresent
 
