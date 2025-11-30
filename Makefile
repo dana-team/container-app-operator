@@ -67,7 +67,7 @@ test-e2e: ginkgo
 	@test -n "${KUBECONFIG}" -o -r ${HOME}/.kube/config || (echo "Failed to find kubeconfig in ~/.kube/config or no KUBECONFIG set"; exit 1)
 	echo "Running e2e tests"
 	go clean -testcache
-	$(LOCALBIN)/ginkgo -p --vv -coverprofile cover.out -timeout 10m ./test/e2e_tests/...
+	$(LOCALBIN)/ginkgo --vv -p $(GINKGO_E2E_PROCS_FLAG) -coverprofile cover.out -timeout 10m ./test/e2e_tests/...
 
 .PHONY: lint
 lint: golangci-lint ## Run golangci-lint linter
@@ -76,6 +76,10 @@ lint: golangci-lint ## Run golangci-lint linter
 .PHONY: lint-fix
 lint-fix: golangci-lint ## Run golangci-lint linter and perform fixes
 	$(GOLANGCI_LINT) run --fix
+
+ifdef E2E_GINKGO_PROCS
+GINKGO_E2E_PROCS_FLAG := --procs=$(E2E_GINKGO_PROCS)
+endif
 
 ##@ Build
 
