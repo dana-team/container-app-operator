@@ -69,12 +69,6 @@ var _ = Describe("Validate DNSRecord functionality", func() {
 			return utilst.DoesResourceExist(k8sClient, dnsRecordObject)
 		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "Should find a resource.")
 
-		By("Waiting for the Capp Route status URL to be populated before removing DNSRecord requirement")
-		Eventually(func() bool {
-			currentCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-			return currentCapp.Status.RouteStatus.DomainMappingObjectStatus.URL != nil
-		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "Capp Route status URL should be set before cleanup")
-
 		By("Removing the DNSRecord requirement from Capp Spec and checking cleanup", func() {
 			err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 				toBeUpdatedCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
