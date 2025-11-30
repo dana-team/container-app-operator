@@ -62,12 +62,20 @@ vet: ## Run go vet against code.
 test: manifests generate fmt vet envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test $$(go list ./... | grep -v /e2e) -coverprofile cover.out
 
+ifdef E2E_GINKGO_PROCS
+GINKGO_E2E_PROCS_FLAG := --procs=$(E2E_GINKGO_PROCS)
+endif
+
+ifdef E2E_GINKGO_FOCUS
+GINKGO_E2E_FOCUS_FLAG := --focus="$(E2E_GINKGO_FOCUS)"
+endif
+
 .PHONY: test-e2e
 test-e2e: ginkgo
 	@test -n "${KUBECONFIG}" -o -r ${HOME}/.kube/config || (echo "Failed to find kubeconfig in ~/.kube/config or no KUBECONFIG set"; exit 1)
 	echo "Running e2e tests"
 	go clean -testcache
-	$(LOCALBIN)/ginkgo -p --vv -coverprofile cover.out -timeout 10m ./test/e2e_tests/...
+	$(LOCALBIN)/ginkgo --vv -p $(GINKGO_E2E_PROCS_FLAG) $(GINKGO_E2E_FOCUS_FLAG) -coverprofile cover.out -timeout 10m ./test/e2e_tests/...
 
 .PHONY: lint
 lint: golangci-lint ## Run golangci-lint linter
