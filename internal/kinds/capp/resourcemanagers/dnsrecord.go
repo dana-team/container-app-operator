@@ -87,19 +87,25 @@ func (r DNSRecordManager) prepareResource(capp cappv1alpha1.Capp) (dnsrecordv1al
 	return dnsRecord, nil
 }
 
-// CleanUp attempts to delete the associated DNSRecord for a given Capp resource.
+// CleanUp attempts to delete all DNSRecords associated with a given Capp resource.
 func (r DNSRecordManager) CleanUp(capp cappv1alpha1.Capp) error {
 	resourceManager := rclient.ResourceManagerClient{Ctx: r.Ctx, K8sclient: r.K8sclient, Log: r.Log}
 
-	if capp.Status.RouteStatus.DomainMappingObjectStatus.URL != nil {
-		dnsRecord := rclient.GetBareDNSRecord(capp.Status.RouteStatus.DomainMappingObjectStatus.URL.Host)
-		if err := resourceManager.DeleteResource(&dnsRecord); err != nil {
+	dnsRecords, err := r.getPreviousDNSRecords(capp)
+	if err != nil {
+		return err
+	}
+
+	for _, dnsRecord := range dnsRecords.Items {
+		record := rclient.GetBareDNSRecord(dnsRecord.Name)
+		if err := resourceManager.DeleteResource(&record); err != nil {
 			if errors.IsNotFound(err) {
-				return nil
+				continue
 			}
 			return err
 		}
 	}
+
 	return nil
 }
 

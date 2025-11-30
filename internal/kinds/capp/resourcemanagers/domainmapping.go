@@ -103,23 +103,30 @@ func (k KnativeDomainMappingManager) setHTTPSKnativeDomainMapping(secretName, se
 	return nil
 }
 
-// CleanUp attempts to delete the associated DomainMapping and tls secret for a given Capp resource.
+// CleanUp attempts to delete the associated DomainMappings and tls secrets for a given Capp resource.
 func (k KnativeDomainMappingManager) CleanUp(capp cappv1alpha1.Capp) error {
 	resourceManager := rclient.ResourceManagerClient{Ctx: k.Ctx, K8sclient: k.K8sclient, Log: k.Log}
 
-	if capp.Status.RouteStatus.DomainMappingObjectStatus.URL != nil {
-		domainMapping := rclient.GetBareDomainMapping(capp.Status.RouteStatus.DomainMappingObjectStatus.URL.Host, capp.Namespace)
-		if err := resourceManager.DeleteResource(&domainMapping); err != nil {
+	domainMappings, err := k.getPreviousDomainMappings(capp)
+	if err != nil {
+		return err
+	}
+
+	for _, domainMapping := range domainMappings.Items {
+		dm := rclient.GetBareDomainMapping(domainMapping.Name, domainMapping.Namespace)
+
+		if err := resourceManager.DeleteResource(&dm); err != nil {
 			if errors.IsNotFound(err) {
-				return nil
+				continue
 			}
 			return err
 		}
 
-		if err := deleteTLSSecret(resourceManager.Ctx, resourceManager.K8sclient, utils.GenerateSecretName(capp.Spec.RouteSpec.Hostname), capp.Namespace); err != nil {
+		if err := deleteTLSSecret(resourceManager.Ctx, resourceManager.K8sclient, utils.GenerateSecretName(domainMapping.Name), domainMapping.Namespace); err != nil {
 			return err
 		}
 	}
+
 	return nil
 }
 

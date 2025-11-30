@@ -89,19 +89,25 @@ func (c CertificateManager) prepareResource(capp cappv1alpha1.Capp) (cmapi.Certi
 	return certificate, nil
 }
 
-// CleanUp attempts to delete the associated Certificate for a given Capp resource.
+// CleanUp attempts to delete all Certificates associated with a given Capp resource.
 func (c CertificateManager) CleanUp(capp cappv1alpha1.Capp) error {
 	resourceManager := rclient.ResourceManagerClient{Ctx: c.Ctx, K8sclient: c.K8sclient, Log: c.Log}
 
-	if capp.Status.RouteStatus.DomainMappingObjectStatus.URL != nil {
-		certificate := rclient.GetBareCertificate(capp.Status.RouteStatus.DomainMappingObjectStatus.URL.Host, capp.Namespace)
-		if err := resourceManager.DeleteResource(&certificate); err != nil {
+	certificates, err := c.getPreviousCertificates(capp)
+	if err != nil {
+		return err
+	}
+
+	for _, certificate := range certificates.Items {
+		cert := rclient.GetBareCertificate(certificate.Name, certificate.Namespace)
+		if err := resourceManager.DeleteResource(&cert); err != nil {
 			if errors.IsNotFound(err) {
-				return nil
+				continue
 			}
 			return err
 		}
 	}
+
 	return nil
 }
 

@@ -15,6 +15,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/record"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -64,16 +65,37 @@ func (n NFSPVCManager) prepareResource(capp cappv1alpha1.Capp) []nfspvcv1alpha1.
 
 }
 
+// getPreviousNFSPVCs returns a list of all NFSPVC objects that are related to the given Capp.
+func (n NFSPVCManager) getPreviousNFSPVCs(capp cappv1alpha1.Capp) (nfspvcv1alpha1.NfsPvcList, error) {
+	nfsPvcs := nfspvcv1alpha1.NfsPvcList{}
+
+	set := labels.Set{
+		utils.CappResourceKey: capp.Name,
+	}
+	listOptions := utils.GetListOptions(set)
+
+	if err := n.K8sclient.List(n.Ctx, &nfsPvcs, &listOptions); err != nil {
+		return nfsPvcs, fmt.Errorf("unable to list NFSPVCs of Capp %q: %w", capp.Name, err)
+	}
+
+	return nfsPvcs, nil
+}
+
 // CleanUp attempts to delete the associated NFSPVCs for a given Capp resource.
 func (n NFSPVCManager) CleanUp(capp cappv1alpha1.Capp) error {
 	resourceManager := rclient.ResourceManagerClient{Ctx: n.Ctx, K8sclient: n.K8sclient, Log: n.Log}
 
-	for _, nfsVolume := range capp.Status.VolumesStatus.NFSVolumesStatus {
-		nsfpvcVolume := rclient.GetBareNFSPVC(nfsVolume.VolumeName, capp.Namespace)
+	nfsPvcs, err := n.getPreviousNFSPVCs(capp)
+	if err != nil {
+		return err
+	}
+
+	for _, nfsPvc := range nfsPvcs.Items {
+		nsfpvcVolume := rclient.GetBareNFSPVC(nfsPvc.Name, nfsPvc.Namespace)
 
 		if err := resourceManager.DeleteResource(&nsfpvcVolume); err != nil {
 			if errors.IsNotFound(err) {
-				return nil
+				continue
 			}
 			return err
 		}
