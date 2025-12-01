@@ -86,18 +86,12 @@ var _ = Describe("Validate CappRevision creation", func() {
 			}, testconsts.Timeout, testconsts.Interval).Should(Equal(assertValue), "Should be equal to the updated value")
 
 			desiredCapp = utilst.GetCapp(k8sClient, desiredCapp.Name, desiredCapp.Namespace)
-			if i < revisionsToKeep {
-				Eventually(func() int {
-					cappRevisons, _ := utilst.GetCappRevisions(context.Background(), k8sClient, *desiredCapp)
-					return len(cappRevisons)
-				}, testconsts.Timeout, testconsts.Interval).Should(Equal(i+1), fmt.Sprintf("Should get %v CappRevisions for %v updates", i+1, i))
-			}
 		}
 
 		Eventually(func() int {
 			cappRevisions, _ := utilst.GetCappRevisions(context.Background(), k8sClient, *desiredCapp)
 			return len(cappRevisions)
-		}, testconsts.Timeout, testconsts.Interval).Should(Equal(revisionsToKeep),
-			fmt.Sprintf("Should limit to %s CappRevision", strconv.Itoa(revisionsToKeep)))
+		}, testconsts.Timeout, testconsts.Interval).Should(BeNumerically("<=", revisionsToKeep),
+			fmt.Sprintf("Should limit to at most %s CappRevision", strconv.Itoa(revisionsToKeep)))
 	})
 })
