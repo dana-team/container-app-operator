@@ -45,6 +45,9 @@ func testCappWithLogger(logType string) {
 		syslogNGOutput := &loggingv1beta1.SyslogNGOutput{}
 		Eventually(func() bool {
 			syslogNGOutput = utilst.GetSyslogNGOutput(k8sClient, syslogNGOutputName, createdCapp.Namespace)
+			if syslogNGOutput.Status.Active == nil {
+				return false
+			}
 			return *syslogNGOutput.Status.Active
 		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue())
 
@@ -72,6 +75,9 @@ func testCappWithLogger(logType string) {
 
 		Eventually(func() bool {
 			syslogNGFlow := utilst.GetSyslogNGFlow(k8sClient, syslogNGFlowName, createdCapp.Namespace)
+			if syslogNGFlow.Status.Active == nil {
+				return false
+			}
 			return *syslogNGFlow.Status.Active
 		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue())
 

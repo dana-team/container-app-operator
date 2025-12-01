@@ -294,6 +294,11 @@ var _ = Describe("Validate knative functionality", func() {
 		createdCapp := utilst.CreateCapp(k8sClient, testCapp)
 		assertionCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
 
+		Eventually(func() string {
+			capp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
+			return capp.Status.KnativeObjectStatus.LatestReadyRevisionName
+		}, testconsts.Timeout, testconsts.Interval).ShouldNot(BeEmpty())
+
 		By("Updating capp's container image")
 		var latestReadyRevisionBeforeUpdate string
 		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
