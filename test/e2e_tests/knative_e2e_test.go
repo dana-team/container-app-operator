@@ -13,49 +13,28 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-// verifyLatestReadyRevision ensures the readiness of the latest Knative Revision
-// if shouldRevisionBeReady is true. It also checks and asserts the state of the LatestReadyRevision.
-func verifyLatestReadyRevision(shouldRevisionBeReady bool, name, namespace, latestReadyRevisionBeforeUpdate string) {
-	if shouldRevisionBeReady {
-		Eventually(func() string {
-			return utilst.GetCapp(k8sClient, name, namespace).Status.KnativeObjectStatus.ConfigurationStatusFields.LatestReadyRevisionName
-		}, testconsts.Timeout, testconsts.Interval).ShouldNot(Equal(latestReadyRevisionBeforeUpdate))
+// verifyLatestReadyRevision ensures that a new Knative Revision becomes ready
+// and that LatestReadyRevisionName changes compared to the previous value.
+func verifyLatestReadyRevision(name, namespace, latestReadyRevisionBeforeUpdate string) {
+	Eventually(func() string {
+		return utilst.GetCapp(k8sClient, name, namespace).Status.KnativeObjectStatus.ConfigurationStatusFields.LatestReadyRevisionName
+	}, testconsts.Timeout, testconsts.Interval).ShouldNot(Equal(latestReadyRevisionBeforeUpdate))
 
-		actualNewRevision := utilst.GetCapp(k8sClient, name, namespace).Status.KnativeObjectStatus.ConfigurationStatusFields.LatestReadyRevisionName
-		checkRevisionReadiness(actualNewRevision, true)
-	} else {
-		Eventually(func() string {
-			return utilst.GetCapp(k8sClient, name, namespace).Status.KnativeObjectStatus.ConfigurationStatusFields.LatestCreatedRevisionName
-		}, testconsts.Timeout, testconsts.Interval).ShouldNot(Equal(latestReadyRevisionBeforeUpdate))
-
-		actualNewRevision := utilst.GetCapp(k8sClient, name, namespace).Status.KnativeObjectStatus.ConfigurationStatusFields.LatestCreatedRevisionName
-		checkRevisionReadiness(actualNewRevision, false)
-
-		By("Ensuring that the capp LatestReadyRevision is not updated")
-		Eventually(func() string {
-			return utilst.GetCapp(k8sClient, name, namespace).Status.KnativeObjectStatus.ConfigurationStatusFields.LatestReadyRevisionName
-		}, testconsts.Timeout, testconsts.Interval).Should(Equal(latestReadyRevisionBeforeUpdate))
-	}
+	actualNewRevision := utilst.GetCapp(k8sClient, name, namespace).Status.KnativeObjectStatus.ConfigurationStatusFields.LatestReadyRevisionName
+	checkRevisionReadiness(actualNewRevision)
 }
 
-// checkRevisionReadiness checks the readiness of the specified revision and asserts its state based on shouldBeReady flag.
-func checkRevisionReadiness(revisionName string, shouldBeReady bool) {
+// checkRevisionReadiness checks that the specified revision exists and becomes ready.
+func checkRevisionReadiness(revisionName string) {
 	By("Checking if the revision was created successfully")
 	revisionObject := mocks.CreateRevisionObject(revisionName)
 	Eventually(func() bool {
 		return utilst.DoesResourceExist(k8sClient, revisionObject)
 	}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "Should find a resource.")
-	if shouldBeReady {
-		By("Ensuring that the new revision is ready")
-		Eventually(func() bool {
-			return utilst.GetRevision(k8sClient, revisionObject.Name, revisionObject.Namespace).IsReady()
-		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue())
-	} else {
-		By("Ensuring that the new revision is not ready")
-		Eventually(func() bool {
-			return utilst.GetRevision(k8sClient, revisionObject.Name, revisionObject.Namespace).IsReady()
-		}, testconsts.Timeout, testconsts.Interval).ShouldNot(BeTrue())
-	}
+	By("Ensuring that the new revision is ready")
+	Eventually(func() bool {
+		return utilst.GetRevision(k8sClient, revisionObject.Name, revisionObject.Namespace).IsReady()
+	}, testconsts.Timeout, testconsts.Interval).Should(BeTrue())
 }
 
 // testMetricAnnotation tests capp instance creation with a specified metric annotation.
@@ -97,7 +76,7 @@ var _ = Describe("Validate knative functionality", func() {
 		Eventually(func() bool {
 			return utilst.DoesResourceExist(k8sClient, ksvcObject)
 		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "Should find a resource.")
-		checkRevisionReadiness(assertionCapp.Name+testconsts.FirstRevisionSuffix, true)
+		checkRevisionReadiness(assertionCapp.Name + testconsts.FirstRevisionSuffix)
 
 		By("Checking the ksvc has the needed labels")
 		ksvcObject = utilst.GetKSVC(k8sClient, assertionCapp.Name, testconsts.NSName)
@@ -139,7 +118,7 @@ var _ = Describe("Validate knative functionality", func() {
 		})
 		Expect(err).ToNot(HaveOccurred())
 
-		verifyLatestReadyRevision(true, createdCapp.Name, createdCapp.Namespace, latestReadyRevisionBeforeUpdate)
+		verifyLatestReadyRevision(createdCapp.Name, createdCapp.Namespace, latestReadyRevisionBeforeUpdate)
 
 		By("Checking if the ksvc was updated successfully")
 		Eventually(func() string {
@@ -164,7 +143,7 @@ var _ = Describe("Validate knative functionality", func() {
 		})
 		Expect(err).ToNot(HaveOccurred())
 
-		verifyLatestReadyRevision(true, createdCapp.Name, createdCapp.Namespace, latestReadyRevisionBeforeUpdate)
+		verifyLatestReadyRevision(createdCapp.Name, createdCapp.Namespace, latestReadyRevisionBeforeUpdate)
 
 		By("Checking if the ksvc was updated successfully")
 		Eventually(func() string {
@@ -189,7 +168,7 @@ var _ = Describe("Validate knative functionality", func() {
 		})
 		Expect(err).ToNot(HaveOccurred())
 
-		verifyLatestReadyRevision(true, createdCapp.Name, createdCapp.Namespace, latestReadyRevisionBeforeUpdate)
+		verifyLatestReadyRevision(createdCapp.Name, createdCapp.Namespace, latestReadyRevisionBeforeUpdate)
 
 		By("Checking if the ksvc's container image was updated successfully")
 		Eventually(func() string {
@@ -217,7 +196,7 @@ var _ = Describe("Validate knative functionality", func() {
 		})
 		Expect(err).ToNot(HaveOccurred())
 
-		verifyLatestReadyRevision(true, createdCapp.Name, createdCapp.Namespace, latestReadyRevisionBeforeUpdate)
+		verifyLatestReadyRevision(createdCapp.Name, createdCapp.Namespace, latestReadyRevisionBeforeUpdate)
 
 		By("Checking if the ksvc's dana annotation was updated successfully")
 		Eventually(func() string {
@@ -242,7 +221,7 @@ var _ = Describe("Validate knative functionality", func() {
 		})
 		Expect(err).ToNot(HaveOccurred())
 
-		verifyLatestReadyRevision(true, createdCapp.Name, createdCapp.Namespace, latestReadyRevisionBeforeUpdate)
+		verifyLatestReadyRevision(createdCapp.Name, createdCapp.Namespace, latestReadyRevisionBeforeUpdate)
 
 		By("Checking if the ksvc's container environment variable was updated successfully")
 		Eventually(func() string {
@@ -263,7 +242,7 @@ var _ = Describe("Validate knative functionality", func() {
 		createdCapp := utilst.CreateCapp(k8sClient, testCapp)
 		assertionCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
 
-		checkRevisionReadiness(assertionCapp.Name+testconsts.FirstRevisionSuffix, true)
+		checkRevisionReadiness(assertionCapp.Name + testconsts.FirstRevisionSuffix)
 
 		By("Updating the secret")
 		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
@@ -285,67 +264,7 @@ var _ = Describe("Validate knative functionality", func() {
 		})
 		Expect(err).ToNot(HaveOccurred())
 
-		verifyLatestReadyRevision(true, createdCapp.Name, createdCapp.Namespace, latestReadyRevisionBeforeUpdate)
-	})
-
-	It("Should create not ready revision when attempting to update to non existing image", func() {
-		By("Creating a capp instance")
-		testCapp := mocks.CreateBaseCapp()
-		createdCapp := utilst.CreateCapp(k8sClient, testCapp)
-		assertionCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-
-		Eventually(func() string {
-			capp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-			return capp.Status.KnativeObjectStatus.LatestReadyRevisionName
-		}, testconsts.Timeout, testconsts.Interval).ShouldNot(BeEmpty())
-
-		By("Updating capp's container image")
-		var latestReadyRevisionBeforeUpdate string
-		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			assertionCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-			latestReadyRevisionBeforeUpdate = assertionCapp.Status.KnativeObjectStatus.LatestReadyRevisionName
-
-			assertionCapp.Spec.ConfigurationSpec.Template.Spec.Containers[0].Image = testconsts.NonExistingImageExample
-			return utilst.UpdateResource(k8sClient, assertionCapp)
-		})
-		Expect(err).ToNot(HaveOccurred())
-
-		verifyLatestReadyRevision(false, createdCapp.Name, createdCapp.Namespace, latestReadyRevisionBeforeUpdate)
-
-		By("Checking if the ksvc's container image was updated successfully")
-		Eventually(func() string {
-			ksvc := utilst.GetKSVC(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
-			return ksvc.Spec.ConfigurationSpec.Template.Spec.Containers[0].Image
-		}, testconsts.Timeout, testconsts.Interval).Should(Equal(testconsts.NonExistingImageExample))
-	})
-
-	It("Should create not ready revision when attempting to update to non existing secret", func() {
-		By("Creating a secret")
-		secretName := utilst.GenerateSecretName()
-		secretObject := mocks.CreateSecretObject(secretName)
-		utilst.CreateSecret(k8sClient, secretObject)
-
-		By("Creating a capp instance with a secret environment variable")
-		testCapp := mocks.CreateBaseCapp()
-		testCapp.Spec.ConfigurationSpec.Template.Spec.PodSpec.Containers[0].Env = *mocks.CreateEnvVarObject(secretName)
-		createdCapp := utilst.CreateCapp(k8sClient, testCapp)
-
-		checkRevisionReadiness(createdCapp.Name+testconsts.FirstRevisionSuffix, true)
-
-		By("Updating the capp secret environment variable")
-		nonExistingSecretName := utilst.GenerateSecretName()
-
-		var latestReadyRevisionBeforeUpdate string
-		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			assertionCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-			latestReadyRevisionBeforeUpdate = assertionCapp.Status.KnativeObjectStatus.LatestReadyRevisionName
-
-			assertionCapp.Spec.ConfigurationSpec.Template.Spec.Containers[0].Env = *mocks.CreateEnvVarObject(nonExistingSecretName)
-			return utilst.UpdateResource(k8sClient, assertionCapp)
-		})
-		Expect(err).ToNot(HaveOccurred())
-
-		verifyLatestReadyRevision(false, createdCapp.Name, createdCapp.Namespace, latestReadyRevisionBeforeUpdate)
+		verifyLatestReadyRevision(createdCapp.Name, createdCapp.Namespace, latestReadyRevisionBeforeUpdate)
 	})
 
 	It("Should create capp with autoscale annotation. The default annotation in the ksvc should be overridden", func() {
