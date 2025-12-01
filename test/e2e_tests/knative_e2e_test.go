@@ -159,7 +159,9 @@ var _ = Describe("Validate knative functionality", func() {
 
 		By("Updating capp's container image")
 		var latestReadyRevisionBeforeUpdate string
-		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		backoff := retry.DefaultRetry
+		backoff.Steps = 10
+		err := retry.RetryOnConflict(backoff, func() error {
 			assertionCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
 			latestReadyRevisionBeforeUpdate = assertionCapp.Status.KnativeObjectStatus.LatestReadyRevisionName
 
