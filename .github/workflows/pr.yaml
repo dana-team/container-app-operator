@@ -40,6 +40,7 @@ jobs:
       IMAGE_REGISTRY: kind-registry:5000
       KIND_VERSION: v0.25.0
       K8S_VERSION: v1.30.4
+      IMAGE_TAG: test-${{ github.sha }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4.2.2
@@ -69,14 +70,27 @@ jobs:
           kubectl_version: ${{env.K8S_VERSION}}
           registry: true
 
-      - name: Build container-app image
-        run: make docker-build docker-push IMG=${IMAGE_REGISTRY}/container-app-operator:test-${GITHUB_REF##*/}
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and load container-app image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          load: true
+          tags: |
+            container-app-operator:${{ env.IMAGE_TAG }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Load image into kind cluster
+        run: kind load docker-image container-app-operator:${IMAGE_TAG} --name hub
 
       - name: Setup prerequisites
         run: make prereq
 
       - name: Deploy controller to cluster
-        run: make install deploy IMG=${IMAGE_REGISTRY}/container-app-operator:test-${GITHUB_REF##*/}
+        run: make install deploy IMG=container-app-operator:${IMAGE_TAG}
 
       - name: Create CappConfig
         run: make create-cappConfig
