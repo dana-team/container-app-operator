@@ -17,6 +17,8 @@ jobs:
       uses: actions/setup-go@v5
       with:
         go-version-file: go.mod
+        cache: true
+        cache-dependency-path: go.sum
 
     - name: Run unit-tests
       run: make test
@@ -37,6 +39,8 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+          cache: true
+          cache-dependency-path: go.sum
 
       - name: Start kind cluster
         uses: container-tools/kind-action@v2
