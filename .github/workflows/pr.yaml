@@ -13,6 +13,15 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4.2.2
 
+    - name: Cache Go tools (bin/)
+      uses: actions/cache@v4
+      with:
+        path: |
+          ./bin
+        key: ${{ runner.os }}-tools-${{ hashFiles('Makefile') }}
+        restore-keys: |
+          ${{ runner.os }}-tools-
+
     - name: Setup Go
       uses: actions/setup-go@v5
       with:
@@ -34,6 +43,15 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4.2.2
+
+      - name: Cache Go tools (bin/)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ./bin
+          key: ${{ runner.os }}-tools-${{ hashFiles('Makefile') }}
+          restore-keys: |
+            ${{ runner.os }}-tools-
 
       - name: Setup Go
         uses: actions/setup-go@v5
