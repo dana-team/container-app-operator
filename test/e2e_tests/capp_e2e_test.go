@@ -35,7 +35,7 @@ var _ = Describe("Validate capp creation", func() {
 		Expect(assertionCapp.Name).ShouldNot(Equal(baseCapp.Name))
 
 		By("Checks if Capp updated successfully")
-		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		err := retry.RetryOnConflict(utilst.NewRetryOnConflictBackoff(), func() error {
 			assertionCapp := utilst.GetCapp(k8sClient, desiredCapp.Name, desiredCapp.Namespace)
 			assertionCapp.Spec.ScaleMetric = testconsts.RPSScaleMetric
 
@@ -77,7 +77,7 @@ var _ = Describe("Validate capp creation", func() {
 		checkRevisionReadiness(revisionName)
 
 		By("Updating the capp status to be disabled")
-		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		err := retry.RetryOnConflict(utilst.NewRetryOnConflictBackoff(), func() error {
 			assertionCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
 			assertionCapp.Spec.State = testconsts.DisabledState
 
@@ -101,7 +101,7 @@ var _ = Describe("Validate capp creation", func() {
 		}, testconsts.Timeout, testconsts.Interval).ShouldNot(BeTrue(), "Should not find a resource.")
 
 		By("Updating the capp status to be enabled")
-		err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		err = retry.RetryOnConflict(utilst.NewRetryOnConflictBackoff(), func() error {
 			assertionCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
 			assertionCapp.Spec.State = testconsts.EnabledState
 

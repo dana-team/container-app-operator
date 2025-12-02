@@ -35,7 +35,7 @@ var _ = Describe("Validate CappRevision creation", func() {
 		utilst.GetCappRevision(k8sClient, cappRevisionName, desiredCapp.Namespace)
 
 		By("Updating Capp")
-		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		err := retry.RetryOnConflict(utilst.NewRetryOnConflictBackoff(), func() error {
 			desiredCapp = utilst.GetCapp(k8sClient, desiredCapp.Name, desiredCapp.Namespace)
 			desiredCapp.Annotations = make(map[string]string)
 			desiredCapp.Annotations["test"] = "test"
@@ -72,7 +72,7 @@ var _ = Describe("Validate CappRevision creation", func() {
 		By("Checking many updates to Capp")
 		for i := 1; i < moreThanRevisionsToKeep; i++ {
 			assertValue := fmt.Sprintf("test%s", strconv.Itoa(i))
-			err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			err := retry.RetryOnConflict(utilst.NewRetryOnConflictBackoff(), func() error {
 				desiredCapp = utilst.GetCapp(k8sClient, desiredCapp.Name, desiredCapp.Namespace)
 				desiredCapp.Annotations = make(map[string]string)
 				desiredCapp.Annotations["test"] = assertValue

@@ -76,7 +76,7 @@ var _ = Describe("Validate the validating webhook", func() {
 		baseCapp.Spec.RouteSpec.Hostname = validHostName
 		Expect(k8sClient.Create(context.Background(), baseCapp)).Should(Succeed())
 
-		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		err := retry.RetryOnConflict(utilst.NewRetryOnConflictBackoff(), func() error {
 			cappInCluster := cappv1alpha1.Capp{}
 			if err := k8sClient.Get(context.Background(), types.NamespacedName{Name: baseCapp.Name, Namespace: baseCapp.Namespace}, &cappInCluster); err != nil {
 				return err
