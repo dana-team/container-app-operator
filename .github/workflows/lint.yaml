@@ -16,9 +16,20 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - name: Cache Go tools (bin/)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ./bin
+          key: ${{ runner.os }}-tools-${{ hashFiles('Makefile') }}
+          restore-keys: |
+            ${{ runner.os }}-tools-
+
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+          cache: true
+          cache-dependency-path: go.sum
 
       - name: Run vet
         run: go vet ./...
