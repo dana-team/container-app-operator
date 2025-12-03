@@ -82,7 +82,7 @@ func testCappWithLogger(logType string) {
 		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue())
 
 		By(fmt.Sprintf("Updating the capp %s logger index", logType))
-		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		err := retry.RetryOnConflict(utilst.NewRetryOnConflictBackoff(), func() error {
 			toBeUpdatedCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
 			toBeUpdatedCapp.Spec.LogSpec.Index = testconsts.TestIndex
 
@@ -130,7 +130,7 @@ func testCappWithLogger(logType string) {
 		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "Should find a resource.")
 
 		By("Removing the logging requirement from Capp Spec and checking cleanup")
-		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		err := retry.RetryOnConflict(utilst.NewRetryOnConflictBackoff(), func() error {
 			toBeUpdatedCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
 			toBeUpdatedCapp.Spec.LogSpec = cappv1alpha1.LogSpec{}
 

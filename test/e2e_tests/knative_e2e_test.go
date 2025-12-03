@@ -109,7 +109,7 @@ var _ = Describe("Validate knative functionality", func() {
 
 		By("Updating the Capp scale metric")
 		var latestReadyRevisionBeforeUpdate string
-		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		err := retry.RetryOnConflict(utilst.NewRetryOnConflictBackoff(), func() error {
 			assertionCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
 			latestReadyRevisionBeforeUpdate = assertionCapp.Status.KnativeObjectStatus.LatestReadyRevisionName
 
@@ -134,7 +134,7 @@ var _ = Describe("Validate knative functionality", func() {
 
 		By("Updating the a capp container name")
 		var latestReadyRevisionBeforeUpdate string
-		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		err := retry.RetryOnConflict(utilst.NewRetryOnConflictBackoff(), func() error {
 			assertionCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
 			latestReadyRevisionBeforeUpdate = assertionCapp.Status.KnativeObjectStatus.LatestReadyRevisionName
 
@@ -159,9 +159,7 @@ var _ = Describe("Validate knative functionality", func() {
 
 		By("Updating capp's container image")
 		var latestReadyRevisionBeforeUpdate string
-		backoff := retry.DefaultRetry
-		backoff.Steps = 10
-		err := retry.RetryOnConflict(backoff, func() error {
+		err := retry.RetryOnConflict(utilst.NewRetryOnConflictBackoff(), func() error {
 			assertionCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
 			latestReadyRevisionBeforeUpdate = assertionCapp.Status.KnativeObjectStatus.LatestReadyRevisionName
 
@@ -189,7 +187,7 @@ var _ = Describe("Validate knative functionality", func() {
 		cappAnnotations[testconsts.ExampleDanaAnnotation] = testconsts.ExampleAppName
 
 		var latestReadyRevisionBeforeUpdate string
-		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		err := retry.RetryOnConflict(utilst.NewRetryOnConflictBackoff(), func() error {
 			assertionCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
 			latestReadyRevisionBeforeUpdate = assertionCapp.Status.KnativeObjectStatus.LatestReadyRevisionName
 
@@ -214,7 +212,7 @@ var _ = Describe("Validate knative functionality", func() {
 
 		By("Updating capp's container environment variable")
 		var latestReadyRevisionBeforeUpdate string
-		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		err := retry.RetryOnConflict(utilst.NewRetryOnConflictBackoff(), func() error {
 			assertionCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
 			latestReadyRevisionBeforeUpdate = assertionCapp.Status.KnativeObjectStatus.LatestReadyRevisionName
 
@@ -247,7 +245,7 @@ var _ = Describe("Validate knative functionality", func() {
 		checkRevisionReadiness(assertionCapp.Name + testconsts.FirstRevisionSuffix)
 
 		By("Updating the secret")
-		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		err := retry.RetryOnConflict(utilst.NewRetryOnConflictBackoff(), func() error {
 			secretObject := utilst.GetSecret(k8sClient, secretObject.Name, secretObject.Namespace)
 			secretObject.Data = map[string][]byte{testconsts.NewSecretKey: []byte(testconsts.SecretValue)}
 
@@ -257,7 +255,7 @@ var _ = Describe("Validate knative functionality", func() {
 
 		By("Updating the capp secret environment variable")
 		var latestReadyRevisionBeforeUpdate string
-		err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		err = retry.RetryOnConflict(utilst.NewRetryOnConflictBackoff(), func() error {
 			assertionCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
 			latestReadyRevisionBeforeUpdate = assertionCapp.Status.KnativeObjectStatus.LatestReadyRevisionName
 

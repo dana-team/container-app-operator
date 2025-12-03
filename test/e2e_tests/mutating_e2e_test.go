@@ -40,7 +40,7 @@ var _ = Describe("Validate the mutating webhook", func() {
 
 		utilst.SwitchUser(&k8sClient, cfg, testconsts.NSName, newScheme(), testconsts.ServiceAccountName)
 
-		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		err := retry.RetryOnConflict(utilst.NewRetryOnConflictBackoff(), func() error {
 			capp = utilst.GetCapp(k8sClient, capp.Name, capp.Namespace)
 			if capp.ObjectMeta.Annotations == nil {
 				capp.ObjectMeta.Annotations = map[string]string{}

@@ -14,6 +14,8 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -103,4 +105,11 @@ func CreateSecret(k8sClient client.Client, secret *corev1.Secret) {
 func CreateCappConfig(k8sClient client.Client, cappConfig *cappv1alpha1.CappConfig) *cappv1alpha1.CappConfig {
 	Expect(k8sClient.Create(context.Background(), cappConfig)).To(Succeed())
 	return cappConfig
+}
+
+// NewRetryOnConflictBackoff returns a preconfigured backoff for RetryOnConflict.
+func NewRetryOnConflictBackoff() wait.Backoff {
+	b := retry.DefaultRetry
+	b.Steps = testconsts.RetryOnConflictSteps
+	return b
 }

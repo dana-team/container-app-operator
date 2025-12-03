@@ -39,7 +39,7 @@ var _ = Describe("Validate DomainMapping functionality", func() {
 
 		By("Updating the Capp Route hostname and checking the status")
 		updatedRouteHostname := utilst.GenerateResourceName(utilst.GenerateRouteHostname(), testconsts.ZoneValue)
-		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		err := retry.RetryOnConflict(utilst.NewRetryOnConflictBackoff(), func() error {
 			toBeUpdatedCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
 			toBeUpdatedCapp.Spec.RouteSpec.Hostname = updatedRouteHostname
 
@@ -87,7 +87,7 @@ var _ = Describe("Validate DomainMapping functionality", func() {
 		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "Should find a resource.")
 
 		By("Changing Capp to be HTTPS")
-		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		err := retry.RetryOnConflict(utilst.NewRetryOnConflictBackoff(), func() error {
 			assertionCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
 			assertionCapp.Spec.RouteSpec.TlsEnabled = true
 
@@ -121,7 +121,7 @@ var _ = Describe("Validate DomainMapping functionality", func() {
 		}, testconsts.Timeout, testconsts.Interval).Should(Equal(domainMappingName), "Should update Route Status of Capp")
 
 		By("Removing the Route from the Capp and check the status and resource clean up")
-		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		err := retry.RetryOnConflict(utilst.NewRetryOnConflictBackoff(), func() error {
 			toBeUpdatedCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
 			toBeUpdatedCapp.Spec.RouteSpec = cappv1alpha1.RouteSpec{}
 
