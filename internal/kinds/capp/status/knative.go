@@ -1,8 +1,9 @@
 package status
 
 import (
+	"context"
+
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
-	"golang.org/x/net/context"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
