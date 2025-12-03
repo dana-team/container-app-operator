@@ -31,11 +31,11 @@ releases:
       - name: logging.enabled
         value: true
 
-  - name: provider-dns
+  - name: provider-dns-v2
     namespace: crossplane-system
     createNamespace: true
-    chart: oci://ghcr.io/dana-team/helm-charts/provider-dns
-    version: v0.1.1
+    chart: oci://ghcr.io/dana-team/helm-charts/provider-dns-v2
+    version: v1.0.1
     wait: true
     disableValidationOnInstall: true
     needs:

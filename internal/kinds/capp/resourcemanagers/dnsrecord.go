@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"reflect"
 
-	dnsrecordv1alpha1 "github.com/dana-team/provider-dns/apis/record/v1alpha1"
+	dnsrecordv1alpha1 "github.com/dana-team/provider-dns-v2/apis/namespaced/record/v1alpha1"
 
-	xpcommonv1 "github.com/crossplane/crossplane-runtime/apis/common/v1"
+	xpv1 "github.com/crossplane/crossplane-runtime/v2/apis/common/v1"
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/resourceclient"
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
@@ -26,6 +26,7 @@ const (
 	DNSRecord                        = "DNSRecord"
 	eventCappDNSRecordCreationFailed = "DNSRecordCreationFailed"
 	eventCappDNSRecordCreated        = "DNSRecordCreated"
+	ClusterProviderConfigKind        = "ClusterProviderConfig"
 )
 
 type DNSRecordManager struct {
@@ -52,18 +53,14 @@ func (r DNSRecordManager) prepareResource(capp cappv1alpha1.Capp) (dnsrecordv1al
 		return dnsrecordv1alpha1.CNAMERecord{}, err
 	}
 
-	xpProvider, err := utils.GetXPProviderFromConfig(dnsConfig)
-	if err != nil {
-		return dnsrecordv1alpha1.CNAMERecord{}, err
-	}
-
 	resourceName := utils.GenerateResourceName(capp.Spec.RouteSpec.Hostname, zone)
 	recordName := utils.GenerateRecordName(capp.Spec.RouteSpec.Hostname, zone)
 
 	dnsRecord := dnsrecordv1alpha1.CNAMERecord{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: resourceName,
+			Name:      resourceName,
+			Namespace: capp.Namespace,
 			Labels: map[string]string{
 				utils.CappResourceKey:   capp.Name,
 				utils.CappNamespaceKey:  capp.Namespace,
@@ -76,12 +73,12 @@ func (r DNSRecordManager) prepareResource(capp cappv1alpha1.Capp) (dnsrecordv1al
 				Zone:  &zone,
 				Cname: &cname,
 			},
-			ResourceSpec: xpcommonv1.ResourceSpec{
-				ProviderConfigReference: &xpcommonv1.Reference{
-					Name: xpProvider,
-				},
-			},
 		},
+	}
+
+	dnsRecord.Spec.ProviderConfigReference = &xpv1.ProviderConfigReference{
+		Name: "default",
+		Kind: ClusterProviderConfigKind,
 	}
 
 	return dnsRecord, nil
@@ -97,7 +94,7 @@ func (r DNSRecordManager) CleanUp(capp cappv1alpha1.Capp) error {
 	}
 
 	for _, dnsRecord := range dnsRecords.Items {
-		record := rclient.GetBareDNSRecord(dnsRecord.Name)
+		record := rclient.GetBareDNSRecord(dnsRecord.Name, dnsRecord.Namespace)
 		if err := resourceManager.DeleteResource(&record); err != nil {
 			if errors.IsNotFound(err) {
 				continue
@@ -207,6 +204,7 @@ func (r DNSRecordManager) getPreviousDNSRecords(capp cappv1alpha1.Capp) (dnsreco
 		utils.CappNamespaceKey: capp.Namespace,
 	}
 	listOptions := utils.GetListOptions(set)
+	listOptions.Namespace = capp.Namespace
 
 	if err := r.K8sclient.List(r.Ctx, &dnsRecords, &listOptions); err != nil {
 		return dnsRecords, fmt.Errorf("unable to list DNSRecords of Capp %q: %w", capp.Name, err)
@@ -219,7 +217,7 @@ func (r DNSRecordManager) getPreviousDNSRecords(capp cappv1alpha1.Capp) (dnsreco
 func (r DNSRecordManager) deletePreviousDNSRecords(dnsRecords dnsrecordv1alpha1.CNAMERecordList, resourceManager rclient.ResourceManagerClient, hostname string) error {
 	for _, dnsRecord := range dnsRecords.Items {
 		if dnsRecord.Name != hostname {
-			recordset := rclient.GetBareDNSRecord(dnsRecord.Name)
+			recordset := rclient.GetBareDNSRecord(dnsRecord.Name, dnsRecord.Namespace)
 			if err := resourceManager.DeleteResource(&recordset); err != nil {
 				return err
 			}
