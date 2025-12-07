@@ -4,9 +4,9 @@ import (
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	nfspvcv1alpha1 "github.com/dana-team/nfspvc-operator/api/v1alpha1"
 	dnsrecordv1alpha1 "github.com/dana-team/provider-dns-v2/apis/namespaced/record/v1alpha1"
+	kedav1alpha1 "github.com/kedacore/keda/v2/apis/keda/v1alpha1"
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kafkasourcesv1 "knative.dev/eventing-kafka/pkg/apis/sources/v1beta1"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
 )
@@ -81,9 +81,19 @@ func GetBareDNSRecord(name, namespace string) dnsrecordv1alpha1.CNAMERecord {
 	}
 }
 
-// GetBareKafkaSource returns a KafkaSource object with only ObjectMeta set.
-func GetBareKafkaSource(name, namespace string) kafkasourcesv1.KafkaSource {
-	return kafkasourcesv1.KafkaSource{
+// GetBareScaledObject returns a scaled object with only ObjectMeta set.
+func GetBareScaledObject(name, namespace string) kedav1alpha1.ScaledObject {
+	return kedav1alpha1.ScaledObject{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+	}
+}
+
+// GetBareTriggerAuth returns a trigger authentication object with only ObjectMeta set.
+func GetBareTriggerAuth(name, namespace string) kedav1alpha1.TriggerAuthentication {
+	return kedav1alpha1.TriggerAuthentication{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,

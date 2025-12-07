@@ -11,6 +11,7 @@ require (
 	github.com/dana-team/provider-dns-v2 v1.0.1
 	github.com/go-logr/logr v1.4.3
 	github.com/go-logr/zapr v1.3.0
+	github.com/kedacore/keda/v2 v2.18.1
 	github.com/kube-logging/logging-operator/pkg/sdk v0.12.0
 	github.com/onsi/ginkgo/v2 v2.27.2
 	github.com/onsi/gomega v1.38.2
@@ -18,13 +19,12 @@ require (
 	github.com/stretchr/testify v1.11.1
 	go.elastic.co/ecszap v1.0.3
 	go.uber.org/zap v1.27.0
-	golang.org/x/net v0.47.0
 	k8s.io/api v0.34.1
 	k8s.io/apimachinery v0.34.1
 	k8s.io/client-go v0.34.1
 	k8s.io/utils v0.0.0-20251002143259-bc988d571ff4
 	knative.dev/eventing-kafka v0.40.0
-	knative.dev/pkg v0.0.0-20240116073220-b488e7be5902
+	knative.dev/pkg v0.0.0-20250326102644-9f3e60a9244c
 	knative.dev/serving v0.40.2
 	sigs.k8s.io/controller-runtime v0.22.4
 )
@@ -49,6 +49,7 @@ require (
 	github.com/emicklei/go-restful/v3 v3.13.0 // indirect
 	github.com/evanphx/json-patch v5.9.11+incompatible // indirect
 	github.com/evanphx/json-patch/v5 v5.9.11 // indirect
+	github.com/expr-lang/expr v1.17.6 // indirect
 	github.com/fatih/camelcase v1.0.0 // indirect
 	github.com/fatih/color v1.18.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
@@ -143,6 +144,7 @@ require (
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/exp v0.0.0-20251023183803-a4bb9ffd2546 // indirect
 	golang.org/x/mod v0.29.0 // indirect
+	golang.org/x/net v0.47.0 // indirect
 	golang.org/x/oauth2 v0.32.0 // indirect
 	golang.org/x/sync v0.18.0 // indirect
 	golang.org/x/sys v0.38.0 // indirect

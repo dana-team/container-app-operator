@@ -4,6 +4,7 @@ import (
 	"time"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	"k8s.io/utils/pointer"
 )
 
 const (
@@ -55,6 +56,14 @@ const (
 	ServiceAccountName              = "test-user"
 	ExcludedServiceAccountName      = "excluded-sa"
 	ExcludedServiceAccountNamespace = "container-app-operator-system"
+	KedaScalarType                  = "kafka"
+	KafkaTopic                      = "demo-topic"
+	TriggerAuthType                 = "triggerAuthentication"
+	TriggerAuthName                 = "kafka-auth"
+	KedaSecretName                  = "kafka-secret"
+	KedaSecretKey                   = "username"
+	AuthParameter                   = "username"
+	Topic                           = "topic"
 )
 
 var (
@@ -64,4 +73,6 @@ var (
 	ManagedByLabelKey          = CappAPIGroup + "/managed-by"
 	LastUpdatedByAnnotationKey = CappAPIGroup + "/last-updated-by"
 	CappNameLabelKey           = CappAPIGroup + "/cappName"
+	MinReplicas                = pointer.Int32(0)
+	MaxReplicas                = pointer.Int32(2)
 )
