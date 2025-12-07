@@ -214,16 +214,49 @@ spec:
     user: elastic
     passwordSecret: es-elastic-user
   sources:
-    kafkaSource:
-      bootstrapServers:
-        - kafka:9092
-      topic: capp-test
-    kafkaAuth:
-      username: user
-      passwordKey:
-        name: es-elastic-user
-        key: password
+  - name: activemq-input
+    type: activemq
+    metadata:
+      managementEndpoint: "activemq.my-namespace.svc:8161"
+      destinationName: "ordersQueue"
+      brokerName: "my-activemq-broker"
+      # optional thresholds:
+      targetQueueSize: "100"             
+      activationTargetQueueSize: "10"   
+    auth:
+      type: triggerAuthentication
+      name: activemq-trigger-auth
+      secretRefs:
+        - name: activemq-secret
+          key: password
   scaleMetric: concurrency
   state: enabled
   
+```
+
+
+## Example AuthObject for a scaled object of type `ActiveMQ`
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: activemq-secret
+type: Opaque
+stringData:
+  username: "myuser"
+  password: "mypassword"
+---
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: activemq-trigger-auth
+spec:
+  secretTargetRef:
+    - parameter: username
+      name: activemq-secret
+      key: username
+    - parameter: password
+      name: activemq-secret
+      key: password
 ```
