@@ -11,7 +11,7 @@ const (
 	TimeoutCapp                     = 90 * time.Second
 	Interval                        = 2 * time.Second
 	DefaultEventually               = 2 * time.Second
-	DefaultConsistently             = 30 * time.Second
+	DefaultConsistently             = 10 * time.Second
 	RetryOnConflictSteps            = 10
 	ClientListLimit                 = 100
 	CappKey                         = "capp"
