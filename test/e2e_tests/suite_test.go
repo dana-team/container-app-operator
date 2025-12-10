@@ -2,6 +2,7 @@ package e2e_tests
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -38,6 +39,11 @@ var _ = SynchronizedBeforeSuite(func() {
 var _ = SynchronizedAfterSuite(func() {}, func() {
 	utilst.DeleteTestUser(k8sClient, testconsts.NSName)
 	utilst.DeleteExcludedServiceAccount(k8sClient)
+
+	if os.Getenv("E2E_SKIP_CLEANUP") == "true" {
+		return
+	}
+
 	cleanUp()
 })
 
