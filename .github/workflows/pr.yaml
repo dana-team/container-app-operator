@@ -62,6 +62,19 @@ jobs:
           go-version-file: go.mod
           cache: true
           cache-dependency-path: go.sum
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build container-app image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          load: true
+          tags: |
+            container-app-operator:${{ env.IMAGE_TAG }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Start kind cluster
         uses: container-tools/kind-action@v2
@@ -71,19 +84,6 @@ jobs:
           node_image: kindest/node:${{env.K8S_VERSION}}
           kubectl_version: ${{env.K8S_VERSION}}
           registry: true
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build and load container-app image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          load: true
-          tags: |
-            container-app-operator:${{ env.IMAGE_TAG }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
       - name: Load image into kind cluster
         run: kind load docker-image container-app-operator:${IMAGE_TAG} --name hub
