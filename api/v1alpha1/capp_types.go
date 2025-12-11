@@ -41,12 +41,6 @@ type CappSpec struct {
 	// +kubebuilder:default:="concurrency"
 	// +kubebuilder:validation:Enum=cpu;memory;rps;concurrency
 	ScaleMetric string `json:"scaleMetric,omitempty"`
-
-	// Site defines where to deploy the Capp.
-	// It can be a specific cluster or a placement name.
-	// +optional
-	Site string `json:"site,omitempty"`
-
 	// State defines the state of capp
 	// Possible values examples: "enabled", "disabled".
 	// +optional
