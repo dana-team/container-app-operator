@@ -88,7 +88,7 @@ jobs:
         run: kind load docker-image container-app-operator:${IMAGE_TAG} --name hub
 
       - name: Setup prerequisites
-        run: make prereq
+        run: make prereq-ci
 
       - name: Deploy controller to cluster
         run: make install deploy IMG=container-app-operator:${IMAGE_TAG}
