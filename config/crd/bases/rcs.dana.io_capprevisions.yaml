@@ -8845,11 +8845,6 @@ spec:
                         - rps
                         - concurrency
                         type: string
-                      site:
-                        description: |-
-                          Site defines where to deploy the Capp.
-                          It can be a specific cluster or a placement name.
-                        type: string
                       sources:
                         description: Sources define the configuration and status of
                           event sources
