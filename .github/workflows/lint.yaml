@@ -16,7 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6.0.1
 
-      - name: Cache Go tools (bin/)
+      - name: Cache Go tools
         uses: actions/cache@v4
         with:
           path: |
