@@ -160,11 +160,6 @@ KNATIVE_HPA_URL ?= https://github.com/knative/serving/releases/download/knative-
 CROSSPLANE_SCC_CRB ?= hack/crossplane-scc-clusterrolebinding.yaml
 PREREQ_HELMFILE ?= charts/capp-prereq-helmfile.yaml
 
-.PHONY: prereq-ci
-prereq-ci:
-	$(MAKE) -j 3 install install-knative install-prereq-helmfile
-	$(MAKE) enable-nfs-knative
-
 .PHONY: prereq ## Install every prerequisite needed to develop and run the operator.
 prereq: install install-knative enable-nfs-knative install-prereq-helmfile
 
