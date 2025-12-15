@@ -1,0 +1,26 @@
+apiVersion: rcs.dana.io/v1alpha1
+kind: Capp
+metadata:
+  name: hello-volume
+  namespace: capp-examples
+spec:
+  scaleMetric: rps
+  configurationSpec:
+    template:
+      spec:
+        containers:
+          - name: app
+            image: ghcr.io/dana-team/capp-gin-app:v0.2.0
+            env:
+              - name: APP_NAME
+                value: hello-volume
+            volumeMounts:
+              - name: shared-data
+                mountPath: /data
+  volumesSpec:
+    nfsVolumes:
+      - name: shared-data
+        server: nfs.example.com
+        path: /exports/shared-data
+        capacity:
+          storage: 1Gi
