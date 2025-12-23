@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/dana-team/container-app-operator/test/e2e_tests/testconsts"
+	kedav1alpha1 "github.com/kedacore/keda/v2/apis/keda/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 
@@ -112,4 +114,42 @@ func NewRetryOnConflictBackoff() wait.Backoff {
 	b := retry.DefaultRetry
 	b.Steps = testconsts.RetryOnConflictSteps
 	return b
+}
+
+// CreateScaledObjectObject creates a bare ScaledObject for testing purposes.
+func CreateScaledObjectObject(name, namespace string) *kedav1alpha1.ScaledObject {
+	return &kedav1alpha1.ScaledObject{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ScaledObject",
+			APIVersion: "keda.sh/v1alpha1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+	}
+}
+
+// CreateTriggerAuthObject creates a bare TriggerAuthentication for testing purposes.
+func CreateTriggerAuthObject(name, namespace string) *kedav1alpha1.TriggerAuthentication {
+	return &kedav1alpha1.TriggerAuthentication{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "TriggerAuthentication",
+			APIVersion: "keda.sh/v1alpha1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+	}
+}
+
+// RandomName generates random names like kafka-source-x7k9p2
+func RandomName(prefix string) string {
+	const letters = "abcdefghijklmnopqrstuvwxyz0123456789"
+	b := make([]byte, 6)
+	for i := range b {
+		b[i] = letters[rand.Intn(len(letters))]
+	}
+	return fmt.Sprintf("%s-%s", prefix, b)
 }

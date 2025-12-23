@@ -3,15 +3,14 @@ package e2e_tests
 import (
 	"context"
 
-	"github.com/dana-team/container-app-operator/api/v1alpha1"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/util/retry"
-
+	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/dana-team/container-app-operator/test/e2e_tests/mocks"
 	"github.com/dana-team/container-app-operator/test/e2e_tests/testconsts"
 	utilst "github.com/dana-team/container-app-operator/test/e2e_tests/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/util/retry"
 )
 
 var _ = Describe("Validate capp creation", func() {
@@ -117,38 +116,59 @@ var _ = Describe("Validate capp creation", func() {
 		By("Checking if the revision is ready")
 		checkRevisionReadiness(revisionName)
 	})
-
-	It("Should create a Capp with a Kafka source", func() {
-		By("Creating a Capp instance with a Kafka source")
+	It("Should create a Capp with a Keda source", func() {
+		By("Creating a Capp instance with a Keda source")
 
 		testCapp := mocks.CreateBaseCapp()
 
-		kafkaSource := v1alpha1.KafkaSource{
-			Name:             "test-source",
-			BootstrapServers: []string{"kafka-broker:9092"},
-			Topic:            []string{"test-topic"},
-			KafkaAuth: &v1alpha1.KafkaAuth{
-				Username: "user",
-				PasswordKeyRef: corev1.SecretKeySelector{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: "my-secret",
+		kedaSourceName := utilst.RandomName("kafka-source")
+
+		kedaSource := cappv1alpha1.KedaSource{
+			Name:       kedaSourceName,
+			ScalarType: testconsts.KedaScalarType,
+			ScalarMetadata: map[string]string{
+				testconsts.Topic: testconsts.KafkaTopic,
+			},
+			MinReplicas: testconsts.MinReplicas,
+			MaxReplicas: testconsts.MaxReplicas,
+			TriggerAuth: &cappv1alpha1.TriggerAuth{
+				Type: testconsts.TriggerAuthType,
+				Name: testconsts.TriggerAuthName,
+				SecretTargets: []cappv1alpha1.AuthSecretTarget{
+					{
+						Parameter: testconsts.AuthParameter,
+						SecretRef: corev1.SecretKeySelector{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: testconsts.KedaSecretName,
+							},
+							Key: testconsts.KedaSecretKey,
+						},
 					},
-					Key: "kafka-password",
 				},
 			},
 		}
 
-		testCapp.Spec.Sources = append(testCapp.Spec.Sources, kafkaSource)
+		testCapp.Spec.Sources = append(testCapp.Spec.Sources, kedaSource)
 
 		createdCapp := utilst.CreateCapp(k8sClient, testCapp)
 
-		By("Checking if the Capp instance has a Kafka source")
+		By("Checking if the Capp instance has a Keda source")
 		Expect(createdCapp.Spec.Sources).Should(HaveLen(1))
-		Expect(createdCapp.Spec.Sources[0].Topic).Should(Equal([]string{"test-topic"}))
-		Expect(createdCapp.Spec.Sources[0].BootstrapServers).Should(Equal([]string{"kafka-broker:9092"}))
-		Expect(createdCapp.Spec.Sources[0].KafkaAuth).NotTo(BeNil())
-		Expect(createdCapp.Spec.Sources[0].KafkaAuth.Username).Should(Equal("user"))
-		Expect(createdCapp.Spec.Sources[0].KafkaAuth.PasswordKeyRef.Key).Should(Equal("kafka-password"))
-		Expect(createdCapp.Spec.Sources[0].KafkaAuth.PasswordKeyRef.LocalObjectReference.Name).Should(Equal("my-secret"))
+		source := createdCapp.Spec.Sources[0]
+		Expect(source.Name).To(Equal(kedaSourceName))
+		Expect(source.ScalarType).To(Equal(testconsts.KedaScalarType))
+		Expect(source.ScalarMetadata).To(HaveKeyWithValue(testconsts.Topic, testconsts.KafkaTopic))
+		Expect(source.MinReplicas).To(Equal(testconsts.MinReplicas))
+		Expect(source.MaxReplicas).To(Equal(testconsts.MaxReplicas))
+
+		Expect(source.TriggerAuth).NotTo(BeNil())
+		Expect(source.TriggerAuth.Name).To(Equal(testconsts.TriggerAuthName))
+		Expect(source.TriggerAuth.SecretTargets).To(HaveLen(1))
+
+		secretTarget := source.TriggerAuth.SecretTargets[0]
+		Expect(secretTarget.Parameter).To(Equal(testconsts.AuthParameter))
+		Expect(secretTarget.SecretRef.Key).To(Equal(testconsts.KedaSecretKey))
+		Expect(secretTarget.SecretRef.Name).To(Equal(testconsts.KedaSecretName))
 	})
+
 })

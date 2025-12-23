@@ -27,12 +27,23 @@ import (
 	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
 )
 
-// SourceType is used to define Enum for the sources types
-type SourceType string
+// AuthSecretTarget maps a secret into the TriggerAuth
+type AuthSecretTarget struct {
+	Parameter string                   `json:"parameter"`
+	SecretRef corev1.SecretKeySelector `json:"secretRef"`
+}
 
-const (
-	SourceKafka SourceType = "Kafka"
-)
+// AuthEnvTarget maps an environment variable into TriggerAuth
+type AuthEnvTarget struct {
+	Parameter string `json:"parameter"`
+	Name      string `json:"name"`
+}
+
+// PodIdentity config for cloud identity bindings
+type PodIdentity struct {
+	// +kubebuilder:validation:Enum=none;azure;aws;gcp
+	Provider string `json:"provider"`
+}
 
 // CappSpec defines the desired state of Capp.
 type CappSpec struct {
@@ -62,7 +73,7 @@ type CappSpec struct {
 	VolumesSpec VolumesSpec `json:"volumesSpec,omitempty"`
 
 	// Sources define the configuration and status of event sources
-	Sources []KafkaSource `json:"sources,omitempty"`
+	Sources []KedaSource `json:"sources,omitempty"`
 }
 
 // VolumesSpec defines the volumes specification for the Capp.
@@ -214,39 +225,53 @@ type NFSVolumeStatus struct {
 	NFSPVCStatus nfspvcv1alpha1.NfsPvcStatus `json:"nfsPvcStatus,omitempty"`
 }
 
-// KafkaSource define the configuration of a Kafka sources
-type KafkaSource struct {
+// KedaSource defines the configuration of a Keda sources
+type KedaSource struct {
 
-	// Name is the name of the Kafka source
+	// Name is the name of the Keda source
 	Name string `json:"name"`
 
-	// Type defines the type of the source
-	Type SourceType `json:"type"`
+	// ScalarType defines the type of the scalar used
+	ScalarType string `json:"scalarType"`
 
-	// BootstrapServers is a list of Kafka broker addresses used to connect to the cluster.
-	BootstrapServers []string `json:"bootstrapServers,omitempty"`
+	// ScalarMetadata defines the data passed directly to the scalar
+	ScalarMetadata map[string]string `json:"scalarMetadata,omitempty"`
 
-	// Topic is the Kafka topic from which messages are consumed.
-	Topic []string `json:"topic"`
+	// TriggerAuth defines the authentication for the trigger (if needed)
+	TriggerAuth *TriggerAuth `json:"triggerAuth,omitempty"`
 
-	// KafkaStatus represents the current observed state of the Kafka source.
-	KafkaAuth *KafkaAuth `json:"kafkaAuth,omitempty"`
+	// MinReplicas is the minimum of replicas allowed
+	MinReplicas *int32 `json:"minReplicas,omitempty"`
+
+	// MaxReplicas is the maximum of replicas allowed
+	MaxReplicas *int32 `json:"maxReplicas,omitempty"`
 }
 
-// KafkaStatus defines the status of a Kafka source
-type KafkaStatus struct {
-	// Conditions contain details about the current state of the Capp.
+// TriggerAuth defines the authentication info needed for a scalar trigger
+type TriggerAuth struct {
+
+	// Type defines if the authentication object is "triggerAuthentication" or "clusterTriggerAuthentication"
+	// +kubebuilder:validation:Enum=triggerAuthentication;clusterTriggerAuthentication
+	Type string `json:"type"`
+
+	// Name of the authentication object
+	Name string `json:"name"`
+
+	// SecretTargets are secrets the scalar may need (e.g Kafka scalar)
+	SecretTargets []AuthSecretTarget `json:"secretTargets,omitempty"`
+
+	// EnvTargets are environment variable the scalar may need
+	EnvTargets []AuthEnvTarget `json:"envTargets,omitempty"`
+
+	// PodIdentity information (AWS IAM, Azure AD, etc.)
+	PodIdentity *PodIdentity `json:"podIdentity,omitempty"`
+}
+
+// KedaStatus defines the status of a Keda source
+type KedaStatus struct {
+	// Conditions contain details about the current state of the Keda source.
 	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
-}
-
-// KafkaAuth defines the data required to create a secret with the user's credentials
-type KafkaAuth struct {
-	// Username used for authenticating
-	Username string `json:"username"`
-
-	// PasswordKey used for authenticating
-	PasswordKeyRef corev1.SecretKeySelector `json:"passwordKey"`
 }
 
 // CappStatus defines the observed state of Capp.
@@ -285,7 +310,7 @@ type CappStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 
 	// SourceStatus contains details about the current state of a source.
-	SourceStatus []KafkaStatus `json:"sourceStatus,omitempty"`
+	SourceStatus []KedaStatus `json:"sourceStatus,omitempty"`
 }
 
 // +kubebuilder:object:root=true

@@ -8662,65 +8662,117 @@ spec:
                   description: Sources define the configuration and status of event
                     sources
                   items:
-                    description: KafkaSource define the configuration of a Kafka sources
+                    description: KedaSource defines the configuration of a Keda sources
                     properties:
-                      bootstrapServers:
-                        description: BootstrapServers is a list of Kafka broker addresses
-                          used to connect to the cluster.
-                        items:
+                      maxReplicas:
+                        description: MaxReplicas is the maximum of replicas allowed
+                        format: int32
+                        type: integer
+                      minReplicas:
+                        description: MinReplicas is the minimum of replicas allowed
+                        format: int32
+                        type: integer
+                      name:
+                        description: Name is the name of the Keda source
+                        type: string
+                      scalarMetadata:
+                        additionalProperties:
                           type: string
-                        type: array
-                      kafkaAuth:
-                        description: KafkaStatus represents the current observed state
-                          of the Kafka source.
+                        description: ScalarMetadata defines the data passed directly
+                          to the scalar
+                        type: object
+                      scalarType:
+                        description: ScalarType defines the type of the scalar used
+                        type: string
+                      triggerAuth:
+                        description: TriggerAuth defines the authentication for the
+                          trigger (if needed)
                         properties:
-                          passwordKey:
-                            description: PasswordKey used for authenticating
+                          envTargets:
+                            description: EnvTargets are environment variable the scalar
+                              may need
+                            items:
+                              description: AuthEnvTarget maps an environment variable
+                                into TriggerAuth
+                              properties:
+                                name:
+                                  type: string
+                                parameter:
+                                  type: string
+                              required:
+                                - name
+                                - parameter
+                              type: object
+                            type: array
+                          name:
+                            description: Name of the authentication object
+                            type: string
+                          podIdentity:
+                            description: PodIdentity information (AWS IAM, Azure AD,
+                              etc.)
                             properties:
-                              key:
-                                description: The key of the secret to select from.  Must
-                                  be a valid secret key.
+                              provider:
+                                enum:
+                                  - none
+                                  - azure
+                                  - aws
+                                  - gcp
                                 type: string
-                              name:
-                                default: ""
-                                description: |-
-                                  Name of the referent.
-                                  This field is effectively required, but due to backwards compatibility is
-                                  allowed to be empty. Instances of this type with an empty value here are
-                                  almost certainly wrong.
-                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                type: string
-                              optional:
-                                description: Specify whether the Secret or its key must
-                                  be defined
-                                type: boolean
                             required:
-                              - key
+                              - provider
                             type: object
-                            x-kubernetes-map-type: atomic
-                          username:
-                            description: Username used for authenticating
+                          secretTargets:
+                            description: SecretTargets are secrets the scalar may need
+                              (e.g Kafka scalar)
+                            items:
+                              description: AuthSecretTarget maps a secret into the TriggerAuth
+                              properties:
+                                parameter:
+                                  type: string
+                                secretRef:
+                                  description: SecretKeySelector selects a key of a
+                                    Secret.
+                                  properties:
+                                    key:
+                                      description: The key of the secret to select from.  Must
+                                        be a valid secret key.
+                                      type: string
+                                    name:
+                                      default: ""
+                                      description: |-
+                                        Name of the referent.
+                                        This field is effectively required, but due to backwards compatibility is
+                                        allowed to be empty. Instances of this type with an empty value here are
+                                        almost certainly wrong.
+                                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                      type: string
+                                    optional:
+                                      description: Specify whether the Secret or its
+                                        key must be defined
+                                      type: boolean
+                                  required:
+                                    - key
+                                  type: object
+                                  x-kubernetes-map-type: atomic
+                              required:
+                                - parameter
+                                - secretRef
+                              type: object
+                            type: array
+                          type:
+                            description: Type defines if the authentication object is
+                              "triggerAuthentication" or "clusterTriggerAuthentication"
+                            enum:
+                              - triggerAuthentication
+                              - clusterTriggerAuthentication
                             type: string
                         required:
-                          - passwordKey
-                          - username
+                          - name
+                          - type
                         type: object
-                      name:
-                        description: Name is the name of the Kafka source
-                        type: string
-                      topic:
-                        description: Topic is the Kafka topic from which messages are
-                          consumed.
-                        items:
-                          type: string
-                        type: array
-                      type:
-                        description: Type defines the type of the source
-                        type: string
                     required:
                       - name
-                      - topic
-                      - type
+                      - scalarType
                     type: object
                   type: array
                 state:
@@ -9501,11 +9553,11 @@ spec:
                   description: SourceStatus contains details about the current state
                     of a source.
                   items:
-                    description: KafkaStatus defines the status of a Kafka source
+                    description: KedaStatus defines the status of a Keda source
                     properties:
                       conditions:
                         description: Conditions contain details about the current state
-                          of the Capp.
+                          of the Keda source.
                         items:
                           description: Condition contains details for one aspect of
                             the current state of this API Resource.
