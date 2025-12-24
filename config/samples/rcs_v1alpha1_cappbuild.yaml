@@ -1,0 +1,25 @@
+apiVersion: rcs.dana.io/v1alpha1
+kind: CappBuild
+metadata:
+  name: demo-cappbuild
+  namespace: default
+spec:
+  source:
+    type: Git
+    git:
+      url: https://github.com/example/repo.git
+      revision: main
+      contextDir: app
+      cloneSecret:
+        name: demo-clone-secret
+
+  cappRef:
+    name: demo-capp
+
+  rebuild:
+    mode: OnCommit
+
+  output:
+    image: ghcr.io/example/demo:latest
+    pushSecret:
+      name: demo-push-secret
