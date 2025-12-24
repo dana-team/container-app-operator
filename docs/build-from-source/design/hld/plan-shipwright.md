@@ -24,6 +24,9 @@ Everything in between is platform-owned and can evolve.
 - **`CappBuild` API (New CRD)**: build-time resource (source + creds). Build implementation details are platform-owned.
   - **Optional** `spec.cappRef`: when set, the built image is handed over to that `Capp`; when omitted, `CappBuild` is standalone (build-only).
   - **Optional rebuild trigger**: user intent can be expressed per `CappBuild` (e.g., manual-only vs on-commit), with defaults and guardrails enforced by platform policy.
+
+## Policy: image publishing and retention
+- If `CappBuild` is used as a **standalone build tool** (no `spec.cappRef`), users **must provide an explicit image repository to push to** (an external repo/registry target).
 - **Dedicated `CappBuild` controller**: reconciles `CappBuild`, creates/monitors Shipwright `Build`/`BuildRun`, and updates the target `Capp` image on success.
 - **`Capp` API**: runtime resource; deploys the current image and reports runtime status.
 - **Helm-gated feature**: enable/disable the `CappBuild` controller (and RBAC) via Helm values (e.g. `cappBuild.enabled`).
