@@ -3,17 +3,15 @@
 ## Prerequisites
 - This feature requires **Shipwright Build** as a `Capp` prerequisite.
 - Shipwright Build requires **Tekton Pipelines**.
-- Builds run via **Shipwright strategies** (`BuildStrategy` / `ClusterBuildStrategy`).
 - The platform provides build defaults and policy centrally.
 
 ## What users get
 `Capp` can be created with **a code source**. The platform will:
-- Build a container image from source (Shipwright-managed build)
+- Build a container image from source
 - Deploy the app using the produced image
-- Rebuild automatically when new commits land (optional / policy-controlled)
+- Rebuild automatically when new commits land
 
 Users do **not** need to know (or choose) how the build is implemented.
-They can optionally include a `Dockerfile` in the repo; the platform will auto-select the appropriate build strategy.
 
 ## Design principle
 Keep a stable contract:
@@ -23,13 +21,19 @@ Keep a stable contract:
 Everything in between is platform-owned and can evolve.
 
 ## High-level architecture
-- **`Capp` API**: add a simple `source` section and expose build/deploy progress in `status`.
+- **`CappBuild` API (New CRD)**: build-time resource (source + creds). Build implementation details are platform-owned.
+  - **Optional** `spec.cappRef`: when set, the built image is handed over to that `Capp`; when omitted, `CappBuild` is standalone (build-only).
+  - **Optional rebuild trigger**: user intent can be expressed per `CappBuild` (e.g., manual-only vs on-commit), with defaults and guardrails enforced by platform policy.
+- **Dedicated `CappBuild` controller**: reconciles `CappBuild`, creates/monitors Shipwright `Build`/`BuildRun`, and updates the target `Capp` image on success.
+- **`Capp` API**: runtime resource; deploys the current image and reports runtime status.
+- **Helm-gated feature**: enable/disable the `CappBuild` controller (and RBAC) via Helm values (e.g. `cappBuild.enabled`).
 - **Platform configuration**: define defaults and policy centrally via `CappConfig`:
-  - Build strategy selection (e.g., Buildpacks vs Kaniko), pinned versions, and policy constraints
-  - Image publishing target (registry/repo naming conventions)
+  - Build strategy selection, pinned versions, and policy constraints
+  - Image publishing target
   - Credentials + authorization model for source + registry access
-  - Rebuild policy (on-commit / manual-only / platform-controlled)
+  - Defaults and constraints for rebuild triggers
 - **How Shipwright executes builds**:
+  - `CappBuild` controller creates Shipwright `Build` and `BuildRun` resources.
   - Shipwright creates Tekton resources under the hood, so Tekton Pipelines must be installed/available.
   - The chosen `BuildStrategy`/`ClusterBuildStrategy` determines the build engine (Buildpacks/Kaniko/Buildah/…).
 - **Strategy auto-selection** (platform-owned):
@@ -37,18 +41,20 @@ Everything in between is platform-owned and can evolve.
   - Otherwise, default to the Buildpacks-based `ClusterBuildStrategy`.
   - This keeps the user contract stable (provide source), while still supporting teams that already maintain `Dockerfile`s.
 - **Build execution (Shipwright Build)**:
-  - The operator requests builds using Shipwright primitives and tracks status:
+  - The `CappBuild` operator requests builds using Shipwright primitives and tracks status:
     - A `Build` CR captures the “build definition” (source + output image + strategy).
-    - A `BuildRun` CR represents each execution of the build (per commit / per change / manual trigger).
-  - The operator watches `BuildRun.status` to determine success/failure and obtains the produced image reference (digest/tag) for deployment.
-  - Once a build succeeds, the operator deploys using the produced image.
+    - A `BuildRun` CR represents each execution of the build (initial/manual run, or auto-triggered on new commits when enabled).
+  - The `CappBuild` operator watches `BuildRun.status` to determine success/failure and obtains the produced image reference.
+  - **Handover to Runtime**: Once a build succeeds, the `CappBuild` controller updates the target `Capp` with the new image reference.
 - **Rebuild on commit (optional / policy-controlled)**:
-  - If enabled, new commits trigger a new `BuildRun` (via an SCM webhook receiver / Tekton Triggers / other platform mechanism), followed by re-deploy.
+  - If enabled, new commits trigger a new `BuildRun`, followed by `Capp` update.
 
 ## Advantages
-- **Simple user experience**: users specify source only.
+- **Better separation of concerns**: Clear split between runtime (`Capp`) and build-time (`CappBuild`) resources and dependencies.
+- **Standalone utility**: `CappBuild` can be used as a generic image building tool even without a `Capp`.
+- **Simple user experience**: users specify source in `CappBuild` and link it to a `Capp`.
 - **Kubernetes-native abstraction**: Shipwright provides a higher-level build API (`Build`/`BuildRun`) instead of wiring Tekton directly in the operator.
-- **Strategy flexibility**: swap build engines (Buildpacks/Kaniko/Buildah/…) without changing the `Capp` contract (platform-owned).
+- **Strategy flexibility**: swap build engines (Buildpacks/Kaniko/Buildah/…) without changing the `CappBuild` contract (platform-owned).
 - **Operator-owned contract**: we can evolve strategy choice, pinning, and defaults without changing app teams’ `Capp`s.
 
 ## Disadvantages
