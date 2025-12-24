@@ -1,116 +1,179 @@
-# Shipwright Phase 2 — `CappBuild` API + Controller (implementation runbook)
+# Shipwright Phase 2 — `CappBuild` API (implementation runbook)
 
-Goal: implement the `CappBuild` CRD and a dedicated controller that translates `CappBuild` into Shipwright `Build` / `BuildRun`, then (optionally) updates a referenced `Capp` with the new image.
+Goal: implement the `CappBuild` CRD **schema only**, per `docs/build-from-source/design/lld/shipwright-phase2.md`.
 
-This doc is intentionally minimal. It assumes the schema in `docs/build-from-source/design/lld/shipwright-phase2.md`.
-
-## 0) Prereqs
-- Run Phase 1 prereqs first (Tekton + Shipwright installed).
-- Ensure `controller-gen` is available via `make controller-gen`.
-
-## 1) Scaffold the API + controller (kubebuilder)
+## 1) Scaffold the API (kubebuilder)
 From repo root:
 
 ```bash
-kubebuilder create api --group rcs --version v1alpha1 --kind CappBuild --resource --controller
+kubebuilder create api --group rcs --version v1alpha1 --kind CappBuild --resource --controller=false
 ```
 
-This will generate:
-- API type in `api/v1alpha1/`
-- Controller skeleton in `internal/controller/` (kubebuilder default)
-- RBAC markers in controller code
+## 2) Implement the schema fields
+Copy/paste the minimal Go schema below.
 
-## 2) Move controller into repo structure (optional but recommended)
-This repo keeps controllers under `internal/kinds/<kind>/controllers/`.
+### Go schema (copy/paste)
 
-- Create a new folder: `internal/kinds/cappbuild/controllers/`
-- Move the generated reconciler into that folder (rename package accordingly).
+```go
+package v1alpha1
 
-If you keep kubebuilder’s default `internal/controller/`, skip this step.
+import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
 
-## 3) Register the new type in the manager scheme
-Update `cmd/main.go`:
-- In `init()` add:
-  - `utilruntime.Must(<your cappbuild api>.AddToScheme(scheme))`
+type CappBuildSourceType string
 
-If you keep the CRD in the existing `api/v1alpha1` package, this is typically already covered by the existing `cappv1alpha1.AddToScheme(scheme)`; verify the generated API is in the same package as existing types.
+const (
+	CappBuildSourceTypeGit CappBuildSourceType = "Git"
+)
 
-## 4) Wire the controller into `cmd/main.go`
-In `main()` (near other `.SetupWithManager` calls), add the `CappBuildReconciler`:
-- `(&cappbuildcontroller.CappBuildReconciler{ ... }).SetupWithManager(mgr)`
+type CappBuildRebuildMode string
 
-Use the same patterns as existing reconcilers:
-- pass `Client`, `Scheme`, and an `EventRecorder`.
+const (
+	CappBuildRebuildModeInitial  CappBuildRebuildMode = "Initial"
+	CappBuildRebuildModeOnCommit CappBuildRebuildMode = "OnCommit"
+)
 
-## 5) Add Shipwright API to scheme (controller runtime)
-The controller needs to create/read Shipwright resources.
+type CappBuildSpec struct {
+	Source CappBuildSource `json:"source"`
 
-Add Shipwright Build API types to the manager scheme (in `cmd/main.go init()`), by importing and registering Shipwright’s Go API package.
+	// +optional
+	CappRef *CappBuildCappRef `json:"cappRef,omitempty"`
 
-At minimum you need the Shipwright `Build` and `BuildRun` types on the scheme.
+	// +optional
+	Rebuild *CappBuildRebuildSpec `json:"rebuild,omitempty"`
 
-## 6) Implement the `CappBuild` → Shipwright mapping
-In the `CappBuild` reconciler:
+	// +optional
+	Output *CappBuildOutputSpec `json:"output,omitempty"`
+}
 
-### 6.1 Create/patch a Shipwright `Build`
-Create a namespaced Shipwright `Build` derived from `CappBuild.spec`:
-- `spec.source.type = Git`
-- `spec.source.git.url = CappBuild.spec.source.git.url`
-- `spec.source.git.revision = CappBuild.spec.source.git.revision` (omit if empty)
-- `spec.source.contextDir = CappBuild.spec.source.git.contextDir` (omit if empty)
-- `spec.source.git.cloneSecret = CappBuild.spec.source.authRef.name` (omit if authRef not set)
+type CappBuildSource struct {
+	// +kubebuilder:validation:Enum=Git
+	Type CappBuildSourceType `json:"type"`
 
-Strategy selection is platform-owned; pick a default strategy here (or read policy from `CappConfig` later).
+	Git CappBuildGitSource `json:"git"`
 
-### 6.2 Create a Shipwright `BuildRun`
-On initial reconcile (or when user requests a run / or commit trigger), create a `BuildRun` that references the `Build`.
+	// +optional
+	SecretRef *CappBuildSecretRef `json:"secretRef,omitempty"`
+}
 
-### 6.3 Update `CappBuild.status`
-Update only what the LLD requires:
-- `status.observedGeneration`
-- `status.conditions` (`Ready`, `BuildSucceeded`)
-- `status.latestImage` (from successful Shipwright output)
-- `status.lastBuildRunRef`
-- `status.lastAppliedCapp` (only if `spec.cappRef` is set and the handover succeeded)
+type CappBuildGitSource struct {
+	// +kubebuilder:validation:MinLength=1
+	URL string `json:"url"`
 
-### 6.4 Optional handover to `Capp`
-If `spec.cappRef` is set:
-- patch the referenced `Capp` to use `status.latestImage`
-- record `status.lastAppliedCapp`
+	// +optional
+	Revision string `json:"revision,omitempty"`
 
-## 7) RBAC
-RBAC for `CappBuild` controller must include:
-- CRUD/watch on `CappBuild`
-- create/patch/watch Shipwright `Build` and `BuildRun`
-- patch/update `CappBuild/status`
-- (optional) patch/update `Capp` when `spec.cappRef` is set
+	// +optional
+	ContextDir string `json:"contextDir,omitempty"`
+}
 
-Use kubebuilder RBAC markers in the controller file to generate manifests.
+type CappBuildSecretRef struct {
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name"`
+}
 
-## 8) Generate manifests + CRDs
-Run:
+type CappBuildCappRef struct {
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name"`
+
+	// +optional
+	Namespace string `json:"namespace,omitempty"`
+}
+
+type CappBuildRebuildSpec struct {
+	// +kubebuilder:validation:Enum=Initial;OnCommit
+	Mode CappBuildRebuildMode `json:"mode"`
+}
+
+type CappBuildOutputSpec struct {
+	// +optional
+	Image string `json:"image,omitempty"`
+}
+
+type CappBuildStatus struct {
+	// +optional
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+
+	// +optional
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
+
+	// +optional
+	LatestImage string `json:"latestImage,omitempty"`
+
+	// +optional
+	LastBuildRunRef string `json:"lastBuildRunRef,omitempty"`
+
+	// +optional
+	LastAppliedCapp string `json:"lastAppliedCapp,omitempty"`
+}
+
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+type CappBuild struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	Spec   CappBuildSpec   `json:"spec,omitempty"`
+	Status CappBuildStatus `json:"status,omitempty"`
+}
+
+// +kubebuilder:object:root=true
+type CappBuildList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []CappBuild `json:"items"`
+}
+```
+
+## 3) Generate CRDs + deepcopy
 
 ```bash
-make manifests generate
+make generate manifests
 ```
 
-Ensure the new CRD appears under:
+Verify the CRD is generated under:
 - `config/crd/bases/`
 
-## 9) Add sample YAML
-Add a sample under `config/samples/` for `CappBuild` (use the examples from the LLD).
+## 4) Add a sample
+Add a `CappBuild` example YAML under:
+- `config/samples/`
 
-## 10) Quick validation
-Apply CRD and deploy controller (dev cluster):
+Create a new sample file:
+- `config/samples/rcs_v1alpha1_cappbuild.yaml`
 
-```bash
-make install
-make deploy
+### Sample `CappBuild` (copy/paste)
+
+```yaml
+apiVersion: rcs.dana.io/v1alpha1
+kind: CappBuild
+metadata:
+  name: demo-cappbuild
+  namespace: default
+spec:
+  source:
+    type: Git
+    git:
+      url: https://github.com/example/repo.git
+      revision: main
+      contextDir: .
+
+  cappRef:
+    name: demo-capp
+
+  rebuild:
+    mode: OnCommit
+
+  output:
+    image: ghcr.io/example/demo:latest
 ```
 
-Create a `CappBuild` instance and verify:
-- Shipwright `Build` + `BuildRun` are created
-- `CappBuild.status.latestImage` is populated on success
-- If `spec.cappRef` is set, the `Capp` is updated
+## 5) Wire the CRD into distribution artifacts
+This phase is **schema-only**, but the CRD must be included wherever we ship CRDs:
+
+- **Kustomize**: `make manifests` updates `config/crd/bases/` (ensure the generated `rcs.dana.io_cappbuilds.yaml` is present there).
+- **Helm chart**: copy the generated CRD into the chart `crds/` directory so `helm install` applies it automatically:
+  - `charts/container-app-operator/crds/rcs.dana.io_cappbuilds.yaml`
+
 
 
