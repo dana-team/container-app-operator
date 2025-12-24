@@ -28,7 +28,6 @@ import (
 
 	dnsrecordv1alpha1 "github.com/dana-team/provider-dns-v2/apis/namespaced/record/v1alpha1"
 
-	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	nfspvcv1alpha1 "github.com/dana-team/nfspvc-operator/api/v1alpha1"
 	"github.com/go-logr/zapr"
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
@@ -48,6 +47,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
+	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	cappcontroller "github.com/dana-team/container-app-operator/internal/kinds/capp/controllers"
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 	crcontroller "github.com/dana-team/container-app-operator/internal/kinds/capprevision/controllers"
@@ -69,7 +69,6 @@ func init() {
 	utilruntime.Must(nfspvcv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(cmapi.AddToScheme(scheme))
 	utilruntime.Must(dnsrecordv1alpha1.AddToScheme(scheme))
-
 	// +kubebuilder:scaffold:scheme
 }
 
