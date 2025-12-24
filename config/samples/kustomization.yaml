@@ -2,4 +2,5 @@
 resources:
 - _v1alpha1_capprevision.yaml
 - rcs_v1alpha1_cappconfig.yaml
+- rcs_v1alpha1_cappbuild.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples
