@@ -2,6 +2,7 @@ package e2e_tests
 
 import (
 	"context"
+	"fmt"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	mock "github.com/dana-team/container-app-operator/test/e2e_tests/mocks"
@@ -48,17 +49,18 @@ var _ = Describe("Validate the validating webhook", func() {
 		Expect(k8sClient.Create(context.Background(), baseCapp)).ShouldNot(Succeed())
 	})
 
-	It("Should deny the use of a hostname matching the invalid pattern", func() {
-		baseCappConfig := mock.CreateBaseCappConfig()
-		baseCappConfig.Spec.InvalidHostnamePatterns = append(
-			baseCappConfig.Spec.InvalidHostnamePatterns,
-			invalidHostName,
-		)
-		utilst.CreateCappConfig(k8sClient, baseCappConfig)
+	It("Should deny the use of a hostname not matching the allowed patterns", func() {
 		baseCapp := mock.CreateBaseCapp()
 		baseCapp.Name = utilst.GenerateUniqueCappName(baseCapp.Name)
 		baseCapp.Spec.RouteSpec.Hostname = invalidHostName
 		Expect(k8sClient.Create(context.Background(), baseCapp)).ShouldNot(Succeed())
+	})
+
+	It("Should allow the use of a hostname matching the allowed patterns", func() {
+		baseCapp := mock.CreateBaseCapp()
+		baseCapp.Name = utilst.GenerateUniqueCappName(baseCapp.Name)
+		baseCapp.Spec.RouteSpec.Hostname = fmt.Sprintf("%s.allowed", baseCapp.Name)
+		Expect(k8sClient.Create(context.Background(), baseCapp)).Should(Succeed())
 	})
 
 	It("Should allow the use of a unique and valid hostname", func() {

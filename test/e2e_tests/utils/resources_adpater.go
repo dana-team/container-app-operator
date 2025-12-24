@@ -101,12 +101,6 @@ func CreateSecret(k8sClient client.Client, secret *corev1.Secret) {
 	Expect(k8sClient.Create(context.Background(), secret)).To(Succeed())
 }
 
-// CreateCappConfig creates a cappv1alpha1.CappConfig object and returns it.
-func CreateCappConfig(k8sClient client.Client, cappConfig *cappv1alpha1.CappConfig) *cappv1alpha1.CappConfig {
-	Expect(k8sClient.Create(context.Background(), cappConfig)).To(Succeed())
-	return cappConfig
-}
-
 // NewRetryOnConflictBackoff returns a preconfigured backoff for RetryOnConflict.
 func NewRetryOnConflictBackoff() wait.Backoff {
 	b := retry.DefaultRetry

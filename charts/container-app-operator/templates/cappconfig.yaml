@@ -24,9 +24,9 @@ spec:
     limits:
       cpu: "{{ .Values.config.defaultResources.limits.cpu }}"
       memory: "{{ .Values.config.defaultResources.limits.memory }}"
-  invalidHostnamePatterns:
-    {{- if .Values.config.invalidHostnamePatterns }}
-    {{ toYaml .Values.config.invalidHostnamePatterns | nindent 4 }}
+  allowedHostnamePatterns:
+    {{- if .Values.config.allowedHostnamePatterns }}
+    {{ toYaml .Values.config.allowedHostnamePatterns | nindent 4 }}
     {{- else }}
     []
     {{- end }}

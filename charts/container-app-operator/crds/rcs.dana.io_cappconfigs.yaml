@@ -1,9 +1,10 @@
+---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  name: cappconfigs.rcs.dana.io
   annotations:
     controller-gen.kubebuilder.io/version: v0.16.4
+  name: cappconfigs.rcs.dana.io
 spec:
   group: rcs.dana.io
   names:
@@ -13,161 +14,156 @@ spec:
     singular: cappconfig
   scope: Namespaced
   versions:
-    - name: v1alpha1
-      schema:
-        openAPIV3Schema:
-          description: CappConfig is the Schema for the cappconfigs API
-          properties:
-            apiVersion:
-              description: |-
-                APIVersion defines the versioned schema of this representation of an object.
-                Servers should convert recognized schemas to the latest internal value, and
-                may reject unrecognized values.
-                More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
-              type: string
-            kind:
-              description: |-
-                Kind is a string value representing the REST resource this object represents.
-                Servers may infer this from the endpoint the client submits requests to.
-                Cannot be updated.
-                In CamelCase.
-                More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
-              type: string
-            metadata:
-              type: object
-            spec:
-              description: CappConfigSpec defines the desired state of CappConfig
-              properties:
-                autoscaleConfig:
-                  properties:
-                    activationScale:
-                      description: ActivationScale is the default scale.
-                      type: integer
-                    concurrency:
-                      description: Concurrency is the maximum concurrency of a Capp.
-                      type: integer
-                    cpu:
-                      description: CPU is the desired CPU utilization to trigger upscaling.
-                      type: integer
-                    memory:
-                      description: Memory is the desired memory utilization to trigger
-                        upscaling.
-                      type: integer
-                    rps:
-                      description: RPS is the desired requests per second to trigger upscaling.
-                      type: integer
-                  required:
-                    - activationScale
-                    - concurrency
-                    - cpu
-                    - memory
-                    - rps
-                  type: object
-                defaultResources:
-                  description: |-
-                    DefaultResources is the default resources to be assigned to Capp.
-                    If other resources are specified then they override the default values.
-                  properties:
-                    claims:
-                      description: |-
-                        Claims lists the names of resources, defined in spec.resourceClaims,
-                        that are used by this container.
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: CappConfig is the Schema for the cappconfigs API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: CappConfigSpec defines the desired state of CappConfig
+            properties:
+              allowedHostnamePatterns:
+                default: []
+                description: |-
+                  AllowedHostnamePatterns is an optional slice of regex patterns to be used to validate the hostname of the Capp.
+                  If the Capp hostname matches a pattern, it is allowed to be created.
+                items:
+                  type: string
+                type: array
+              autoscaleConfig:
+                properties:
+                  activationScale:
+                    description: ActivationScale is the default scale.
+                    type: integer
+                  concurrency:
+                    description: Concurrency is the maximum concurrency of a Capp.
+                    type: integer
+                  cpu:
+                    description: CPU is the desired CPU utilization to trigger upscaling.
+                    type: integer
+                  memory:
+                    description: Memory is the desired memory utilization to trigger
+                      upscaling.
+                    type: integer
+                  rps:
+                    description: RPS is the desired requests per second to trigger
+                      upscaling.
+                    type: integer
+                required:
+                - activationScale
+                - concurrency
+                - cpu
+                - memory
+                - rps
+                type: object
+              defaultResources:
+                description: |-
+                  DefaultResources is the default resources to be assigned to Capp.
+                  If other resources are specified then they override the default values.
+                properties:
+                  claims:
+                    description: |-
+                      Claims lists the names of resources, defined in spec.resourceClaims,
+                      that are used by this container.
 
-                        This field depends on the
-                        DynamicResourceAllocation feature gate.
+                      This field depends on the
+                      DynamicResourceAllocation feature gate.
 
-                        This field is immutable. It can only be set for containers.
-                      items:
-                        description: ResourceClaim references one entry in PodSpec.ResourceClaims.
-                        properties:
-                          name:
-                            description: |-
-                              Name must match the name of one entry in pod.spec.resourceClaims of
-                              the Pod where this field is used. It makes that resource available
-                              inside a container.
-                            type: string
-                          request:
-                            description: |-
-                              Request is the name chosen for a request in the referenced claim.
-                              If empty, everything from the claim is made available, otherwise
-                              only the result of this request.
-                            type: string
-                        required:
-                          - name
-                        type: object
-                      type: array
-                      x-kubernetes-list-map-keys:
-                        - name
-                      x-kubernetes-list-type: map
-                    limits:
-                      additionalProperties:
-                        anyOf:
-                          - type: integer
-                          - type: string
-                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                        x-kubernetes-int-or-string: true
-                      description: |-
-                        Limits describes the maximum amount of compute resources allowed.
-                        More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                      This field is immutable. It can only be set for containers.
+                    items:
+                      description: ResourceClaim references one entry in PodSpec.ResourceClaims.
+                      properties:
+                        name:
+                          description: |-
+                            Name must match the name of one entry in pod.spec.resourceClaims of
+                            the Pod where this field is used. It makes that resource available
+                            inside a container.
+                          type: string
+                        request:
+                          description: |-
+                            Request is the name chosen for a request in the referenced claim.
+                            If empty, everything from the claim is made available, otherwise
+                            only the result of this request.
+                          type: string
+                      required:
+                      - name
                       type: object
-                    requests:
-                      additionalProperties:
-                        anyOf:
-                          - type: integer
-                          - type: string
-                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                        x-kubernetes-int-or-string: true
-                      description: |-
-                        Requests describes the minimum amount of compute resources required.
-                        If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-                        otherwise to an implementation-defined value. Requests cannot exceed Limits.
-                        More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
-                      type: object
-                  type: object
-                dnsConfig:
-                  properties:
-                    cname:
-                      description: CNAME defines the CNAME record that will be used for
-                        Capp Hostnames
-                      type: string
-                    issuer:
-                      description: Issuer defines the certificate issuer
-                      type: string
-                    provider:
-                      description: Provider defines the DNS provider
-                      type: string
-                    zone:
-                      description: Zone defines the DNS zone for Capp Hostnames
-                      type: string
-                  required:
-                    - cname
-                    - issuer
-                    - provider
-                    - zone
-                  type: object
-                invalidHostnamePatterns:
-                  default: []
-                  description: |-
-                    InvalidHostnamePatterns is an optional slice of regex patterns to be used to validate the hostname of the Capp.
-                    If the Capp hostname matches a pattern, it is blocked from being created.
-                  items:
+                    type: array
+                    x-kubernetes-list-map-keys:
+                    - name
+                    x-kubernetes-list-type: map
+                  limits:
+                    additionalProperties:
+                      anyOf:
+                      - type: integer
+                      - type: string
+                      pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                      x-kubernetes-int-or-string: true
+                    description: |-
+                      Limits describes the maximum amount of compute resources allowed.
+                      More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                    type: object
+                  requests:
+                    additionalProperties:
+                      anyOf:
+                      - type: integer
+                      - type: string
+                      pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                      x-kubernetes-int-or-string: true
+                    description: |-
+                      Requests describes the minimum amount of compute resources required.
+                      If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
+                      otherwise to an implementation-defined value. Requests cannot exceed Limits.
+                      More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                    type: object
+                type: object
+              dnsConfig:
+                properties:
+                  cname:
+                    description: CNAME defines the CNAME record that will be used
+                      for Capp Hostnames
                     type: string
-                  type: array
-              required:
-                - autoscaleConfig
-                - defaultResources
-                - dnsConfig
-                - invalidHostnamePatterns
-              type: object
-            status:
-              description: CappConfigStatus defines the observed state of CappConfig
-              type: object
-          type: object
-      served: true
-      storage: true
-status:
-  acceptedNames:
-    kind: ""
-    plural: ""
-  conditions: []
-  storedVersions: []
+                  issuer:
+                    description: Issuer defines the certificate issuer
+                    type: string
+                  provider:
+                    description: Provider defines the DNS provider
+                    type: string
+                  zone:
+                    description: Zone defines the DNS zone for Capp Hostnames
+                    type: string
+                required:
+                - cname
+                - issuer
+                - provider
+                - zone
+                type: object
+            required:
+            - allowedHostnamePatterns
+            - autoscaleConfig
+            - defaultResources
+            - dnsConfig
+            type: object
+          status:
+            description: CappConfigStatus defines the observed state of CappConfig
+            type: object
+        type: object
+    served: true
+    storage: true
