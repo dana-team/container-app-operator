@@ -39,6 +39,14 @@ spec:
           spec:
             description: CappConfigSpec defines the desired state of CappConfig
             properties:
+              allowedHostnamePatterns:
+                default: []
+                description: |-
+                  AllowedHostnamePatterns is an optional slice of regex patterns to be used to validate the hostname of the Capp.
+                  If the Capp hostname matches a pattern, it is allowed to be created.
+                items:
+                  type: string
+                type: array
               autoscaleConfig:
                 properties:
                   activationScale:
@@ -147,19 +155,11 @@ spec:
                 - provider
                 - zone
                 type: object
-              invalidHostnamePatterns:
-                default: []
-                description: |-
-                  InvalidHostnamePatterns is an optional slice of regex patterns to be used to validate the hostname of the Capp.
-                  If the Capp hostname matches a pattern, it is blocked from being created.
-                items:
-                  type: string
-                type: array
             required:
+            - allowedHostnamePatterns
             - autoscaleConfig
             - defaultResources
             - dnsConfig
-            - invalidHostnamePatterns
             type: object
           status:
             description: CappConfigStatus defines the observed state of CappConfig

@@ -17,10 +17,10 @@ type CappConfigSpec struct {
 	// If other resources are specified then they override the default values.
 	DefaultResources corev1.ResourceRequirements `json:"defaultResources"`
 
-	// InvalidHostnamePatterns is an optional slice of regex patterns to be used to validate the hostname of the Capp.
-	// If the Capp hostname matches a pattern, it is blocked from being created.
+	// AllowedHostnamePatterns is an optional slice of regex patterns to be used to validate the hostname of the Capp.
+	// If the Capp hostname matches a pattern, it is allowed to be created.
 	// +kubebuilder:default:={}
-	InvalidHostnamePatterns []string `json:"invalidHostnamePatterns"`
+	AllowedHostnamePatterns []string `json:"allowedHostnamePatterns"`
 }
 
 type DNSConfig struct {

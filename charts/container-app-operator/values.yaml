@@ -100,7 +100,7 @@ config:
       # -- Default requested memory per Capp workload.
       memory: 100Mi
 
-  invalidHostnamePatterns:
-    # -- A list of regex patterns that hostnames of Capp workloads must not match.
-    # If a Capp hostname matches one of these patterns, its creation will be blocked.
-    - ""
+  allowedHostnamePatterns:
+    # -- A list of regex patterns that hostnames of Capp workloads must match.
+    # If a Capp hostname matches one of these patterns, its creation will be allowed.
+    - ".*"

@@ -101,8 +101,12 @@ func CreateSecret(k8sClient client.Client, secret *corev1.Secret) {
 	Expect(k8sClient.Create(context.Background(), secret)).To(Succeed())
 }
 
-// CreateCappConfig creates a cappv1alpha1.CappConfig object and returns it.
-func CreateCappConfig(k8sClient client.Client, cappConfig *cappv1alpha1.CappConfig) *cappv1alpha1.CappConfig {
+// CreateOrUpdateCappConfig creates a cappv1alpha1.CappConfig object if one does not exist and returns it.
+func CreateOrUpdateCappConfig(k8sClient client.Client, cappConfig *cappv1alpha1.CappConfig) *cappv1alpha1.CappConfig {
+	if DoesResourceExist(k8sClient, cappConfig) {
+		Expect(k8sClient.Update(context.Background(), cappConfig)).To(Succeed())
+		return cappConfig
+	}
 	Expect(k8sClient.Create(context.Background(), cappConfig)).To(Succeed())
 	return cappConfig
 }

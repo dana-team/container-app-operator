@@ -48,17 +48,28 @@ var _ = Describe("Validate the validating webhook", func() {
 		Expect(k8sClient.Create(context.Background(), baseCapp)).ShouldNot(Succeed())
 	})
 
-	It("Should deny the use of a hostname matching the invalid pattern", func() {
+	It("Should deny the use of a hostname not matching the allowed patterns", func() {
 		baseCappConfig := mock.CreateBaseCappConfig()
-		baseCappConfig.Spec.InvalidHostnamePatterns = append(
-			baseCappConfig.Spec.InvalidHostnamePatterns,
-			invalidHostName,
-		)
-		utilst.CreateCappConfig(k8sClient, baseCappConfig)
+		baseCappConfig.Spec.AllowedHostnamePatterns = []string{
+			`.*\.allowed\.com`,
+		}
+		utilst.CreateOrUpdateCappConfig(k8sClient, baseCappConfig)
 		baseCapp := mock.CreateBaseCapp()
 		baseCapp.Name = utilst.GenerateUniqueCappName(baseCapp.Name)
-		baseCapp.Spec.RouteSpec.Hostname = invalidHostName
+		baseCapp.Spec.RouteSpec.Hostname = "forbidden.domain.com"
 		Expect(k8sClient.Create(context.Background(), baseCapp)).ShouldNot(Succeed())
+	})
+
+	It("Should allow the use of a hostname matching the allowed patterns", func() {
+		baseCappConfig := mock.CreateBaseCappConfig()
+		baseCappConfig.Spec.AllowedHostnamePatterns = []string{
+			`.*\.allowed\.com`,
+		}
+		utilst.CreateOrUpdateCappConfig(k8sClient, baseCappConfig)
+		baseCapp := mock.CreateBaseCapp()
+		baseCapp.Name = utilst.GenerateUniqueCappName(baseCapp.Name)
+		baseCapp.Spec.RouteSpec.Hostname = "myapp.allowed.com"
+		Expect(k8sClient.Create(context.Background(), baseCapp)).Should(Succeed())
 	})
 
 	It("Should allow the use of a unique and valid hostname", func() {
