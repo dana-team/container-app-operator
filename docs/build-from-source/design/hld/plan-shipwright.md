@@ -27,6 +27,7 @@ Everything in between is platform-owned and can evolve.
 
 ## Policy: image publishing and retention
 - If `CappBuild` is used as a **standalone build tool** (no `spec.cappRef`), users **must provide an explicit image repository to push to** (an external repo/registry target).
+- We **must not store/retain images in the internal registry** that are **not referenced by (i.e., in use by) a `Capp`**. Internal registry usage is reserved for images that the operator hands over to `Capp` and that are currently referenced by `Capp` state.
 - **Dedicated `CappBuild` controller**: reconciles `CappBuild`, creates/monitors Shipwright `Build`/`BuildRun`, and updates the target `Capp` image on success.
 - **`Capp` API**: runtime resource; deploys the current image and reports runtime status.
 - **Helm-gated feature**: enable/disable the `CappBuild` controller (and RBAC) via Helm values (e.g. `cappBuild.enabled`).
