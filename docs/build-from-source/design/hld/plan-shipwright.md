@@ -25,6 +25,18 @@ Everything in between is platform-owned and can evolve.
   - **Optional** `spec.cappRef`: when set, the built image is handed over to that `Capp`; when omitted, `CappBuild` is standalone (build-only).
   - **Optional rebuild trigger**: user intent can be expressed per `CappBuild` (e.g., manual-only vs on-commit), with defaults and guardrails enforced by platform policy.
 
+## Multi-container `Capp` support (sidecars)
+`Capp` embeds Knative’s `ConfigurationSpec`, which can include **multiple containers** (e.g., sidecars).
+
+The build contract remains **source → single image**:
+- Each successful `CappBuild` produces **one** image reference.
+- When `spec.cappRef` is set, the `CappBuild` controller updates **exactly one** container image on the target `Capp`.
+
+How the target container is selected:
+- If `spec.cappRef.containerName` is set: update the container with that name in the `Capp` pod template.
+- If `spec.cappRef.containerName` is omitted: update the **first** container in the `Capp` pod template (the “primary” container by convention).
+- Sidecar images (additional containers) are expected to be managed independently (pinned to external images, separate build pipelines, etc.).
+
 ## Policy: image publishing and retention
 - If `CappBuild` is used as a **standalone build tool** (no `spec.cappRef`), users **must provide an explicit image repository to push to** (an external repo/registry target).
 - We **must not store/retain images in the internal registry** that are **not referenced by (i.e., in use by) a `Capp`**. Internal registry usage is reserved for images that the operator hands over to `Capp` and that are currently referenced by `Capp` state.
