@@ -74,14 +74,7 @@ rules:
 - apiGroups:
   - rcs.dana.io
   resources:
-  - cappconfigs
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - rcs.dana.io
-  resources:
+  - cappbuilds
   - capprevisions
   - capps
   verbs:
@@ -95,6 +88,14 @@ rules:
 - apiGroups:
   - rcs.dana.io
   resources:
+  - cappbuilds/finalizers
+  - capps/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - rcs.dana.io
+  resources:
+  - cappbuilds/status
   - capprevisions/status
   - capps/status
   verbs:
@@ -104,9 +105,11 @@ rules:
 - apiGroups:
   - rcs.dana.io
   resources:
-  - capps/finalizers
+  - cappconfigs
   verbs:
-  - update
+  - get
+  - list
+  - watch
 - apiGroups:
   - record.dns-v2.m.crossplane.io
   resources:

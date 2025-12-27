@@ -104,3 +104,7 @@ config:
     # -- A list of regex patterns that hostnames of Capp workloads must match.
     # If a Capp hostname matches one of these patterns, its creation will be allowed.
     - ".*"
+
+cappBuild:
+   # -- Feature flag: when true, the manager process will start the CappBuild controller.
+  enabled: false
