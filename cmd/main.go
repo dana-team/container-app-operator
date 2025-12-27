@@ -50,6 +50,7 @@ import (
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	cappcontroller "github.com/dana-team/container-app-operator/internal/kinds/capp/controllers"
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
+	cappbuildcontroller "github.com/dana-team/container-app-operator/internal/kinds/cappbuild/controllers"
 	crcontroller "github.com/dana-team/container-app-operator/internal/kinds/capprevision/controllers"
 	webhooks "github.com/dana-team/container-app-operator/internal/webhook/rcs/v1alpha1"
 	// +kubebuilder:scaffold:imports
@@ -176,6 +177,19 @@ func main() {
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "CappRevision")
 		os.Exit(1)
+	}
+
+	if os.Getenv("ENABLE_CAPPBUILD_CONTROLLER") == "true" {
+		if err = (&cappbuildcontroller.CappBuildReconciler{
+			Client:        mgr.GetClient(),
+			Scheme:        mgr.GetScheme(),
+			EventRecorder: mgr.GetEventRecorderFor("cappbuild-controller"),
+		}).SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "CappBuild")
+			os.Exit(1)
+		}
+	} else {
+		setupLog.Info("cappbuild controller disabled (set ENABLE_CAPPBUILD_CONTROLLER=true to enable)")
 	}
 
 	// nolint:goconst
