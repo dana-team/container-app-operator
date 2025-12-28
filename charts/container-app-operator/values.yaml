@@ -105,6 +105,19 @@ config:
     # If a Capp hostname matches one of these patterns, its creation will be allowed.
     - ".*"
 
+  cappBuild:
+    # -- Optional platform defaults/policy for build-from-source.
+    # When configured, clusterBuildStrategy.* is required.
+    output:
+      # -- Default OCI image repo (no tag/digest) for build outputs.
+      # defaultImageRepo: "registry.example.com/org/capps"
+    clusterBuildStrategy:
+      buildFile:
+        # -- Strategy name when the source indicates a file-based build.
+        present: buildpacks-v3
+        # -- Strategy name when the source does not indicate a file-based build.
+        absent: buildah-strategy-managed-push
+
 cappBuild:
    # -- Feature flag: when true, the manager process will start the CappBuild controller.
   enabled: false
