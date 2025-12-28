@@ -2,6 +2,7 @@ package webhooks
 
 import (
 	"context"
+	"fmt"
 
 	"net/http"
 
@@ -52,14 +53,21 @@ func (c *CappValidator) handle(ctx context.Context, capp cappv1alpha1.Capp, oldC
 		return admission.Denied("Failed to fetch CappConfig")
 	}
 
-	var invalidHostnamePatterns []string
-	if config.Spec.InvalidHostnamePatterns != nil {
-		invalidHostnamePatterns = config.Spec.InvalidHostnamePatterns
+	var allowedHostnamePatterns []string
+	if config.Spec.AllowedHostnamePatterns != nil {
+		allowedHostnamePatterns = config.Spec.AllowedHostnamePatterns
 	}
 
 	if oldCapp == nil || capp.Spec.RouteSpec.Hostname != oldCapp.Spec.RouteSpec.Hostname {
-		if errs := common.ValidateDomainName(capp.Spec.RouteSpec.Hostname, invalidHostnamePatterns); errs != nil {
+		if errs := common.ValidateDomainName(capp.Spec.RouteSpec.Hostname, allowedHostnamePatterns); errs != nil {
 			return admission.Denied(errs.Error())
+		}
+		taken, err := common.IsDomainNameTaken(capp.Spec.RouteSpec.Hostname)
+		if err != nil {
+			return admission.Denied(fmt.Sprintf("hostname check error: %v", err))
+		}
+		if taken {
+			return admission.Denied(fmt.Sprintf("invalid name %q: hostname must be unique and not already taken", capp.Spec.RouteSpec.Hostname))
 		}
 	}
 

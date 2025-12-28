@@ -179,8 +179,8 @@ func (in *CappConfigSpec) DeepCopyInto(out *CappConfigSpec) {
 	out.DNSConfig = in.DNSConfig
 	out.AutoscaleConfig = in.AutoscaleConfig
 	in.DefaultResources.DeepCopyInto(&out.DefaultResources)
-	if in.InvalidHostnamePatterns != nil {
-		in, out := &in.InvalidHostnamePatterns, &out.InvalidHostnamePatterns
+	if in.AllowedHostnamePatterns != nil {
+		in, out := &in.AllowedHostnamePatterns, &out.AllowedHostnamePatterns
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
