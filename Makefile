@@ -193,16 +193,18 @@ uninstall-tekton: ## Uninstall Tekton Pipelines from the cluster
 .PHONY: install-shipwright
 install-shipwright: install-tekton ## Install Shipwright Build on the cluster
 	$(KUBECTL) apply --server-side=true -f $(SHIPWRIGHT_BUILD_URL)
-	$(KUBECTL) apply -f hack/shipwright-certs.yaml
+	$(KUBECTL) apply -f hack/shipwright/certs.yaml
 	@for crd in $$($(KUBECTL) get crd -oname | grep shipwright.io); do \
 		$(KUBECTL) annotate $$crd cert-manager.io/inject-ca-from=shipwright-build/shipwright-build-webhook-cert --overwrite; \
 	done
 	$(KUBECTL) -n shipwright-build rollout status deployment/shipwright-build-controller --timeout=10m
 	$(KUBECTL) -n shipwright-build rollout status deployment/shipwright-build-webhook --timeout=10m
+	$(KUBECTL) apply -f hack/shipwright/strategies.yaml
 
 .PHONY: uninstall-shipwright
 uninstall-shipwright: ## Uninstall Shipwright Build from the cluster
-	$(KUBECTL) delete -f hack/shipwright-certs.yaml --ignore-not-found=true
+	$(KUBECTL) delete -f hack/shipwright/strategies.yaml --ignore-not-found=true
+	$(KUBECTL) delete -f hack/shipwright/certs.yaml --ignore-not-found=true
 	$(KUBECTL) delete -f $(SHIPWRIGHT_BUILD_URL) --ignore-not-found=true
 
 .PHONY: install-knative
