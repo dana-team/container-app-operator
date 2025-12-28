@@ -3,6 +3,13 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - 'examples/**'
+      - 'images/**'
+      - 'LICENSE'
+      - 'OWNERS'
 
 env:
   REGISTRY: ghcr.io
