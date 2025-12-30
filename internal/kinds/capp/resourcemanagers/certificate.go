@@ -29,6 +29,7 @@ const (
 	eventCappCertificateCreated        = "CertificateCreated"
 	PrivateKeySize                     = 4096
 	clusterIssuerKind                  = "ClusterIssuer"
+	certificateUIDSecretLabelKey       = "networking.internal.knative.dev/certificate-uid"
 )
 
 type CertificateManager struct {
@@ -83,6 +84,13 @@ func (c CertificateManager) prepareResource(capp cappv1alpha1.Capp) (cmapi.Certi
 				Group: certv1alpha1.GroupVersion.Group,
 			},
 			SecretName: secretName,
+			SecretTemplate: &cmapi.CertificateSecretTemplate{
+				Labels: map[string]string{
+					// Add knative label to the secret so that kourier can fetch it.
+					// See: https://docs.redhat.com/en/documentation/red_hat_openshift_serverless/1.33/html/serving/configuring-custom-domains-for-knative-services#serverless-ossm-secret-filtering-net-kourier_domain-mapping-custom-tls-cert
+					certificateUIDSecretLabelKey: "",
+				},
+			},
 		},
 	}
 
