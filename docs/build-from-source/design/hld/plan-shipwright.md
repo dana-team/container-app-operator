@@ -23,6 +23,7 @@ Everything in between is platform-owned and can evolve.
 ## High-level architecture
 - **`CappBuild` API (New CRD)**: build-time resource (source + creds). Build implementation details are platform-owned.
   - **Optional** `spec.cappRef`: when set, the built image is handed over to that `Capp`; when omitted, `CappBuild` is standalone (build-only).
+  - **Required** `spec.output`: explicit output image target (registry/repo) to push to.
   - **Optional rebuild trigger**: user intent can be expressed per `CappBuild` (e.g., manual-only vs on-commit), with defaults and guardrails enforced by platform policy.
 
 ## Multi-container `Capp` support (sidecars)
@@ -37,15 +38,14 @@ How the target container is selected:
 - If `spec.cappRef.containerName` is omitted: update the **first** container in the `Capp` pod template (the “primary” container by convention).
 - Sidecar images (additional containers) are expected to be managed independently (pinned to external images, separate build pipelines, etc.).
 
-## Policy: image publishing and retention
-- If `CappBuild` is used as a **standalone build tool** (no `spec.cappRef`), users **must provide an explicit image repository to push to** (an external repo/registry target).
-- We **must not store/retain images in the internal registry** that are **not referenced by (i.e., in use by) a `Capp`**. Internal registry usage is reserved for images that the operator hands over to `Capp` and that are currently referenced by `Capp` state.
+## Policy: image publishing
+- `CappBuild.spec.output` is **required** (regardless of whether `spec.cappRef` is set).
 - **Dedicated `CappBuild` controller**: reconciles `CappBuild`, creates/monitors Shipwright `Build`/`BuildRun`, and updates the target `Capp` image on success.
 - **`Capp` API**: runtime resource; deploys the current image and reports runtime status.
 - **Helm-gated feature**: enable/disable the `CappBuild` controller (and RBAC) via Helm values (e.g. `cappBuild.enabled`).
 - **Platform configuration**: define defaults and policy centrally via `CappConfig`:
   - Build strategy selection, pinned versions, and policy constraints
-  - Image publishing target
+  - Validation/policy for allowed `spec.output` targets (e.g., allowlist of registries, naming constraints)
   - Credentials + authorization model for source + registry access
   - Defaults and constraints for rebuild triggers
 - **How Shipwright executes builds**:
