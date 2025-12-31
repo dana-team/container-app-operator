@@ -16,6 +16,7 @@ This phase stops **before** creating Shipwright `Build`/`BuildRun` objects.
 - Select the build strategy based on **presence/absence of a build file**:
   `Dockerfile` or `Containerfile` within the repo (respecting `contextDir`).
 - Fail fast with clear `status.conditions` when inputs or policy are missing.
+  - `spec.output` / `spec.output.image` are required by the CRD and treated as mandatory inputs.
 
 ## Deliverables
 
@@ -136,13 +137,13 @@ func newBuild(
 				Kind: "ClusterBuildStrategy",
 				Name: selectedStrategyName,
 			},
-			// Source and Output are derived from cb.Spec. Later phases can expand
+			// Source and Output are mapped from cb.Spec. Later phases can expand
 			// credentials/params wiring, but the selected strategy is fixed here.
 			Source: shipwrightv1alpha1.Source{
 				// TODO: map cb.Spec.Source (git url/revision/contextDir/cloneSecret)
 			},
 			Output: shipwrightv1alpha1.Image{
-				// TODO: map cb.Spec.Output (image/pushSecret) or platform defaults
+				// TODO: map cb.Spec.Output (image/pushSecret)
 			},
 		},
 	}
