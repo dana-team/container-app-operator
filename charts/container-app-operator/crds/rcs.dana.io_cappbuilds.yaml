@@ -64,6 +64,7 @@ spec:
                 properties:
                   image:
                     description: Image is the reference of the image.
+                    minLength: 1
                     type: string
                   pushSecret:
                     description: Describes the secret name for pushing a container
@@ -80,6 +81,8 @@ spec:
                         type: string
                     type: object
                     x-kubernetes-map-type: atomic
+                required:
+                - image
                 type: object
               rebuild:
                 description: Rebuild controls rebuild behavior.
@@ -145,6 +148,7 @@ spec:
                 - type
                 type: object
             required:
+            - output
             - source
             type: object
           status:

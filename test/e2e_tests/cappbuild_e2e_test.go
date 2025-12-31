@@ -28,6 +28,9 @@ var _ = Describe("Validate CappBuild controller", func() {
 						URL: "https://github.com/dana-team/container-app-operator",
 					},
 				},
+				Output: cappv1alpha1.CappBuildOutputSpec{
+					Image: "registry.example.com/team/cappbuild-e2e",
+				},
 			},
 		}
 

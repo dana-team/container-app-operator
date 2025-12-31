@@ -47,9 +47,8 @@ type CappBuildSpec struct {
 	// Rebuild controls rebuild behavior.
 	Rebuild *CappBuildRebuildSpec `json:"rebuild,omitempty"`
 
-	// +optional
 	// Output refers to the location where the built image would be pushed.
-	Output *CappBuildOutputSpec `json:"output,omitempty"`
+	Output CappBuildOutputSpec `json:"output"`
 }
 
 type CappBuildSource struct {
@@ -101,9 +100,9 @@ type CappBuildRebuildSpec struct {
 }
 
 type CappBuildOutputSpec struct {
-	// +optional
 	// Image is the reference of the image.
-	Image string `json:"image,omitempty"`
+	// +kubebuilder:validation:MinLength=1
+	Image string `json:"image"`
 
 	// +optional
 	// Describes the secret name for pushing a container image.
