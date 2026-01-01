@@ -41,6 +41,21 @@ spec:
           spec:
             description: Spec defines the desired state of the CappBuild.
             properties:
+              buildFile:
+                description: BuildFile indicates whether the source should be built
+                  using a buildfile-based or non-buildfile-based strategy.
+                properties:
+                  mode:
+                    description: |-
+                      Mode selects whether the source is expected to contain a Dockerfile/Containerfile.
+                      Present: use a buildfile-based strategy; Absent: use a non-buildfile-based strategy.
+                    enum:
+                    - Present
+                    - Absent
+                    type: string
+                required:
+                - mode
+                type: object
               cappRef:
                 description: |-
                   CappRef links this build to a Capp. If set, the controller will update the
@@ -148,6 +163,7 @@ spec:
                 - type
                 type: object
             required:
+            - buildFile
             - output
             - source
             type: object

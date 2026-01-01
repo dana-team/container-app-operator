@@ -34,9 +34,26 @@ const (
 	CappBuildRebuildModeOnCommit CappBuildRebuildMode = "OnCommit"
 )
 
+type CappBuildFileMode string
+
+const (
+	CappBuildFileModePresent CappBuildFileMode = "Present"
+	CappBuildFileModeAbsent  CappBuildFileMode = "Absent"
+)
+
+type CappBuildFileSpec struct {
+	// +kubebuilder:validation:Enum=Present;Absent
+	// Mode selects whether the source is expected to contain a Dockerfile/Containerfile.
+	// Present: use a buildfile-based strategy; Absent: use a non-buildfile-based strategy.
+	Mode CappBuildFileMode `json:"mode"`
+}
+
 type CappBuildSpec struct {
 	// Source refers to the location where the source code is.
 	Source CappBuildSource `json:"source"`
+
+	// BuildFile indicates whether the source should be built using a buildfile-based or non-buildfile-based strategy.
+	BuildFile CappBuildFileSpec `json:"buildFile"`
 
 	// +optional
 	// CappRef links this build to a Capp. If set, the controller will update the

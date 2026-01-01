@@ -4,6 +4,8 @@ metadata:
   name: demo-cappbuild
   namespace: default
 spec:
+  buildFile:
+    mode: Present
   source:
     type: Git
     git:
