@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -40,7 +39,7 @@ func (r *CappBuildReconciler) patchReadyCondition(
 func (r *CappBuildReconciler) newBuild(
 	cb *rcs.CappBuild,
 	selectedStrategyName string,
-) (*shipwright.Build, error) {
+) *shipwright.Build {
 	kind := shipwright.ClusterBuildStrategyKind
 
 	build := &shipwright.Build{
@@ -85,7 +84,7 @@ func (r *CappBuildReconciler) newBuild(
 		build.Spec.Output.PushSecret = &ps
 	}
 
-	return build, nil
+	return build
 }
 
 // reconcileBuild ensures the Shipwright Build exists and matches desired state.
@@ -96,10 +95,7 @@ func (r *CappBuildReconciler) reconcileBuild(
 ) error {
 	logger := log.FromContext(ctx)
 
-	desired, err := r.newBuild(cb, selectedStrategyName)
-	if err != nil {
-		return fmt.Errorf("failed to generate build definition: %w", err)
-	}
+	desired := r.newBuild(cb, selectedStrategyName)
 
 	actual := &shipwright.Build{
 		ObjectMeta: metav1.ObjectMeta{
