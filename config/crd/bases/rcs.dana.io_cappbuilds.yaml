@@ -170,6 +170,9 @@ spec:
           status:
             description: Status defines the observed state of the CappBuild.
             properties:
+              buildRef:
+                description: BuildRef references the associated Build.
+                type: string
               conditions:
                 description: |-
                   Conditions represent the latest available observations of the CappBuild's
