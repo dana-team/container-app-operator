@@ -72,7 +72,7 @@ import (
 	shipwrightv1beta1 "github.com/shipwright-io/build/pkg/apis/build/v1beta1"
 )
 
-func deriveBuildName(cb *cappv1alpha1.CappBuild) string {
+func buildNameFor(cb *cappv1alpha1.CappBuild) string {
 	return cb.Name + "-build"
 }
 
@@ -99,7 +99,7 @@ func (r *CappBuildReconciler) getBuild(
 	ctx context.Context,
 	cb *cappv1alpha1.CappBuild,
 ) (*shipwrightv1beta1.Build, bool, error) {
-	key := types.NamespacedName{Namespace: cb.Namespace, Name: deriveBuildName(cb)}
+	key := types.NamespacedName{Namespace: cb.Namespace, Name: buildNameFor(cb)}
 	build := &shipwrightv1beta1.Build{}
 
 	if err := r.Get(ctx, key, build); err != nil {
@@ -127,7 +127,7 @@ func (r *CappBuildReconciler) newBuild(
 
 	build := &shipwrightv1beta1.Build{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      deriveBuildName(cb),
+			Name:      buildNameFor(cb),
 			Namespace: cb.Namespace,
 			Labels: map[string]string{
 				cappv1alpha1.GroupVersion.Group + "/parent-cappbuild": cb.Name,
