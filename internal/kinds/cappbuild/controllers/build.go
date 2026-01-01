@@ -25,6 +25,8 @@ func (r *CappBuildReconciler) patchReadyCondition(
 ) error {
 	orig := cb.DeepCopy()
 
+	cb.Status.ObservedGeneration = cb.Generation
+
 	meta.SetStatusCondition(&cb.Status.Conditions, metav1.Condition{
 		Type:               TypeReady,
 		Status:             status,
