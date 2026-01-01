@@ -133,6 +133,10 @@ type CappBuildStatus struct {
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 
 	// +optional
+	// BuildRef references the associated Build.
+	BuildRef string `json:"buildRef,omitempty"`
+
+	// +optional
 	// Conditions represent the latest available observations of the CappBuild's
 	// state.
 	Conditions []metav1.Condition `json:"conditions,omitempty"`

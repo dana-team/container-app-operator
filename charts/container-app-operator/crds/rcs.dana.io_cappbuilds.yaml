@@ -42,8 +42,8 @@ spec:
             description: Spec defines the desired state of the CappBuild.
             properties:
               buildFile:
-                description: BuildFile controls build strategy selection without probing
-                  the source.
+                description: BuildFile indicates whether the source should be built
+                  using a buildfile-based or non-buildfile-based strategy.
                 properties:
                   mode:
                     description: |-
@@ -170,6 +170,10 @@ spec:
           status:
             description: Status defines the observed state of the CappBuild.
             properties:
+              buildRef:
+                description: 'BuildRef references the associated Shipwright Build
+                  (for example: "<namespace>/<name>").'
+                type: string
               conditions:
                 description: |-
                   Conditions represent the latest available observations of the CappBuild's
