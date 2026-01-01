@@ -22,6 +22,9 @@ var _ = Describe("Validate CappBuild controller", func() {
 				Namespace: testconsts.NSName,
 			},
 			Spec: cappv1alpha1.CappBuildSpec{
+				BuildFile: cappv1alpha1.CappBuildFileSpec{
+					Mode: cappv1alpha1.CappBuildFileModeAbsent,
+				},
 				Source: cappv1alpha1.CappBuildSource{
 					Type: cappv1alpha1.CappBuildSourceTypeGit,
 					Git: cappv1alpha1.CappBuildGitSource{
