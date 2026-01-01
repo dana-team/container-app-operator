@@ -54,14 +54,6 @@ func (r *CappBuildReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, fmt.Errorf("failed to get CappBuild: %w", err)
 	}
 
-	if cb.Status.ObservedGeneration != cb.Generation {
-		orig := cb.DeepCopy()
-		cb.Status.ObservedGeneration = cb.Generation
-		if err := r.Status().Patch(ctx, cb, client.MergeFrom(orig)); err != nil {
-			return ctrl.Result{}, fmt.Errorf("failed to patch CappBuild status: %w", err)
-		}
-	}
-
 	var alreadyOwned *controllerutil.AlreadyOwnedError
 
 	cappConfig, err := capputils.GetCappConfig(r.Client)
