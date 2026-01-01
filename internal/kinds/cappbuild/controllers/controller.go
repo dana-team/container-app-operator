@@ -2,8 +2,8 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 	"errors"
+	"fmt"
 	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -12,12 +12,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
-
+	rcs "github.com/dana-team/container-app-operator/api/v1alpha1"
 	capputils "github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	rcs "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
@@ -39,7 +37,7 @@ type CappBuildReconciler struct {
 
 func (r *CappBuildReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&cappv1alpha1.CappBuild{}).
+		For(&rcs.CappBuild{}).
 		Named(cappBuildControllerName).
 		Complete(r)
 }
@@ -48,7 +46,7 @@ func (r *CappBuildReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	logger := log.FromContext(ctx).WithValues("CappBuildName", req.Name, "CappBuildNamespace", req.Namespace)
 	logger.Info("Starting Reconcile")
 
-	cb := &cappv1alpha1.CappBuild{}
+	cb := &rcs.CappBuild{}
 	if err := r.Get(ctx, req.NamespacedName, cb); err != nil {
 		if apierrors.IsNotFound(err) {
 			return ctrl.Result{}, nil
