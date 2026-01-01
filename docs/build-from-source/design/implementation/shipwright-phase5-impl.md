@@ -226,6 +226,17 @@ if err := r.reconcileBuild(ctx, cb, selectedStrategyName); err != nil {
 	return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
 }
 
+// Record association/progress without claiming success (Phase 5 is not "done").
+buildRef := cb.Namespace + "/" + buildNameFor(cb)
+if cb.Status.BuildRef != buildRef {
+	orig := cb.DeepCopy()
+	cb.Status.ObservedGeneration = cb.Generation
+	cb.Status.BuildRef = buildRef
+	if err := r.Status().Patch(ctx, cb, client.MergeFrom(orig)); err != nil {
+		return ctrl.Result{}, err
+	}
+}
+
 return ctrl.Result{}, nil
 ```
 
@@ -244,6 +255,7 @@ import (
 	capputils "github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 ```
