@@ -16,13 +16,13 @@ Edit:
 Add import:
 
 ```go
-shipwrightv1beta1 "github.com/shipwright-io/build/pkg/apis/build/v1beta1"
+shipwright "github.com/shipwright-io/build/pkg/apis/build/v1beta1"
 ```
 
 Add to `init()`:
 
 ```go
-utilruntime.Must(shipwrightv1beta1.AddToScheme(scheme))
+utilruntime.Must(shipwright.AddToScheme(scheme))
 ```
 
 ## 1) Add condition/reason constants
@@ -33,8 +33,6 @@ Create:
 ```go
 package controllers
 
-import "errors"
-
 const (
 	TypeReady = "Ready"
 
@@ -43,8 +41,6 @@ const (
 	ReasonMissingPolicy        = "MissingPolicy"
 	ReasonSourceAccessFailed   = "SourceAccessFailed"
 )
-
-var ErrBuildConflict = errors.New("build conflict")
 ```
 
 ## 2) Add `Build` helpers (typed Shipwright `Build`)
@@ -57,28 +53,25 @@ package controllers
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
-	shipwrightv1beta1 "github.com/shipwright-io/build/pkg/apis/build/v1beta1"
+	rcs "github.com/dana-team/container-app-operator/api/v1alpha1"
+	shipwright "github.com/shipwright-io/build/pkg/apis/build/v1beta1"
 )
 
-func buildNameFor(cb *cappv1alpha1.CappBuild) string {
+func buildNameFor(cb *rcs.CappBuild) string {
 	return cb.Name + "-build"
 }
 
 func (r *CappBuildReconciler) patchReadyCondition(
 	ctx context.Context,
-	cb *cappv1alpha1.CappBuild,
+	cb *rcs.CappBuild,
 	status metav1.ConditionStatus,
 	reason, message string,
 ) error {
@@ -95,57 +88,33 @@ func (r *CappBuildReconciler) patchReadyCondition(
 	return r.Status().Patch(ctx, cb, client.MergeFrom(orig))
 }
 
-func (r *CappBuildReconciler) getBuild(
-	ctx context.Context,
-	cb *cappv1alpha1.CappBuild,
-) (*shipwrightv1beta1.Build, bool, error) {
-	key := types.NamespacedName{Namespace: cb.Namespace, Name: buildNameFor(cb)}
-	build := &shipwrightv1beta1.Build{}
-
-	if err := r.Get(ctx, key, build); err != nil {
-		if apierrors.IsNotFound(err) {
-			return nil, false, nil
-		}
-		return nil, false, err
-	}
-
-	if !metav1.IsControlledBy(build, cb) {
-		return nil, false, fmt.Errorf("%w: %s exists but is not owned by CappBuild %s/%s",
-			ErrBuildConflict, key.String(), cb.Namespace, cb.Name)
-	}
-	return build, true, nil
-}
-
 func (r *CappBuildReconciler) newBuild(
-	cb *cappv1alpha1.CappBuild,
+	cb *rcs.CappBuild,
 	selectedStrategyName string,
-) (*shipwrightv1beta1.Build, error) {
-	// CappBuild CRD enforces spec.output.image (required, MinLength=1).
-	outputImage := cb.Spec.Output.Image
+) (*shipwright.Build, error) {
+	kind := shipwright.ClusterBuildStrategyKind
 
-	kind := shipwrightv1beta1.ClusterBuildStrategyKind
-
-	build := &shipwrightv1beta1.Build{
+	build := &shipwright.Build{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      buildNameFor(cb),
 			Namespace: cb.Namespace,
 			Labels: map[string]string{
-				cappv1alpha1.GroupVersion.Group + "/parent-cappbuild": cb.Name,
+				rcs.GroupVersion.Group + "/parent-cappbuild": cb.Name,
 			},
 		},
-		Spec: shipwrightv1beta1.BuildSpec{
-			Strategy: shipwrightv1beta1.Strategy{
+		Spec: shipwright.BuildSpec{
+			Strategy: shipwright.Strategy{
 				Name: selectedStrategyName,
 				Kind: &kind,
 			},
-			Source: &shipwrightv1beta1.Source{
-				Type: shipwrightv1beta1.GitType,
-				Git: &shipwrightv1beta1.Git{
+			Source: &shipwright.Source{
+				Type: shipwright.GitType,
+				Git: &shipwright.Git{
 					URL: cb.Spec.Source.Git.URL,
 				},
 			},
-			Output: shipwrightv1beta1.Image{
-				Image: outputImage,
+			Output: shipwright.Image{
+				Image: cb.Spec.Output.Image,
 			},
 		},
 	}
@@ -167,54 +136,50 @@ func (r *CappBuildReconciler) newBuild(
 		build.Spec.Output.PushSecret = &ps
 	}
 
-	if err := controllerutil.SetControllerReference(cb, build, r.Scheme); err != nil {
-		return nil, err
-	}
 	return build, nil
 }
 
-// ensureBuild creates or patches the associated Build. Only sets Ready=False on failures.
-func (r *CappBuildReconciler) ensureBuild(
+// reconcileBuild ensures the Shipwright Build exists and matches desired state.
+// It returns errors; the main Reconcile flow is responsible for updating CappBuild status.
+func (r *CappBuildReconciler) reconcileBuild(
 	ctx context.Context,
-	cb *cappv1alpha1.CappBuild,
+	cb *rcs.CappBuild,
 	selectedStrategyName string,
 ) error {
 	logger := log.FromContext(ctx)
 
-	existing, ok, err := r.getBuild(ctx, cb)
-	if err != nil {
-		if errors.Is(err, ErrBuildConflict) {
-			_ = r.patchReadyCondition(ctx, cb, metav1.ConditionFalse, ReasonBuildConflict, err.Error())
-			return nil
-		}
-		_ = r.patchReadyCondition(ctx, cb, metav1.ConditionFalse, ReasonBuildReconcileFailed, err.Error())
-		return err
-	}
-
 	desired, err := r.newBuild(cb, selectedStrategyName)
 	if err != nil {
-		_ = r.patchReadyCondition(ctx, cb, metav1.ConditionFalse, ReasonBuildReconcileFailed, err.Error())
-		return err
+		return fmt.Errorf("failed to generate build definition: %w", err)
 	}
 
-	if !ok {
-		if err := r.Create(ctx, desired); err != nil {
-			_ = r.patchReadyCondition(ctx, cb, metav1.ConditionFalse, ReasonBuildReconcileFailed, err.Error())
+	actual := &shipwright.Build{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      desired.Name,
+			Namespace: desired.Namespace,
+		},
+	}
+
+	op, err := controllerutil.CreateOrPatch(ctx, r.Client, actual, func() error {
+		if err := controllerutil.SetControllerReference(cb, actual, r.Scheme); err != nil {
 			return err
 		}
-		logger.Info("Created Shipwright Build", "name", desired.Name)
+		// Merge controller-owned labels; do not wipe labels from other actors.
+		if actual.Labels == nil {
+			actual.Labels = map[string]string{}
+		}
+		for k, v := range desired.Labels {
+			actual.Labels[k] = v
+		}
+		actual.Spec = desired.Spec
 		return nil
-	}
-
-	orig := existing.DeepCopy()
-	existing.Labels = desired.Labels
-	existing.Spec = desired.Spec
-
-	if err := r.Patch(ctx, existing, client.MergeFrom(orig)); err != nil {
-		_ = r.patchReadyCondition(ctx, cb, metav1.ConditionFalse, ReasonBuildReconcileFailed, err.Error())
+	})
+	if err != nil {
 		return err
 	}
-	logger.Info("Patched Shipwright Build", "name", existing.Name)
+	if op != controllerutil.OperationResultNone {
+		logger.Info("Reconciled Shipwright Build", "name", actual.Name, "operation", string(op))
+	}
 	return nil
 }
 ```
@@ -232,11 +197,13 @@ Add:
 // +kubebuilder:rbac:groups=shipwright.io,resources=builds,verbs=get;list;watch;create;update;patch;delete
 ```
 
-### 3.2) Wire: policy → probe → select strategy → ensureBuild
+### 3.2) Wire: policy → probe → select strategy → reconcileBuild
 
 Replace the body after `ObservedGeneration` handling with:
 
 ```go
+var alreadyOwned *controllerutil.AlreadyOwnedError
+
 cfg, err := capputils.GetCappConfig(r.Client)
 if err != nil || cfg.Spec.CappBuild == nil {
 	_ = r.patchReadyCondition(ctx, cb, metav1.ConditionFalse, ReasonMissingPolicy, "CappConfig build policy is missing")
@@ -257,8 +224,12 @@ if buildFilePresent {
 	selected = present
 }
 
-if err := r.ensureBuild(ctx, cb, selected); err != nil {
-	// ensureBuild already set Ready=False on failures
+if err := r.reconcileBuild(ctx, cb, selected); err != nil {
+	if errors.As(err, &alreadyOwned) {
+		_ = r.patchReadyCondition(ctx, cb, metav1.ConditionFalse, ReasonBuildConflict, err.Error())
+		return ctrl.Result{}, nil
+	}
+	_ = r.patchReadyCondition(ctx, cb, metav1.ConditionFalse, ReasonBuildReconcileFailed, err.Error())
 	return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
 }
 
@@ -269,10 +240,12 @@ Also add imports (adjust existing list):
 
 ```go
 import (
+	"errors"
 	"time"
 
 	capputils "github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 ```
 
@@ -288,10 +261,10 @@ import (
 	"context"
 	"fmt"
 
-	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	rcs "github.com/dana-team/container-app-operator/api/v1alpha1"
 )
 
-func probeBuildFilePresence(ctx context.Context, cb *cappv1alpha1.CappBuild) (bool, error) {
+func probeBuildFilePresence(ctx context.Context, cb *rcs.CappBuild) (bool, error) {
 	return false, fmt.Errorf("probeBuildFilePresence not implemented")
 }
 ```
@@ -302,5 +275,6 @@ func probeBuildFilePresence(ctx context.Context, cb *cappv1alpha1.CappBuild) (bo
 make fmt
 make manifests
 ```
+
 
 
