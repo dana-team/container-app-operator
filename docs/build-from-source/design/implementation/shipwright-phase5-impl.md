@@ -39,7 +39,6 @@ const (
 	ReasonBuildReconcileFailed = "BuildReconcileFailed"
 	ReasonBuildConflict        = "BuildConflict"
 	ReasonMissingPolicy        = "MissingPolicy"
-	ReasonSourceAccessFailed   = "SourceAccessFailed"
 )
 ```
 
@@ -204,27 +203,21 @@ Replace the body after `ObservedGeneration` handling with:
 ```go
 var alreadyOwned *controllerutil.AlreadyOwnedError
 
-cfg, err := capputils.GetCappConfig(r.Client)
-if err != nil || cfg.Spec.CappBuild == nil {
+cappConfig, err := capputils.GetCappConfig(r.Client)
+if err != nil || cappConfig.Spec.CappBuild == nil {
 	_ = r.patchReadyCondition(ctx, cb, metav1.ConditionFalse, ReasonMissingPolicy, "CappConfig build policy is missing")
 	return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
 }
 
-present := cfg.Spec.CappBuild.ClusterBuildStrategy.BuildFile.Present
-absent := cfg.Spec.CappBuild.ClusterBuildStrategy.BuildFile.Absent
+present := cappConfig.Spec.CappBuild.ClusterBuildStrategy.BuildFile.Present
+absent := cappConfig.Spec.CappBuild.ClusterBuildStrategy.BuildFile.Absent
 
-buildFilePresent, err := probeBuildFilePresence(ctx, cb)
-if err != nil {
-	_ = r.patchReadyCondition(ctx, cb, metav1.ConditionFalse, ReasonSourceAccessFailed, err.Error())
-	return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
+selectedStrategyName := absent
+if cb.Spec.BuildFile.Mode == rcs.CappBuildFileModePresent {
+	selectedStrategyName = present
 }
 
-selected := absent
-if buildFilePresent {
-	selected = present
-}
-
-if err := r.reconcileBuild(ctx, cb, selected); err != nil {
+if err := r.reconcileBuild(ctx, cb, selectedStrategyName); err != nil {
 	if errors.As(err, &alreadyOwned) {
 		_ = r.patchReadyCondition(ctx, cb, metav1.ConditionFalse, ReasonBuildConflict, err.Error())
 		return ctrl.Result{}, nil
@@ -236,40 +229,26 @@ if err := r.reconcileBuild(ctx, cb, selected); err != nil {
 return ctrl.Result{}, nil
 ```
 
-Also add imports (adjust existing list):
+Also add imports (adjust existing list). Important: if `controller.go` currently imports
+Kubernetes API errors as `errors` (`k8s.io/apimachinery/pkg/api/errors`), rename it to
+`apierrors` so stdlib `errors` can be used for `errors.As(...)`:
+
+- Update call sites accordingly (e.g. `errors.IsNotFound(err)` → `apierrors.IsNotFound(err)`).
 
 ```go
 import (
 	"errors"
 	"time"
 
+	rcs "github.com/dana-team/container-app-operator/api/v1alpha1"
 	capputils "github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 ```
 
-## 4) Add build-file probe stub
-
-Create:
-- `/home/sbahar/projects/ps/dana-team/container-app-operator/internal/kinds/cappbuild/controllers/sourceprobe.go`
-
-```go
-package controllers
-
-import (
-	"context"
-	"fmt"
-
-	rcs "github.com/dana-team/container-app-operator/api/v1alpha1"
-)
-
-func probeBuildFilePresence(ctx context.Context, cb *rcs.CappBuild) (bool, error) {
-	return false, fmt.Errorf("probeBuildFilePresence not implemented")
-}
-```
-
-## 5) Generate manifests + format
+## 4) Generate manifests + format
 
 ```bash
 make fmt
