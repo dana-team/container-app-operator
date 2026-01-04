@@ -2,9 +2,12 @@ package controllers
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -12,6 +15,8 @@ import (
 	rcs "github.com/dana-team/container-app-operator/api/v1alpha1"
 	shipwright "github.com/shipwright-io/build/pkg/apis/build/v1beta1"
 )
+
+var ErrBuildStrategyNotFound = errors.New("clusterbuildstrategy not found")
 
 func buildNameFor(cb *rcs.CappBuild) string {
 	return cb.Name + "-build"
@@ -97,6 +102,11 @@ func (r *CappBuildReconciler) reconcileBuild(
 ) error {
 	logger := log.FromContext(ctx)
 
+	clusterBuildStrategy := &shipwright.ClusterBuildStrategy{}
+	if err := r.Get(ctx, types.NamespacedName{Name: selectedStrategyName}, clusterBuildStrategy); err != nil {
+		return fmt.Errorf("%w: %q: %v", ErrBuildStrategyNotFound, selectedStrategyName, err)
+	}
+
 	desired := r.newBuild(cb, selectedStrategyName)
 
 	actual := &shipwright.Build{
@@ -125,5 +135,6 @@ func (r *CappBuildReconciler) reconcileBuild(
 	if op != controllerutil.OperationResultNone {
 		logger.Info("Reconciled Shipwright Build", "name", actual.Name, "operation", string(op))
 	}
+
 	return nil
 }

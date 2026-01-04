@@ -165,3 +165,11 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - shipwright.io
+  resources:
+  - clusterbuildstrategies
+  verbs:
+  - get
+  - list
+  - watch

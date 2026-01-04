@@ -32,6 +32,7 @@ import (
 	"github.com/go-logr/zapr"
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
 	routev1 "github.com/openshift/api/route/v1"
+	shipwright "github.com/shipwright-io/build/pkg/apis/build/v1beta1"
 	"go.elastic.co/ecszap"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -70,6 +71,7 @@ func init() {
 	utilruntime.Must(nfspvcv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(cmapi.AddToScheme(scheme))
 	utilruntime.Must(dnsrecordv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(shipwright.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 

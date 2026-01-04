@@ -17,6 +17,8 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	shipwright "github.com/shipwright-io/build/pkg/apis/build/v1beta1"
 )
 
 const cappBuildControllerName = "CappBuildController"
@@ -34,10 +36,12 @@ type CappBuildReconciler struct {
 // +kubebuilder:rbac:groups="",resources=events,verbs=get;list;watch;create;patch;update
 // +kubebuilder:rbac:groups="events.k8s.io",resources=events,verbs=get;list;watch;create;patch;update
 // +kubebuilder:rbac:groups=shipwright.io,resources=builds,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=shipwright.io,resources=clusterbuildstrategies,verbs=get;list;watch
 
 func (r *CappBuildReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&rcs.CappBuild{}).
+		Owns(&shipwright.Build{}).
 		Named(cappBuildControllerName).
 		Complete(r)
 }
@@ -71,6 +75,10 @@ func (r *CappBuildReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	if err := r.reconcileBuild(ctx, cb, selectedStrategyName); err != nil {
+		if errors.Is(err, ErrBuildStrategyNotFound) {
+			_ = r.patchReadyCondition(ctx, cb, metav1.ConditionFalse, ReasonBuildStrategyNotFound, err.Error())
+			return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
+		}
 		if errors.As(err, &alreadyOwned) {
 			_ = r.patchReadyCondition(ctx, cb, metav1.ConditionFalse, ReasonBuildConflict, err.Error())
 			return ctrl.Result{}, nil
