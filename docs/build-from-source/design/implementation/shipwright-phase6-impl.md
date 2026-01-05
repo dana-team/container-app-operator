@@ -37,6 +37,7 @@ import (
 	shipwright "github.com/shipwright-io/build/pkg/apis/build/v1beta1"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -123,8 +124,8 @@ func TestReconcileMissingPolicy(t *testing.T) {
 
 	latest := &rcs.CappBuild{}
 	require.NoError(t, c.Get(ctx, client.ObjectKeyFromObject(cb), latest))
-	cond := metav1.FindStatusCondition(latest.Status.Conditions, TypeReady)
-	require.NotNil(t, cond)
+	cond := meta.FindStatusCondition(latest.Status.Conditions, TypeReady)
+	require.NotNil(t, cond, "Ready condition should be set")
 	require.Equal(t, metav1.ConditionFalse, cond.Status)
 	require.Equal(t, ReasonMissingPolicy, cond.Reason)
 }
@@ -143,8 +144,8 @@ func TestReconcileStrategyNotFound(t *testing.T) {
 
 	latest := &rcs.CappBuild{}
 	require.NoError(t, c.Get(ctx, client.ObjectKeyFromObject(cb), latest))
-	cond := metav1.FindStatusCondition(latest.Status.Conditions, TypeReady)
-	require.NotNil(t, cond)
+	cond := meta.FindStatusCondition(latest.Status.Conditions, TypeReady)
+	require.NotNil(t, cond, "Ready condition should be set")
 	require.Equal(t, metav1.ConditionFalse, cond.Status)
 	require.Equal(t, ReasonBuildStrategyNotFound, cond.Reason)
 }
@@ -180,14 +181,15 @@ func TestReconcileBuildConflict(t *testing.T) {
 	}
 
 	r, c := newReconciler(t, cb, cappConfig, clusterBuildStrategy, existingBuild)
+
 	res, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: types.NamespacedName{Name: cb.Name, Namespace: cb.Namespace}})
 	require.NoError(t, err)
 	require.Equal(t, time.Duration(0), res.RequeueAfter)
 
 	latest := &rcs.CappBuild{}
 	require.NoError(t, c.Get(ctx, client.ObjectKeyFromObject(cb), latest))
-	cond := metav1.FindStatusCondition(latest.Status.Conditions, TypeReady)
-	require.NotNil(t, cond)
+	cond := meta.FindStatusCondition(latest.Status.Conditions, TypeReady)
+	require.NotNil(t, cond, "Ready condition should be set")
 	require.Equal(t, metav1.ConditionFalse, cond.Status)
 	require.Equal(t, ReasonBuildConflict, cond.Reason)
 }
@@ -217,7 +219,7 @@ func TestReconcileCreatesBuild(t *testing.T) {
 	// Shipwright Build contract
 	build := &shipwright.Build{}
 	require.NoError(t, c.Get(ctx, types.NamespacedName{Name: buildNameFor(cb), Namespace: cb.Namespace}, build))
-	require.True(t, metav1.IsControlledBy(build, latest))
+	require.True(t, metav1.IsControlledBy(build, latest), "Build should be controller-owned by CappBuild")
 	require.Equal(t, absentStrategy, build.Spec.Strategy.Name)
 }
 ```
