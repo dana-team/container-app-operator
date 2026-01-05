@@ -8,10 +8,10 @@ spec:
     mode: Present
   source:
     type: Git
+    contextDir: app
     git:
       url: https://github.com/example/repo.git
       revision: main
-      contextDir: app
       cloneSecret:
         name: demo-clone-secret
 
