@@ -15,7 +15,6 @@ import (
 	rcs "github.com/dana-team/container-app-operator/api/v1alpha1"
 	capputils "github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	shipwright "github.com/shipwright-io/build/pkg/apis/build/v1beta1"
@@ -62,7 +61,7 @@ func (r *CappBuildReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	cappConfig, err := capputils.GetCappConfig(r.Client)
 	if err != nil || cappConfig.Spec.CappBuild == nil {
-		_ = r.patchReadyCondition(ctx, cb, metav1.ConditionFalse, ReasonMissingPolicy, "CappConfig build policy is missing")
+		_ = r.patchReadyCondition(ctx, cb, ReasonMissingPolicy, "CappConfig build policy is missing")
 		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
 	}
 
@@ -76,14 +75,14 @@ func (r *CappBuildReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	if err := r.reconcileBuild(ctx, cb, selectedStrategyName); err != nil {
 		if errors.Is(err, ErrBuildStrategyNotFound) {
-			_ = r.patchReadyCondition(ctx, cb, metav1.ConditionFalse, ReasonBuildStrategyNotFound, err.Error())
+			_ = r.patchReadyCondition(ctx, cb, ReasonBuildStrategyNotFound, err.Error())
 			return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
 		}
 		if errors.As(err, &alreadyOwned) {
-			_ = r.patchReadyCondition(ctx, cb, metav1.ConditionFalse, ReasonBuildConflict, err.Error())
+			_ = r.patchReadyCondition(ctx, cb, ReasonBuildConflict, err.Error())
 			return ctrl.Result{}, nil
 		}
-		_ = r.patchReadyCondition(ctx, cb, metav1.ConditionFalse, ReasonBuildReconcileFailed, err.Error())
+		_ = r.patchReadyCondition(ctx, cb, ReasonBuildReconcileFailed, err.Error())
 		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
 	}
 
