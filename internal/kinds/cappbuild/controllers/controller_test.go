@@ -180,6 +180,11 @@ func TestReconcileCreatesBuild(t *testing.T) {
 	require.NoError(t, c.Get(ctx, client.ObjectKeyFromObject(cb), latest))
 	require.Equal(t, latest.Generation, latest.Status.ObservedGeneration)
 	require.Equal(t, cb.Namespace+"/"+buildNameFor(cb), latest.Status.BuildRef)
+	cond := meta.FindStatusCondition(latest.Status.Conditions, TypeReady)
+	require.NotNil(t, cond, "Ready condition should be set")
+	require.Equal(t, metav1.ConditionTrue, cond.Status)
+	require.Equal(t, ReasonReconciled, cond.Reason)
+	require.Equal(t, latest.Generation, cond.ObservedGeneration)
 
 	build := &shipwright.Build{}
 	require.NoError(t, c.Get(ctx, types.NamespacedName{Name: buildNameFor(cb), Namespace: cb.Namespace}, build))
@@ -205,6 +210,14 @@ func TestReconcileUpdatesBuild(t *testing.T) {
 	res, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: types.NamespacedName{Name: cb.Name, Namespace: cb.Namespace}})
 	require.NoError(t, err)
 	require.Equal(t, time.Duration(0), res.RequeueAfter)
+
+	latest := &rcs.CappBuild{}
+	require.NoError(t, c.Get(ctx, client.ObjectKeyFromObject(cb), latest))
+	cond := meta.FindStatusCondition(latest.Status.Conditions, TypeReady)
+	require.NotNil(t, cond, "Ready condition should be set")
+	require.Equal(t, metav1.ConditionTrue, cond.Status)
+	require.Equal(t, ReasonReconciled, cond.Reason)
+	require.Equal(t, latest.Generation, cond.ObservedGeneration)
 
 	build := &shipwright.Build{}
 	require.NoError(t, c.Get(ctx, types.NamespacedName{Name: buildNameFor(cb), Namespace: cb.Namespace}, build))

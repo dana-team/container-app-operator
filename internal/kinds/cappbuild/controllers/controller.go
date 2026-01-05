@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -61,7 +63,7 @@ func (r *CappBuildReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	cappConfig, err := capputils.GetCappConfig(r.Client)
 	if err != nil || cappConfig.Spec.CappBuild == nil {
-		_ = r.patchReadyCondition(ctx, cb, ReasonMissingPolicy, "CappConfig build policy is missing")
+		_ = r.patchReadyCondition(ctx, cb, metav1.ConditionFalse, ReasonMissingPolicy, "CappConfig build policy is missing")
 		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
 	}
 
@@ -75,23 +77,33 @@ func (r *CappBuildReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	if err := r.reconcileBuild(ctx, cb, selectedStrategyName); err != nil {
 		if errors.Is(err, ErrBuildStrategyNotFound) {
-			_ = r.patchReadyCondition(ctx, cb, ReasonBuildStrategyNotFound, err.Error())
+			_ = r.patchReadyCondition(ctx, cb, metav1.ConditionFalse, ReasonBuildStrategyNotFound, err.Error())
 			return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
 		}
 		if errors.As(err, &alreadyOwned) {
-			_ = r.patchReadyCondition(ctx, cb, ReasonBuildConflict, err.Error())
+			_ = r.patchReadyCondition(ctx, cb, metav1.ConditionFalse, ReasonBuildConflict, err.Error())
 			return ctrl.Result{}, nil
 		}
-		_ = r.patchReadyCondition(ctx, cb, ReasonBuildReconcileFailed, err.Error())
+		_ = r.patchReadyCondition(ctx, cb, metav1.ConditionFalse, ReasonBuildReconcileFailed, err.Error())
 		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
 	}
 
 	buildRef := cb.Namespace + "/" + buildNameFor(cb)
-	if cb.Status.BuildRef != buildRef {
+	if cb.Status.BuildRef != buildRef || cb.Status.ObservedGeneration != cb.Generation {
 		orig := cb.DeepCopy()
 		cb.Status.ObservedGeneration = cb.Generation
 		cb.Status.BuildRef = buildRef
 		if err := r.Status().Patch(ctx, cb, client.MergeFrom(orig)); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
+	ready := meta.FindStatusCondition(cb.Status.Conditions, TypeReady)
+	if ready == nil ||
+		ready.Status != metav1.ConditionTrue ||
+		ready.ObservedGeneration != cb.Generation ||
+		ready.Reason != ReasonReconciled {
+		if err := r.patchReadyCondition(ctx, cb, metav1.ConditionTrue, ReasonReconciled, "CappBuild is reconciled"); err != nil {
 			return ctrl.Result{}, err
 		}
 	}

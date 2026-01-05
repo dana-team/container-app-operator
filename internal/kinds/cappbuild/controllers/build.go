@@ -25,6 +25,7 @@ func buildNameFor(cb *rcs.CappBuild) string {
 func (r *CappBuildReconciler) patchReadyCondition(
 	ctx context.Context,
 	cb *rcs.CappBuild,
+	status metav1.ConditionStatus,
 	reason, message string,
 ) error {
 	orig := cb.DeepCopy()
@@ -33,7 +34,7 @@ func (r *CappBuildReconciler) patchReadyCondition(
 
 	meta.SetStatusCondition(&cb.Status.Conditions, metav1.Condition{
 		Type:               TypeReady,
-		Status:             metav1.ConditionFalse,
+		Status:             status,
 		Reason:             reason,
 		Message:            message,
 		ObservedGeneration: cb.Generation,

@@ -7,4 +7,5 @@ const (
 	ReasonBuildConflict         = "BuildConflict"
 	ReasonBuildStrategyNotFound = "BuildStrategyNotFound"
 	ReasonMissingPolicy         = "MissingPolicy"
+	ReasonReconciled            = "Reconciled"
 )
