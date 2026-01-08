@@ -157,6 +157,15 @@ rules:
 - apiGroups:
   - shipwright.io
   resources:
+  - buildruns
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+- apiGroups:
+  - shipwright.io
+  resources:
   - builds
   verbs:
   - create
