@@ -34,18 +34,18 @@ Add a controller step after successful `Build` reconcile:
 - `BuildRun` lives in the same namespace as the `CappBuild`.
 - `BuildRun` name is deterministic per `CappBuild` generation:
   - Recommended: `<cappBuild.name>-buildrun-<cappBuild.generation>`
-  - Rationale: allows creating a new run when spec changes, while staying idempotent per generation.
+  - Rationale: create exactly **one** `BuildRun` per `CappBuild` spec revision (generation).
 - The controller is the only writer for `status.lastBuildRunRef`.
 
 **Idempotency rules**
-- If `status.lastBuildRunRef` points to an existing `BuildRun` for the current `generation`, do not create a new one.
+- If the expected `BuildRun` for the current `generation` already exists, do not create a new one and do not patch its spec.
 - If the expected `BuildRun` exists but is not owned by the `CappBuild`, treat it as a conflict and stop (no requeue).
 
 ### 2) Controller wiring + RBAC for `BuildRun`
 Update controller setup and permissions:
 - `SetupWithManager`: also `Owns(&shipwright.BuildRun{})` so reconcile reacts to `BuildRun` status changes.
 - Add `+kubebuilder:rbac` markers for `shipwright.io` `buildruns`:
-  - `get;list;watch;create;update;patch;delete`
+  - `get;list;watch;create`
 
 ### 3) Status updates
 Update `CappBuild.status` as follows:
@@ -107,7 +107,7 @@ Required failure handling and requeue semantics:
 - **`BuildRun` conflict** (name exists but not owned):
   - `Ready=False`, `Reason=BuildRunConflict`
   - No requeue (requires human action).
-- **Client failures** (create/get/patch):
+- **Client failures** (create/get):
   - `Ready=False`, `Reason=BuildRunReconcileFailed`
   - Requeue with backoff.
 - **BuildRun failed** (`Succeeded=False`):
