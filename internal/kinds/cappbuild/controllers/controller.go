@@ -38,11 +38,13 @@ type CappBuildReconciler struct {
 // +kubebuilder:rbac:groups="events.k8s.io",resources=events,verbs=get;list;watch;create;patch;update
 // +kubebuilder:rbac:groups=shipwright.io,resources=builds,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=shipwright.io,resources=clusterbuildstrategies,verbs=get;list;watch
+// +kubebuilder:rbac:groups=shipwright.io,resources=buildruns,verbs=get;list;watch;create
 
 func (r *CappBuildReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&rcs.CappBuild{}).
 		Owns(&shipwright.Build{}).
+		Owns(&shipwright.BuildRun{}).
 		Named(cappBuildControllerName).
 		Complete(r)
 }
@@ -96,6 +98,31 @@ func (r *CappBuildReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		if err := r.Status().Patch(ctx, cb, client.MergeFrom(orig)); err != nil {
 			return ctrl.Result{}, err
 		}
+	}
+
+	buildRun, err := r.reconcileBuildRun(ctx, cb)
+	if err != nil {
+		if errors.As(err, &alreadyOwned) {
+			_ = r.patchReadyCondition(ctx, cb, metav1.ConditionFalse, ReasonBuildRunConflict, err.Error())
+			return ctrl.Result{}, nil
+		}
+		_ = r.patchReadyCondition(ctx, cb, metav1.ConditionFalse, ReasonBuildRunReconcileFailed, err.Error())
+		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
+	}
+
+	if err := r.patchBuildSucceededCondition(ctx, cb, buildRun); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	if buildRun.IsSuccessful() {
+		if err := r.patchLatestImage(ctx, cb, computeLatestImage(cb, buildRun)); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
+	cond := meta.FindStatusCondition(cb.Status.Conditions, TypeBuildSucceeded)
+	if cond != nil && cond.Status == metav1.ConditionUnknown {
+		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 	}
 
 	ready := meta.FindStatusCondition(cb.Status.Conditions, TypeReady)
