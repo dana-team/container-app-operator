@@ -8,6 +8,7 @@ import (
 	shipwright "github.com/shipwright-io/build/pkg/apis/build/v1beta1"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -77,4 +78,19 @@ func newCappBuild(name, namespace string) *rcs.CappBuild {
 			Output: rcs.CappBuildOutputSpec{Image: "registry.example.com/team/app"},
 		},
 	}
+}
+
+func requireCondition(
+	t *testing.T,
+	conditions []metav1.Condition,
+	condType string,
+	status metav1.ConditionStatus,
+	reason string,
+) {
+	t.Helper()
+
+	cond := meta.FindStatusCondition(conditions, condType)
+	require.NotNil(t, cond, "%s condition should be set", condType)
+	require.Equal(t, status, cond.Status)
+	require.Equal(t, reason, cond.Reason)
 }

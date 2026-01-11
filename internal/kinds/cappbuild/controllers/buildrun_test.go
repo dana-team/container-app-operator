@@ -38,18 +38,11 @@ func TestReconcileReusesExistingBuildRun(t *testing.T) {
 	ctx := context.Background()
 
 	cb := newCappBuild("cb-"+t.Name(), "ns-"+t.Name())
+	cb.UID = types.UID("cb-uid")
 	existingBuildRun := newBuildRun(cb)
 	existingBuildRun.UID = types.UID("existing-buildrun-uid")
 
-	controller := true
-	existingBuildRun.OwnerReferences = []metav1.OwnerReference{{
-		APIVersion: rcs.GroupVersion.String(),
-		Kind:       "CappBuild",
-		Name:       cb.Name,
-		UID:        types.UID("cb-uid"),
-		Controller: &controller,
-	}}
-	cb.UID = types.UID("cb-uid")
+	require.NoError(t, controllerutil.SetControllerReference(cb, existingBuildRun, testScheme(t)))
 
 	r, _ := newReconciler(t, cb, existingBuildRun)
 	br, err := r.reconcileBuildRun(ctx, cb)
@@ -64,14 +57,13 @@ func TestReconcileBuildRunConflict(t *testing.T) {
 	cb := newCappBuild("cb-"+t.Name(), "ns-"+t.Name())
 	conflict := newBuildRun(cb)
 
-	controller := true
-	conflict.OwnerReferences = []metav1.OwnerReference{{
-		APIVersion: rcs.GroupVersion.String(),
-		Kind:       "CappBuild",
-		Name:       "someone-else",
-		UID:        types.UID("other-uid"),
-		Controller: &controller,
-	}}
+	otherOwner := &rcs.CappBuild{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "someone-else",
+			UID:  types.UID("other-uid"),
+		},
+	}
+	require.NoError(t, controllerutil.SetControllerReference(otherOwner, conflict, testScheme(t)))
 
 	r, _ := newReconciler(t, cb, conflict)
 	br, err := r.reconcileBuildRun(ctx, cb)
@@ -103,10 +95,8 @@ func TestPatchBuildSucceededCondition(t *testing.T) {
 
 		require.NoError(t, r.patchBuildSucceededCondition(ctx, cb, br))
 
+		requireCondition(t, cb.Status.Conditions, TypeBuildSucceeded, expectedStatus, expectedReason)
 		buildSucceededCond := meta.FindStatusCondition(cb.Status.Conditions, TypeBuildSucceeded)
-		require.NotNil(t, buildSucceededCond, "BuildSucceeded condition should be set")
-		require.Equal(t, expectedStatus, buildSucceededCond.Status)
-		require.Equal(t, expectedReason, buildSucceededCond.Reason)
 		require.Equal(t, cb.Generation, buildSucceededCond.ObservedGeneration)
 	}
 
