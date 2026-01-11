@@ -77,14 +77,14 @@ func deriveBuildSucceededStatus(br *shipwright.BuildRun) (metav1.ConditionStatus
 		return metav1.ConditionTrue, ReasonBuildRunSucceeded, "BuildRun succeeded"
 	case corev1.ConditionFalse:
 		msg := "BuildRun failed"
-		if succeededCondition.GetReason() != "" || succeededCondition.GetMessage() != "" {
-			msg = fmt.Sprintf("BuildRun failed: %s %s", succeededCondition.GetReason(), succeededCondition.GetMessage())
+		if buildRunMessage := strings.TrimSpace(succeededCondition.GetMessage()); buildRunMessage != "" {
+			msg = fmt.Sprintf("BuildRun failed: %s", buildRunMessage)
 		}
 		return metav1.ConditionFalse, ReasonBuildRunFailed, strings.TrimSpace(msg)
 	default:
 		msg := "BuildRun is running"
-		if succeededCondition.GetReason() != "" || succeededCondition.GetMessage() != "" {
-			msg = fmt.Sprintf("BuildRun is running: %s %s", succeededCondition.GetReason(), succeededCondition.GetMessage())
+		if buildRunMessage := strings.TrimSpace(succeededCondition.GetMessage()); buildRunMessage != "" {
+			msg = fmt.Sprintf("BuildRun is running: %s", buildRunMessage)
 		}
 		return metav1.ConditionUnknown, ReasonBuildRunRunning, strings.TrimSpace(msg)
 	}
