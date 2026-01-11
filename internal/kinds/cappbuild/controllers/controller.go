@@ -114,6 +114,16 @@ func (r *CappBuildReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, err
 	}
 
+	ready := meta.FindStatusCondition(cb.Status.Conditions, TypeReady)
+	if ready == nil ||
+		ready.Status != metav1.ConditionTrue ||
+		ready.ObservedGeneration != cb.Generation ||
+		ready.Reason != ReasonReconciled {
+		if err := r.patchReadyCondition(ctx, cb, metav1.ConditionTrue, ReasonReconciled, "CappBuild is reconciled"); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
 	if buildRun.IsSuccessful() {
 		if err := r.patchLatestImage(ctx, cb, computeLatestImage(cb, buildRun)); err != nil {
 			return ctrl.Result{}, err
@@ -123,16 +133,6 @@ func (r *CappBuildReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	cond := meta.FindStatusCondition(cb.Status.Conditions, TypeBuildSucceeded)
 	if cond != nil && cond.Status == metav1.ConditionUnknown {
 		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
-	}
-
-	ready := meta.FindStatusCondition(cb.Status.Conditions, TypeReady)
-	if ready == nil ||
-		ready.Status != metav1.ConditionTrue ||
-		ready.ObservedGeneration != cb.Generation ||
-		ready.Reason != ReasonReconciled {
-		if err := r.patchReadyCondition(ctx, cb, metav1.ConditionTrue, ReasonReconciled, "CappBuild is reconciled"); err != nil {
-			return ctrl.Result{}, err
-		}
 	}
 
 	return ctrl.Result{}, nil
