@@ -119,7 +119,7 @@ func (r *CappBuildReconciler) patchBuildSucceededCondition(
 	orig := cb.DeepCopy()
 
 	cb.Status.ObservedGeneration = cb.Generation
-	cb.Status.LastBuildRunRef = cb.Namespace + "/" + br.Name
+	cb.Status.LastBuildRunRef = br.Name
 
 	status, reason, message := deriveBuildSucceededStatus(br)
 	meta.SetStatusCondition(&cb.Status.Conditions, metav1.Condition{

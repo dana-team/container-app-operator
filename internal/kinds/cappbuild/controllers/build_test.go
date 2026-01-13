@@ -99,7 +99,7 @@ func TestReconcileCreatesBuild(t *testing.T) {
 	latest := &rcs.CappBuild{}
 	require.NoError(t, c.Get(ctx, client.ObjectKeyFromObject(cb), latest))
 	require.Equal(t, latest.Generation, latest.Status.ObservedGeneration)
-	require.Equal(t, cb.Namespace+"/"+buildNameFor(cb), latest.Status.BuildRef)
+	require.Equal(t, buildNameFor(cb), latest.Status.BuildRef)
 
 	build := &shipwright.Build{}
 	require.NoError(t, c.Get(ctx, types.NamespacedName{Name: buildNameFor(cb), Namespace: cb.Namespace}, build))
