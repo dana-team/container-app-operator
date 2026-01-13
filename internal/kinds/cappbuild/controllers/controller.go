@@ -90,7 +90,7 @@ func (r *CappBuildReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
 	}
 
-	buildRef := cb.Namespace + "/" + buildNameFor(cb)
+	buildRef := buildNameFor(cb)
 	if cb.Status.BuildRef != buildRef || cb.Status.ObservedGeneration != cb.Generation {
 		orig := cb.DeepCopy()
 		cb.Status.ObservedGeneration = cb.Generation
