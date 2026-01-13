@@ -159,22 +159,53 @@ KNATIVE_URL ?= https://github.com/knative-extensions/kn-plugin-quickstart/releas
 KNATIVE_HPA_URL ?= https://github.com/knative/serving/releases/download/knative-$(KNATIVE_VERSION)/serving-hpa.yaml
 CROSSPLANE_SCC_CRB ?= hack/crossplane-scc-clusterrolebinding.yaml
 PREREQ_HELMFILE ?= charts/capp-prereq-helmfile.yaml
+TEKTON_PIPELINES_VERSION ?= v0.68.0
+TEKTON_PIPELINES_URL ?= https://storage.googleapis.com/tekton-releases/pipeline/previous/$(TEKTON_PIPELINES_VERSION)/release.yaml
+SHIPWRIGHT_BUILD_VERSION ?= v0.17.0
+SHIPWRIGHT_BUILD_URL ?= https://github.com/shipwright-io/build/releases/download/$(SHIPWRIGHT_BUILD_VERSION)/release.yaml
 
 .PHONY: prereq ## Install every prerequisite needed to develop and run the operator.
-prereq: install install-knative enable-nfs-knative install-prereq-helmfile
+prereq: install install-knative enable-nfs-knative install-prereq-helmfile install-tekton install-shipwright
 
 .PHONY: prereq-openshift ## Install every prerequisite needed to develop and run the operator on OpenShift with Serverless already installed.
-prereq-openshift: enable-nfs-knative install-crossplane-scc install-prereq-helmfile
+prereq-openshift: enable-nfs-knative install-crossplane-scc install-prereq-helmfile install-tekton install-shipwright
 
 .PHONY: uninstall-prereq ## Uninstall every prerequisite needed to develop and run the operator.
-uninstall-prereq: uninstall-prereq-helmfile
+uninstall-prereq: uninstall-shipwright uninstall-tekton uninstall-prereq-helmfile
 
 .PHONY: uninstall-prereq-openshift  ## Uninstall every prerequisite needed to develop and run the operator.
-uninstall-prereq-openshift: uninstall-prereq-helmfile uninstall-crossplane-scc
+uninstall-prereq-openshift: uninstall-shipwright uninstall-tekton uninstall-prereq-helmfile uninstall-crossplane-scc
 
 .PHONY: enable-nfs-knative
 enable-nfs-knative: ## Enable NFS for Knative
 	kubectl patch configmap config-features -n knative-serving -p '{"data":{"kubernetes.podspec-persistent-volume-claim":"enabled", "kubernetes.podspec-persistent-volume-write":"enabled"}}'
+
+.PHONY: install-tekton
+install-tekton: ## Install Tekton Pipelines on the cluster
+	$(KUBECTL) apply -f $(TEKTON_PIPELINES_URL)
+	$(KUBECTL) -n tekton-pipelines rollout status deployment/tekton-pipelines-controller --timeout=10m
+	$(KUBECTL) -n tekton-pipelines rollout status deployment/tekton-pipelines-webhook --timeout=10m
+
+.PHONY: uninstall-tekton
+uninstall-tekton: ## Uninstall Tekton Pipelines from the cluster
+	$(KUBECTL) delete -f $(TEKTON_PIPELINES_URL) --ignore-not-found=true
+
+.PHONY: install-shipwright
+install-shipwright: install-tekton ## Install Shipwright Build on the cluster
+	$(KUBECTL) apply --server-side=true -f $(SHIPWRIGHT_BUILD_URL)
+	$(KUBECTL) apply -f hack/shipwright/certs.yaml
+	@for crd in $$($(KUBECTL) get crd -oname | grep shipwright.io); do \
+		$(KUBECTL) annotate $$crd cert-manager.io/inject-ca-from=shipwright-build/shipwright-build-webhook-cert --overwrite; \
+	done
+	$(KUBECTL) -n shipwright-build rollout status deployment/shipwright-build-controller --timeout=10m
+	$(KUBECTL) -n shipwright-build rollout status deployment/shipwright-build-webhook --timeout=10m
+	$(KUBECTL) apply -f hack/shipwright/strategies.yaml
+
+.PHONY: uninstall-shipwright
+uninstall-shipwright: ## Uninstall Shipwright Build from the cluster
+	$(KUBECTL) delete -f hack/shipwright/strategies.yaml --ignore-not-found=true
+	$(KUBECTL) delete -f hack/shipwright/certs.yaml --ignore-not-found=true
+	$(KUBECTL) delete -f $(SHIPWRIGHT_BUILD_URL) --ignore-not-found=true
 
 .PHONY: install-knative
 install-knative: ## Install knative controller on the kind cluster

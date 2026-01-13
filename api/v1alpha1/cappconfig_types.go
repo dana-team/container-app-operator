@@ -21,6 +21,10 @@ type CappConfigSpec struct {
 	// If the Capp hostname matches a pattern, it is allowed to be created.
 	// +kubebuilder:default:={}
 	AllowedHostnamePatterns []string `json:"allowedHostnamePatterns"`
+
+	// +optional
+	// CappBuild holds platform defaults/policy for the CappBuild feature.
+	CappBuild *CappBuildConfig `json:"cappBuild,omitempty"`
 }
 
 type DNSConfig struct {
@@ -45,6 +49,38 @@ type AutoscaleConfig struct {
 	Concurrency int `json:"concurrency"`
 	// ActivationScale is the default scale.
 	ActivationScale int `json:"activationScale"`
+}
+
+type CappBuildConfig struct {
+	// +optional
+	// Output holds defaults for deriving the build output image.
+	Output *CappBuildOutputConfig `json:"output,omitempty"`
+
+	// ClusterBuildStrategy holds platform defaults for selecting a build strategy.
+	ClusterBuildStrategy CappBuildClusterStrategyConfig `json:"clusterBuildStrategy"`
+}
+
+type CappBuildOutputConfig struct {
+	// +optional
+	// DefaultImageRepo is the default OCI image repo (no tag/digest) for build outputs.
+	// +kubebuilder:validation:MinLength=1
+	DefaultImageRepo string `json:"defaultImageRepo,omitempty"`
+}
+
+type CappBuildClusterStrategyConfig struct {
+	// BuildFile holds strategy defaults for selecting a strategy based on whether a
+	// build file indicator is present (e.g. Dockerfile, Containerfile).
+	BuildFile CappBuildFileStrategyConfig `json:"buildFile"`
+}
+
+type CappBuildFileStrategyConfig struct {
+	// Present is the strategy name to use when the source indicates a file-based build.
+	// +kubebuilder:validation:MinLength=1
+	Present string `json:"present"`
+
+	// Absent is the strategy name to use when the source does not indicate a file-based build.
+	// +kubebuilder:validation:MinLength=1
+	Absent string `json:"absent"`
 }
 
 // CappConfigStatus defines the observed state of CappConfig
