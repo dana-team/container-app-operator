@@ -26,3 +26,8 @@ spec:
     - '.*\.allowed'
     - '.*\.com'
     - 'test.dev-.*'
+  cappBuild:
+    clusterBuildStrategy:
+      buildFile:
+        present: "buildpacks-v3"
+        absent: "buildah-strategy-managed-push"
