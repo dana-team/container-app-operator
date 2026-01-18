@@ -103,37 +103,43 @@ Copy to: `/home/sbahar/projects/ps/dana-team/container-app-operator/api/v1alpha1
 
 ```go
 type CappBuildOnCommitEvent struct {
-	// Ref is the git ref from the webhook payload (e.g., refs/heads/main).
+	// Ref is the git ref from the webhook payload.
 	// +optional
 	Ref string `json:"ref,omitempty"`
 
-	// AfterSHA is the "after" commit SHA from the webhook payload (best-effort).
+	// CommitSHA is the commit SHA from the webhook payload.
 	// +optional
-	AfterSHA string `json:"afterSHA,omitempty"`
+	CommitSHA string `json:"commitSHA,omitempty"`
 
-	// ReceivedAt is when the operator received (and accepted) the webhook event.
+	// ReceivedAt is when the webhook was received.
 	// +optional
 	ReceivedAt metav1.Time `json:"receivedAt,omitempty"`
 }
 
 type CappBuildOnCommitLastTriggered struct {
+	// Name is the name of the last BuildRun created from an on-commit trigger.
 	// +optional
 	Name string `json:"name,omitempty"`
 
+	// TriggeredAt is when the last BuildRun was created from an on-commit trigger.
 	// +optional
 	TriggeredAt metav1.Time `json:"triggeredAt,omitempty"`
 }
 
 type CappBuildOnCommitStatus struct {
+	// LastReceived is the last received webhook event.
 	// +optional
 	LastReceived *CappBuildOnCommitEvent `json:"lastReceived,omitempty"`
 
+	// Pending is the latest pending on-commit trigger.
 	// +optional
 	Pending *CappBuildOnCommitEvent `json:"pending,omitempty"`
 
+	// LastTriggeredBuildRun references the last BuildRun created from an on-commit trigger.
 	// +optional
 	LastTriggeredBuildRun *CappBuildOnCommitLastTriggered `json:"lastTriggeredBuildRun,omitempty"`
 
+	// TriggerCounter is used to derive deterministic BuildRun names for on-commit triggers.
 	// +optional
 	TriggerCounter int64 `json:"triggerCounter,omitempty"`
 }
@@ -142,7 +148,7 @@ type CappBuildStatus struct {
 	// ... keep existing fields ...
 
 	// +optional
-	// OnCommit stores webhook-trigger trigger intent and execution bookkeeping.
+	// OnCommit stores on-commit trigger state.
 	OnCommit *CappBuildOnCommitStatus `json:"onCommit,omitempty"`
 }
 ```
@@ -170,8 +176,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/go-logr/logr"
 	rcs "github.com/dana-team/container-app-operator/api/v1alpha1"
-	capputils "github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -202,102 +208,146 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	logger := log.FromContext(ctx).WithName("git-webhook")
 
-	if r.Method != http.MethodPost {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, "failed to read body", http.StatusBadRequest)
-		return
-	}
-
-	provider, err := detectProvider(r.Header)
+	body, provider, err := readRequest(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	cappConfig, err := capputils.GetCappConfig(h.Client)
-	if err != nil || cappConfig.Spec.CappBuild == nil || cappConfig.Spec.CappBuild.OnCommit == nil || !cappConfig.Spec.CappBuild.OnCommit.Enabled {
-		// Feature disabled: accept the request but do nothing (keeps providers from retry-storming).
-		w.WriteHeader(http.StatusAccepted)
-		return
-	}
-
-	ev, err := parsePushEvent(provider, body)
+	event, err := readPushEvent(provider, body)
 	if err != nil {
 		http.Error(w, "invalid payload", http.StatusBadRequest)
 		return
 	}
+	// Avoid logging raw payloads (may include secrets). Log only safe fields.
+	logger.Info("webhook parsed", "provider", provider, "ref", event.Ref, "commitSHA", event.AfterSHA, "repo", event.RepoURL)
 
-	candidates, err := h.findCandidateCappBuilds(ctx, ev)
+	candidates, err := h.findMatchingCappBuilds(ctx, event)
 	if err != nil {
 		logger.Error(err, "failed to list cappbuilds")
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 	if len(candidates) == 0 {
-		if h.EventRecorder != nil {
-			h.EventRecorder.Eventf(cappConfig, corev1.EventTypeNormal, "WebhookNoMatch", "git webhook accepted, no CappBuild matched")
-		}
+		logger.Info("webhook ignored: no matching CappBuild")
 		w.WriteHeader(http.StatusAccepted)
 		return
 	}
 
-	now := metav1.Now()
-	verifiedAny := false
-	for _, cb := range candidates {
-		cb := cb
-		secret, err := loadCappBuildWebhookSecret(ctx, h.Client, &cb)
-		if err != nil {
-			logger.Error(err, "failed to load cappbuild webhook secret", "name", cb.Name, "namespace", cb.Namespace)
-			continue
-		}
-		if err := verifyRequest(provider, r.Header, body, secret); err != nil {
-			// Not a match for this CappBuild secret.
-			continue
-		}
-		verifiedAny = true
-
-		// Patch status to record trigger intent (controller applies debounce/rate-limit/active-build gating).
-		err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-			latest := &rcs.CappBuild{}
-			if err := h.Client.Get(ctx, types.NamespacedName{Name: cb.Name, Namespace: cb.Namespace}, latest); err != nil {
-				return err
-			}
-
-			if latest.Status.OnCommit == nil {
-				latest.Status.OnCommit = &rcs.CappBuildOnCommitStatus{}
-			}
-
-			event := &rcs.CappBuildOnCommitEvent{
-				Ref:       ev.Ref,
-				AfterSHA:  ev.AfterSHA,
-				ReceivedAt: now,
-			}
-			latest.Status.OnCommit.LastReceived = event
-			latest.Status.OnCommit.Pending = event
-
-			return h.Client.Status().Update(ctx, latest)
-		})
-		if err != nil {
-			logger.Error(err, "failed to update cappbuild status", "name", cb.Name, "namespace", cb.Namespace)
-			continue
-		}
-		if h.EventRecorder != nil {
-			h.EventRecorder.Eventf(&cb, corev1.EventTypeNormal, "WebhookAccepted", "git webhook accepted for %s/%s", cb.Namespace, cb.Name)
-		}
+	verified, err := h.filterVerifiedCappBuilds(ctx, logger, provider, r.Header, body, candidates)
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	if len(verified) == 0 {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
 	}
 
-	if !verifiedAny {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
+	if err := h.patchVerified(ctx, logger, event, verified); err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 
 	// Respond quickly; actual work happens in reconciliation.
 	w.WriteHeader(http.StatusAccepted)
+}
+
+func readRequest(r *http.Request) ([]byte, provider, error) {
+	if r.Method != http.MethodPost {
+		return nil, "", fmt.Errorf("method %s not allowed", r.Method)
+	}
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to read body: %w", err)
+	}
+	p, err := detectWebhookProvider(r.Header)
+	if err != nil {
+		return nil, "", err
+	}
+	return body, p, nil
+}
+
+func (h *Handler) filterVerifiedCappBuilds(
+	ctx context.Context,
+	logger logr.Logger,
+	provider provider,
+	headers http.Header,
+	body []byte,
+	candidates []rcs.CappBuild,
+) ([]rcs.CappBuild, error) {
+	var verified []rcs.CappBuild
+	for _, cb := range candidates {
+		cb := cb
+		ok, err := authenticateCappBuildWebhook(ctx, h.Client, provider, headers, body, &cb)
+		if err != nil {
+			logger.Error(err, "failed to verify webhook candidate", "name", cb.Name, "namespace", cb.Namespace)
+			return nil, err
+		}
+		if !ok {
+			continue
+		}
+		verified = append(verified, cb)
+	}
+	return verified, nil
+}
+
+func authenticateCappBuildWebhook(
+	ctx context.Context,
+	c client.Client,
+	provider provider,
+	headers http.Header,
+	body []byte,
+	cb *rcs.CappBuild,
+) (bool, error) {
+	secret, err := loadCappBuildWebhookSecret(ctx, c, cb)
+	if err != nil {
+		return false, err
+	}
+	if err := verifyRequest(provider, headers, body, secret); err != nil {
+		return false, nil
+	}
+	return true, nil
+}
+
+func (h *Handler) patchVerified(
+	ctx context.Context,
+	logger logr.Logger,
+	event *pushEvent,
+	candidates []rcs.CappBuild,
+) error {
+	now := metav1.Now()
+	for _, cb := range candidates {
+		cb := cb
+		if err := h.patchOnCommitStatus(ctx, &cb, event, now); err != nil {
+			logger.Error(err, "failed to update cappbuild status", "name", cb.Name, "namespace", cb.Namespace)
+			return err
+		}
+		if h.EventRecorder != nil {
+			h.EventRecorder.Eventf(&cb, corev1.EventTypeNormal, "WebhookAccepted", "git webhook accepted for %s/%s", cb.Namespace, cb.Name)
+		}
+	}
+	return nil
+}
+
+func (h *Handler) patchOnCommitStatus(ctx context.Context, cb *rcs.CappBuild, event *pushEvent, now metav1.Time) error {
+	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+		latest := &rcs.CappBuild{}
+		if err := h.Client.Get(ctx, types.NamespacedName{Name: cb.Name, Namespace: cb.Namespace}, latest); err != nil {
+			return err
+		}
+		if latest.Status.OnCommit == nil {
+			latest.Status.OnCommit = &rcs.CappBuildOnCommitStatus{}
+		}
+		onCommitEvent := &rcs.CappBuildOnCommitEvent{
+			Ref:       event.Ref,
+			CommitSHA: event.AfterSHA,
+			ReceivedAt: now,
+		}
+		latest.Status.OnCommit.LastReceived = onCommitEvent
+		latest.Status.OnCommit.Pending = onCommitEvent
+		return h.Client.Status().Update(ctx, latest)
+	})
 }
 
 func Path() string { return pathWebhooksGit }
@@ -309,14 +359,14 @@ const (
 	providerGitLab provider = "gitlab"
 )
 
-func detectProvider(h http.Header) (provider, error) {
+func detectWebhookProvider(h http.Header) (provider, error) {
 	if strings.EqualFold(strings.TrimSpace(h.Get(headerGithubEvent)), githubPushEvent) {
 		return providerGitHub, nil
 	}
 	if strings.EqualFold(strings.TrimSpace(h.Get(headerGitlabEvent)), gitlabPushEvent) {
 		return providerGitLab, nil
 	}
-	return "", fmt.Errorf("unsupported or missing webhook event headers")
+	return "", fmt.Errorf("unsupported webhook event")
 }
 
 func loadCappBuildWebhookSecret(ctx context.Context, c client.Client, cb *rcs.CappBuild) ([]byte, error) {
@@ -349,7 +399,7 @@ func verifyRequest(p provider, h http.Header, body []byte, secret []byte) error 
 		gotHex := strings.TrimPrefix(got, githubSig256Prefix)
 		gotSig, err := hex.DecodeString(gotHex)
 		if err != nil {
-			return fmt.Errorf("invalid signature")
+			return fmt.Errorf("invalid signature: %w", err)
 		}
 
 		mac := hmac.New(sha256.New, secret)
@@ -399,34 +449,34 @@ type gitlabPushPayload struct {
 	} `json:"project"`
 }
 
-func parsePushEvent(p provider, body []byte) (*pushEvent, error) {
+func readPushEvent(p provider, body []byte) (*pushEvent, error) {
 	switch p {
 	case providerGitHub:
-		var pl githubPushPayload
-		if err := json.Unmarshal(body, &pl); err != nil {
+		var payload githubPushPayload
+		if err := json.Unmarshal(body, &payload); err != nil {
 			return nil, err
 		}
-		repo := strings.TrimSpace(pl.Repository.CloneURL)
+		repo := strings.TrimSpace(payload.Repository.CloneURL)
 		if repo == "" {
-			repo = strings.TrimSpace(pl.Repository.HTMLURL)
+			repo = strings.TrimSpace(payload.Repository.HTMLURL)
 		}
-		if repo == "" || strings.TrimSpace(pl.Ref) == "" {
-			return nil, fmt.Errorf("missing required fields")
+		if repo == "" || strings.TrimSpace(payload.Ref) == "" {
+			return nil, fmt.Errorf("missing required fields: ref or repository URL")
 		}
-		return &pushEvent{RepoURL: repo, Ref: pl.Ref, AfterSHA: pl.After}, nil
+		return &pushEvent{RepoURL: repo, Ref: payload.Ref, AfterSHA: payload.After}, nil
 	case providerGitLab:
-		var pl gitlabPushPayload
-		if err := json.Unmarshal(body, &pl); err != nil {
+		var payload gitlabPushPayload
+		if err := json.Unmarshal(body, &payload); err != nil {
 			return nil, err
 		}
-		repo := strings.TrimSpace(pl.Project.GitHTTPURL)
+		repo := strings.TrimSpace(payload.Project.GitHTTPURL)
 		if repo == "" {
-			repo = strings.TrimSpace(pl.Project.WebURL)
+			repo = strings.TrimSpace(payload.Project.WebURL)
 		}
-		if repo == "" || strings.TrimSpace(pl.Ref) == "" {
-			return nil, fmt.Errorf("missing required fields")
+		if repo == "" || strings.TrimSpace(payload.Ref) == "" {
+			return nil, fmt.Errorf("missing required fields: ref or repository URL")
 		}
-		return &pushEvent{RepoURL: repo, Ref: pl.Ref, AfterSHA: pl.After}, nil
+		return &pushEvent{RepoURL: repo, Ref: payload.Ref, AfterSHA: payload.After}, nil
 	default:
 		return nil, fmt.Errorf("unknown provider")
 	}
@@ -439,53 +489,43 @@ func normalizeRepoURL(s string) string {
 	return s
 }
 
-func (h *Handler) findMatchingCappBuilds(ctx context.Context, ev *pushEvent) ([]rcs.CappBuild, error) {
+func (h *Handler) findMatchingCappBuilds(ctx context.Context, event *pushEvent) ([]rcs.CappBuild, error) {
 	var list rcs.CappBuildList
-	if err := h.Client.List(ctx, &list); err != nil {
+	// Narrow the list using a low-cardinality label selector:
+	// rcs.dana.io/oncommit-enabled=true.
+	if err := h.Client.List(ctx, &list, client.MatchingLabels{"rcs.dana.io/oncommit-enabled": "true"}); err != nil {
 		return nil, err
 	}
 
-	wantRepo := normalizeRepoURL(ev.RepoURL)
+	normalizedRepoURL := normalizeRepoURL(event.RepoURL)
 
-	var out []rcs.CappBuild
+	var matches []rcs.CappBuild
 	for _, cb := range list.Items {
 		cb := cb
-		if cb.Spec.Rebuild == nil || cb.Spec.Rebuild.Mode != rcs.CappBuildRebuildModeOnCommit {
-			continue
-		}
-		if cb.Spec.Source.Type != rcs.CappBuildSourceTypeGit {
-			continue
-		}
-		if cb.Spec.Source.Git.URL == "" {
-			continue
-		}
-		if cb.Spec.Source.Git.Revision == "" {
-			// Phase 10: require explicit tracked branch for webhook matching.
+		if cb.Spec.Rebuild == nil ||
+			cb.Spec.Rebuild.Mode != rcs.CappBuildRebuildModeOnCommit ||
+			cb.Spec.Source.Type != rcs.CappBuildSourceTypeGit ||
+			cb.Spec.Source.Git.URL == "" ||
+			cb.Spec.Source.Git.Revision == "" ||
+			normalizeRepoURL(cb.Spec.Source.Git.URL) != normalizedRepoURL ||
+			event.Ref != "refs/heads/"+cb.Spec.Source.Git.Revision {
 			continue
 		}
 
-		if normalizeRepoURL(cb.Spec.Source.Git.URL) != wantRepo {
-			continue
-		}
-		if ev.Ref != "refs/heads/"+cb.Spec.Source.Git.Revision {
-			continue
-		}
-
-		out = append(out, cb)
+		matches = append(matches, cb)
 	}
-	return out, nil
-}
-
-func (h *Handler) findCandidateCappBuilds(ctx context.Context, ev *pushEvent) ([]rcs.CappBuild, error) {
-	// Same as findMatchingCappBuilds but renamed for clarity: “candidate” means
-	// matching repo/ref (untrusted payload), before secret verification.
-	return h.findMatchingCappBuilds(ctx, ev)
+	return matches, nil
 }
 ```
 
 Notes:
 - The handler purposefully does **no BuildRun creation**; it only records `status.onCommit.pending`.
 - Debounce / rate limit defaults are enforced in reconciliation (not in the handler).
+
+Required label selector:
+- Add a stable label maintained by the controller (or a mutating webhook):
+  - label key: `rcs.dana.io/oncommit-enabled`
+  - value: `"true"` when `spec.rebuild.mode=OnCommit` and `spec.onCommit.webhookSecretRef` is set
 
 ### 2.2) Wire the handler in `cmd/main.go`
 
@@ -498,16 +538,39 @@ Add import:
 gitwebhook "github.com/dana-team/container-app-operator/internal/webhook/git"
 ```
 
-Then, inside the existing `ENABLE_WEBHOOKS` block, register the endpoint:
+Then, inside the existing `ENABLE_WEBHOOKS` block, register the endpoint **only when OnCommit is enabled in CappConfig**.
+
+Add this helper:
+
+```go
+func isOnCommitWebhookEnabled(ctx context.Context, c client.Client) bool {
+	cfg, err := capputils.GetCappConfig(c)
+	if err != nil || cfg.Spec.CappBuild == nil || cfg.Spec.CappBuild.OnCommit == nil {
+		return false
+	}
+	return cfg.Spec.CappBuild.OnCommit.Enabled
+}
+```
+
+Import note:
+- Ensure `context` and `capputils` are imported in `cmd/main.go`.
+
+And register conditionally:
 
 Copy to: `/home/sbahar/projects/ps/dana-team/container-app-operator/cmd/main.go`
 
 ```go
-hookServer.Register(gitwebhook.Path(), &gitwebhook.Handler{
-	Client:        mgr.GetClient(),
-	EventRecorder: mgr.GetEventRecorderFor("git-webhook"),
-})
+if isOnCommitWebhookEnabled(context.Background(), mgr.GetClient()) {
+	hookServer.Register(gitwebhook.Path(), &gitwebhook.Handler{
+		Client:        mgr.GetClient(),
+		EventRecorder: mgr.GetEventRecorderFor("git-webhook"),
+	})
+}
 ```
+
+Note:
+- This keeps the handler from running at all when OnCommit is disabled.
+- It requires a controller restart to pick up CappConfig changes (enable/disable).
 
 ## 3) CappBuild controller: debounce + rate-limit + BuildRun creation (OnCommit)
 
@@ -863,7 +926,7 @@ func TestGitLabWebhookAcceptsValidTokenAndPatchesMatchingCappBuild(t *testing.T)
 	require.NotNil(t, updated.Status.OnCommit)
 	require.NotNil(t, updated.Status.OnCommit.Pending)
 	require.Equal(t, "refs/heads/main", updated.Status.OnCommit.Pending.Ref)
-	require.Equal(t, "abc", updated.Status.OnCommit.Pending.AfterSHA)
+	require.Equal(t, "abc", updated.Status.OnCommit.Pending.CommitSHA)
 }
 
 func TestGitHubWebhookAcceptsValidSig256(t *testing.T) {
