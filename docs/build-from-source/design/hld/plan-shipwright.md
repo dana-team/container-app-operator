@@ -22,30 +22,12 @@ Keep a stable contract:
 
 Everything in between is platform-owned and can evolve.
 
-## High-level architecture
-- **`CappBuild` API (New CRD)**: build-time resource (source + creds).
-  - **Optional** `spec.cappRef`: when set, the built image is handed over to that `Capp`; when omitted, `CappBuild` is standalone (build-only).
-  - **Required** `spec.output`: explicit output image target (registry/repo) to push to.
-  - **Required** `spec.buildFile.mode`: user-selected strategy mode:
-    - `Present`: use a Dockerfile/Containerfile-based strategy
-    - `Absent`: use a non-buildfile-based strategy (e.g., Buildpacks)
-  - **Optional rebuild trigger**: user intent can be expressed per `CappBuild` (e.g., manual-only vs on-commit), with defaults and guardrails enforced by platform policy.
-
 ## Multi-container `Capp` support (sidecars)
-`Capp` embeds Knative’s `ConfigurationSpec`, which can include **multiple containers** (e.g., sidecars).
-
-The build contract remains **source → single image**:
-- Each successful `CappBuild` produces **one** image reference.
-- When `spec.cappRef` is set, the `CappBuild` controller updates **exactly one** container image on the target `Capp`.
-
-How the target container is selected:
-- If `spec.cappRef.containerName` is set: update the container with that name in the `Capp` pod template.
-- If `spec.cappRef.containerName` is omitted: update the **first** container in the `Capp` pod template (the “primary” container by convention).
-- Sidecar images (additional containers) are expected to be managed independently (pinned to external images, separate build pipelines, etc.).
+Sidecar images (additional containers) are expected to be managed independently (pinned to external images, separate build pipelines, etc.).
 
 ## Policy: image publishing
-- `CappBuild.spec.output` is **required** (regardless of whether `spec.cappRef` is set).
-- **Dedicated `CappBuild` controller**: reconciles `CappBuild`, creates/monitors Shipwright `Build`/`BuildRun`, and updates the target `Capp` image on success.
+- `CappBuild.spec.output` is **required**.
+- **Dedicated `CappBuild` controller**: reconciles `CappBuild`, creates/monitors Shipwright `Build`/`BuildRun`.
 - **`Capp` API**: runtime resource; deploys the current image and reports runtime status.
 - **Helm-gated feature**: enable/disable the `CappBuild` controller (and RBAC) via Helm values (e.g. `cappBuild.enabled`).
 - **Platform configuration**: define defaults and policy centrally via `CappConfig`:
@@ -66,9 +48,8 @@ How the target container is selected:
     - A `Build` CR captures the “build definition” (source + output image + strategy).
     - A `BuildRun` CR represents each execution of the build (initial/manual run, or auto-triggered on new commits when enabled).
   - The `CappBuild` operator watches `BuildRun.status` to determine success/failure and obtains the produced image reference.
-  - **Handover to Runtime**: Once a build succeeds, the `CappBuild` controller updates the target `Capp` with the new image reference.
 - **Rebuild on commit (optional / policy-controlled)**:
-  - If enabled, new commits trigger a new `BuildRun`, followed by `Capp` update.
+  - If enabled, new commits trigger a new `BuildRun`.
 
 ## Advantages
 - **Better separation of concerns**: Clear split between runtime (`Capp`) and build-time (`CappBuild`) resources and dependencies.

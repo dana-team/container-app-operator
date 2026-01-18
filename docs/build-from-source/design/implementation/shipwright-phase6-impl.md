@@ -101,12 +101,12 @@ func newCappBuild(name, namespace string, mode rcs.CappBuildFileMode) *rcs.CappB
 			Generation: 1,
 		},
 		Spec: rcs.CappBuildSpec{
-			BuildFile: rcs.CappBuildFileSpec{Mode: mode},
+			BuildFile: rcs.CappBuildFile{Mode: mode},
 			Source: rcs.CappBuildSource{
 				Type: rcs.CappBuildSourceTypeGit,
 				Git:  rcs.CappBuildGitSource{URL: "https://example.invalid/repo.git"},
 			},
-			Output: rcs.CappBuildOutputSpec{Image: "registry.example.com/team/app"},
+			Output: rcs.CappBuildOutput{Image: "registry.example.com/team/app"},
 		},
 	}
 }
@@ -258,7 +258,7 @@ func newCappBuild(name string, mode cappv1alpha1.CappBuildFileMode) *cappv1alpha
 			Namespace: testconsts.NSName,
 		},
 		Spec: cappv1alpha1.CappBuildSpec{
-			BuildFile: cappv1alpha1.CappBuildFileSpec{
+			BuildFile: cappv1alpha1.CappBuildFile{
 				Mode: mode,
 			},
 			Source: cappv1alpha1.CappBuildSource{
@@ -267,7 +267,7 @@ func newCappBuild(name string, mode cappv1alpha1.CappBuildFileMode) *cappv1alpha
 					URL: "https://github.com/dana-team/container-app-operator",
 				},
 			},
-			Output: cappv1alpha1.CappBuildOutputSpec{
+			Output: cappv1alpha1.CappBuildOutput{
 				Image: "registry.example.com/team/cappbuild-e2e",
 			},
 		},

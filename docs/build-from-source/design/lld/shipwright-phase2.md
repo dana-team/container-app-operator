@@ -7,7 +7,6 @@ Phase 2 introduces the **`CappBuild` API schema** (CRD contract) for build-from-
 - Keep build implementation details **platform-owned**.
 - Provide a stable user contract for **source → image**.
 - Support two rebuild modes: **manual/initial** and **auto rebuild on commit** (when enabled by policy).
-- Allow `CappBuild` to be either **attached to a `Capp`** or **standalone**.
 
 ## `CappBuild` API
 
@@ -30,16 +29,6 @@ Defines the source location and revision to build.
   - **`name`** (required if set): Secret name
 
 Notes:
-
-#### `spec.cappRef` (optional)
-Links a build to a runtime `Capp`.
-
-- When set: successful builds update the referenced `Capp` to use the newly built image.
-- When omitted: `CappBuild` is standalone and produces an image without updating any runtime.
-
-Fields:
-- **`name`** (required): target `Capp` name
-- **`namespace`** (optional): defaults to the `CappBuild` namespace
 
 #### `spec.rebuild` (optional)
 User intent for rebuild behavior. Defaults and constraints are enforced via platform policy (`CappConfig`).
@@ -67,38 +56,12 @@ The last produced image reference (string).
 #### `status.lastBuildRunRef`
 Reference to the last Shipwright `BuildRun` created for this `CappBuild`.
 
-#### `status.lastAppliedCapp`
-When `spec.cappRef` is set, records the last runtime update acknowledging which `Capp` was updated to `status.latestImage`.
-
 ## Validation / semantics
 - `spec.source.type` is required and must be supported.
 - `spec.source.git.url` is required for `type=Git`.
 - `spec.rebuild.mode` is limited to `{Manual, OnCommit}`.
-- If `spec.cappRef.name` is set, it must be non-empty.
 
-## Example (attached build)
-
-```yaml
-apiVersion: rcs.dana.io/v1alpha1
-kind: CappBuild
-metadata:
-  name: my-app-build
-spec:
-  source:
-    type: Git
-    git:
-      url: https://github.com/example/my-app
-      revision: main
-      contextDir: .
-    authRef:
-      name: my-app-git-creds
-  cappRef:
-    name: my-app
-  rebuild:
-    mode: Manual
-```
-
-## Example (standalone build)
+## Example
 
 ```yaml
 apiVersion: rcs.dana.io/v1alpha1

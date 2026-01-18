@@ -98,12 +98,12 @@ func newCappBuild(name, namespace string) *rcs.CappBuild {
 			Generation: 1,
 		},
 		Spec: rcs.CappBuildSpec{
-			BuildFile: rcs.CappBuildFileSpec{Mode: rcs.CappBuildFileModeAbsent},
+			BuildFile: rcs.CappBuildFile{Mode: rcs.CappBuildFileModeAbsent},
 			Source: rcs.CappBuildSource{
 				Type: rcs.CappBuildSourceTypeGit,
 				Git:  rcs.CappBuildGitSource{URL: "https://example.invalid/repo.git"},
 			},
-			Output: rcs.CappBuildOutputSpec{Image: "registry.example.com/team/app"},
+			Output: rcs.CappBuildOutput{Image: "registry.example.com/team/app"},
 		},
 	}
 }

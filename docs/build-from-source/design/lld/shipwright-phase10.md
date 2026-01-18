@@ -53,7 +53,7 @@ Expose a platform endpoint (example): `https://capp.example.com/webhooks/git`
   - GitLab: `X-Gitlab-Event: Push Hook`
 
 **Verification (webhook authenticity)**
-- Secrets are **platform-provided** and must be configured by users in their repo webhook settings.
+- Secrets are **per-`CappBuild`** and must be configured by users in their repo webhook settings.
 - GitHub verification:
   - Verify `X-Hub-Signature-256` using **HMAC-SHA256** over the raw request body.
 - GitLab verification:
@@ -147,12 +147,19 @@ Apply platform safety policy per `CappBuild`:
 **Where policy comes from**
 - Extend `CappConfig.spec.cappBuild` with an optional `onCommit` policy block:
   - `enabled` (bool; default false)
-  - `webhookSecretRef` (Secret name/key in the operator config namespace)
 
 **Defaults (Phase 10)**
 - Keep debounce and rate limit values as controller defaults to avoid over-configuring early:
   - debounce window default: **10s**
   - min trigger interval default: **30s**
+
+**Per-`CappBuild` secret reference**
+- Each `CappBuild` that uses `spec.rebuild.mode=OnCommit` must specify an on-commit secret reference (e.g., `spec.onCommit.webhookSecretRef`) pointing to a Secret in the same namespace as the `CappBuild`.
+- Webhook verification is done **per matched `CappBuild`**:
+  - parse payload (untrusted) to extract repo + ref
+  - find candidate `CappBuild`s by repo/ref and `rebuild.mode=OnCommit`
+  - verify signature/token against each candidate’s secret
+  - only if verification succeeds for a specific `CappBuild`, record trigger intent on that `CappBuild`
 
 ### 6) BuildRun triggering model (Shipwright)
 When a `CappBuild` has a pending trigger and is allowed by policy:
