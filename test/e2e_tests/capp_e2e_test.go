@@ -149,7 +149,7 @@ var _ = Describe("Validate capp creation", func() {
 		}
 
 		testCapp.Spec.Sources = append(testCapp.Spec.Sources, kedaSource)
-
+		testCapp.Spec.ScaleMetric = testconsts.ExternalScaleMetric
 		createdCapp := utilst.CreateCapp(k8sClient, testCapp)
 
 		By("Checking if the Capp instance has a Keda source")

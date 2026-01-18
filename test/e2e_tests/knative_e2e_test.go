@@ -53,7 +53,7 @@ func testMetricAnnotation(metricType string) {
 
 var _ = Describe("Validate knative functionality", func() {
 	It("Should create a ksvc with cpu metric annotation when creating a capp with cpu scale metric", func() {
-		testMetricAnnotation("cpu")
+		testMetricAnnotation(testconsts.CPUScaleMetric)
 	})
 
 	It("Should create a ksvc with memory metric annotation when creating a capp with memory scale metric", func() {
@@ -67,7 +67,7 @@ var _ = Describe("Validate knative functionality", func() {
 	It("Should create and delete a ksvc when creating and deleting a capp instance", func() {
 		By("Creating a capp instance")
 		testCapp := mocks.CreateBaseCapp()
-		testCapp.Spec.ScaleMetric = "cpu"
+		testCapp.Spec.ScaleMetric = testconsts.CPUScaleMetric
 		createdCapp := utilst.CreateCapp(k8sClient, testCapp)
 		assertionCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
 
@@ -104,7 +104,7 @@ var _ = Describe("Validate knative functionality", func() {
 	It("Should update ksvc metric annotation and create a new revision when updating the capp scale metric", func() {
 		By("Creating a capp instance")
 		testCapp := mocks.CreateBaseCapp()
-		testCapp.Spec.ScaleMetric = "cpu"
+		testCapp.Spec.ScaleMetric = testconsts.CPUScaleMetric
 		createdCapp := utilst.CreateCapp(k8sClient, testCapp)
 
 		By("Updating the Capp scale metric")
