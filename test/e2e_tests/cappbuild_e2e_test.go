@@ -37,7 +37,7 @@ func newCappBuild(name, revision string) *cappv1alpha1.CappBuild {
 			Namespace: testconsts.NSName,
 		},
 		Spec: cappv1alpha1.CappBuildSpec{
-			BuildFile: cappv1alpha1.CappBuildFileSpec{
+			BuildFile: cappv1alpha1.CappBuildFile{
 				Mode: cappv1alpha1.CappBuildFileModeAbsent,
 			},
 			Source: cappv1alpha1.CappBuildSource{
@@ -47,7 +47,7 @@ func newCappBuild(name, revision string) *cappv1alpha1.CappBuild {
 					Revision: revision,
 				},
 			},
-			Output: cappv1alpha1.CappBuildOutputSpec{
+			Output: cappv1alpha1.CappBuildOutput{
 				Image: "registry.example.com/team/cappbuild-e2e:v1",
 			},
 		},

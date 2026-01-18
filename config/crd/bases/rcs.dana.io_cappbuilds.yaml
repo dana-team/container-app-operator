@@ -56,23 +56,6 @@ spec:
                 required:
                 - mode
                 type: object
-              cappRef:
-                description: |-
-                  CappRef links this build to a Capp. If set, the controller will update the
-                  Capp with the built image.
-                properties:
-                  containerName:
-                    description: |-
-                      ContainerName selects which container in the referenced Capp should have its image updated.
-                      If omitted, the first container in the Capp pod template is updated.
-                    type: string
-                  name:
-                    description: Name is the name of the Capp resource.
-                    minLength: 1
-                    type: string
-                required:
-                - name
-                type: object
               output:
                 description: Output refers to the location where the built image would
                   be pushed.

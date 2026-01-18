@@ -41,7 +41,7 @@ const (
 	CappBuildFileModeAbsent  CappBuildFileMode = "Absent"
 )
 
-type CappBuildFileSpec struct {
+type CappBuildFile struct {
 	// +kubebuilder:validation:Enum=Present;Absent
 	// Mode selects whether the source is expected to contain a Dockerfile/Containerfile.
 	// Present: use a buildfile-based strategy; Absent: use a non-buildfile-based strategy.
@@ -53,19 +53,14 @@ type CappBuildSpec struct {
 	Source CappBuildSource `json:"source"`
 
 	// BuildFile indicates whether the source should be built using a buildfile-based or non-buildfile-based strategy.
-	BuildFile CappBuildFileSpec `json:"buildFile"`
-
-	// +optional
-	// CappRef links this build to a Capp. If set, the controller will update the
-	// Capp with the built image.
-	CappRef *CappBuildCappRef `json:"cappRef,omitempty"`
+	BuildFile CappBuildFile `json:"buildFile"`
 
 	// +optional
 	// Rebuild controls rebuild behavior.
-	Rebuild *CappBuildRebuildSpec `json:"rebuild,omitempty"`
+	Rebuild *CappBuildRebuild `json:"rebuild,omitempty"`
 
 	// Output refers to the location where the built image would be pushed.
-	Output CappBuildOutputSpec `json:"output"`
+	Output CappBuildOutput `json:"output"`
 }
 
 type CappBuildSource struct {
@@ -99,24 +94,13 @@ type CappBuildGitSource struct {
 	CloneSecret *corev1.LocalObjectReference `json:"cloneSecret,omitempty"`
 }
 
-type CappBuildCappRef struct {
-	// +kubebuilder:validation:MinLength=1
-	// Name is the name of the Capp resource.
-	Name string `json:"name"`
-
-	// +optional
-	// ContainerName selects which container in the referenced Capp should have its image updated.
-	// If omitted, the first container in the Capp pod template is updated.
-	ContainerName string `json:"containerName,omitempty"`
-}
-
-type CappBuildRebuildSpec struct {
+type CappBuildRebuild struct {
 	// +kubebuilder:validation:Enum=Initial;OnCommit
 	// Mode selects the rebuild strategy.
 	Mode CappBuildRebuildMode `json:"mode"`
 }
 
-type CappBuildOutputSpec struct {
+type CappBuildOutput struct {
 	// Image is the reference of the image.
 	// +kubebuilder:validation:MinLength=1
 	Image string `json:"image"`

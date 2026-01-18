@@ -15,9 +15,6 @@ spec:
       cloneSecret:
         name: demo-clone-secret
 
-  cappRef:
-    name: demo-capp
-
   rebuild:
     mode: OnCommit
 
