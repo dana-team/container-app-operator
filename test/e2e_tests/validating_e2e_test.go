@@ -6,6 +6,7 @@ import (
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	mock "github.com/dana-team/container-app-operator/test/e2e_tests/mocks"
+	"github.com/dana-team/container-app-operator/test/e2e_tests/testconsts"
 	utilst "github.com/dana-team/container-app-operator/test/e2e_tests/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -113,6 +114,27 @@ var _ = Describe("Validate the validating webhook", func() {
 		baseCapp.Spec.LogSpec.User = elasticUser
 		baseCapp.Spec.LogSpec.PasswordSecret = secretName
 		Expect(k8sClient.Create(context.Background(), baseCapp)).Should(Succeed())
+	})
+
+	It("Should deny a Capp with sources but without 'external' scale metric", func() {
+		baseCapp := mock.CreateBaseCapp()
+		baseCapp.Name = utilst.GenerateUniqueCappName(baseCapp.Name)
+		baseCapp.Spec.ScaleMetric = testconsts.CPUScaleMetric
+		baseCapp.Spec.Sources = []cappv1alpha1.KedaSource{
+			{
+				Name:       "test-source",
+				ScalarType: "prometheus",
+			},
+		}
+		Expect(k8sClient.Create(context.Background(), baseCapp)).ShouldNot(Succeed())
+	})
+
+	It("Should deny a Capp with 'external' scale metric but without sources", func() {
+		baseCapp := mock.CreateBaseCapp()
+		baseCapp.Name = utilst.GenerateUniqueCappName(baseCapp.Name)
+		baseCapp.Spec.ScaleMetric = testconsts.ExternalScaleMetric
+		baseCapp.Spec.Sources = []cappv1alpha1.KedaSource{}
+		Expect(k8sClient.Create(context.Background(), baseCapp)).ShouldNot(Succeed())
 	})
 
 })

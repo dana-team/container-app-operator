@@ -48,9 +48,9 @@ type PodIdentity struct {
 // CappSpec defines the desired state of Capp.
 type CappSpec struct {
 	// ScaleMetric defines which metric type is watched by the Autoscaler.
-	// Possible values examples: "concurrency", "rps", "cpu", "memory".
+	// Possible values examples: "concurrency", "rps", "cpu", "memory", "external".
 	// +kubebuilder:default:="concurrency"
-	// +kubebuilder:validation:Enum=cpu;memory;rps;concurrency
+	// +kubebuilder:validation:Enum=cpu;memory;rps;concurrency;external
 	ScaleMetric string `json:"scaleMetric,omitempty"`
 	// State defines the state of capp
 	// Possible values examples: "enabled", "disabled".
