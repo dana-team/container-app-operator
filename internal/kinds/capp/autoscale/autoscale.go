@@ -6,19 +6,15 @@ import (
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 	"k8s.io/utils/strings/slices"
+	kautoscaling "knative.dev/serving/pkg/apis/autoscaling"
 )
 
 const (
-	KnativeMetricKey          = "autoscaling.knative.dev/metric"
-	KnativeAutoscaleClassKey  = "autoscaling.knative.dev/class"
-	KnativeAutoscaleTargetKey = "autoscaling.knative.dev/target"
-	AutoScalerSubString       = "autoscaling"
-	KnativeActivationScaleKey = "autoscaling.knative.dev/activation-scale"
-	defaultActivationScaleKey = "activationScale"
-	rpsScaleKey               = "rps"
-	cpuScaleKey               = "cpu"
-	memoryScaleKey            = "memory"
-	concurrencyScaleKey       = "concurrency"
+	AutoScalerSubString = "autoscaling"
+	rpsScaleKey         = "rps"
+	cpuScaleKey         = "cpu"
+	memoryScaleKey      = "memory"
+	concurrencyScaleKey = "concurrency"
 )
 
 var TargetDefaultValues = cappv1alpha1.AutoscaleConfig{
@@ -47,10 +43,15 @@ func SetAutoScaler(capp cappv1alpha1.Capp, defaults cappv1alpha1.AutoscaleConfig
 	activationScale := defaults.ActivationScale
 
 	givenAutoScaleAnnotation := utils.FilterMap(capp.Spec.ConfigurationSpec.Template.Annotations, AutoScalerSubString)
-	autoScaleAnnotations[KnativeAutoscaleClassKey] = getAutoScaleClassByMetric(scaleMetric)
-	autoScaleAnnotations[KnativeMetricKey] = scaleMetric
-	autoScaleAnnotations[KnativeAutoscaleTargetKey] = getTargetValue(scaleMetric, defaults)
-	autoScaleAnnotations[KnativeActivationScaleKey] = fmt.Sprintf("%d", activationScale)
+	autoScaleAnnotations[kautoscaling.ClassAnnotationKey] = getAutoScaleClassByMetric(scaleMetric)
+	autoScaleAnnotations[kautoscaling.MetricAnnotationKey] = scaleMetric
+	autoScaleAnnotations[kautoscaling.TargetAnnotationKey] = getTargetValue(scaleMetric, defaults)
+	autoScaleAnnotations[kautoscaling.ActivationScaleKey] = fmt.Sprintf("%d", activationScale)
+
+	if capp.Spec.MinReplicas != 0 {
+		autoScaleAnnotations[kautoscaling.MinScaleAnnotationKey] = fmt.Sprintf("%d", capp.Spec.MinReplicas)
+	}
+
 	autoScaleAnnotations = utils.MergeMaps(autoScaleAnnotations, givenAutoScaleAnnotation)
 
 	return autoScaleAnnotations

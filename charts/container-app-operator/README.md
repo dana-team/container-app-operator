@@ -8,12 +8,13 @@ A Helm chart for Kubernetes
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| config | object | `{"allowedHostnamePatterns":[".*"],"autoscaleConfig":{"activationScale":3,"concurrency":10,"cpu":80,"memory":70,"rps":200},"defaultResources":{"limits":{"cpu":"200m","memory":"200Mi"},"requests":{"cpu":"100m","memory":"100Mi"}},"dnsConfig":{"cname":"ingress.capp-zone.com.","issuer":"cert-issuer","provider":"dns-default","zone":"capp-zone.com."},"enabled":true}` | Configuration for CappConfig CRD |
+| config | object | `{"allowedHostnamePatterns":[".*"],"autoscaleConfig":{"activationScale":3,"concurrency":10,"cpu":80,"memory":70,"minReplicasLimit":10,"rps":200},"defaultResources":{"limits":{"cpu":"200m","memory":"200Mi"},"requests":{"cpu":"100m","memory":"100Mi"}},"dnsConfig":{"cname":"ingress.capp-zone.com.","issuer":"cert-issuer","provider":"dns-default","zone":"capp-zone.com."},"enabled":true}` | Configuration for CappConfig CRD |
 | config.allowedHostnamePatterns[0] | string | `".*"` | A list of regex patterns that hostnames of Capp workloads must match. If a Capp hostname matches one of these patterns, its creation will be allowed. |
 | config.autoscaleConfig.activationScale | int | `3` | The default activation scale (minimum replicas before scaling starts). |
 | config.autoscaleConfig.concurrency | int | `10` | The default concurrency limit for autoscaling. |
 | config.autoscaleConfig.cpu | int | `80` | The default CPU utilization percentage for autoscaling. |
 | config.autoscaleConfig.memory | int | `70` | The default memory utilization percentage for autoscaling. |
+| config.autoscaleConfig.minReplicasLimit | int | `10` | The global minimum scale (maximum allowed value for minReplicas). |
 | config.autoscaleConfig.rps | int | `200` | The default Requests Per Second (RPS) threshold for autoscaling. |
 | config.defaultResources.limits | object | `{"cpu":"200m","memory":"200Mi"}` | Default compute resource limits applied to all Capp workloads. |
 | config.defaultResources.limits.cpu | string | `"200m"` | Maximum requested CPU per Capp workload. |
@@ -30,7 +31,7 @@ A Helm chart for Kubernetes
 | controllerManager.manager.containerSecurityContext.capabilities | object | `{"drop":["ALL"]}` | Linux capabilities to drop from the container for improved security. |
 | controllerManager.manager.image.imagePullPolicy | string | `"IfNotPresent"` | Controller manager container image pull policy. |
 | controllerManager.manager.image.repository | string | `"ghcr.io/dana-team/container-app-operator"` | Controller manager container image repository. |
-| controllerManager.manager.image.tag | string | `"main"` | Controller manager container image tag. |
+| controllerManager.manager.image.tag | string | `""` | Controller manager container image tag. |
 | controllerManager.manager.resources.limits.cpu | string | `"500m"` | Maximum CPU limit for the controller manager container. |
 | controllerManager.manager.resources.limits.memory | string | `"128Mi"` | Maximum memory limit for the controller manager container. |
 | controllerManager.manager.resources.requests.cpu | string | `"10m"` | Minimum CPU request for the controller manager container. |

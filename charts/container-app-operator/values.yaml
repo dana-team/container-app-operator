@@ -86,6 +86,8 @@ config:
     concurrency: 10
     # -- The default activation scale (minimum replicas before scaling starts).
     activationScale: 3
+    # -- The global minimum scale (maximum allowed value for minReplicas).
+    minReplicasLimit: 10
 
   defaultResources:
     # -- Default compute resource limits applied to all Capp workloads.

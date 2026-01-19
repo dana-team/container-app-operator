@@ -28,8 +28,6 @@ const (
 	ExampleDanaAnnotation           = "rcs.dana.io/app-name"
 	TestContainerName               = "capp-test-container"
 	FirstRevisionSuffix             = "-00001"
-	KnativeAutoscaleTargetKey       = "autoscaling.knative.dev/target"
-	KnativeActivationScaleKey       = "autoscaling.knative.dev/activation-scale"
 	TestIndex                       = "test"
 	TestLabelKey                    = "e2e-test"
 	CappConfigName                  = "capp-config"

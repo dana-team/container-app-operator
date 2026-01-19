@@ -11,6 +11,8 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/util/retry"
+	"knative.dev/serving/pkg/apis/autoscaling"
+	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 )
 
 var _ = Describe("Validate capp creation", func() {
@@ -171,4 +173,60 @@ var _ = Describe("Validate capp creation", func() {
 		Expect(secretTarget.SecretRef.Name).To(Equal(testconsts.KedaSecretName))
 	})
 
+	It("Should validate minReplicas defaulting and validation", func() {
+		baseCapp := mocks.CreateBaseCapp()
+		baseCapp.Name = utilst.GenerateCappName()
+
+		By("Creating Capp with no minReplicas (should default to 0)")
+		createdCapp := utilst.CreateCapp(k8sClient, baseCapp)
+		Eventually(func() int {
+			capp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
+			return capp.Spec.MinReplicas
+		}, testconsts.Timeout, testconsts.Interval).Should(Equal(0))
+
+		By("Verifying KSVC annotation for default minReplicas")
+		Eventually(func() bool {
+			ksvc := &knativev1.Service{}
+			utilst.GetResource(k8sClient, ksvc, createdCapp.Name, createdCapp.Namespace)
+			minReplicas, found := ksvc.Spec.Template.Annotations[autoscaling.MinScaleAnnotationKey]
+			if !found {
+				return true
+			}
+			return minReplicas == "0"
+		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue())
+
+		By("Updating Capp with valid minReplicas")
+		err := retry.RetryOnConflict(utilst.NewRetryOnConflictBackoff(), func() error {
+			capp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
+			capp.Spec.MinReplicas = 3
+			return utilst.UpdateResource(k8sClient, capp)
+		})
+		Expect(err).ToNot(HaveOccurred())
+
+		By("Verifying Capp has minReplicas=3")
+		Eventually(func() int {
+			capp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
+			return capp.Spec.MinReplicas
+		}, testconsts.Timeout, testconsts.Interval).Should(Equal(3))
+
+		By("Verifying KSVC annotation for minReplicas=3")
+		Eventually(func() string {
+			ksvc := &knativev1.Service{}
+			utilst.GetResource(k8sClient, ksvc, createdCapp.Name, createdCapp.Namespace)
+			return ksvc.Spec.Template.Annotations[autoscaling.MinScaleAnnotationKey]
+		}, testconsts.Timeout, testconsts.Interval).Should(Equal("3"))
+
+		By("Updating Capp with invalid minReplicas (> GlobalMinScale)")
+
+		err = retry.RetryOnConflict(utilst.NewRetryOnConflictBackoff(), func() error {
+			capp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
+			capp.Spec.MinReplicas = 20
+			return utilst.UpdateResource(k8sClient, capp)
+		})
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("must be less than or equal to global min scale"))
+
+		By("Cleaning up")
+		utilst.DeleteCapp(k8sClient, createdCapp)
+	})
 })
