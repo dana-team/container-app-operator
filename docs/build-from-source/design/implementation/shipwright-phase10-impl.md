@@ -327,10 +327,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/record"
 )
 
 type Handler struct {
@@ -501,15 +501,19 @@ Required label selector:
 Edit:
 - `/home/sbahar/projects/ps/dana-team/container-app-operator/cmd/main.go`
 
-Add import:
+Add these imports (ensure they are grouped correctly):
 
 ```go
-gitwebhook "github.com/dana-team/container-app-operator/internal/webhook/git"
+import (
+	"context"
+	// ... existing ...
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	// ... existing ...
+	gitwebhook "github.com/dana-team/container-app-operator/internal/webhook/git"
+)
 ```
 
-Then, inside the existing `ENABLE_WEBHOOKS` block, register the endpoint **only when OnCommit is enabled in CappConfig**.
-
-Add this helper:
+Add this helper function before `func main()`:
 
 ```go
 func isOnCommitWebhookEnabled(ctx context.Context, c client.Client) bool {
@@ -522,19 +526,24 @@ func isOnCommitWebhookEnabled(ctx context.Context, c client.Client) bool {
 ```
 
 Import note:
-- Ensure `context` and `capputils` are imported in `cmd/main.go`.
+- Ensure `context`, `sigs.k8s.io/controller-runtime/pkg/client`, and `capputils` are imported in `cmd/main.go`.
 
-And register conditionally:
+Then, inside `func main()`, find the `ENABLE_WEBHOOKS` block and add the registration after the existing validators/mutators:
 
 Copy to: `/home/sbahar/projects/ps/dana-team/container-app-operator/cmd/main.go`
 
 ```go
-if isOnCommitWebhookEnabled(context.Background(), mgr.GetClient()) {
-	hookServer.Register("/webhooks/git", &gitwebhook.Handler{
-		Client:        mgr.GetClient(),
-		EventRecorder: mgr.GetEventRecorderFor("git-webhook"),
-	})
-}
+	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
+		hookServer := mgr.GetWebhookServer()
+		// ... existing registrations ...
+
+		if isOnCommitWebhookEnabled(context.Background(), mgr.GetClient()) {
+			hookServer.Register("/webhooks/git", &gitwebhook.Handler{
+				Client:        mgr.GetClient(),
+				EventRecorder: mgr.GetEventRecorderFor("git-webhook"),
+			})
+		}
+	}
 ```
 
 Note:
@@ -558,49 +567,12 @@ const (
 )
 ```
 
-### 3.1.1) Maintain the on-commit label (required for webhook filtering)
-
-Edit:
-- `/home/sbahar/projects/ps/dana-team/container-app-operator/internal/kinds/cappbuild/controllers/controller.go`
-
-Add a small helper and use it in reconcile (after `cb` is loaded):
-
-Copy to: `/home/sbahar/projects/ps/dana-team/container-app-operator/internal/kinds/cappbuild/controllers/controller.go`
-
-```go
-const onCommitLabelKey = "rcs.dana.io/oncommit-enabled"
-
-func (r *CappBuildReconciler) ensureOnCommitLabel(ctx context.Context, cb *rcs.CappBuild) error {
-	desired := "false"
-	if cb.Spec.Rebuild != nil && cb.Spec.Rebuild.Mode == rcs.CappBuildRebuildModeOnCommit {
-		desired = "true"
-	}
-
-	if cb.Labels == nil {
-		cb.Labels = map[string]string{}
-	}
-	if cb.Labels[onCommitLabelKey] == desired {
-		return nil
-	}
-
-	orig := cb.DeepCopy()
-	cb.Labels[onCommitLabelKey] = desired
-	return r.Patch(ctx, cb, client.MergeFrom(orig))
-}
-```
-
-Then use it in reconcile (near the top, after fetching `cb`):
-
-```go
-if err := r.ensureOnCommitLabel(ctx, cb); err != nil {
-	return ctrl.Result{RequeueAfter: 30 * time.Second}, err
-}
-```
-
 ### 3.2) Add OnCommit reconciliation helper
 
 Create:
 - `/home/sbahar/projects/ps/dana-team/container-app-operator/internal/kinds/cappbuild/controllers/oncommit.go`
+
+This file contains both the label maintenance and the trigger logic:
 
 Copy to: `/home/sbahar/projects/ps/dana-team/container-app-operator/internal/kinds/cappbuild/controllers/oncommit.go`
 
@@ -622,7 +594,27 @@ import (
 const (
 	onCommitDebounce    = 10 * time.Second
 	onCommitMinInterval = 30 * time.Second
+	onCommitLabelKey    = "rcs.dana.io/oncommit-enabled"
 )
+
+// ensureOnCommitLabel maintains the label required for the webhook handler to filter CappBuilds.
+func (r *CappBuildReconciler) ensureOnCommitLabel(ctx context.Context, cb *rcs.CappBuild) error {
+	desired := "false"
+	if cb.Spec.Rebuild != nil && cb.Spec.Rebuild.Mode == rcs.CappBuildRebuildModeOnCommit {
+		desired = "true"
+	}
+
+	if cb.Labels == nil {
+		cb.Labels = map[string]string{}
+	}
+	if cb.Labels[onCommitLabelKey] == desired {
+		return nil
+	}
+
+	orig := cb.DeepCopy()
+	cb.Labels[onCommitLabelKey] = desired
+	return r.Patch(ctx, cb, client.MergeFrom(orig))
+}
 
 // triggerBuildRun enforces debounce/rate-limit/one-active-build and creates a BuildRun
 // when a pending trigger is ready.
@@ -769,35 +761,62 @@ func (r *CappBuildReconciler) ensureBuildRunOnCommit(ctx context.Context, cb *rc
 Edit:
 - `/home/sbahar/projects/ps/dana-team/container-app-operator/internal/kinds/cappbuild/controllers/controller.go`
 
-Replace the single `reconcileBuildRun(...)` call with:
+In `Reconcile`, you must:
+1.  Add the call to `ensureOnCommitLabel` immediately after fetching the `CappBuild`.
+2.  Replace the single `reconcileBuildRun` call (approx. line 103) with the selection logic that prioritizes on-commit triggers.
+
+Update the `Reconcile` function as follows:
 
 Copy to: `/home/sbahar/projects/ps/dana-team/container-app-operator/internal/kinds/cappbuild/controllers/controller.go`
 
 ```go
-var buildRun *shipwright.BuildRun
+func (r *CappBuildReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	// ... (logger initialization) ...
 
-// First: apply OnCommit policy if a pending trigger exists.
-if br, requeueAfter, err := r.triggerBuildRun(ctx, cb); err != nil {
-	_ = r.patchReadyCondition(ctx, cb, metav1.ConditionFalse, ReasonBuildRunReconcileFailed, err.Error())
-	return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
-} else if requeueAfter != nil {
-	return ctrl.Result{RequeueAfter: *requeueAfter}, nil
-} else if br != nil {
-	buildRun = br
-}
+	cb := &rcs.CappBuild{}
+	if err := r.Get(ctx, req.NamespacedName, cb); err != nil {
+		// ... (existing error handling) ...
+	}
 
-// Fallback: ensure the generation-based BuildRun exists (initial/manual behavior).
-if buildRun == nil {
-	br, err := r.reconcileBuildRun(ctx, cb)
-	if err != nil {
-		if errors.As(err, &alreadyOwned) {
-			_ = r.patchReadyCondition(ctx, cb, metav1.ConditionFalse, ReasonBuildRunConflict, err.Error())
-			return ctrl.Result{}, nil
-		}
+	// [ADD THIS]: Maintain the label used by webhooks
+	if err := r.ensureOnCommitLabel(ctx, cb); err != nil {
+		return ctrl.Result{RequeueAfter: 30 * time.Second}, err
+	}
+
+	// ... (existing build strategy reconciliation logic) ...
+
+	// [REPLACE the old reconcileBuildRun call with this block]:
+	var buildRun *shipwright.BuildRun
+
+	// 1. Try to trigger or find an active on-commit build
+	if br, requeueAfter, err := r.triggerBuildRun(ctx, cb); err != nil {
 		_ = r.patchReadyCondition(ctx, cb, metav1.ConditionFalse, ReasonBuildRunReconcileFailed, err.Error())
 		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
+	} else if requeueAfter != nil {
+		return ctrl.Result{RequeueAfter: *requeueAfter}, nil
+	} else if br != nil {
+		buildRun = br
 	}
-	buildRun = br
+
+	// 2. Fallback to generation-based build if no on-commit build is active/pending
+	if buildRun == nil {
+		br, err := r.reconcileBuildRun(ctx, cb)
+		if err != nil {
+			if errors.As(err, &alreadyOwned) {
+				_ = r.patchReadyCondition(ctx, cb, metav1.ConditionFalse, ReasonBuildRunConflict, err.Error())
+				return ctrl.Result{}, nil
+			}
+			_ = r.patchReadyCondition(ctx, cb, metav1.ConditionFalse, ReasonBuildRunReconcileFailed, err.Error())
+			return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
+		}
+		buildRun = br
+	}
+
+	// ... (continue with status mapping using 'buildRun') ...
+	if err := r.patchBuildSucceededCondition(ctx, cb, buildRun); err != nil {
+		return ctrl.Result{}, err
+	}
+    // ...
 }
 ```
 
@@ -807,8 +826,6 @@ Then keep the existing status mapping logic:
 - if `BuildSucceeded=Unknown`, requeue `10s`
 
 ## 4) Unit tests
-
-### 4.1) Webhook handler tests
 
 ### 4.1) Git Webhook Tests
 

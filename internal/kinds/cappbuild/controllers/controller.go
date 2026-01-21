@@ -61,6 +61,10 @@ func (r *CappBuildReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, fmt.Errorf("failed to get CappBuild: %w", err)
 	}
 
+	if err := r.ensureOnCommitLabel(ctx, cb); err != nil {
+		return ctrl.Result{RequeueAfter: 30 * time.Second}, err
+	}
+
 	var alreadyOwned *controllerutil.AlreadyOwnedError
 
 	cappConfig, err := capputils.GetCappConfig(r.Client)
@@ -100,14 +104,28 @@ func (r *CappBuildReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		}
 	}
 
-	buildRun, err := r.reconcileBuildRun(ctx, cb)
-	if err != nil {
-		if errors.As(err, &alreadyOwned) {
-			_ = r.patchReadyCondition(ctx, cb, metav1.ConditionFalse, ReasonBuildRunConflict, err.Error())
-			return ctrl.Result{}, nil
-		}
+	var buildRun *shipwright.BuildRun
+
+	if br, requeueAfter, err := r.triggerBuildRun(ctx, cb); err != nil {
 		_ = r.patchReadyCondition(ctx, cb, metav1.ConditionFalse, ReasonBuildRunReconcileFailed, err.Error())
 		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
+	} else if requeueAfter != nil {
+		return ctrl.Result{RequeueAfter: *requeueAfter}, nil
+	} else if br != nil {
+		buildRun = br
+	}
+
+	if buildRun == nil {
+		br, err := r.reconcileBuildRun(ctx, cb)
+		if err != nil {
+			if errors.As(err, &alreadyOwned) {
+				_ = r.patchReadyCondition(ctx, cb, metav1.ConditionFalse, ReasonBuildRunConflict, err.Error())
+				return ctrl.Result{}, nil
+			}
+			_ = r.patchReadyCondition(ctx, cb, metav1.ConditionFalse, ReasonBuildRunReconcileFailed, err.Error())
+			return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
+		}
+		buildRun = br
 	}
 
 	if err := r.patchBuildSucceededCondition(ctx, cb, buildRun); err != nil {

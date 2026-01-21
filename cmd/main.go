@@ -20,6 +20,7 @@ import (
 	"crypto/tls"
 	"flag"
 	"os"
+	"context"
 
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -42,6 +43,7 @@ import (
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	runtimezap "sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -53,6 +55,7 @@ import (
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 	cappbuildcontroller "github.com/dana-team/container-app-operator/internal/kinds/cappbuild/controllers"
 	crcontroller "github.com/dana-team/container-app-operator/internal/kinds/capprevision/controllers"
+	gitwebhook "github.com/dana-team/container-app-operator/internal/webhook/git"
 	webhooks "github.com/dana-team/container-app-operator/internal/webhook/rcs/v1alpha1"
 	// +kubebuilder:scaffold:imports
 )
@@ -84,6 +87,14 @@ func initEcsLogger() {
 	core := ecszap.NewCore(encoderConfig, os.Stdout, zap.DebugLevel)
 	logger := zap.New(core, zap.AddCaller())
 	logf.SetLogger(zapr.NewLogger(logger))
+}
+
+func isOnCommitWebhookEnabled(ctx context.Context, c client.Client) bool {
+	cfg, err := utils.GetCappConfig(c)
+	if err != nil || cfg.Spec.CappBuild == nil || cfg.Spec.CappBuild.OnCommit == nil {
+		return false
+	}
+	return cfg.Spec.CappBuild.OnCommit.Enabled
 }
 
 func main() {
@@ -207,6 +218,13 @@ func main() {
 			Client:  mgr.GetClient(),
 			Decoder: decoder,
 		}})
+
+		if isOnCommitWebhookEnabled(context.Background(), mgr.GetClient()) {
+			hookServer.Register("/webhooks/git", &gitwebhook.Handler{
+				Client:        mgr.GetClient(),
+				EventRecorder: mgr.GetEventRecorderFor("git-webhook"),
+			})
+		}
 	}
 	// +kubebuilder:scaffold:builder
 

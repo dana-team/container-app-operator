@@ -103,6 +103,16 @@ spec:
                     required:
                     - buildFile
                     type: object
+                  onCommit:
+                    description: OnCommit configures webhook-triggered rebuilds.
+                    properties:
+                      enabled:
+                        default: false
+                        description: Enabled enables webhook-triggered rebuilds.
+                        type: boolean
+                    required:
+                    - enabled
+                    type: object
                   output:
                     description: Output holds defaults for deriving the build output
                       image.

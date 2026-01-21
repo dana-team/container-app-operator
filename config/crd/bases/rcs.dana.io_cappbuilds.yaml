@@ -56,6 +56,37 @@ spec:
                 required:
                 - mode
                 type: object
+              onCommit:
+                description: OnCommit configures webhook-triggered rebuilds.
+                properties:
+                  webhookSecretRef:
+                    description: WebhookSecretRef references the Secret used to verify
+                      webhook requests.
+                    properties:
+                      key:
+                        description: The key of the secret to select from.  Must be
+                          a valid secret key.
+                        type: string
+                      name:
+                        default: ""
+                        description: |-
+                          Name of the referent.
+                          This field is effectively required, but due to backwards compatibility is
+                          allowed to be empty. Instances of this type with an empty value here are
+                          almost certainly wrong.
+                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                        type: string
+                      optional:
+                        description: Specify whether the Secret or its key must be
+                          defined
+                        type: boolean
+                    required:
+                    - key
+                    type: object
+                    x-kubernetes-map-type: atomic
+                required:
+                - webhookSecretRef
+                type: object
               output:
                 description: Output refers to the location where the built image would
                   be pushed.
@@ -229,6 +260,59 @@ spec:
                   controller.
                 format: int64
                 type: integer
+              onCommit:
+                description: OnCommit stores on-commit trigger state.
+                properties:
+                  lastReceived:
+                    description: LastReceived is the last received webhook event.
+                    properties:
+                      commitSHA:
+                        description: CommitSHA is the commit SHA from the webhook
+                          payload.
+                        type: string
+                      receivedAt:
+                        description: ReceivedAt is when the webhook was received.
+                        format: date-time
+                        type: string
+                      ref:
+                        description: Ref is the git ref from the webhook payload.
+                        type: string
+                    type: object
+                  lastTriggeredBuildRun:
+                    description: LastTriggeredBuildRun references the last BuildRun
+                      created from an on-commit trigger.
+                    properties:
+                      name:
+                        description: Name is the name of the last BuildRun created
+                          from an on-commit trigger.
+                        type: string
+                      triggeredAt:
+                        description: TriggeredAt is when the last BuildRun was created
+                          from an on-commit trigger.
+                        format: date-time
+                        type: string
+                    type: object
+                  pending:
+                    description: Pending is the latest pending on-commit trigger.
+                    properties:
+                      commitSHA:
+                        description: CommitSHA is the commit SHA from the webhook
+                          payload.
+                        type: string
+                      receivedAt:
+                        description: ReceivedAt is when the webhook was received.
+                        format: date-time
+                        type: string
+                      ref:
+                        description: Ref is the git ref from the webhook payload.
+                        type: string
+                    type: object
+                  triggerCounter:
+                    description: TriggerCounter is used to derive deterministic BuildRun
+                      names for on-commit triggers.
+                    format: int64
+                    type: integer
+                type: object
             type: object
         type: object
     served: true

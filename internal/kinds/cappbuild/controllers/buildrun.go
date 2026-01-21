@@ -147,3 +147,28 @@ func (r *CappBuildReconciler) patchLatestImage(
 	cb.Status.LatestImage = latestImage
 	return r.Status().Patch(ctx, cb, client.MergeFrom(orig))
 }
+
+func (r *CappBuildReconciler) ensureBuildRunOnCommit(ctx context.Context, cb *rcs.CappBuild, counter int64) (*shipwright.BuildRun, error) {
+	desired := newBuildRun(cb)
+	desired.Name = fmt.Sprintf("%s-buildrun-oncommit-%d", cb.Name, counter)
+	desired.Labels["rcs.dana.io/build-trigger"] = "oncommit"
+
+	existing := &shipwright.BuildRun{}
+	key := client.ObjectKeyFromObject(desired)
+	if err := r.Get(ctx, key, existing); err == nil {
+		if !metav1.IsControlledBy(existing, cb) {
+			return nil, &controllerutil.AlreadyOwnedError{Object: existing}
+		}
+		return existing, nil
+	} else if client.IgnoreNotFound(err) != nil {
+		return nil, err
+	}
+
+	if err := controllerutil.SetControllerReference(cb, desired, r.Scheme); err != nil {
+		return nil, err
+	}
+	if err := r.Create(ctx, desired); err != nil {
+		return nil, err
+	}
+	return desired, nil
+}

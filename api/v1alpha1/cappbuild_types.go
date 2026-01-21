@@ -61,6 +61,10 @@ type CappBuildSpec struct {
 
 	// Output refers to the location where the built image would be pushed.
 	Output CappBuildOutput `json:"output"`
+
+	// +optional
+	// OnCommit configures webhook-triggered rebuilds.
+	OnCommit *CappBuildOnCommit `json:"onCommit,omitempty"`
 }
 
 type CappBuildSource struct {
@@ -110,6 +114,11 @@ type CappBuildOutput struct {
 	PushSecret *corev1.LocalObjectReference `json:"pushSecret,omitempty"`
 }
 
+type CappBuildOnCommit struct {
+	// WebhookSecretRef references the Secret used to verify webhook requests.
+	WebhookSecretRef corev1.SecretKeySelector `json:"webhookSecretRef"`
+}
+
 type CappBuildStatus struct {
 	// +optional
 	// ObservedGeneration is the .metadata.generation last processed by the
@@ -133,6 +142,52 @@ type CappBuildStatus struct {
 	// LastBuildRunRef is a reference to the last BuildRun
 	// created for this CappBuild.
 	LastBuildRunRef string `json:"lastBuildRunRef,omitempty"`
+
+	// +optional
+	// OnCommit stores on-commit trigger state.
+	OnCommit *CappBuildOnCommitStatus `json:"onCommit,omitempty"`
+}
+
+type CappBuildOnCommitEvent struct {
+	// Ref is the git ref from the webhook payload.
+	// +optional
+	Ref string `json:"ref,omitempty"`
+
+	// CommitSHA is the commit SHA from the webhook payload.
+	// +optional
+	CommitSHA string `json:"commitSHA,omitempty"`
+
+	// ReceivedAt is when the webhook was received.
+	// +optional
+	ReceivedAt metav1.Time `json:"receivedAt,omitempty"`
+}
+
+type CappBuildOnCommitLastTriggered struct {
+	// Name is the name of the last BuildRun created from an on-commit trigger.
+	// +optional
+	Name string `json:"name,omitempty"`
+
+	// TriggeredAt is when the last BuildRun was created from an on-commit trigger.
+	// +optional
+	TriggeredAt metav1.Time `json:"triggeredAt,omitempty"`
+}
+
+type CappBuildOnCommitStatus struct {
+	// LastReceived is the last received webhook event.
+	// +optional
+	LastReceived *CappBuildOnCommitEvent `json:"lastReceived,omitempty"`
+
+	// Pending is the latest pending on-commit trigger.
+	// +optional
+	Pending *CappBuildOnCommitEvent `json:"pending,omitempty"`
+
+	// LastTriggeredBuildRun references the last BuildRun created from an on-commit trigger.
+	// +optional
+	LastTriggeredBuildRun *CappBuildOnCommitLastTriggered `json:"lastTriggeredBuildRun,omitempty"`
+
+	// TriggerCounter is used to derive deterministic BuildRun names for on-commit triggers.
+	// +optional
+	TriggerCounter int64 `json:"triggerCounter,omitempty"`
 }
 
 // CappBuild is the Schema for the cappbuilds API. It represents a build-from-
