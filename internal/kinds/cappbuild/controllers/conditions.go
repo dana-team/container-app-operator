@@ -17,7 +17,7 @@ const (
 	ReasonBuildRunSucceeded       = "BuildRunSucceeded"
 	ReasonBuildRunFailed          = "BuildRunFailed"
 
-	ReasonOnCommitDisabled   = "OnCommitDisabled"
-	ReasonWebhookSecretMissing = "WebhookSecretMissing"
+	ReasonOnCommitDisabled       = "OnCommitDisabled"
+	ReasonWebhookSecretMissing   = "WebhookSecretMissing"
 	ReasonOnCommitBuildTriggered = "OnCommitBuildTriggered"
 )

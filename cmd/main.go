@@ -20,7 +20,6 @@ import (
 	"crypto/tls"
 	"flag"
 	"os"
-	"context"
 
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -89,7 +88,7 @@ func initEcsLogger() {
 	logf.SetLogger(zapr.NewLogger(logger))
 }
 
-func isOnCommitWebhookEnabled(ctx context.Context, c client.Client) bool {
+func isOnCommitWebhookEnabled(c client.Client) bool {
 	cfg, err := utils.GetCappConfig(c)
 	if err != nil || cfg.Spec.CappBuild == nil || cfg.Spec.CappBuild.OnCommit == nil {
 		return false
@@ -219,7 +218,7 @@ func main() {
 			Decoder: decoder,
 		}})
 
-		if isOnCommitWebhookEnabled(context.Background(), mgr.GetClient()) {
+		if isOnCommitWebhookEnabled(mgr.GetClient()) {
 			hookServer.Register("/webhooks/git", &gitwebhook.Handler{
 				Client:        mgr.GetClient(),
 				EventRecorder: mgr.GetEventRecorderFor("git-webhook"),

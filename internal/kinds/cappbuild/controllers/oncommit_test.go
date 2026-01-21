@@ -12,7 +12,6 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	
 )
 
 func TestTriggerNaming(t *testing.T) {
@@ -64,8 +63,8 @@ func TestTriggerDebounce(t *testing.T) {
 	cb.Spec.Rebuild = &rcs.CappBuildRebuild{Mode: rcs.CappBuildRebuildModeOnCommit}
 	cb.Status.OnCommit = &rcs.CappBuildOnCommitStatus{
 		Pending: &rcs.CappBuildOnCommitEvent{
-			Ref: "refs/heads/main", 
-			CommitSHA: "abc",
+			Ref:        "refs/heads/main",
+			CommitSHA:  "abc",
 			ReceivedAt: metav1.NewTime(now),
 		},
 	}

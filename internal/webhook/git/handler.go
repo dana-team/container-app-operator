@@ -11,8 +11,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/util/retry"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
@@ -47,9 +47,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	normalizedRepoURL := normalizeRepoURL(event.RepoURL)
-	var matches []rcs.CappBuild
+	matches := make([]rcs.CappBuild, 0, len(list.Items))
 	for _, cb := range list.Items {
-		cb := cb
+
 		isMatch := cb.Spec.Rebuild != nil &&
 			cb.Spec.Rebuild.Mode == rcs.CappBuildRebuildModeOnCommit &&
 			cb.Spec.Source.Type == rcs.CappBuildSourceTypeGit &&
@@ -73,7 +73,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	now := metav1.Now()
 	var authenticatedCount int
 	for _, cb := range matches {
-		cb := cb
+
 		secret, err := resolveWebhookSecret(ctx, h.Client, &cb)
 		if err != nil {
 			logger.Error(err, "failed to resolve webhook secret", "name", cb.Name, "namespace", cb.Namespace)
@@ -133,8 +133,8 @@ func (h *Handler) patchOnCommitStatus(ctx context.Context, cb *rcs.CappBuild, ev
 			latest.Status.OnCommit = &rcs.CappBuildOnCommitStatus{}
 		}
 		onCommitEvent := &rcs.CappBuildOnCommitEvent{
-			Ref:       event.Ref,
-			CommitSHA: event.CommitSHA,
+			Ref:        event.Ref,
+			CommitSHA:  event.CommitSHA,
 			ReceivedAt: now,
 		}
 		latest.Status.OnCommit.LastReceived = onCommitEvent
