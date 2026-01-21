@@ -117,6 +117,9 @@ config:
         present: buildpacks-v3
         # -- Strategy name when the source does not indicate a file-based build.
         absent: buildah-strategy-managed-push
+    onCommit:
+      # -- Feature flag: when true, the OnCommit webhook handler and controller are enabled.
+      enabled: false
 
 cappBuild:
    # -- Feature flag: when true, the manager process will start the CappBuild controller.
