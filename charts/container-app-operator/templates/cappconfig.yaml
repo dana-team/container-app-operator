@@ -30,7 +30,7 @@ spec:
     {{- else }}
     []
     {{- end }}
-  {{- with .Values.config.cappBuild }}
+  {{- with .Values.cappBuild }}
   cappBuild:
     {{- with .output }}
     {{- if .defaultImageRepo }}
@@ -40,8 +40,8 @@ spec:
     {{- end }}
     clusterBuildStrategy:
       buildFile:
-        present: {{ required "config.cappBuild.clusterBuildStrategy.buildFile.present is required" .clusterBuildStrategy.buildFile.present | quote }}
-        absent: {{ required "config.cappBuild.clusterBuildStrategy.buildFile.absent is required" .clusterBuildStrategy.buildFile.absent | quote }}
+        present: {{ required "cappBuild.clusterBuildStrategy.buildFile.present is required" .clusterBuildStrategy.buildFile.present | quote }}
+        absent: {{ required "cappBuild.clusterBuildStrategy.buildFile.absent is required" .clusterBuildStrategy.buildFile.absent | quote }}
     {{- with .onCommit }}
     onCommit:
       enabled: {{ .enabled }}
