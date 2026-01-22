@@ -110,7 +110,6 @@ config:
     # When configured, clusterBuildStrategy.* is required.
     output:
       # -- Default OCI image repo (no tag/digest) for build outputs.
-      # defaultImageRepo: "registry.example.com/org/capps"
     clusterBuildStrategy:
       buildFile:
         # -- Strategy name when the source indicates a file-based build.
