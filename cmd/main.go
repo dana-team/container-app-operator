@@ -42,7 +42,6 @@ import (
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	runtimezap "sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -86,14 +85,6 @@ func initEcsLogger() {
 	core := ecszap.NewCore(encoderConfig, os.Stdout, zap.DebugLevel)
 	logger := zap.New(core, zap.AddCaller())
 	logf.SetLogger(zapr.NewLogger(logger))
-}
-
-func isOnCommitWebhookEnabled(c client.Client) bool {
-	cfg, err := utils.GetCappConfig(c)
-	if err != nil || cfg.Spec.CappBuild == nil || cfg.Spec.CappBuild.OnCommit == nil {
-		return false
-	}
-	return cfg.Spec.CappBuild.OnCommit.Enabled
 }
 
 func main() {
@@ -218,11 +209,14 @@ func main() {
 			Decoder: decoder,
 		}})
 
-		if isOnCommitWebhookEnabled(mgr.GetClient()) {
+		if os.Getenv("ENABLE_ONCOMMIT_WEBHOOK") == "true" {
 			hookServer.Register("/webhooks/git", &gitwebhook.Handler{
 				Client:        mgr.GetClient(),
 				EventRecorder: mgr.GetEventRecorderFor("git-webhook"),
 			})
+			setupLog.Info("git webhook handler registered at /webhooks/git")
+		} else {
+			setupLog.Info("git webhook handler disabled (set ENABLE_ONCOMMIT_WEBHOOK=true to enable)")
 		}
 	}
 	// +kubebuilder:scaffold:builder

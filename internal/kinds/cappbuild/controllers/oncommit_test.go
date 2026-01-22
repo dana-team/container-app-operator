@@ -22,7 +22,6 @@ func TestTriggerNaming(t *testing.T) {
 	}
 
 	cfg := newCappConfig()
-	cfg.Spec.CappBuild.OnCommit = &rcs.CappBuildOnCommitConfig{Enabled: true}
 	r, _ := newReconciler(t, cfg, cb)
 
 	br, requeue, err := r.triggerBuildRun(context.Background(), cb)
@@ -47,7 +46,6 @@ func TestTriggerActiveBuild(t *testing.T) {
 	require.NoError(t, controllerutil.SetControllerReference(cb, activeBR, testScheme(t)))
 
 	cfg := newCappConfig()
-	cfg.Spec.CappBuild.OnCommit = &rcs.CappBuildOnCommitConfig{Enabled: true}
 	r, _ := newReconciler(t, cfg, cb, activeBR)
 
 	br, requeue, err := r.triggerBuildRun(context.Background(), cb)
@@ -70,7 +68,6 @@ func TestTriggerDebounce(t *testing.T) {
 	}
 
 	cfg := newCappConfig()
-	cfg.Spec.CappBuild.OnCommit = &rcs.CappBuildOnCommitConfig{Enabled: true}
 	r, _ := newReconciler(t, cfg, cb)
 
 	br, requeue, err := r.triggerBuildRun(context.Background(), cb)

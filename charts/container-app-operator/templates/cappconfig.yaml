@@ -42,9 +42,5 @@ spec:
       buildFile:
         present: {{ required "cappBuild.clusterBuildStrategy.buildFile.present is required" .clusterBuildStrategy.buildFile.present | quote }}
         absent: {{ required "cappBuild.clusterBuildStrategy.buildFile.absent is required" .clusterBuildStrategy.buildFile.absent | quote }}
-    {{- with .onCommit }}
-    onCommit:
-      enabled: {{ .enabled }}
-    {{- end }}
   {{- end }}
 {{- end }}

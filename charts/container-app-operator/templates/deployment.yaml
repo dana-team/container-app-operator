@@ -31,6 +31,8 @@ spec:
           value: {{ quote .Values.kubernetesClusterDomain }}
         - name: ENABLE_CAPPBUILD_CONTROLLER
           value: {{ ternary "true" "false" .Values.cappBuild.enabled | quote }}
+        - name: ENABLE_ONCOMMIT_WEBHOOK
+          value: {{ ternary "true" "false" .Values.cappBuild.onCommit.enabled | quote }}
         image: {{ .Values.controllerManager.manager.image.repository }}:{{ .Values.controllerManager.manager.image.tag
           | default .Chart.AppVersion }}
         imagePullPolicy: {{ .Values.controllerManager.manager.imagePullPolicy }}

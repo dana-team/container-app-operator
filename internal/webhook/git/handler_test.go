@@ -42,7 +42,6 @@ func newCappConfig() *rcs.CappConfig {
 						Absent:  "absent-strategy",
 					},
 				},
-				OnCommit: &rcs.CappBuildOnCommitConfig{Enabled: true},
 			},
 		},
 	}

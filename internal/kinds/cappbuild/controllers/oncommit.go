@@ -5,7 +5,6 @@ import (
 	"time"
 
 	rcs "github.com/dana-team/container-app-operator/api/v1alpha1"
-	capputils "github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 	shipwright "github.com/shipwright-io/build/pkg/apis/build/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -51,11 +50,6 @@ func (r *CappBuildReconciler) triggerBuildRun(
 		return nil, nil, nil
 	}
 
-	if !isPolicyEnabled(r.Client) {
-		_ = r.patchReadyCondition(ctx, cb, metav1.ConditionFalse, ReasonOnCommitDisabled, "OnCommit rebuilds are disabled by policy")
-		return nil, nil, nil
-	}
-
 	if cb.Status.OnCommit == nil || cb.Status.OnCommit.Pending == nil {
 		return nil, nil, nil
 	}
@@ -90,14 +84,6 @@ func (r *CappBuildReconciler) triggerBuildRun(
 	}
 
 	return br, nil, nil
-}
-
-func isPolicyEnabled(c client.Client) bool {
-	cfg, err := capputils.GetCappConfig(c)
-	if err != nil || cfg.Spec.CappBuild == nil || cfg.Spec.CappBuild.OnCommit == nil {
-		return false
-	}
-	return cfg.Spec.CappBuild.OnCommit.Enabled
 }
 
 func requeueAfter(cb *rcs.CappBuild) *time.Duration {

@@ -58,16 +58,6 @@ type CappBuildConfig struct {
 
 	// ClusterBuildStrategy holds platform defaults for selecting a build strategy.
 	ClusterBuildStrategy CappBuildClusterStrategyConfig `json:"clusterBuildStrategy"`
-
-	// +optional
-	// OnCommit configures webhook-triggered rebuilds.
-	OnCommit *CappBuildOnCommitConfig `json:"onCommit,omitempty"`
-}
-
-type CappBuildOnCommitConfig struct {
-	// Enabled enables webhook-triggered rebuilds.
-	// +kubebuilder:default:=false
-	Enabled bool `json:"enabled"`
 }
 
 type CappBuildOutputConfig struct {
