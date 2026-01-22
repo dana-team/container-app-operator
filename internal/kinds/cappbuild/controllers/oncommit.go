@@ -58,12 +58,20 @@ func (r *CappBuildReconciler) triggerBuildRun(
 		return nil, requeueAfter, nil
 	}
 
+	pendingCommit := cb.Status.OnCommit.Pending.CommitSHA
+	if cb.Status.OnCommit.LastTriggeredBuildRun != nil &&
+		cb.Status.OnCommit.LastTriggeredBuildRun.CommitSHA == pendingCommit {
+		orig := cb.DeepCopy()
+		cb.Status.OnCommit.Pending = nil
+		_ = r.Status().Patch(ctx, cb, client.MergeFrom(orig))
+		return nil, nil, nil
+	}
+
 	if cb.Status.LastBuildRunRef != "" {
 		active := &shipwright.BuildRun{}
 		if err := r.Get(ctx, client.ObjectKey{Namespace: cb.Namespace, Name: cb.Status.LastBuildRunRef}, active); err == nil {
 			if metav1.IsControlledBy(active, cb) {
 				cond := active.Status.GetCondition(shipwright.Succeeded)
-				// If the build is still running (not True and not False), return it as active.
 				if cond == nil || (cond.GetStatus() != corev1.ConditionTrue && cond.GetStatus() != corev1.ConditionFalse) {
 					return active, nil, nil
 				}
@@ -79,7 +87,7 @@ func (r *CappBuildReconciler) triggerBuildRun(
 		return nil, nil, err
 	}
 
-	if err := r.markTriggered(ctx, cb, br, counter); err != nil {
+	if err := r.markTriggered(ctx, cb, br, counter, pendingCommit); err != nil {
 		return nil, nil, err
 	}
 
@@ -112,11 +120,12 @@ func nextTrigger(cb *rcs.CappBuild) int64 {
 	return counter + 1
 }
 
-func (r *CappBuildReconciler) markTriggered(ctx context.Context, cb *rcs.CappBuild, br *shipwright.BuildRun, triggerCounter int64) error {
+func (r *CappBuildReconciler) markTriggered(ctx context.Context, cb *rcs.CappBuild, br *shipwright.BuildRun, triggerCounter int64, commitSHA string) error {
 	orig := cb.DeepCopy()
 	cb.Status.OnCommit.TriggerCounter = triggerCounter
 	cb.Status.OnCommit.LastTriggeredBuildRun = &rcs.CappBuildOnCommitLastTriggered{
 		Name:        br.Name,
+		CommitSHA:   commitSHA,
 		TriggeredAt: metav1.Now(),
 	}
 	cb.Status.OnCommit.Pending = nil

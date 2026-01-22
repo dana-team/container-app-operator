@@ -288,6 +288,10 @@ spec:
                     description: LastTriggeredBuildRun references the last BuildRun
                       created from an on-commit trigger.
                     properties:
+                      commitSHA:
+                        description: CommitSHA is the commit SHA that triggered the
+                          last BuildRun.
+                        type: string
                       name:
                         description: Name is the name of the last BuildRun created
                           from an on-commit trigger.

@@ -172,6 +172,10 @@ type CappBuildOnCommitLastTriggered struct {
 	// +optional
 	Name string `json:"name,omitempty"`
 
+	// CommitSHA is the commit SHA that triggered the last BuildRun.
+	// +optional
+	CommitSHA string `json:"commitSHA,omitempty"`
+
 	// TriggeredAt is when the last BuildRun was created from an on-commit trigger.
 	// +optional
 	TriggeredAt metav1.Time `json:"triggeredAt,omitempty"`
