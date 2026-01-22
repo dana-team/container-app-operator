@@ -187,6 +187,12 @@ spec:
               buildRef:
                 description: BuildRef references the associated Build.
                 type: string
+              buildRunCounter:
+                description: |-
+                  BuildRunCounter is incremented each time a BuildRun is created and is
+                  used to generate deterministic BuildRun names.
+                format: int64
+                type: integer
               conditions:
                 description: |-
                   Conditions represent the latest available observations of the CappBuild's

@@ -144,6 +144,11 @@ type CappBuildStatus struct {
 	LastBuildRunRef string `json:"lastBuildRunRef,omitempty"`
 
 	// +optional
+	// BuildRunCounter is incremented each time a BuildRun is created and is
+	// used to generate deterministic BuildRun names.
+	BuildRunCounter int64 `json:"buildRunCounter,omitempty"`
+
+	// +optional
 	// OnCommit stores on-commit trigger state.
 	OnCommit *CappBuildOnCommitStatus `json:"onCommit,omitempty"`
 }

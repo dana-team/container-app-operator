@@ -25,8 +25,8 @@ func TestReconcileCreatesBuildRun(t *testing.T) {
 	require.NotNil(t, br)
 
 	actualBuildRun := &shipwright.BuildRun{}
-	require.NoError(t, c.Get(ctx, types.NamespacedName{Name: buildRunNameFor(cb), Namespace: cb.Namespace}, actualBuildRun))
-	require.Equal(t, buildRunNameFor(cb), actualBuildRun.Name)
+	require.NoError(t, c.Get(ctx, types.NamespacedName{Name: buildRunNameFor(cb, cb.Status.BuildRunCounter), Namespace: cb.Namespace}, actualBuildRun))
+	require.Equal(t, buildRunNameFor(cb, cb.Status.BuildRunCounter), actualBuildRun.Name)
 	require.Equal(t, cb.Namespace, actualBuildRun.Namespace)
 
 	require.True(t, metav1.IsControlledBy(actualBuildRun, cb), "BuildRun should be controller-owned by CappBuild")
@@ -39,7 +39,8 @@ func TestReconcileReusesExistingBuildRun(t *testing.T) {
 
 	cb := newCappBuild("cb-"+t.Name(), "ns-"+t.Name())
 	cb.UID = types.UID("cb-uid")
-	existingBuildRun := newBuildRun(cb)
+	cb.Status.BuildRunCounter = 0
+	existingBuildRun := newBuildRun(cb, 1)
 	existingBuildRun.UID = types.UID("existing-buildrun-uid")
 
 	require.NoError(t, controllerutil.SetControllerReference(cb, existingBuildRun, testScheme(t)))
@@ -55,7 +56,8 @@ func TestReconcileBuildRunConflict(t *testing.T) {
 	ctx := context.Background()
 
 	cb := newCappBuild("cb-"+t.Name(), "ns-"+t.Name())
-	conflict := newBuildRun(cb)
+	cb.Status.BuildRunCounter = 0
+	conflict := newBuildRun(cb, 1)
 
 	otherOwner := &rcs.CappBuild{
 		ObjectMeta: metav1.ObjectMeta{
@@ -145,5 +147,100 @@ func TestComputeLatestImage(t *testing.T) {
 		cb.Spec.Output.Image = "registry.example.com/team/app"
 		br := &shipwright.BuildRun{}
 		require.Equal(t, "", computeLatestImage(cb, br))
+	})
+}
+
+func TestIsNewBuildRequired(t *testing.T) {
+	ctx := context.Background()
+	const testBuildRunName = "some-buildrun"
+
+	t.Run("no previous build => required", func(t *testing.T) {
+		cb := newCappBuild("cb-"+t.Name(), "ns-"+t.Name())
+		r, _ := newReconciler(t, cb)
+
+		require.True(t, r.isNewBuildRequired(ctx, cb))
+	})
+
+	t.Run("no annotation => required", func(t *testing.T) {
+		cb := newCappBuild("cb-"+t.Name(), "ns-"+t.Name())
+		cb.Status.LastBuildRunRef = testBuildRunName
+		r, _ := newReconciler(t, cb)
+
+		require.True(t, r.isNewBuildRequired(ctx, cb))
+	})
+
+	t.Run("build inputs unchanged => not required", func(t *testing.T) {
+		cb := newCappBuild("cb-"+t.Name(), "ns-"+t.Name())
+		cb.Status.LastBuildRunRef = testBuildRunName
+		r, _ := newReconciler(t, cb)
+
+		require.NoError(t, r.recordBuildSpec(cb))
+
+		require.False(t, r.isNewBuildRequired(ctx, cb))
+	})
+
+	t.Run("git URL changed => required", func(t *testing.T) {
+		cb := newCappBuild("cb-"+t.Name(), "ns-"+t.Name())
+		cb.Status.LastBuildRunRef = testBuildRunName
+		r, _ := newReconciler(t, cb)
+
+		require.NoError(t, r.recordBuildSpec(cb))
+
+		cb.Spec.Source.Git.URL = "https://github.com/other/repo"
+
+		require.True(t, r.isNewBuildRequired(ctx, cb))
+	})
+
+	t.Run("git revision changed => required", func(t *testing.T) {
+		cb := newCappBuild("cb-"+t.Name(), "ns-"+t.Name())
+		cb.Status.LastBuildRunRef = testBuildRunName
+		r, _ := newReconciler(t, cb)
+
+		require.NoError(t, r.recordBuildSpec(cb))
+
+		cb.Spec.Source.Git.Revision = "develop"
+
+		require.True(t, r.isNewBuildRequired(ctx, cb))
+	})
+
+	t.Run("output image changed => required", func(t *testing.T) {
+		cb := newCappBuild("cb-"+t.Name(), "ns-"+t.Name())
+		cb.Status.LastBuildRunRef = testBuildRunName
+		r, _ := newReconciler(t, cb)
+
+		require.NoError(t, r.recordBuildSpec(cb))
+
+		cb.Spec.Output.Image = "registry.example.com/other/image"
+
+		require.True(t, r.isNewBuildRequired(ctx, cb))
+	})
+
+	t.Run("onCommit field added => not required", func(t *testing.T) {
+		cb := newCappBuild("cb-"+t.Name(), "ns-"+t.Name())
+		cb.Status.LastBuildRunRef = testBuildRunName
+		r, _ := newReconciler(t, cb)
+
+		require.NoError(t, r.recordBuildSpec(cb))
+
+		cb.Spec.OnCommit = &rcs.CappBuildOnCommit{
+			WebhookSecretRef: corev1.SecretKeySelector{
+				LocalObjectReference: corev1.LocalObjectReference{Name: "webhook-secret"},
+				Key:                  "token",
+			},
+		}
+
+		require.False(t, r.isNewBuildRequired(ctx, cb))
+	})
+
+	t.Run("rebuild mode changed => not required", func(t *testing.T) {
+		cb := newCappBuild("cb-"+t.Name(), "ns-"+t.Name())
+		cb.Status.LastBuildRunRef = testBuildRunName
+		r, _ := newReconciler(t, cb)
+
+		require.NoError(t, r.recordBuildSpec(cb))
+
+		cb.Spec.Rebuild = &rcs.CappBuildRebuild{Mode: rcs.CappBuildRebuildModeOnCommit}
+
+		require.False(t, r.isNewBuildRequired(ctx, cb))
 	})
 }

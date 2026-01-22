@@ -2,13 +2,16 @@ package controllers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"reflect"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	rcs "github.com/dana-team/container-app-operator/api/v1alpha1"
 	distref "github.com/distribution/reference"
@@ -16,16 +19,25 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-func buildRunNameFor(cb *rcs.CappBuild) string {
-	return fmt.Sprintf("%s-buildrun-%d", cb.Name, cb.Generation)
+const annotationKeyLastBuildSpec = "rcs.dana.io/last-build-spec"
+
+// buildInputs captures fields that trigger a new build when changed.
+type buildInputs struct {
+	Source    rcs.CappBuildSource `json:"source"`
+	BuildFile rcs.CappBuildFile   `json:"buildFile"`
+	Output    rcs.CappBuildOutput `json:"output"`
 }
 
-func newBuildRun(cb *rcs.CappBuild) *shipwright.BuildRun {
+func buildRunNameFor(cb *rcs.CappBuild, counter int64) string {
+	return fmt.Sprintf("%s-buildrun-%d", cb.Name, counter)
+}
+
+func newBuildRun(cb *rcs.CappBuild, counter int64) *shipwright.BuildRun {
 	buildName := buildNameFor(cb)
 
 	return &shipwright.BuildRun{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      buildRunNameFor(cb),
+			Name:      buildRunNameFor(cb, counter),
 			Namespace: cb.Namespace,
 			Labels: map[string]string{
 				rcs.GroupVersion.Group + "/parent-cappbuild": cb.Name,
@@ -39,12 +51,12 @@ func newBuildRun(cb *rcs.CappBuild) *shipwright.BuildRun {
 	}
 }
 
-// reconcileBuildRun ensures the expected BuildRun exists for this CappBuild generation.
 func (r *CappBuildReconciler) reconcileBuildRun(
 	ctx context.Context,
 	cb *rcs.CappBuild,
 ) (*shipwright.BuildRun, error) {
-	desired := newBuildRun(cb)
+	counter := nextBuildRunCounter(cb)
+	desired := newBuildRun(cb, counter)
 
 	existing := &shipwright.BuildRun{}
 	key := client.ObjectKeyFromObject(desired)
@@ -63,7 +75,22 @@ func (r *CappBuildReconciler) reconcileBuildRun(
 	if err := r.Create(ctx, desired); err != nil {
 		return nil, err
 	}
+
+	orig := cb.DeepCopy()
+	cb.Status.BuildRunCounter = counter
+	if err := r.Status().Patch(ctx, cb, client.MergeFrom(orig)); err != nil {
+		return nil, err
+	}
+
 	return desired, nil
+}
+
+func nextBuildRunCounter(cb *rcs.CappBuild) int64 {
+	counter := cb.Status.BuildRunCounter
+	if counter < 0 {
+		counter = 0
+	}
+	return counter + 1
 }
 
 func deriveBuildSucceededStatus(br *shipwright.BuildRun) (metav1.ConditionStatus, string, string) {
@@ -149,7 +176,7 @@ func (r *CappBuildReconciler) patchLatestImage(
 }
 
 func (r *CappBuildReconciler) ensureBuildRunOnCommit(ctx context.Context, cb *rcs.CappBuild, counter int64) (*shipwright.BuildRun, error) {
-	desired := newBuildRun(cb)
+	desired := newBuildRun(cb, 0)
 	desired.Name = fmt.Sprintf("%s-buildrun-oncommit-%d", cb.Name, counter)
 	desired.Labels["rcs.dana.io/build-trigger"] = "oncommit"
 
@@ -171,4 +198,45 @@ func (r *CappBuildReconciler) ensureBuildRunOnCommit(ctx context.Context, cb *rc
 		return nil, err
 	}
 	return desired, nil
+}
+
+func (r *CappBuildReconciler) isNewBuildRequired(ctx context.Context, cb *rcs.CappBuild) bool {
+	if cb.Status.LastBuildRunRef == "" {
+		return true
+	}
+
+	lastSpecJson, ok := cb.Annotations[annotationKeyLastBuildSpec]
+	if !ok {
+		return true
+	}
+
+	var lastInputs buildInputs
+	if err := json.Unmarshal([]byte(lastSpecJson), &lastInputs); err != nil {
+		log.FromContext(ctx).Error(err, "Failed to unmarshal last build spec annotation", "CappBuild", cb.Name)
+		return true
+	}
+
+	return !reflect.DeepEqual(cb.Spec.Source, lastInputs.Source) ||
+		!reflect.DeepEqual(cb.Spec.BuildFile, lastInputs.BuildFile) ||
+		!reflect.DeepEqual(cb.Spec.Output, lastInputs.Output)
+}
+
+func (r *CappBuildReconciler) recordBuildSpec(cb *rcs.CappBuild) error {
+	if cb.Annotations == nil {
+		cb.Annotations = make(map[string]string)
+	}
+
+	inputs := buildInputs{
+		Source:    cb.Spec.Source,
+		BuildFile: cb.Spec.BuildFile,
+		Output:    cb.Spec.Output,
+	}
+
+	specJson, err := json.Marshal(inputs)
+	if err != nil {
+		return err
+	}
+
+	cb.Annotations[annotationKeyLastBuildSpec] = string(specJson)
+	return nil
 }

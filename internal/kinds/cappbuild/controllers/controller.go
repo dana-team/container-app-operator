@@ -24,7 +24,6 @@ import (
 
 const cappBuildControllerName = "CappBuildController"
 
-// CappBuildReconciler reconciles a CappBuild object.
 type CappBuildReconciler struct {
 	client.Client
 	Scheme        *runtime.Scheme
@@ -116,20 +115,17 @@ func (r *CappBuildReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	if buildRun == nil {
-		br, err := r.reconcileBuildRun(ctx, cb)
-		if err != nil {
-			if errors.As(err, &alreadyOwned) {
-				_ = r.patchReadyCondition(ctx, cb, metav1.ConditionFalse, ReasonBuildRunConflict, err.Error())
-				return ctrl.Result{}, nil
-			}
-			_ = r.patchReadyCondition(ctx, cb, metav1.ConditionFalse, ReasonBuildRunReconcileFailed, err.Error())
-			return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
+		br, result, err := r.ensureBuildRun(ctx, cb)
+		if err != nil || result != nil {
+			return *result, err
 		}
 		buildRun = br
 	}
 
-	if err := r.patchBuildSucceededCondition(ctx, cb, buildRun); err != nil {
-		return ctrl.Result{}, err
+	if buildRun != nil {
+		if err := r.patchBuildSucceededCondition(ctx, cb, buildRun); err != nil {
+			return ctrl.Result{}, err
+		}
 	}
 
 	ready := meta.FindStatusCondition(cb.Status.Conditions, TypeReady)
@@ -154,4 +150,45 @@ func (r *CappBuildReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	return ctrl.Result{}, nil
+}
+
+func (r *CappBuildReconciler) ensureBuildRun(
+	ctx context.Context,
+	cb *rcs.CappBuild,
+) (*shipwright.BuildRun, *ctrl.Result, error) {
+	var alreadyOwned *controllerutil.AlreadyOwnedError
+
+	if r.isNewBuildRequired(ctx, cb) {
+		br, err := r.reconcileBuildRun(ctx, cb)
+		if err != nil {
+			if errors.As(err, &alreadyOwned) {
+				_ = r.patchReadyCondition(ctx, cb, metav1.ConditionFalse, ReasonBuildRunConflict, err.Error())
+				return nil, &ctrl.Result{}, nil
+			}
+			_ = r.patchReadyCondition(ctx, cb, metav1.ConditionFalse, ReasonBuildRunReconcileFailed, err.Error())
+			return nil, &ctrl.Result{RequeueAfter: 30 * time.Second}, nil
+		}
+
+		if err := r.recordBuildSpec(cb); err != nil {
+			return nil, &ctrl.Result{}, err
+		}
+		if err := r.Update(ctx, cb); err != nil {
+			return nil, &ctrl.Result{}, err
+		}
+
+		return br, nil, nil
+	}
+
+	if cb.Status.LastBuildRunRef != "" {
+		existingBR := &shipwright.BuildRun{}
+		if err := r.Get(ctx, client.ObjectKey{Namespace: cb.Namespace, Name: cb.Status.LastBuildRunRef}, existingBR); err != nil {
+			if !apierrors.IsNotFound(err) {
+				log.FromContext(ctx).Error(err, "Failed to fetch last BuildRun", "BuildRun", cb.Status.LastBuildRunRef)
+			}
+		} else {
+			return existingBR, nil, nil
+		}
+	}
+
+	return nil, nil, nil
 }
