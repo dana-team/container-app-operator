@@ -4,39 +4,26 @@ This guide explains how to configure and test the GitHub webhook feature (`OnCom
 
 ## Prerequisites
 
-- The operator is deployed and running with `ENABLE_ONCOMMIT_WEBHOOK=true` environment variable.
+- The operator is deployed via Helm with `cappBuild.onCommit.enabled=true`.
 - You have a GitHub repository URL to use for testing.
 
 ## 0. Enable OnCommit Webhook in the Operator
 
-The OnCommit webhook handler must be enabled at operator startup via environment variable.
-
-**Using Helm:**
-
-Set `cappBuild.onCommit.enabled=true` in `values.yaml` or via `--set`:
+Deploy or upgrade the operator with the OnCommit webhook enabled:
 
 ```bash
-helm upgrade capp-operator charts/container-app-operator \
+helm upgrade --install capp-operator charts/container-app-operator \
+  --set cappBuild.enabled=true \
   --set cappBuild.onCommit.enabled=true \
-  -n container-app-operator-system
-```
-
-**Using Kustomize:**
-
-After deploying with `kubectl apply -k config/default`, set the environment variable:
-
-```bash
-kubectl set env deployment/capp-operator-controller-manager \
   -n container-app-operator-system \
-  ENABLE_ONCOMMIT_WEBHOOK=true
+  --create-namespace
 ```
 
 **Verify the webhook is registered:**
 
-Check the operator logs for the registration message:
-
 ```bash
-kubectl logs -n container-app-operator-system -l app.kubernetes.io/name=container-app-operator --tail=50 | grep webhook
+kubectl logs -n container-app-operator-system \
+  -l app.kubernetes.io/name=container-app-operator --tail=50 | grep webhook
 ```
 
 You should see: `"message":"git webhook handler registered at /webhooks/git"`
@@ -90,10 +77,12 @@ spec:
 
 To test the feature without exposing your cluster to the public internet, you can simulate a GitHub push event using `curl`.
 
-### 1. Create the Payload
-Create a file named `payload.json` with the following content (ensure the URL and ref match your `CappBuild`):
+### Create the Payload File
 
-```json
+Create a file named `payload.json` (ensure the URL and ref match your `CappBuild`):
+
+```bash
+cat > payload.json << 'EOF'
 {
   "ref": "refs/heads/main",
   "after": "1234567890abcdef1234567890abcdef12345678",
@@ -101,39 +90,49 @@ Create a file named `payload.json` with the following content (ensure the URL an
     "clone_url": "https://github.com/your-user/your-repo"
   }
 }
+EOF
 ```
 
-### 2. Generate Signature and Send Request
-Since the operator validates the GitHub signature, you must sign the payload using the same secret (`mysecret`) used in Step 2.
+### Send the Webhook Request
 
-Run the following command to calculate the HMAC-SHA256 signature and send the POST request:
+Since the operator validates the GitHub signature, you must sign the payload using the same secret (`mysecret`) used in Step 2.
 
 ```bash
 SECRET="mysecret"
-PAYLOAD="payload.json"
+PAYLOAD_FILE="payload.json"
 URL="https://localhost:8443/webhooks/git"
 
-# Calculate the signature
-SIGNATURE=$(openssl dgst -sha256 -hmac "$SECRET" "$PAYLOAD" | cut -d" " -f2)
+# Calculate the HMAC-SHA256 signature
+SIGNATURE=$(openssl dgst -sha256 -hmac "$SECRET" "$PAYLOAD_FILE" | cut -d' ' -f2)
 
 # Send the request
 curl -k -X POST "$URL" \
   -H "Content-Type: application/json" \
   -H "X-GitHub-Event: push" \
   -H "X-Hub-Signature-256: sha256=$SIGNATURE" \
-  -d @"$PAYLOAD"
+  --data-binary "@$PAYLOAD_FILE"
 ```
+
+**Expected response:** HTTP 202 (silent success).
+
+**Testing with different commits:** To trigger additional builds, change the `after` field to a new commit SHA and resend.
 
 ## 5. Verify the Results
 
 1. **Check the Operator Logs**:
    ```bash
-   kubectl logs -n container-app-operator-system -l control-plane=controller-manager
+   kubectl logs -n container-app-operator-system -l app.kubernetes.io/name=container-app-operator --tail=20 | grep webhook
    ```
-   Look for `git-webhook` logs indicating `git webhook accepted`.
+   You should see: `"git webhook accepted for <namespace>/<cappbuild-name>"`
 
-2. **Verify CappBuild Status**:
+2. **Verify BuildRun was Created**:
+   ```bash
+   kubectl get buildruns -n your-namespace -l rcs.dana.io/build-trigger=oncommit
+   ```
+   You should see a new BuildRun with `-oncommit-` in its name.
+
+3. **Check CappBuild Status**:
    ```bash
    kubectl get cappbuild my-app-build -n your-namespace -o yaml
    ```
-   You should see the `status.onCommit.lastReceived` and `status.onCommit.pending` fields populated with the commit SHA from your payload. This will trigger a new `BuildRun`.
+   The `status.onCommit.lastReceived` and `status.onCommit.pending` fields should be populated with the commit SHA from your payload.
