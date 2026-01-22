@@ -28,11 +28,11 @@ import (
 
 	dnsrecordv1alpha1 "github.com/dana-team/provider-dns-v2/apis/namespaced/record/v1alpha1"
 
-	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	nfspvcv1alpha1 "github.com/dana-team/nfspvc-operator/api/v1alpha1"
 	"github.com/go-logr/zapr"
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
 	routev1 "github.com/openshift/api/route/v1"
+	shipwright "github.com/shipwright-io/build/pkg/apis/build/v1beta1"
 	"go.elastic.co/ecszap"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -48,9 +48,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
+	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	cappcontroller "github.com/dana-team/container-app-operator/internal/kinds/capp/controllers"
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
+	cappbuildcontroller "github.com/dana-team/container-app-operator/internal/kinds/cappbuild/controllers"
 	crcontroller "github.com/dana-team/container-app-operator/internal/kinds/capprevision/controllers"
+	gitwebhook "github.com/dana-team/container-app-operator/internal/webhook/git"
 	webhooks "github.com/dana-team/container-app-operator/internal/webhook/rcs/v1alpha1"
 	// +kubebuilder:scaffold:imports
 )
@@ -69,7 +72,7 @@ func init() {
 	utilruntime.Must(nfspvcv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(cmapi.AddToScheme(scheme))
 	utilruntime.Must(dnsrecordv1alpha1.AddToScheme(scheme))
-
+	utilruntime.Must(shipwright.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 
@@ -179,6 +182,19 @@ func main() {
 		os.Exit(1)
 	}
 
+	if os.Getenv("ENABLE_CAPPBUILD_CONTROLLER") == "true" {
+		if err = (&cappbuildcontroller.CappBuildReconciler{
+			Client:        mgr.GetClient(),
+			Scheme:        mgr.GetScheme(),
+			EventRecorder: mgr.GetEventRecorderFor("cappbuild-controller"),
+		}).SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "CappBuild")
+			os.Exit(1)
+		}
+	} else {
+		setupLog.Info("cappbuild controller disabled (set ENABLE_CAPPBUILD_CONTROLLER=true to enable)")
+	}
+
 	// nolint:goconst
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
 		hookServer := mgr.GetWebhookServer()
@@ -192,6 +208,16 @@ func main() {
 			Client:  mgr.GetClient(),
 			Decoder: decoder,
 		}})
+
+		if os.Getenv("ENABLE_ONCOMMIT_WEBHOOK") == "true" {
+			hookServer.Register("/webhooks/git", &gitwebhook.Handler{
+				Client:        mgr.GetClient(),
+				EventRecorder: mgr.GetEventRecorderFor("git-webhook"),
+			})
+			setupLog.Info("git webhook handler registered at /webhooks/git")
+		} else {
+			setupLog.Info("git webhook handler disabled (set ENABLE_ONCOMMIT_WEBHOOK=true to enable)")
+		}
 	}
 	// +kubebuilder:scaffold:builder
 

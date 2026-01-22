@@ -75,14 +75,7 @@ rules:
 - apiGroups:
   - rcs.dana.io
   resources:
-  - cappconfigs
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - rcs.dana.io
-  resources:
+  - cappbuilds
   - capprevisions
   - capps
   verbs:
@@ -96,6 +89,14 @@ rules:
 - apiGroups:
   - rcs.dana.io
   resources:
+  - cappbuilds/finalizers
+  - capps/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - rcs.dana.io
+  resources:
+  - cappbuilds/status
   - capprevisions/status
   - capps/status
   verbs:
@@ -105,9 +106,11 @@ rules:
 - apiGroups:
   - rcs.dana.io
   resources:
-  - capps/finalizers
+  - cappconfigs
   verbs:
-  - update
+  - get
+  - list
+  - watch
 - apiGroups:
   - record.dns-v2.m.crossplane.io
   resources:
@@ -150,6 +153,35 @@ rules:
   - get
   - list
   - update
+  - watch
+- apiGroups:
+  - shipwright.io
+  resources:
+  - buildruns
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+- apiGroups:
+  - shipwright.io
+  resources:
+  - builds
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - shipwright.io
+  resources:
+  - clusterbuildstrategies
+  verbs:
+  - get
+  - list
   - watch
 ---
 apiVersion: rbac.authorization.k8s.io/v1

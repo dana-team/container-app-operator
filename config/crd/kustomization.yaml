@@ -6,6 +6,7 @@ resources:
 - bases/rcs.dana.io_capprevisions.yaml
 - bases/rcs.dana.io_cappconfigs.yaml
 
+- bases/rcs.dana.io_cappbuilds.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
 patches:

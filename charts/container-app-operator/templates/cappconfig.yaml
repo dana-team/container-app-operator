@@ -30,4 +30,17 @@ spec:
     {{- else }}
     []
     {{- end }}
+  {{- with .Values.cappBuild }}
+  cappBuild:
+    {{- with .output }}
+    {{- if .defaultImageRepo }}
+    output:
+      defaultImageRepo: {{ .defaultImageRepo | quote }}
+    {{- end }}
+    {{- end }}
+    clusterBuildStrategy:
+      buildFile:
+        present: {{ required "cappBuild.clusterBuildStrategy.buildFile.present is required" .clusterBuildStrategy.buildFile.present | quote }}
+        absent: {{ required "cappBuild.clusterBuildStrategy.buildFile.absent is required" .clusterBuildStrategy.buildFile.absent | quote }}
+  {{- end }}
 {{- end }}
