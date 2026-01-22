@@ -79,7 +79,7 @@ func (r *CappBuildReconciler) triggerBuildRun(
 		return nil, nil, err
 	}
 
-	if err := r.markTriggered(ctx, cb, br); err != nil {
+	if err := r.markTriggered(ctx, cb, br, counter); err != nil {
 		return nil, nil, err
 	}
 
@@ -105,15 +105,16 @@ func requeueAfter(cb *rcs.CappBuild) *time.Duration {
 }
 
 func nextTrigger(cb *rcs.CappBuild) int64 {
-	if cb.Status.OnCommit.TriggerCounter < 0 {
-		cb.Status.OnCommit.TriggerCounter = 0
+	counter := cb.Status.OnCommit.TriggerCounter
+	if counter < 0 {
+		counter = 0
 	}
-	cb.Status.OnCommit.TriggerCounter++
-	return cb.Status.OnCommit.TriggerCounter
+	return counter + 1
 }
 
-func (r *CappBuildReconciler) markTriggered(ctx context.Context, cb *rcs.CappBuild, br *shipwright.BuildRun) error {
+func (r *CappBuildReconciler) markTriggered(ctx context.Context, cb *rcs.CappBuild, br *shipwright.BuildRun, triggerCounter int64) error {
 	orig := cb.DeepCopy()
+	cb.Status.OnCommit.TriggerCounter = triggerCounter
 	cb.Status.OnCommit.LastTriggeredBuildRun = &rcs.CappBuildOnCommitLastTriggered{
 		Name:        br.Name,
 		TriggeredAt: metav1.Now(),
