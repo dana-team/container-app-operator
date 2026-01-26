@@ -1,13 +1,17 @@
 package e2e_tests
 
 import (
+	"context"
+
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/dana-team/container-app-operator/test/e2e_tests/mocks"
 	"github.com/dana-team/container-app-operator/test/e2e_tests/testconsts"
 	utilst "github.com/dana-team/container-app-operator/test/e2e_tests/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/util/retry"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ = Describe("Validate Certificate functionality", func() {
@@ -26,6 +30,21 @@ var _ = Describe("Validate Certificate functionality", func() {
 		certificateObject = utilst.GetCertificate(k8sClient, certificateName, testconsts.NSName)
 		Expect(certificateObject.Labels[testconsts.CappResourceKey]).Should(Equal(createdCapp.Name))
 		Expect(certificateObject.Labels[testconsts.ManagedByLabelKey]).Should(Equal(testconsts.CappKey))
+
+		By("Verifying no Certificate creation failures")
+		Consistently(func() bool {
+			eventList := &corev1.EventList{}
+			err := k8sClient.List(context.Background(), eventList, client.InNamespace(createdCapp.Namespace))
+			if err != nil {
+				return false
+			}
+			for _, event := range eventList.Items {
+				if event.InvolvedObject.Name == createdCapp.Name && event.Reason == "CertificateCreationFailed" {
+					return true
+				}
+			}
+			return false
+		}, testconsts.DefaultConsistently, testconsts.Interval).Should(BeFalse(), "Should not have Certificate creation failure events")
 
 		By("Updating the Capp Route hostname and checking the status")
 		var toBeUpdatedCapp *cappv1alpha1.Capp
