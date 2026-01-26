@@ -150,7 +150,7 @@ func (c CertificateManager) create(capp cappv1alpha1.Capp) error {
 				return err
 			}
 
-			return c.createCertificate(capp, certificateFromCapp, resourceManager)
+			return nil
 		} else {
 			return fmt.Errorf("failed to get Certificate %q: %w", certificateFromCapp.Name, err)
 		}
