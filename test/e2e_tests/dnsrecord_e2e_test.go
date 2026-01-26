@@ -1,6 +1,7 @@
 package e2e_tests
 
 import (
+	xpv1 "github.com/crossplane/crossplane-runtime/v2/apis/common/v1"
 	"github.com/dana-team/container-app-operator/test/e2e_tests/mocks"
 	"github.com/dana-team/container-app-operator/test/e2e_tests/testconsts"
 	utilst "github.com/dana-team/container-app-operator/test/e2e_tests/utils"
@@ -82,5 +83,37 @@ var _ = Describe("Validate DNSRecord functionality", func() {
 				return utilst.DoesResourceExist(k8sClient, dnsRecordObject)
 			}, testconsts.Timeout, testconsts.Interval).Should(BeFalse(), "Should not find a resource.")
 		})
+	})
+
+	It("Should not update DNSRecord when only Capp metadata changes", func() {
+		By("Creating a capp with a route")
+		createdCapp, _ := utilst.CreateCappWithHTTPHostname(k8sClient)
+
+		By("Checking if the DNSRecord was created successfully")
+		dnsRecordName := utilst.GenerateResourceName(createdCapp.Spec.RouteSpec.Hostname, testconsts.ZoneValue)
+		dnsRecordObject := mocks.CreateDNSRecordObject(dnsRecordName)
+		Eventually(func() bool {
+			return utilst.DoesResourceExist(k8sClient, dnsRecordObject)
+		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "Should find a resource.")
+
+		By("Simulating external mutation of DNSRecord spec")
+		err := retry.RetryOnConflict(utilst.NewRetryOnConflictBackoff(), func() error {
+			dnsRecord := utilst.GetDNSRecord(k8sClient, dnsRecordName, createdCapp.Namespace)
+			dnsRecord.Spec.ManagementPolicies = []xpv1.ManagementAction{"Create"}
+			return utilst.UpdateResource(k8sClient, dnsRecord)
+		})
+		Expect(err).ToNot(HaveOccurred())
+
+		By("Confirming external mutation is persisted")
+		Eventually(func() []xpv1.ManagementAction {
+			currentDNSRecord := utilst.GetDNSRecord(k8sClient, dnsRecordName, createdCapp.Namespace)
+			return currentDNSRecord.Spec.ManagementPolicies
+		}, testconsts.Timeout, testconsts.Interval).Should(Equal([]xpv1.ManagementAction{"Create"}))
+
+		By("Should preserve external DNSRecord spec fields on Capp metadata-only changes")
+		Consistently(func() []xpv1.ManagementAction {
+			currentDNSRecord := utilst.GetDNSRecord(k8sClient, dnsRecordName, createdCapp.Namespace)
+			return currentDNSRecord.Spec.ManagementPolicies
+		}, testconsts.DefaultConsistently, testconsts.Interval).Should(Equal([]xpv1.ManagementAction{"Create"}))
 	})
 })
