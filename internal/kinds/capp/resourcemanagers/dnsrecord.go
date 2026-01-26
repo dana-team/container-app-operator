@@ -133,9 +133,7 @@ func (r DNSRecordManager) createOrUpdate(capp cappv1alpha1.Capp) error {
 
 	if err := r.K8sclient.Get(r.Ctx, types.NamespacedName{Namespace: capp.Namespace, Name: dnsRecordFromCapp.Name}, &dnsRecord); err != nil {
 		if errors.IsNotFound(err) {
-			if err := r.createDNSRecord(capp, dnsRecordFromCapp, resourceManager); err != nil {
-				return err
-			}
+			return r.createDNSRecord(capp, dnsRecordFromCapp, resourceManager)
 		} else {
 			return fmt.Errorf("failed to get DNSRecord %q: %w", dnsRecordFromCapp.Name, err)
 		}
@@ -167,8 +165,10 @@ func (r DNSRecordManager) createDNSRecord(capp cappv1alpha1.Capp, dnsRecordFromC
 
 // updateDNSRecord checks if an update to the DNSRecord is necessary and performs the update to match desired state.
 func (r DNSRecordManager) updateDNSRecord(dnsRecord, dnsRecordFromCapp dnsrecordv1alpha1.CNAMERecord, resourceManager rclient.ResourceManagerClient) error {
-	if !reflect.DeepEqual(dnsRecord.Spec, dnsRecordFromCapp.Spec) {
-		dnsRecord.Spec = dnsRecordFromCapp.Spec
+	if !reflect.DeepEqual(dnsRecord.Spec.ForProvider, dnsRecordFromCapp.Spec.ForProvider) ||
+		!reflect.DeepEqual(dnsRecord.Spec.ProviderConfigReference, dnsRecordFromCapp.Spec.ProviderConfigReference) {
+		dnsRecord.Spec.ForProvider = dnsRecordFromCapp.Spec.ForProvider
+		dnsRecord.Spec.ProviderConfigReference = dnsRecordFromCapp.Spec.ProviderConfigReference
 		return resourceManager.UpdateResource(&dnsRecord)
 	}
 
