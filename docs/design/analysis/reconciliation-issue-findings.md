@@ -12,8 +12,7 @@ The primary cause of the non-stopping generation increase is located in the `DNS
 *   **Continuous Updates**: Because the controller's "desired" state doesn't include these defaults, the comparison always fails, leading to an `Update` call on every reconciliation cycle. This update triggers a new watch event, starting the loop again.
 
 ### 2. Redundant API Calls
-Several resource managers (`DNSRecord`, `DomainMapping`, `Certificate`) follow a pattern that results in unnecessary overhead:
-*   **Create-then-Update**: If a resource is not found, it is created. However, the logic immediately proceeds to call the update function for that same resource in the same execution path.
+*   **DomainMapping Create-then-Update**: `KnativeDomainMappingManager` creates a resource when not found, but then continues to call the update function in the same execution path, causing an unnecessary Update call immediately after creation.
 *   **Certificate Double-Creation**: A bug in `CertificateManager` causes two consecutive `CreateResource` calls for the same certificate, leading to avoidable "AlreadyExists" errors.
 
 ### 3. Unchecked Status Updates
@@ -29,9 +28,10 @@ The controller's configuration for watching sub-resources is too broad.
 ## Recommendations
 
 ### Short-term Fixes
-*   **Narrow Comparisons**: Modify resource managers to only compare fields they explicitly manage (e.g., `Spec.ForProvider` for Crossplane, or specific `Spec` fields for Certificates).
+*   **Narrow Comparisons in DNSRecord**: Modify `DNSRecordManager.updateDNSRecord` to only compare fields it explicitly manages (`Spec.ForProvider`, `Spec.ProviderConfigReference`) instead of the entire `Spec`, preventing false diffs from Crossplane-injected defaults.
+*   **Fix DomainMapping Flow**: Return immediately after creating a DomainMapping instead of continuing to the update path.
+*   **Fix Certificate Double-Create**: Remove the duplicate `createCertificate` call in `CertificateManager.create`.
 *   **Idempotent Status**: Implement a `reflect.DeepEqual` check on `Capp.Status` before calling the update API.
-*   **Fix Logic Flow**: Ensure that a `Create` operation is not immediately followed by an `Update`.
 
 ### Long-term Improvements
 *   **Refine Predicates**: Use more specific predicates (e.g., `GenerationChangedPredicate`) for sub-resource watches to ignore status-only updates.
