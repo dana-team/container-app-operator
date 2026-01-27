@@ -157,9 +157,7 @@ func (k KnativeDomainMappingManager) createOrUpdate(capp cappv1alpha1.Capp) erro
 
 	if err := k.K8sclient.Get(k.Ctx, types.NamespacedName{Namespace: capp.Namespace, Name: domainMappingFromCapp.Name}, &domainMapping); err != nil {
 		if errors.IsNotFound(err) {
-			if err := k.createDomainMapping(capp, domainMappingFromCapp, resourceManager); err != nil {
-				return err
-			}
+			return k.createDomainMapping(capp, domainMappingFromCapp, resourceManager)
 		} else {
 			return fmt.Errorf("failed to get DomainMapping %q: %w", domainMappingFromCapp.Name, err)
 		}
