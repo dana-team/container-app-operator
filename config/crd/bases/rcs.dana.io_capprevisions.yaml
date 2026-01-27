@@ -8823,6 +8823,12 @@ spec:
                             description: User defines a User for authentication.
                             type: string
                         type: object
+                      minReplicas:
+                        default: 0
+                        description: MinReplicas is the minimum number of replicas
+                          for the Capp.
+                        minimum: 0
+                        type: integer
                       routeSpec:
                         description: RouteSpec defines the route specification for
                           the Capp.

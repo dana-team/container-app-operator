@@ -14,6 +14,7 @@ const (
 	KnativeAutoscaleTargetKey = "autoscaling.knative.dev/target"
 	AutoScalerSubString       = "autoscaling"
 	KnativeActivationScaleKey = "autoscaling.knative.dev/activation-scale"
+	KnativeMinScaleKey        = "autoscaling.knative.dev/min-scale"
 	defaultActivationScaleKey = "activationScale"
 	rpsScaleKey               = "rps"
 	cpuScaleKey               = "cpu"
@@ -51,6 +52,11 @@ func SetAutoScaler(capp cappv1alpha1.Capp, defaults cappv1alpha1.AutoscaleConfig
 	autoScaleAnnotations[KnativeMetricKey] = scaleMetric
 	autoScaleAnnotations[KnativeAutoscaleTargetKey] = getTargetValue(scaleMetric, defaults)
 	autoScaleAnnotations[KnativeActivationScaleKey] = fmt.Sprintf("%d", activationScale)
+
+	if capp.Spec.MinReplicas != 0 {
+		autoScaleAnnotations[KnativeMinScaleKey] = fmt.Sprintf("%d", capp.Spec.MinReplicas)
+	}
+
 	autoScaleAnnotations = utils.MergeMaps(autoScaleAnnotations, givenAutoScaleAnnotation)
 
 	return autoScaleAnnotations

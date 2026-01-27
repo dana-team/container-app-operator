@@ -30,6 +30,7 @@ const (
 	FirstRevisionSuffix             = "-00001"
 	KnativeAutoscaleTargetKey       = "autoscaling.knative.dev/target"
 	KnativeActivationScaleKey       = "autoscaling.knative.dev/activation-scale"
+	KnativeMinScaleKey              = "autoscaling.knative.dev/min-scale"
 	TestIndex                       = "test"
 	TestLabelKey                    = "e2e-test"
 	CappConfigName                  = "capp-config"

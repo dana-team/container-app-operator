@@ -59,6 +59,12 @@ type CappSpec struct {
 	// +kubebuilder:validation:Enum=enabled;disabled
 	State string `json:"state,omitempty"`
 
+	// MinReplicas is the minimum number of replicas for the Capp.
+	// +kubebuilder:default:=0
+	// +kubebuilder:validation:Minimum=0
+	// +optional
+	MinReplicas int `json:"minReplicas,omitempty"`
+
 	// ConfigurationSpec holds the desired state of the Configuration (from the client).
 	ConfigurationSpec knativev1.ConfigurationSpec `json:"configurationSpec"`
 

@@ -45,6 +45,9 @@ type AutoscaleConfig struct {
 	Concurrency int `json:"concurrency"`
 	// ActivationScale is the default scale.
 	ActivationScale int `json:"activationScale"`
+	// MinReplicasLimit is the global minimum scale.
+	// +kubebuilder:validation:Minimum=1
+	MinReplicasLimit int `json:"minReplicasLimit"`
 }
 
 // CappConfigStatus defines the observed state of CappConfig
