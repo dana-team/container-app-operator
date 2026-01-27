@@ -25,6 +25,13 @@ The controller's configuration for watching sub-resources is too broad.
 *   **ResourceVersion Predicate**: It triggers reconciliation on any `ResourceVersion` change.
 *   **Status Noise**: Updates to the status of sub-resources (like a Knative Service becoming ready) trigger the `Capp` controller even when the specification hasn't changed, leading to excessive reconciliation cycles.
 
+### 5. Hostname Mismatch in Cleanup Logic
+A bug in `deletePreviousCertificates` and `deletePreviousDNSRecords` causes infinite delete-recreate loops.
+*   **Wrong Parameter Passed**: `handlePreviousCertificates` receives the generated resource name (e.g., `myapp.example.com`) but passes `capp.Spec.RouteSpec.Hostname` (e.g., `myapp`) to the delete function.
+*   **Always-True Condition**: The comparison `certificate.Name != hostname` always evaluates to true since `"myapp.example.com" != "myapp"`.
+*   **Infinite Loop**: The current certificate is deleted on every reconcile, then recreated, triggering cert-manager to create a new `CertificateRequest` each cycle—resulting in thousands of CertificateRequests.
+*   **Affected Files**: `certificate.go:204` and `dnsrecord.go:195`.
+
 ## Recommendations
 
 ### Short-term Fixes
@@ -32,6 +39,7 @@ The controller's configuration for watching sub-resources is too broad.
 *   **Fix DomainMapping Flow**: Return immediately after creating a DomainMapping instead of continuing to the update path.
 *   **Fix Certificate Double-Create**: Remove the duplicate `createCertificate` call in `CertificateManager.create`.
 *   **Idempotent Status**: Implement a `reflect.DeepEqual` check on `Capp.Status` before calling the update API.
+*   **Fix Hostname Mismatch**: In `handlePreviousCertificates` and `handlePreviousDNSRecords`, pass the generated resource `name` (not `capp.Spec.RouteSpec.Hostname`) to the delete functions.
 
 ### Long-term Improvements
 *   **Refine Predicates**: Use more specific predicates (e.g., `GenerationChangedPredicate`) for sub-resource watches to ignore status-only updates.
