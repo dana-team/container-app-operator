@@ -40,6 +40,7 @@ import (
 const (
 	cappControllerName = "CappController"
 	RequeueTime        = 5 * time.Second
+	SyncPeriod         = 30 * time.Second
 )
 
 // CappReconciler reconciles a Capp object
@@ -78,32 +79,32 @@ func (r *CappReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(
 			&knativev1.Service{},
 			handler.EnqueueRequestsFromMapFunc(r.findCappFromEvent),
-			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
+			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
 		).
 		Watches(
 			&knativev1beta1.DomainMapping{},
 			handler.EnqueueRequestsFromMapFunc(r.findCappFromHostname),
-			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
+			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
 		).
 		Watches(
 			&cmapi.Certificate{},
 			handler.EnqueueRequestsFromMapFunc(r.findCappFromHostname),
-			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
+			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
 		).
 		Watches(
 			&dnsrecordv1alpha1.CNAMERecord{},
 			handler.EnqueueRequestsFromMapFunc(r.findCappFromHostname),
-			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
+			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
 		).
 		Watches(
 			&loggingv1beta1.SyslogNGOutput{},
 			handler.EnqueueRequestsFromMapFunc(r.findCappFromEvent),
-			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
+			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
 		).
 		Watches(
 			&loggingv1beta1.SyslogNGFlow{},
 			handler.EnqueueRequestsFromMapFunc(r.findCappFromEvent),
-			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
+			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
 		).
 		Complete(r)
 }
@@ -172,7 +173,7 @@ func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		}
 		return ctrl.Result{}, fmt.Errorf("failed to sync Capp: %s", err.Error())
 	}
-	return ctrl.Result{}, nil
+	return ctrl.Result{RequeueAfter: SyncPeriod}, nil
 }
 
 // SyncApplication manages the lifecycle of Capp.
