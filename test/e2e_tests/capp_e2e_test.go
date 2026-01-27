@@ -116,6 +116,28 @@ var _ = Describe("Validate capp creation", func() {
 		By("Checking if the revision is ready")
 		checkRevisionReadiness(revisionName)
 	})
+	It("Should remain stable after reaching ready state", func() {
+		By("Creating a capp instance")
+		testCapp := mocks.CreateBaseCapp()
+		createdCapp := utilst.CreateCapp(k8sClient, testCapp)
+
+		By("Waiting for Capp to become ready")
+		Eventually(func() string {
+			capp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
+			return capp.Status.StateStatus.State
+		}, testconsts.Timeout, testconsts.Interval).Should(Equal(testconsts.EnabledState))
+
+		By("Capturing Capp state after becoming ready")
+		stableCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
+		initialResourceVersion := stableCapp.ResourceVersion
+
+		By("Verifying Capp is not modified while idle")
+		Consistently(func() string {
+			capp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
+			return capp.ResourceVersion
+		}, testconsts.DefaultConsistently, testconsts.Interval).Should(Equal(initialResourceVersion))
+	})
+
 	It("Should create a Capp with a Keda source", func() {
 		By("Creating a Capp instance with a Keda source")
 
