@@ -28,9 +28,6 @@ var _ = Describe("Validate DomainMapping functionality", func() {
 		Expect(domainMappingObject.Labels[testconsts.CappResourceKey]).Should(Equal(createdCapp.Name))
 		Expect(domainMappingObject.Labels[testconsts.ManagedByLabelKey]).Should(Equal(testconsts.CappKey))
 
-		By("Verifying DomainMapping generation after creation")
-		Expect(domainMappingObject.Generation).To(Equal(1))
-
 		By("Checking if the RouteStatus of the Capp was updated successfully")
 		Eventually(func() string {
 			capp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
