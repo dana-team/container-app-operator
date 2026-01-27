@@ -192,7 +192,7 @@ func (r DNSRecordManager) handlePreviousDNSRecords(capp cappv1alpha1.Capp, resou
 		return err
 	}
 
-	return r.deletePreviousDNSRecords(dnsRecords, resourceManager, capp.Spec.RouteSpec.Hostname)
+	return r.deletePreviousDNSRecords(dnsRecords, resourceManager, name)
 }
 
 // getPreviousDNSRecords returns a list of all DNSRecord objects that are related to the given Capp.
