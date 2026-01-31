@@ -201,7 +201,7 @@ func (c CertificateManager) handlePreviousCertificates(capp cappv1alpha1.Capp, r
 		return err
 	}
 
-	return c.deletePreviousCertificates(certificates, resourceManager, capp.Spec.RouteSpec.Hostname)
+	return c.deletePreviousCertificates(certificates, resourceManager, name)
 }
 
 // getPreviousCertificates returns a list of all Certificate objects that are related to the given Capp.
