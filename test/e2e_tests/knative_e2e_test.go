@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"k8s.io/client-go/util/retry"
+	"knative.dev/serving/pkg/apis/autoscaling"
 
 	"github.com/dana-team/container-app-operator/test/e2e_tests/testconsts"
 
@@ -271,7 +272,7 @@ var _ = Describe("Validate knative functionality", func() {
 		By("Creating a capp instance")
 		testCapp := mocks.CreateBaseCapp()
 		annotations := map[string]string{
-			testconsts.KnativeAutoscaleTargetKey: "666",
+			autoscaling.TargetAnnotationKey: "666",
 		}
 		testCapp.Spec.ConfigurationSpec.Template.Annotations = annotations
 		createdCapp := utilst.CreateCapp(k8sClient, testCapp)
@@ -280,7 +281,7 @@ var _ = Describe("Validate knative functionality", func() {
 		By("Checking if the ksvc's defaults annotations were overridden")
 		Eventually(func() string {
 			ksvc := utilst.GetKSVC(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
-			return ksvc.Spec.ConfigurationSpec.Template.Annotations[testconsts.KnativeAutoscaleTargetKey]
+			return ksvc.Spec.ConfigurationSpec.Template.Annotations[autoscaling.TargetAnnotationKey]
 		}, testconsts.Timeout, testconsts.Interval).Should(Equal("666"))
 	})
 
@@ -324,8 +325,8 @@ var _ = Describe("Validate knative functionality", func() {
 		By("Checking if the ksvc's annotation is equal to the cappConfig's autoScale")
 		Eventually(func() bool {
 			ksvc := utilst.GetKSVC(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
-			return ksvc.Spec.ConfigurationSpec.Template.ObjectMeta.Annotations[testconsts.KnativeAutoscaleTargetKey] == fmt.Sprintf("%d", cappConfig.Spec.AutoscaleConfig.Concurrency) &&
-				ksvc.Spec.ConfigurationSpec.Template.ObjectMeta.Annotations[testconsts.KnativeActivationScaleKey] == fmt.Sprintf("%d", cappConfig.Spec.AutoscaleConfig.ActivationScale)
+			return ksvc.Spec.ConfigurationSpec.Template.ObjectMeta.Annotations[autoscaling.TargetAnnotationKey] == fmt.Sprintf("%d", cappConfig.Spec.AutoscaleConfig.Concurrency) &&
+				ksvc.Spec.ConfigurationSpec.Template.ObjectMeta.Annotations[autoscaling.ActivationScaleKey] == fmt.Sprintf("%d", cappConfig.Spec.AutoscaleConfig.ActivationScale)
 		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue())
 	})
 })

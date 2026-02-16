@@ -12,6 +12,7 @@ spec:
     memory: {{ .Values.config.autoscaleConfig.memory }}
     concurrency: {{ .Values.config.autoscaleConfig.concurrency }}
     activationScale: {{ .Values.config.autoscaleConfig.activationScale }}
+    minReplicasLimit: {{ .Values.config.autoscaleConfig.minReplicasLimit }}
   dnsConfig:
     zone: "{{ .Values.config.dnsConfig.zone }}"
     cname: "{{ .Values.config.dnsConfig.cname }}"

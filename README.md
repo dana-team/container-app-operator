@@ -30,6 +30,7 @@ The `container-app-operator` project can work as a standalone solution, but is m
 ## Feature Highlights
 
 - [x] Support for autoscaler (`HPA` or `KPA`) according to the chosen `scaleMetric` (`concurrency`, `rps`, `cpu`, `memory`) with default settings.
+- [x] Support for setting minimum replicas per Capp (`minReplicas`) with a global maximum limit.
 - [x] Support for HTTP/HTTPS `DomainMapping` for accessing applications via `Ingress`/`Route`.
 - [x] Support for `DNS Records` lifecycle management based on the `hostname` API field (using a white-list approach for validation).
 - [x] Support for `Certificate` lifecycle management based on the `hostname` API field.
@@ -54,6 +55,8 @@ The `container-app-operator` project can work as a standalone solution, but is m
 5. `certificate-external-issuer` installed on the cluster (you can [use the `install.yaml`](https://github.com/dana-team/cert-external-issuer/releases)).
 
 6. `logging-operator` installed on the cluster (you can [use the Helm Chart](https://kube-logging.dev/docs/install/#deploy-logging-operator-with-helm)).
+
+7. `prometheus-operator` and `keda` installed on the cluster (optional, for Keda/Prometheus features).
 
 Everything can also be installed by running:
 
@@ -153,6 +156,7 @@ spec:
     memory: 70
     concurrency: 10
     activationScale: 3
+    globalMinScale: 10
   dnsConfig:
     zone: "capp-zone.com."
     cname: "ingress.capp-zone.com."
@@ -230,6 +234,7 @@ spec:
         - name: activemq-secret
           key: password
   scaleMetric: concurrency
+  minReplicas: 2
   state: enabled
   
 ```

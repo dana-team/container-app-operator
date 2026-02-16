@@ -62,6 +62,11 @@ spec:
                     description: Memory is the desired memory utilization to trigger
                       upscaling.
                     type: integer
+                  minReplicasLimit:
+                    description: MinReplicasLimit is the global minimum scale. (maximum
+                      allowed value for minReplicas).
+                    minimum: 1
+                    type: integer
                   rps:
                     description: RPS is the desired requests per second to trigger
                       upscaling.
@@ -71,6 +76,7 @@ spec:
                 - concurrency
                 - cpu
                 - memory
+                - minReplicasLimit
                 - rps
                 type: object
               defaultResources:
