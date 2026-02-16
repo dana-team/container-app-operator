@@ -40,7 +40,6 @@ import (
 const (
 	cappControllerName = "CappController"
 	RequeueTime        = 5 * time.Second
-	SyncPeriod         = 30 * time.Second
 )
 
 // CappReconciler reconciles a Capp object
@@ -173,7 +172,7 @@ func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		}
 		return ctrl.Result{}, fmt.Errorf("failed to sync Capp: %s", err.Error())
 	}
-	return ctrl.Result{RequeueAfter: SyncPeriod}, nil
+	return ctrl.Result{}, nil
 }
 
 // SyncApplication manages the lifecycle of Capp.
