@@ -245,9 +245,9 @@ func (k KnativeDomainMappingManager) deletePreviousDomainMappings(knativeDomainM
 			if err := resourceManager.DeleteResource(&dm); err != nil {
 				return err
 			}
-		}
-		if err := deleteTLSSecret(resourceManager.Ctx, resourceManager.K8sclient, utils.GenerateSecretName(domainMapping.Name), domainMapping.Namespace); err != nil {
-			return err
+			if err := deleteTLSSecret(resourceManager.Ctx, resourceManager.K8sclient, utils.GenerateSecretName(domainMapping.Name), domainMapping.Namespace); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
