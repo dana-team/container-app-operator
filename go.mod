@@ -5,7 +5,7 @@ go 1.25.5
 require (
 	github.com/cert-manager/cert-manager v1.19.2
 	github.com/cisco-open/operator-tools v0.37.0
-	github.com/crossplane/crossplane-runtime/v2 v2.0.0
+	github.com/crossplane/crossplane-runtime/v2 v2.1.0
 	github.com/dana-team/cert-external-issuer v0.1.5
 	github.com/dana-team/nfspvc-operator v0.5.2
 	github.com/dana-team/provider-dns-v2 v1.0.1
