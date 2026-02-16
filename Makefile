@@ -71,11 +71,11 @@ GINKGO_E2E_FOCUS_FLAG := --focus="$(E2E_GINKGO_FOCUS)"
 endif
 
 .PHONY: test-e2e
-test-e2e: ginkgo
+test-e2e:
 	@test -n "${KUBECONFIG}" -o -r ${HOME}/.kube/config || (echo "Failed to find kubeconfig in ~/.kube/config or no KUBECONFIG set"; exit 1)
 	echo "Running e2e tests"
 	go clean -testcache
-	$(LOCALBIN)/ginkgo --vv -p $(GINKGO_E2E_PROCS_FLAG) $(GINKGO_E2E_FOCUS_FLAG) -coverprofile cover.out -timeout 10m ./test/e2e_tests/...
+	go run github.com/onsi/ginkgo/v2/ginkgo --vv -p $(GINKGO_E2E_PROCS_FLAG) $(GINKGO_E2E_FOCUS_FLAG) -coverprofile cover.out -timeout 10m ./test/e2e_tests/...
 
 .PHONY: lint
 lint: golangci-lint ## Run golangci-lint linter
@@ -228,7 +228,6 @@ KUSTOMIZE ?= $(LOCALBIN)/kustomize-$(KUSTOMIZE_VERSION)
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen-$(CONTROLLER_TOOLS_VERSION)
 ENVTEST ?= $(LOCALBIN)/setup-envtest-$(ENVTEST_VERSION)
 GOLANGCI_LINT = $(LOCALBIN)/golangci-lint-$(GOLANGCI_LINT_VERSION)
-GINKGO ?= $(LOCALBIN)/ginkgo
 HELMFILE ?= $(LOCALBIN)/helmfile-$(HELMFILE_VERSION)
 HELM_DOCS ?= $(LOCALBIN)/helm-docs-$(HELM_DOCS_VERSION)
 
@@ -262,11 +261,6 @@ $(ENVTEST): $(LOCALBIN)
 golangci-lint: $(GOLANGCI_LINT) ## Download golangci-lint locally if necessary.
 $(GOLANGCI_LINT): $(LOCALBIN)
 	$(call go-install-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/v2/cmd/golangci-lint,${GOLANGCI_LINT_VERSION})
-
-.PHONY: ginkgo
-ginkgo: $(GINKGO) ## Download ginkgo locally if necessary.
-$(GINKGO): $(LOCALBIN)
-	test -s $(LOCALBIN)/ginkgo || GOBIN=$(LOCALBIN) go install github.com/onsi/ginkgo/v2/ginkgo@latest
 
 .PHONY: helm
 helm: ## Install helm on the local machine
