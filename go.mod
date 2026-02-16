@@ -8,7 +8,7 @@ require (
 	github.com/crossplane/crossplane-runtime/v2 v2.0.0
 	github.com/dana-team/cert-external-issuer v0.1.5
 	github.com/dana-team/nfspvc-operator v0.5.2
-	github.com/dana-team/provider-dns-v2 v1.0.1
+	github.com/dana-team/provider-dns-v2 v1.0.2
 	github.com/go-logr/logr v1.4.3
 	github.com/go-logr/zapr v1.3.0
 	github.com/kedacore/keda/v2 v2.18.3
