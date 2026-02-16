@@ -3,7 +3,7 @@ module github.com/dana-team/container-app-operator
 go 1.25.5
 
 require (
-	github.com/cert-manager/cert-manager v1.19.2
+	github.com/cert-manager/cert-manager v1.19.3
 	github.com/cisco-open/operator-tools v0.37.0
 	github.com/crossplane/crossplane-runtime/v2 v2.0.0
 	github.com/dana-team/cert-external-issuer v0.1.5
