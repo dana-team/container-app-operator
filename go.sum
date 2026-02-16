@@ -43,8 +43,8 @@ github.com/dana-team/cert-external-issuer v0.1.5 h1:WV3wy0lzCco796dZXqz/C7qxJSqH
 github.com/dana-team/cert-external-issuer v0.1.5/go.mod h1:EYYWCBL7NiLJhraR5IFO03YTuHgQQ187OT8cO4ggn6w=
 github.com/dana-team/nfspvc-operator v0.5.2 h1:UXU/M4PIQdEvPwP7u2kY+gZEmGksxoj5YZCX4T58djo=
 github.com/dana-team/nfspvc-operator v0.5.2/go.mod h1:lqKxt8nFK81+HtR8CBAEOizm5I6VFiNQhhkz9z6ticM=
-github.com/dana-team/provider-dns-v2 v1.0.1 h1:Vm7v9bZ4ja7qFh8LTpHhopr8ZaK6ES7Nj2YTIFE531s=
-github.com/dana-team/provider-dns-v2 v1.0.1/go.mod h1:dLYT/ou5J9Fpp7gRIqxsn9snKfSEx3GBxIeJ3fRODCc=
+github.com/dana-team/provider-dns-v2 v1.0.2 h1:ifmMrQnOY4w6/W2XdoCzcJ45qZ/Oft0zWAsn2tCNSfo=
+github.com/dana-team/provider-dns-v2 v1.0.2/go.mod h1:aSmAMQv+LZxQPtibvuyU6BRH7sCxCCK+njqNgJ1JLQY=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1VwoXQT9A3Wy9MM3WgvqSxFWenqJduM=
