@@ -1,6 +1,7 @@
 resources:
 - manifests.yaml
 - service.yaml
+- git-webhook-service.yaml
 
 configurations:
 - kustomizeconfig.yaml
