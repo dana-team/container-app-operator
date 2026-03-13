@@ -7,6 +7,7 @@ import (
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/apimachinery/pkg/types"
@@ -28,6 +29,8 @@ func SyncStatus(ctx context.Context, capp cappv1alpha1.Capp, log logr.Logger, r 
 	if err := r.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: capp.Name}, &cappObject); err != nil {
 		return err
 	}
+
+	oldStatus := cappObject.Status.DeepCopy()
 
 	applicationLinks, err := buildApplicationLinks(ctx, log, r, onOpenshift)
 	if err != nil {
@@ -72,6 +75,10 @@ func SyncStatus(ctx context.Context, capp cappv1alpha1.Capp, log logr.Logger, r 
 	cappObject.Status.KnativeObjectStatus = knativeObjectStatus
 	cappObject.Status.RevisionInfo = revisionInfo
 	cappObject.Status.ApplicationLinks = *applicationLinks
+
+	if equality.Semantic.DeepEqual(*oldStatus, cappObject.Status) {
+		return nil
+	}
 
 	if err := r.Status().Update(ctx, &cappObject); err != nil {
 		log.Error(err, "failed to update Capp status")
