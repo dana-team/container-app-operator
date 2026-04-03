@@ -3,7 +3,6 @@ package resourcemanagers
 import (
 	"context"
 	"fmt"
-	"reflect"
 
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 
@@ -13,6 +12,7 @@ import (
 	nfspvcv1alpha1 "github.com/dana-team/nfspvc-operator/api/v1alpha1"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -158,7 +158,7 @@ func (n NFSPVCManager) createNFSPVC(capp *cappv1alpha1.Capp, nfspvc *nfspvcv1alp
 
 // updateNFSPVC checks if an update to the NFSPVC is necessary and performs the update to match desired state.
 func (n NFSPVCManager) updateNFSPVC(existingNFSPVC, nfspvc nfspvcv1alpha1.NfsPvc, resourceManager rclient.ResourceManagerClient) error {
-	if !reflect.DeepEqual(existingNFSPVC.Spec, nfspvc.Spec) {
+	if !equality.Semantic.DeepEqual(existingNFSPVC.Spec, nfspvc.Spec) {
 		existingNFSPVC.Spec = nfspvc.Spec
 		return resourceManager.UpdateResource(&existingNFSPVC)
 	}

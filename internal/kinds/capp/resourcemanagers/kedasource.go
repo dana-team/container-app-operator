@@ -3,7 +3,6 @@ package resourcemanagers
 import (
 	"context"
 	"fmt"
-	"reflect"
 
 	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/resourceclient"
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
@@ -14,6 +13,7 @@ import (
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -267,7 +267,7 @@ func (k KedaSourceManager) createTriggerAuth(capp *cappv1alpha1.Capp, triggerAut
 
 // updateTriggerAuth checks if an update to the scaled object is necessary and performs the update to match desired state.
 func (k KedaSourceManager) updateTriggerAuth(existingtriggerAuth, triggerAuth kedav1alpha1.TriggerAuthentication, resourceManager rclient.ResourceManagerClient) error {
-	if !reflect.DeepEqual(existingtriggerAuth.Spec, triggerAuth.Spec) {
+	if !equality.Semantic.DeepEqual(existingtriggerAuth.Spec, triggerAuth.Spec) {
 		existingtriggerAuth.Spec = triggerAuth.Spec
 		return resourceManager.UpdateResource(&existingtriggerAuth)
 	}
@@ -291,7 +291,7 @@ func (k KedaSourceManager) createScaledObject(capp *cappv1alpha1.Capp, scaledObj
 
 // updateKafkaSource checks if an update to the scaled object is necessary and performs the update to match desired state.
 func (k KedaSourceManager) updateScaledObject(existingScaledObject, scaledObject kedav1alpha1.ScaledObject, resourceManager rclient.ResourceManagerClient) error {
-	if !reflect.DeepEqual(existingScaledObject.Spec, scaledObject.Spec) {
+	if !equality.Semantic.DeepEqual(existingScaledObject.Spec, scaledObject.Spec) {
 		existingScaledObject.Spec = scaledObject.Spec
 		return resourceManager.UpdateResource(&existingScaledObject)
 	}

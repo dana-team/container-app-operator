@@ -3,7 +3,7 @@ package resourcemanagers
 import (
 	"context"
 	"fmt"
-	"reflect"
+	"maps"
 
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/autoscale"
 	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/resourceclient"
@@ -12,6 +12,7 @@ import (
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -44,7 +45,8 @@ func (k KnativeServiceManager) prepareResource(capp cappv1alpha1.Capp, ctx conte
 	knativeServiceLabels := map[string]string{}
 
 	if capp.Labels != nil {
-		knativeServiceLabels = capp.Labels
+		maps.Copy(knativeServiceLabels, capp.Labels)
+
 	}
 	knativeServiceLabels[utils.CappResourceKey] = capp.Name
 
@@ -186,7 +188,7 @@ func (k KnativeServiceManager) createKSVC(capp *cappv1alpha1.Capp, knativeServic
 
 // updateKSVC checks if an update to the KnativeService is necessary and performs the update to match desired state.
 func (k KnativeServiceManager) updateKSVC(knativeService, knativeServiceFromCapp *knativev1.Service, resourceManager rclient.ResourceManagerClient) error {
-	if !reflect.DeepEqual(knativeService.Spec, knativeServiceFromCapp.Spec) {
+	if !equality.Semantic.DeepEqual(knativeService.Spec, knativeServiceFromCapp.Spec) {
 		knativeService.Spec = knativeServiceFromCapp.Spec
 		return resourceManager.UpdateResource(knativeService)
 	}
