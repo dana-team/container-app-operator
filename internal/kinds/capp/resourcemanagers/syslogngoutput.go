@@ -3,7 +3,6 @@ package resourcemanagers
 import (
 	"context"
 	"fmt"
-	"reflect"
 
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 
@@ -15,6 +14,7 @@ import (
 	"github.com/kube-logging/logging-operator/pkg/sdk/logging/model/syslogng/output"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -163,7 +163,7 @@ func (o SyslogNGOutputManager) createSyslogNGOutput(syslogNGOutputFromCapp loggi
 
 // updateSyslogNGOutput checks if an update to the SyslogNGOutput is necessary and performs the update to match desired state.
 func (o SyslogNGOutputManager) updateSyslogNGOutput(syslogNGOutput, syslogNGOutputFromCapp *loggingv1beta1.SyslogNGOutput, resourceManager rclient.ResourceManagerClient) error {
-	if !reflect.DeepEqual(syslogNGOutput.Spec, syslogNGOutputFromCapp.Spec) {
+	if !equality.Semantic.DeepEqual(syslogNGOutput.Spec, syslogNGOutputFromCapp.Spec) {
 		syslogNGOutput.Spec = syslogNGOutputFromCapp.Spec
 		return resourceManager.UpdateResource(syslogNGOutput)
 	}

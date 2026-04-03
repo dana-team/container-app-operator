@@ -3,7 +3,6 @@ package resourcemanagers
 import (
 	"context"
 	"fmt"
-	"reflect"
 
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 
@@ -13,6 +12,7 @@ import (
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
 	"github.com/kube-logging/logging-operator/pkg/sdk/logging/model/syslogng/filter"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -126,7 +126,7 @@ func (f SyslogNGFlowManager) createSyslogNGFlow(syslogNGFlowFromCapp loggingv1be
 
 // updateSyslogNGFlow checks if an update to the SyslogNGFlow is necessary and performs the update to match desired state.
 func (f SyslogNGFlowManager) updateSyslogNGFlow(syslogNGFlow, syslogNGFlowFromCapp *loggingv1beta1.SyslogNGFlow, resourceManager rclient.ResourceManagerClient) error {
-	if !reflect.DeepEqual(syslogNGFlow.Spec, syslogNGFlowFromCapp.Spec) {
+	if !equality.Semantic.DeepEqual(syslogNGFlow.Spec, syslogNGFlowFromCapp.Spec) {
 		syslogNGFlow.Spec = syslogNGFlowFromCapp.Spec
 		return resourceManager.UpdateResource(syslogNGFlow)
 	}

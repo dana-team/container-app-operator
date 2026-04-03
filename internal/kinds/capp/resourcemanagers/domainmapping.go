@@ -3,7 +3,6 @@ package resourcemanagers
 import (
 	"context"
 	"fmt"
-	"reflect"
 
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 
@@ -12,6 +11,7 @@ import (
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -189,7 +189,7 @@ func (k KnativeDomainMappingManager) createDomainMapping(capp cappv1alpha1.Capp,
 
 // updateDomainMapping checks if an update to the DomainMapping is necessary and performs the update to match desired state.
 func (k KnativeDomainMappingManager) updateDomainMapping(knativeDomainMapping, domainMappingFromCapp knativev1beta1.DomainMapping, resourceManager rclient.ResourceManagerClient) error {
-	if !reflect.DeepEqual(knativeDomainMapping.Spec, domainMappingFromCapp.Spec) {
+	if !equality.Semantic.DeepEqual(knativeDomainMapping.Spec, domainMappingFromCapp.Spec) {
 		knativeDomainMapping.Spec = domainMappingFromCapp.Spec
 		return resourceManager.UpdateResource(&knativeDomainMapping)
 	}

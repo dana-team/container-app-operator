@@ -2,17 +2,21 @@ package actionmanagers
 
 import (
 	"context"
+	"maps"
 	"sort"
 
 	"k8s.io/apimachinery/pkg/api/equality"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 	"github.com/dana-team/container-app-operator/internal/kinds/capprevision/adapters"
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const revisionsToKeep = 10
+
+var annotationToIgnore = utils.CappAPIGroup + "/last-updated-by"
 
 // splitRevisionsAtIndex splits a slice of CappRevisions into two slices:
 // one containing the elements before the specified index (exclusive),
@@ -41,8 +45,14 @@ func equalSpec(cappSpec, revisionCappSpec cappv1alpha1.CappSpec) bool {
 }
 
 // equalAnnotations returns a boolean indicating whether two annotation maps are equal.
-func equalAnnotations(cappAnnotations, revisionCappAnnotations map[string]string) bool {
-	return equality.Semantic.DeepEqual(cappAnnotations, revisionCappAnnotations)
+func equalAnnotations(cappAnnotations, revisionCappAnnotations map[string]string, toIgnoreKey string) bool {
+	filteredCappAnnotations := map[string]string{}
+	filteredRevisionAnnotations := map[string]string{}
+	maps.Copy(filteredCappAnnotations, cappAnnotations)
+	maps.Copy(filteredRevisionAnnotations, revisionCappAnnotations)
+	delete(filteredCappAnnotations, toIgnoreKey)
+	delete(filteredRevisionAnnotations, toIgnoreKey)
+	return equality.Semantic.DeepEqual(filteredCappAnnotations, filteredRevisionAnnotations)
 }
 
 // equalLabels returns a boolean indicating whether two label maps are equal.
@@ -54,7 +64,7 @@ func equalLabels(cappLabels, revisionCappLabels map[string]string) bool {
 // The comparison concerts the Capp Spec of the two instances, the Capp annotations and Capp labels.
 func isEqual(capp cappv1alpha1.Capp, revision cappv1alpha1.CappRevision) bool {
 	return equalSpec(capp.Spec, revision.Spec.CappTemplate.Spec) &&
-		equalAnnotations(capp.Annotations, revision.Spec.CappTemplate.Annotations) &&
+		equalAnnotations(capp.Annotations, revision.Spec.CappTemplate.Annotations, annotationToIgnore) &&
 		equalLabels(capp.Labels, revision.Spec.CappTemplate.Labels)
 }
 

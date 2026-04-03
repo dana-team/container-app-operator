@@ -3,7 +3,6 @@ package resourcemanagers
 import (
 	"context"
 	"fmt"
-	"reflect"
 
 	dnsrecordv1alpha1 "github.com/dana-team/provider-dns-v2/apis/namespaced/record/v1alpha1"
 
@@ -13,6 +12,7 @@ import (
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -165,8 +165,8 @@ func (r DNSRecordManager) createDNSRecord(capp cappv1alpha1.Capp, dnsRecordFromC
 
 // updateDNSRecord checks if an update to the DNSRecord is necessary and performs the update to match desired state.
 func (r DNSRecordManager) updateDNSRecord(dnsRecord, dnsRecordFromCapp dnsrecordv1alpha1.CNAMERecord, resourceManager rclient.ResourceManagerClient) error {
-	if !reflect.DeepEqual(dnsRecord.Spec.ForProvider, dnsRecordFromCapp.Spec.ForProvider) ||
-		!reflect.DeepEqual(dnsRecord.Spec.ProviderConfigReference, dnsRecordFromCapp.Spec.ProviderConfigReference) {
+	if !equality.Semantic.DeepEqual(dnsRecord.Spec.ForProvider, dnsRecordFromCapp.Spec.ForProvider) ||
+		!equality.Semantic.DeepEqual(dnsRecord.Spec.ProviderConfigReference, dnsRecordFromCapp.Spec.ProviderConfigReference) {
 		dnsRecord.Spec.ForProvider = dnsRecordFromCapp.Spec.ForProvider
 		dnsRecord.Spec.ProviderConfigReference = dnsRecordFromCapp.Spec.ProviderConfigReference
 		return resourceManager.UpdateResource(&dnsRecord)

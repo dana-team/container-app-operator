@@ -158,7 +158,7 @@ KNATIVE_VERSION ?= v1.17.0
 KNATIVE_URL ?= https://github.com/knative-extensions/kn-plugin-quickstart/releases/download/knative-$(KNATIVE_VERSION)/kn-quickstart-linux-amd64
 KNATIVE_HPA_URL ?= https://github.com/knative/serving/releases/download/knative-$(KNATIVE_VERSION)/serving-hpa.yaml
 CROSSPLANE_SCC_CRB ?= hack/crossplane-scc-clusterrolebinding.yaml
-PREREQ_HELMFILE ?= charts/capp-prereq-helmfile.yaml
+PREREQ_HELMFILE ?= charts/capp-prereq-helmfile.gotmpl
 
 .PHONY: prereq ## Install every prerequisite needed to develop and run the operator.
 prereq: install install-knative enable-nfs-knative install-prereq-helmfile
@@ -239,7 +239,7 @@ KUSTOMIZE_VERSION ?= v5.5.0
 CONTROLLER_TOOLS_VERSION ?= v0.16.4
 ENVTEST_VERSION ?= release-0.19
 GOLANGCI_LINT_VERSION ?= v2.7.2
-HELMFILE_VERSION ?= 0.167.1
+HELMFILE_VERSION ?= 1.4.3
 HELM_DOCS_VERSION ?= v1.14.2
 
 .PHONY: kustomize
