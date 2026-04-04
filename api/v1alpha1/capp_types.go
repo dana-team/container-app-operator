@@ -123,18 +123,27 @@ type RouteSpec struct {
 	RouteTimeoutSeconds *int64 `json:"routeTimeoutSeconds,omitempty"`
 }
 
+type LogType string
+
+const (
+	LogTypeElastic           LogType = "elastic"
+	LogTypeElasticDataStream LogType = "elastic-datastream"
+)
+
 // LogSpec defines the configuration for shipping Capp logs.
 type LogSpec struct {
 	// Type defines where to send the Capp logs
-	// +kubebuilder:validation:Enum=elastic
+	// +kubebuilder:validation:Enum=elastic;elastic-datastream
 	// +optional
-	Type string `json:"type,omitempty"`
+	Type LogType `json:"type,omitempty"`
 
 	// Host defines Elasticsearch or Splunk host.
+	// Should include full URL with protocol and port (e.g. https://elasticsearch:9200/_bulk).
 	// +optional
 	Host string `json:"host,omitempty"`
 
 	// Index defines the index name to write events to.
+	// Ignored if type is set to "elastic-datastream".
 	// +optional
 	Index string `json:"index,omitempty"`
 

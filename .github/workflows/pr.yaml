@@ -47,8 +47,8 @@ jobs:
       E2E_SKIP_CLEANUP: "true"
       E2E_GINKGO_PROCS: 8
       IMAGE_REGISTRY: kind-registry:5000
-      KIND_VERSION: v0.25.0
-      K8S_VERSION: v1.30.4
+      KIND_VERSION: v0.31.0
+      K8S_VERSION: v1.33.4
       IMAGE_TAG: test-${{ github.sha }}
     steps:
       - name: Checkout
@@ -84,7 +84,7 @@ jobs:
           cache-to: type=gha,mode=min
 
       - name: Start kind cluster
-        uses: container-tools/kind-action@v2
+        uses: container-tools/kind-action@d69143e5f6afa8a8b34d8cdf37044b11d07b7728
         with:
           cluster_name: hub
           version: ${{env.KIND_VERSION}}
@@ -113,3 +113,8 @@ jobs:
 
       - name: Run e2e tests
         run: make test-e2e
+
+      - name: debug operator
+        if: failure()
+        run: |
+          kubectl -n container-app-operator-system logs -l control-plane=controller-manager -c manager --tail=-1

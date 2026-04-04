@@ -17,20 +17,35 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-// checkOutputIndexValue checks if the SyslogLogOutput index value matches the desired value based on the logger type.
-func checkOutputIndexValue(logType string, syslogNGOutputName string, syslogNGOutputNamespace string, IndexDesiredValue string) {
+// checkOutputParameters checks if the SyslogNGOutput index value matches the desired value based on the logger type.
+func checkOutputParameters(logType cappv1alpha1.LogType, syslogNGOutputName string, syslogNGOutputNamespace string, indexDesiredValue string, urlDesiredValue string) {
 	switch logType {
-	case testconsts.ElasticType:
+	case cappv1alpha1.LogTypeElastic:
 		Eventually(func() string {
 			syslogNGOutput := utilst.GetSyslogNGOutput(k8sClient, syslogNGOutputName, syslogNGOutputNamespace)
 			return syslogNGOutput.Spec.Elasticsearch.Index
-		}, testconsts.Timeout, testconsts.Interval).Should(Equal(IndexDesiredValue))
+		}, testconsts.Timeout, testconsts.Interval).Should(Equal(indexDesiredValue))
+	case cappv1alpha1.LogTypeElasticDataStream:
+		Eventually(func() string {
+			syslogNGOutput := utilst.GetSyslogNGOutput(k8sClient, syslogNGOutputName, syslogNGOutputNamespace)
+			return syslogNGOutput.Spec.ElasticsearchDatastream.URL
+		}, testconsts.Timeout, testconsts.Interval).Should(Equal(urlDesiredValue))
+	}
+}
+
+// editCappLogSpec updates the Capp's LogSpec based on the logger type.
+func editCappLogSpec(capp *cappv1alpha1.Capp, logType cappv1alpha1.LogType) {
+	switch logType {
+	case cappv1alpha1.LogTypeElastic:
+		capp.Spec.LogSpec.Index = testconsts.TestIndex
+	case cappv1alpha1.LogTypeElasticDataStream:
+		capp.Spec.LogSpec.Host = testconsts.ElasticDataStreamURL
 	}
 }
 
 // testCappWithLogger performs a comprehensive test for creating, updating, and deleting
 // a Capp instance with a specified logger type.
-func testCappWithLogger(logType string) {
+func testCappWithLogger(logType cappv1alpha1.LogType) {
 	It(fmt.Sprintf("Should create, update, and delete SyslogNGFlow and SyslogNGOutput when creating, updating, and deleting a Capp instance with %s logger", logType), func() {
 		By(fmt.Sprintf("Creating a Capp with %s logger", logType))
 		createdCapp := utilst.CreateCappWithLogger(logType, k8sClient)
@@ -81,17 +96,17 @@ func testCappWithLogger(logType string) {
 			return *syslogNGFlow.Status.Active
 		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue())
 
-		By(fmt.Sprintf("Updating the capp %s logger index", logType))
+		By(fmt.Sprintf("Updating the capp %s logger index/url", logType))
 		err := retry.RetryOnConflict(utilst.NewRetryOnConflictBackoff(), func() error {
 			toBeUpdatedCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-			toBeUpdatedCapp.Spec.LogSpec.Index = testconsts.TestIndex
+			editCappLogSpec(toBeUpdatedCapp, logType)
 
 			return utilst.UpdateResource(k8sClient, toBeUpdatedCapp)
 		})
 		Expect(err).ToNot(HaveOccurred())
 
-		By("Checking if the SyslogNGOutput index was updated")
-		checkOutputIndexValue(logType, syslogNGOutputName, createdCapp.Namespace, testconsts.TestIndex)
+		By("Checking if the SyslogNGOutput index/url was updated")
+		checkOutputParameters(logType, syslogNGOutputName, createdCapp.Namespace, testconsts.TestIndex, testconsts.ElasticDataStreamURL)
 
 		By("Deleting the Capp instance")
 		utilst.DeleteCapp(k8sClient, createdCapp)
@@ -149,5 +164,6 @@ func testCappWithLogger(logType string) {
 }
 
 var _ = Describe("Validate Logger functionality", func() {
-	testCappWithLogger(testconsts.ElasticType)
+	testCappWithLogger(cappv1alpha1.LogTypeElastic)
+	testCappWithLogger(cappv1alpha1.LogTypeElasticDataStream)
 })
