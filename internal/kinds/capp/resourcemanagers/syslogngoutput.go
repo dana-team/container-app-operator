@@ -27,9 +27,9 @@ const (
 	SyslogNGOutput                        = "syslogNGOutput"
 	eventCappSyslogNGOutputCreationFailed = "SyslogNGOutputCreationFailed"
 	eventCappSyslogNGlSOutputCreated      = "SyslogNGOutputCreated"
-	logTypeElastic                        = "elastic"
 	elasticSSLVersion                     = "tlsv1_2"
 	elasticTemplate                       = "$(format-json --subkeys json# --key-delimiter #)"
+	elasticDataStreamTemplate             = "--subkeys json# --key-delimiter # --exclude DATE --key ISODATE @timestamp=${ISODATE}"
 	elasticSecretKey                      = "elastic"
 )
 
@@ -41,8 +41,9 @@ type SyslogNGOutputManager struct {
 }
 
 // syslogNGOutputCreators is a map that associates log types with their corresponding SyslogNGOutput creation functions.
-var syslogNGOutputCreators = map[string]func(cappv1alpha1.LogSpec) loggingv1beta1.SyslogNGOutputSpec{
-	logTypeElastic: createElasticsearchOutput,
+var syslogNGOutputCreators = map[cappv1alpha1.LogType]func(cappv1alpha1.LogSpec) loggingv1beta1.SyslogNGOutputSpec{
+	cappv1alpha1.LogTypeElastic:           createElasticsearchOutput,
+	cappv1alpha1.LogTypeElasticDataStream: createElasticDataStreamOutput,
 }
 
 // createElasticsearchOutput creates an Elasticsearch SyslogNGOutput object based on the provided logSpec.
@@ -74,6 +75,34 @@ func createElasticsearchOutput(logSpec cappv1alpha1.LogSpec) loggingv1beta1.Sysl
 	}
 
 	return syslogNGOutputSpec
+}
+
+// createElasticDataStreamOutput creates an Elasticsearch Data Stream SyslogNGOutput object based on the provided logSpec.
+func createElasticDataStreamOutput(logSpec cappv1alpha1.LogSpec) loggingv1beta1.SyslogNGOutputSpec {
+	peerVerify := false
+
+	syslogNGOutput := loggingv1beta1.SyslogNGOutputSpec{
+		ElasticsearchDatastream: &output.ElasticsearchDatastreamOutput{
+			Record: elasticDataStreamTemplate,
+			HTTPOutput: output.HTTPOutput{
+				URL:  logSpec.Host,
+				User: logSpec.User,
+				Password: secret.Secret{
+					ValueFrom: &secret.ValueFrom{
+						SecretKeyRef: &corev1.SecretKeySelector{
+							LocalObjectReference: corev1.LocalObjectReference{Name: logSpec.PasswordSecret},
+							Key:                  elasticSecretKey,
+						},
+					},
+				},
+				TLS: &output.TLS{
+					PeerVerify: &peerVerify,
+					SslVersion: elasticSSLVersion,
+				},
+			},
+		},
+	}
+	return syslogNGOutput
 }
 
 // prepareResource prepares a SyslogNGOutput resource based on the provided Capp.

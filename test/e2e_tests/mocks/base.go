@@ -22,6 +22,7 @@ func CreateBaseCapp() *cappv1alpha1.Capp {
 			Namespace: testconsts.NSName,
 		},
 		Spec: cappv1alpha1.CappSpec{
+			ScaleMetric: testconsts.ConcurrencyScaleMetric,
 			ConfigurationSpec: knativev1.ConfigurationSpec{
 				Template: knativev1.RevisionTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{

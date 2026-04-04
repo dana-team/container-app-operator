@@ -8621,10 +8621,14 @@ spec:
                 description: LogSpec defines the configuration for shipping Capp logs.
                 properties:
                   host:
-                    description: Host defines Elasticsearch or Splunk host.
+                    description: |-
+                      Host defines Elasticsearch or Splunk host.
+                      Should include full URL with protocol and port (e.g. https://elasticsearch:9200/_bulk).
                     type: string
                   index:
-                    description: Index defines the index name to write events to.
+                    description: |-
+                      Index defines the index name to write events to.
+                      Ignored if type is set to "elastic-datastream".
                     type: string
                   passwordSecret:
                     description: |-
@@ -8635,6 +8639,7 @@ spec:
                     description: Type defines where to send the Capp logs
                     enum:
                     - elastic
+                    - elastic-datastream
                     type: string
                   user:
                     description: User defines a User for authentication.

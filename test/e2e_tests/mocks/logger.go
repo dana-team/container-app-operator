@@ -11,11 +11,21 @@ import (
 // CreateElasticLogSpec creates a Logging Spec for Elasticsearch.
 func CreateElasticLogSpec() cappv1alpha1.LogSpec {
 	return cappv1alpha1.LogSpec{
-		Type:           testconsts.ElasticType,
+		Type:           cappv1alpha1.LogTypeElastic,
 		Host:           testconsts.ElasticHost,
 		Index:          testconsts.MainIndex,
 		User:           testconsts.ElasticUserName,
-		PasswordSecret: testconsts.ElasticSecretName,
+		PasswordSecret: testconsts.ElasticSecretName + "-elastic",
+	}
+}
+
+// CreateElasticDataStreamLogSpec creates a Logging Spec for Elasticsearch Data Stream.
+func CreateElasticDataStreamLogSpec() cappv1alpha1.LogSpec {
+	return cappv1alpha1.LogSpec{
+		Type:           cappv1alpha1.LogTypeElasticDataStream,
+		Host:           testconsts.ElasticDataStreamURL,
+		User:           testconsts.ElasticUserName,
+		PasswordSecret: testconsts.ElasticSecretName + "-datastream",
 	}
 }
 
@@ -44,7 +54,20 @@ func CreateElasticSecretObject() *corev1.Secret {
 	return &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      testconsts.ElasticSecretName,
+			Name:      testconsts.ElasticSecretName + "-elastic",
+			Namespace: testconsts.NSName,
+		},
+		Type: "Opaque",
+		Data: map[string][]byte{testconsts.ElasticUserName: []byte(testconsts.SecretValue)},
+	}
+}
+
+// CreateElasticDataStreamSecretObject returns a Secret for Elasticsearch Data Stream logging.
+func CreateElasticDataStreamSecretObject() *corev1.Secret {
+	return &corev1.Secret{
+		TypeMeta: metav1.TypeMeta{},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      testconsts.ElasticSecretName + "-datastream",
 			Namespace: testconsts.NSName,
 		},
 		Type: "Opaque",

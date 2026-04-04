@@ -11,7 +11,7 @@ import (
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 	"k8s.io/apimachinery/pkg/types"
 
-	v1alpha2 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"knative.dev/pkg/apis"
@@ -70,15 +70,16 @@ func IsDomainNameTaken(domainName string) (bool, error) {
 }
 
 // ValidateLogSpec checks if the LogSpec is valid based on the Type field.
-func ValidateLogSpec(logSpec v1alpha2.LogSpec) *apis.FieldError {
-	requiredFields := map[string][]string{
-		"elastic": {"Host", "Index", "User", "PasswordSecret"},
+func ValidateLogSpec(logSpec cappv1alpha1.LogSpec) *apis.FieldError {
+	requiredFields := map[cappv1alpha1.LogType][]string{
+		cappv1alpha1.LogTypeElastic:           {"Host", "Index", "User", "PasswordSecret"},
+		cappv1alpha1.LogTypeElasticDataStream: {"Host", "User", "PasswordSecret"},
 	}
 	required, exists := requiredFields[logSpec.Type]
 	if !exists {
 		validTypes := make([]string, 0, len(requiredFields))
 		for validType := range requiredFields {
-			validTypes = append(validTypes, validType)
+			validTypes = append(validTypes, string(validType))
 		}
 		return apis.ErrGeneric(
 			fmt.Sprintf("Invalid LogSpec Type: %q. Valid types are: %q", logSpec.Type, strings.Join(validTypes, ", ")),
@@ -94,7 +95,7 @@ func ValidateLogSpec(logSpec v1alpha2.LogSpec) *apis.FieldError {
 }
 
 // findMissingFields checks for missing fields in LogSpec.
-func findMissingFields(logSpec v1alpha2.LogSpec, required []string) []string {
+func findMissingFields(logSpec cappv1alpha1.LogSpec, required []string) []string {
 	var missingFields []string
 	fieldValues := map[string]string{
 		"Host":           logSpec.Host,
@@ -111,8 +112,8 @@ func findMissingFields(logSpec v1alpha2.LogSpec, required []string) []string {
 }
 
 // GetCappConfig returns an instance of Capp Config.
-func GetCappConfig(ctx context.Context, k8sClient client.Client) (*v1alpha2.CappConfig, error) {
-	config := v1alpha2.CappConfig{}
+func GetCappConfig(ctx context.Context, k8sClient client.Client) (*cappv1alpha1.CappConfig, error) {
+	config := cappv1alpha1.CappConfig{}
 	key := types.NamespacedName{Name: utils.CappConfigName, Namespace: utils.CappNS}
 	if err := k8sClient.Get(ctx, key, &config); err != nil {
 		return nil, err
