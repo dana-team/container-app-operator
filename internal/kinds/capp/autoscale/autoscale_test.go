@@ -36,4 +36,14 @@ func TestSetAutoScaler(t *testing.T) {
 	}
 	annotationsRps := SetAutoScaler(exampleCapp, cappv1alpha1.AutoscaleConfig{})
 	assert.Equal(t, exampleCappRpsExpected, annotationsRps)
+
+	exampleCapp.Spec.ScaleMetric = "external"
+	exampleCappExternalExpected := map[string]string{
+		"autoscaling.knative.dev/class":            "hpa.autoscaling.knative.dev",
+		"autoscaling.knative.dev/metric":           "external",
+		"autoscaling.knative.dev/activation-scale": "3",
+	}
+	annotationsExternal := SetAutoScaler(exampleCapp, cappv1alpha1.AutoscaleConfig{})
+	assert.Equal(t, exampleCappExternalExpected, annotationsExternal)
+	assert.NotContains(t, annotationsExternal, "autoscaling.knative.dev/target")
 }
