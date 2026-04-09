@@ -45,7 +45,9 @@ func SetAutoScaler(capp cappv1alpha1.Capp, defaults cappv1alpha1.AutoscaleConfig
 	givenAutoScaleAnnotation := utils.FilterMap(capp.Spec.ConfigurationSpec.Template.Annotations, AutoScalerSubString)
 	autoScaleAnnotations[kautoscaling.ClassAnnotationKey] = getAutoScaleClassByMetric(scaleMetric)
 	autoScaleAnnotations[kautoscaling.MetricAnnotationKey] = scaleMetric
-	autoScaleAnnotations[kautoscaling.TargetAnnotationKey] = getTargetValue(scaleMetric, defaults)
+	if targetValue := getTargetValue(scaleMetric, defaults); targetValue != "" {
+		autoScaleAnnotations[kautoscaling.TargetAnnotationKey] = targetValue
+	}
 	autoScaleAnnotations[kautoscaling.ActivationScaleKey] = fmt.Sprintf("%d", activationScale)
 
 	if capp.Spec.MinReplicas != 0 {
