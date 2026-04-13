@@ -78,7 +78,7 @@ func (r *CappReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(
 			&knativev1.Service{},
 			handler.EnqueueRequestsFromMapFunc(r.findCappFromEvent),
-			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
+			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
 		).
 		Watches(
 			&knativev1beta1.DomainMapping{},
