@@ -8,45 +8,39 @@ import (
 )
 
 const (
-	Timeout                                     = 240 * time.Second
-	TimeoutCapp                                 = 90 * time.Second
-	Interval                                    = 2 * time.Second
-	DefaultEventually                           = 2 * time.Second
-	DefaultConsistently                         = 10 * time.Second
-	RetryOnConflictSteps                        = 10
-	ClientListLimit                             = 100
-	CappKey                                     = "capp"
-	Charset                                     = "abcdefghijklmnopqrstuvwxyz0123456789"
-	RandStrLength                               = 10
-	UnsupportedScaleMetric                      = "storage"
-	EnabledState                                = "enabled"
-	DisabledState                               = "disabled"
-	KnativeMetricAnnotation                     = "autoscaling.knative.dev/metric"
-	ImageExample                                = "danateam/autoscale-go"
-	ExampleAppName                              = "new-app-name"
-	NewSecretKey                                = "username"
-	ExampleDanaAnnotation                       = "rcs.dana.io/app-name"
-	TestContainerName                           = "capp-test-container"
-	FirstRevisionSuffix                         = "-00001"
-	TestIndex                                   = "test"
-	TestLabelKey                                = "e2e-test"
-	CappConfigName                              = "capp-config"
-	CappName                                    = "capp-test"
-	NSName                                      = "capp-e2e-tests"
-	RPSScaleMetric                              = "rps"
-	CPUScaleMetric                              = "cpu"
-	MemoryScaleMetric                           = "memory"
-	ConcurrencyScaleMetric                      = "concurrency"
-	ExternalScaleMetric                         = "external"
-	SecretKey                                   = "extra"
-	SecretValue                                 = "YmFyCg=="
-	ControllerNS                                = "container-app-operator-system"
-	KnativeServingNamespace                     = "knative-serving"
-	KnativeConfigNetworkConfigMapName           = "config-network"
-	KnativeAutocreateClusterDomainClaimsDataKey = "autocreate-cluster-domain-claims"
-	// TrueString is the usual spelling of boolean true in Kubernetes ConfigMap .data
-	// values and shell-style environment variables (e.g. E2E_SKIP_CLEANUP).
-	TrueString                      = "true"
+	Timeout                         = 240 * time.Second
+	TimeoutCapp                     = 90 * time.Second
+	Interval                        = 2 * time.Second
+	DefaultEventually               = 2 * time.Second
+	DefaultConsistently             = 10 * time.Second
+	RetryOnConflictSteps            = 10
+	ClientListLimit                 = 100
+	CappKey                         = "capp"
+	Charset                         = "abcdefghijklmnopqrstuvwxyz0123456789"
+	RandStrLength                   = 10
+	UnsupportedScaleMetric          = "storage"
+	EnabledState                    = "enabled"
+	DisabledState                   = "disabled"
+	KnativeMetricAnnotation         = "autoscaling.knative.dev/metric"
+	ImageExample                    = "danateam/autoscale-go"
+	ExampleAppName                  = "new-app-name"
+	NewSecretKey                    = "username"
+	ExampleDanaAnnotation           = "rcs.dana.io/app-name"
+	TestContainerName               = "capp-test-container"
+	FirstRevisionSuffix             = "-00001"
+	TestIndex                       = "test"
+	TestLabelKey                    = "e2e-test"
+	CappConfigName                  = "capp-config"
+	CappName                        = "capp-test"
+	NSName                          = "capp-e2e-tests"
+	RPSScaleMetric                  = "rps"
+	CPUScaleMetric                  = "cpu"
+	MemoryScaleMetric               = "memory"
+	ConcurrencyScaleMetric          = "concurrency"
+	ExternalScaleMetric             = "external"
+	SecretKey                       = "extra"
+	SecretValue                     = "YmFyCg=="
+	ControllerNS                    = "container-app-operator-system"
 	ZoneValue                       = "capp-zone.com."
 	CappBaseImage                   = "ghcr.io/dana-team/capp-gin-app:v0.2.0"
 	PassEnvName                     = "PASSWORD"

@@ -14,7 +14,6 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -29,7 +28,6 @@ func TestE2E(t *testing.T) {
 
 var _ = SynchronizedBeforeSuite(func() {
 	initClient()
-	ensureKnativeDomainClaimAutocreate()
 	cleanUp()
 	createE2ETestNamespace()
 	utilst.CreateTestUser(k8sClient, testconsts.NSName)
@@ -42,37 +40,12 @@ var _ = SynchronizedAfterSuite(func() {}, func() {
 	utilst.DeleteTestUser(k8sClient, testconsts.NSName)
 	utilst.DeleteExcludedServiceAccount(k8sClient)
 
-	if os.Getenv("E2E_SKIP_CLEANUP") == testconsts.TrueString {
+	if os.Getenv("E2E_SKIP_CLEANUP") == "true" {
 		return
 	}
 
 	cleanUp()
 })
-
-// ensureKnativeDomainClaimAutocreate sets config-network autocreate-cluster-domain-claims so
-// DomainMapping reconciliation succeeds without pre-created ClusterDomainClaims.
-func ensureKnativeDomainClaimAutocreate() {
-	ctx := context.Background()
-	key := client.ObjectKey{
-		Namespace: testconsts.KnativeServingNamespace,
-		Name:      testconsts.KnativeConfigNetworkConfigMapName,
-	}
-	err := retry.RetryOnConflict(utilst.NewRetryOnConflictBackoff(), func() error {
-		cm := &corev1.ConfigMap{}
-		if err := k8sClient.Get(ctx, key, cm); err != nil {
-			return err
-		}
-		if cm.Data == nil {
-			cm.Data = map[string]string{}
-		}
-		if cm.Data[testconsts.KnativeAutocreateClusterDomainClaimsDataKey] == testconsts.TrueString {
-			return nil
-		}
-		cm.Data[testconsts.KnativeAutocreateClusterDomainClaimsDataKey] = testconsts.TrueString
-		return k8sClient.Update(ctx, cm)
-	})
-	Expect(err).NotTo(HaveOccurred())
-}
 
 // initClient initializes a k8s client.
 func initClient() {
