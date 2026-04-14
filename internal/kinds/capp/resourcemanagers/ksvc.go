@@ -119,9 +119,8 @@ func (k KnativeServiceManager) CleanUp(capp cappv1alpha1.Capp) error {
 }
 
 // IsRequired determines if a Knative service (ksvc) is required based on the Capp's spec.
-// Spec.state is defaulted to "enabled" by the Capp CRD; treat empty or "enabled" as required.
 func (k KnativeServiceManager) IsRequired(capp cappv1alpha1.Capp) bool {
-	return capp.Spec.State != cappDisabledState
+	return capp.Spec.State == cappEnabledState
 }
 
 // isResumed checks whether the state changed from disabled to enabled.
