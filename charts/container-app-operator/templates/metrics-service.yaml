@@ -1,0 +1,24 @@
+{{- if .Values.metricsService.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "container-app-operator.fullname" . }}-metrics-service
+  labels:
+    app.kubernetes.io/component: metrics
+    control-plane: controller-manager
+  {{- include "container-app-operator.labels" . | nindent 4 }}
+  {{- with .Values.metricsService.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.metricsService.type }}
+  selector:
+    control-plane: controller-manager
+    {{- include "container-app-operator.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: https
+      port: {{ .Values.metricsService.port }}
+      targetPort: https
+      protocol: TCP
+{{- end }}
