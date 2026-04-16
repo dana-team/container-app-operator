@@ -114,7 +114,19 @@ jobs:
       - name: Run e2e tests
         run: make test-e2e
 
-      - name: debug operator
+      - name: Post-failure diagnostics
         if: failure()
         run: |
-          kubectl -n container-app-operator-system logs -l control-plane=controller-manager -c manager --tail=-1
+          set +e
+          echo "=== container-app-operator-system: controller-manager logs ==="
+          kubectl -n container-app-operator-system logs -l control-plane=controller-manager -c manager --tail=-1 2>/dev/null || true
+          echo ""
+          echo "=== capp-e2e-tests: Pending pods ==="
+          pending=$(kubectl get pods -n capp-e2e-tests --field-selector=status.phase=Pending -o jsonpath='{.items[*].metadata.name}' 2>/dev/null) || true
+          if [ -z "$pending" ]; then
+            echo "(none)"
+          else
+            for p in $pending; do
+              kubectl describe pod "$p" -n capp-e2e-tests 2>/dev/null || true
+            done
+          fi
