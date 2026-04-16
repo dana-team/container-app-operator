@@ -7,6 +7,7 @@ import (
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/go-logr/logr"
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -33,12 +34,18 @@ func buildLoggingStatus(ctx context.Context, capp cappv1alpha1.Capp, log logr.Lo
 	logger.Info("Building logger status")
 
 	if err := r.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: capp.Name}, syslogNGFlow); err != nil {
+		if apierrors.IsNotFound(err) {
+			return loggingStatus, nil
+		}
 		logger.Error(err, "Failed to fetch SyslogNGFlow")
 		return loggingStatus, err
 	}
 
 	syslogNGOutput := &loggingv1beta1.SyslogNGOutput{}
 	if err := r.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: capp.Name}, syslogNGOutput); err != nil {
+		if apierrors.IsNotFound(err) {
+			return loggingStatus, nil
+		}
 		logger.Error(err, "Failed to fetch SyslogNGOutput")
 		return loggingStatus, err
 	}

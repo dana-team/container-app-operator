@@ -4,6 +4,7 @@ import (
 	"context"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
@@ -56,6 +57,9 @@ func buildKnativeStatus(ctx context.Context, kubeClient client.Client, capp capp
 	if isRequired {
 		kservice := &knativev1.Service{}
 		if err := kubeClient.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: capp.Name}, kservice); err != nil {
+			if apierrors.IsNotFound(err) {
+				return knativeObjectStatus, revisionInfo, nil
+			}
 			return knativeObjectStatus, revisionInfo, err
 		}
 
