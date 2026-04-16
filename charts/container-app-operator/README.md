@@ -1,6 +1,6 @@
 # container-app-operator
 
-![Version: 0.1.0](https://img.shields.io/badge/Version-0.1.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.1.0](https://img.shields.io/badge/AppVersion-0.1.0-informational?style=flat-square)
+![Version: 0.1.1](https://img.shields.io/badge/Version-0.1.1-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.1.0](https://img.shields.io/badge/AppVersion-0.1.0-informational?style=flat-square)
 
 A Helm chart for Kubernetes
 
@@ -40,6 +40,18 @@ A Helm chart for Kubernetes
 | controllerManager.replicas | int | `1` | Number of replicas for the controller manager Deployment. |
 | controllerManager.serviceAccount.annotations | object | `{}` | Annotations to add to the service account used by the controller manager. |
 | kubernetesClusterDomain | string | `"cluster.local"` | Domain name of the Kubernetes cluster. |
+| metricsService.annotations | object | `{}` | Optional annotations on the metrics Service. |
+| metricsService.enabled | bool | `true` | If true, create a Service targeting the metrics port for scraping. |
+| metricsService.port | int | `8443` | Metrics listen port; must match --metrics-bind-address on the manager. |
+| metricsService.type | string | `"ClusterIP"` | Service type for the metrics endpoint. |
+| serviceMonitor.enabled | bool | `false` | If true, create a ServiceMonitor (requires monitoring.coreos.com CRDs). |
+| serviceMonitor.interval | string | `""` | Scrape interval (omit to use Prometheus default). |
+| serviceMonitor.labels | object | `{}` | Extra labels on the ServiceMonitor (e.g. for prometheus operator selectors). |
+| serviceMonitor.metricRelabelings | list | `[]` | Metric relabeling rules passed to the ServiceMonitor endpoint. |
+| serviceMonitor.relabelings | list | `[]` | Relabeling rules passed to the ServiceMonitor endpoint. |
+| serviceMonitor.scrapeTimeout | string | `""` | Scrape timeout (omit to use Prometheus default). |
+| serviceMonitor.tls.caFile | string | `""` | Path to PEM CA file on the Prometheus pod; use with insecureSkipVerify false for verified TLS. |
+| serviceMonitor.tls.insecureSkipVerify | bool | `true` | If false, set caFile to the CA bundle on the Prometheus pod (e.g. OpenShift service CA). |
 | webhookService.ports | list | `[{"port":443,"protocol":"TCP","targetPort":9443}]` | List of ports exposed by the webhook service. |
 | webhookService.type | string | `"ClusterIP"` | Type of Kubernetes Service to expose the webhook (ClusterIP, NodePort, LoadBalancer). |
 

@@ -43,6 +43,9 @@ spec:
         - containerPort: 9443
           name: webhook-server
           protocol: TCP
+        - containerPort: {{ .Values.metricsService.port }}
+          name: https
+          protocol: TCP
         readinessProbe:
           httpGet:
             path: /readyz
