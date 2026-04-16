@@ -32,7 +32,7 @@ jobs:
         run: make build-installer IMG=${{ env.REGISTRY }}/${{ env.REPOSITORY_NAME }}:${GITHUB_REF##*/}
 
       - name: Upload install.yaml file
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: dist/install.yaml
 
