@@ -10,6 +10,7 @@ import (
 	dnsrecordv1alpha1 "github.com/dana-team/provider-dns-v2/apis/namespaced/record/v1alpha1"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -62,6 +63,9 @@ func buildDomainMappingStatus(ctx context.Context, kubeClient client.Client, cap
 	domainMapping := &knativev1beta1.DomainMapping{}
 	domainMappingName := utils.GenerateResourceName(capp.Spec.RouteSpec.Hostname, zone)
 	if err := kubeClient.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: domainMappingName}, domainMapping); err != nil {
+		if apierrors.IsNotFound(err) {
+			return knativev1beta1.DomainMappingStatus{}, nil
+		}
 		return knativev1beta1.DomainMappingStatus{}, err
 	}
 
@@ -79,6 +83,9 @@ func buildCertificateStatus(ctx context.Context, kubeClient client.Client, capp 
 	certificateName := utils.GenerateResourceName(capp.Spec.RouteSpec.Hostname, zone)
 
 	if err := kubeClient.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: certificateName}, certificate); err != nil {
+		if apierrors.IsNotFound(err) {
+			return cmapi.CertificateStatus{}, nil
+		}
 		return cmapi.CertificateStatus{}, err
 	}
 
@@ -109,6 +116,9 @@ func buildCNAMERecordStatus(ctx context.Context, kubeClient client.Client, capp 
 	cnameRecord := &dnsrecordv1alpha1.CNAMERecord{}
 	cnameRecordName := utils.GenerateResourceName(capp.Spec.RouteSpec.Hostname, zone)
 	if err := kubeClient.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: cnameRecordName}, cnameRecord); err != nil {
+		if apierrors.IsNotFound(err) {
+			return dnsrecordv1alpha1.CNAMERecordStatus{}, nil
+		}
 		return dnsrecordv1alpha1.CNAMERecordStatus{}, err
 	}
 

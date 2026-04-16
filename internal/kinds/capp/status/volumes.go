@@ -5,6 +5,7 @@ import (
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	nfspvcv1alpha1 "github.com/dana-team/nfspvc-operator/api/v1alpha1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -21,6 +22,13 @@ func buildVolumesStatus(ctx context.Context, kubeClient client.Client, capp capp
 	for _, NFSPVC := range capp.Spec.VolumesSpec.NFSVolumes {
 		NFSPVCObj := nfspvcv1alpha1.NfsPvc{}
 		if err := kubeClient.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: NFSPVC.Name}, &NFSPVCObj); err != nil {
+			if apierrors.IsNotFound(err) {
+				volumesStatus.NFSVolumesStatus = append(volumesStatus.NFSVolumesStatus, cappv1alpha1.NFSVolumeStatus{
+					VolumeName:   NFSPVC.Name,
+					NFSPVCStatus: nfspvcv1alpha1.NfsPvcStatus{},
+				})
+				continue
+			}
 			return volumesStatus, err
 		}
 
