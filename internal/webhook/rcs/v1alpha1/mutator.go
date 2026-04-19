@@ -74,7 +74,8 @@ func mutateAnnotations(capp *v1alpha2.Capp, username string) {
 func mutateResources(capp *v1alpha2.Capp, defaultResources corev1.ResourceRequirements) {
 	resources := []corev1.ResourceName{corev1.ResourceCPU, corev1.ResourceMemory}
 
-	for _, container := range capp.Spec.ConfigurationSpec.Template.Spec.Containers {
+	for i := range capp.Spec.ConfigurationSpec.Template.Spec.Containers {
+		container := &capp.Spec.ConfigurationSpec.Template.Spec.Containers[i]
 		setResourceQuantity(&container.Resources.Requests, defaultResources.Requests, resources)
 		setResourceQuantity(&container.Resources.Limits, defaultResources.Limits, resources)
 	}
