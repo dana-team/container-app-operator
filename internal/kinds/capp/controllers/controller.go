@@ -73,7 +73,15 @@ type CappReconciler struct {
 // SetupWithManager sets up the controller with the Manager.
 func (r *CappReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&cappv1alpha1.Capp{}).
+		For(&cappv1alpha1.Capp{},
+			builder.WithPredicates(
+				predicate.Or(
+					predicate.GenerationChangedPredicate{},
+					predicate.AnnotationChangedPredicate{},
+					predicate.LabelChangedPredicate{},
+				),
+			),
+		).
 		Named(cappControllerName).
 		Watches(
 			&knativev1.Service{},
