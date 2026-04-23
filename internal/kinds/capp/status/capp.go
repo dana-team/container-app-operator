@@ -47,7 +47,7 @@ func SyncStatus(ctx context.Context, capp cappv1alpha1.Capp, log logr.Logger, r 
 	cappObject.Status.RevisionInfo = revisionInfo
 
 	syslogNGFlowManager := resourceManagers[rmanagers.SyslogNGFlow]
-	loggingStatus, err := buildLoggingStatus(ctx, capp, log, r, syslogNGFlowManager.IsRequired(capp))
+	loggingStatus, err := buildLoggingStatus(ctx, capp, log, r, cappObject.Status.LoggingStatus, syslogNGFlowManager.IsRequired(capp))
 	if err != nil {
 		return err
 	}

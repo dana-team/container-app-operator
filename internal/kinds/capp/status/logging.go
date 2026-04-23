@@ -2,7 +2,6 @@ package status
 
 import (
 	"context"
-	"time"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/go-logr/logr"
@@ -22,12 +21,11 @@ const (
 
 // buildLoggingStatus builds the Logging status of the Capp CRD by getting the SyslogNGFlow and SyslogNGOutput objects
 // bundled to the Capp and adding their status. It also creates a condition in accordance with their situation.
-func buildLoggingStatus(ctx context.Context, capp cappv1alpha1.Capp, log logr.Logger, r client.Client, isRequired bool) (cappv1alpha1.LoggingStatus, error) {
+func buildLoggingStatus(ctx context.Context, capp cappv1alpha1.Capp, log logr.Logger, r client.Client, existing cappv1alpha1.LoggingStatus, isRequired bool) (cappv1alpha1.LoggingStatus, error) {
 	logger := log.WithValues("SyslogNGFlowName", capp.Name, "SyslogNGOutputName", capp.Name)
-	loggingStatus := cappv1alpha1.LoggingStatus{}
 
 	if !isRequired {
-		return loggingStatus, nil
+		return cappv1alpha1.LoggingStatus{}, nil
 	}
 
 	syslogNGFlow := &loggingv1beta1.SyslogNGFlow{}
@@ -35,37 +33,37 @@ func buildLoggingStatus(ctx context.Context, capp cappv1alpha1.Capp, log logr.Lo
 
 	if err := r.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: capp.Name}, syslogNGFlow); err != nil {
 		if apierrors.IsNotFound(err) {
-			return loggingStatus, nil
+			return cappv1alpha1.LoggingStatus{}, nil
 		}
 		logger.Error(err, "Failed to fetch SyslogNGFlow")
-		return loggingStatus, err
+		return cappv1alpha1.LoggingStatus{}, err
 	}
 
 	syslogNGOutput := &loggingv1beta1.SyslogNGOutput{}
 	if err := r.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: capp.Name}, syslogNGOutput); err != nil {
 		if apierrors.IsNotFound(err) {
-			return loggingStatus, nil
+			return cappv1alpha1.LoggingStatus{}, nil
 		}
 		logger.Error(err, "Failed to fetch SyslogNGOutput")
-		return loggingStatus, err
+		return cappv1alpha1.LoggingStatus{}, err
 	}
 
+	loggingStatus := *existing.DeepCopy()
 	loggingStatus.SyslogNGFlow = syslogNGFlow.Status
 	loggingStatus.SyslogNGOutput = syslogNGOutput.Status
 
-	problems := "True"
+	isLoggingHealthy := syslogNGFlow.Status.ProblemsCount == 0 && syslogNGOutput.Status.ProblemsCount == 0
+	status := metav1.ConditionTrue
 	reason := conditionReady
-
-	if syslogNGFlow.Status.ProblemsCount != 0 || syslogNGOutput.Status.ProblemsCount != 0 {
+	if !isLoggingHealthy {
+		status = metav1.ConditionFalse
 		reason = loggingResourceInvalid
-		problems = "False"
 	}
 
 	condition := metav1.Condition{
-		Type:               loggingReady,
-		Status:             metav1.ConditionStatus(problems),
-		LastTransitionTime: metav1.Time{Time: time.Now()},
-		Reason:             reason,
+		Type:   loggingReady,
+		Status: status,
+		Reason: reason,
 	}
 
 	meta.SetStatusCondition(&loggingStatus.Conditions, condition)
