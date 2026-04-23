@@ -6,21 +6,21 @@ require (
 	github.com/cert-manager/cert-manager v1.19.3
 	github.com/cisco-open/operator-tools v0.37.0
 	github.com/crossplane/crossplane-runtime/v2 v2.1.0
-	github.com/dana-team/cert-external-issuer v0.1.5
+	github.com/dana-team/cert-external-issuer v0.2.1
 	github.com/dana-team/nfspvc-operator v0.5.2
 	github.com/dana-team/provider-dns-v2 v1.0.2
 	github.com/go-logr/logr v1.4.3
 	github.com/go-logr/zapr v1.3.0
 	github.com/kube-logging/logging-operator/pkg/sdk v0.12.0
 	github.com/onsi/ginkgo/v2 v2.28.1
-	github.com/onsi/gomega v1.39.0
+	github.com/onsi/gomega v1.39.1
 	github.com/openshift/api v0.0.0-20251103120323-33ccad512a44
 	github.com/stretchr/testify v1.11.1
 	go.elastic.co/ecszap v1.0.3
 	go.uber.org/zap v1.27.1
-	k8s.io/api v0.35.0
-	k8s.io/apimachinery v0.35.0
-	k8s.io/client-go v0.35.0
+	k8s.io/api v0.35.3
+	k8s.io/apimachinery v0.35.3
+	k8s.io/client-go v0.35.3
 	k8s.io/utils v0.0.0-20251002143259-bc988d571ff4
 	knative.dev/pkg v0.0.0-20260319144603-18c5d580ae64
 	knative.dev/serving v0.48.2
