@@ -13,8 +13,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -40,9 +42,16 @@ type CappRevisionReconciler struct {
 // SetupWithManager sets up the controller with the Manager.
 func (r *CappRevisionReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&cappv1alpha1.Capp{}).
+		For(&cappv1alpha1.Capp{},
+			builder.WithPredicates(
+				predicate.Or(
+					predicate.GenerationChangedPredicate{},
+					predicate.AnnotationChangedPredicate{},
+					predicate.LabelChangedPredicate{},
+				),
+			),
+		).
 		Named(cappRevisionControllerName).
-		WithEventFilter(NewCappPredicates()).
 		Complete(r)
 }
 
