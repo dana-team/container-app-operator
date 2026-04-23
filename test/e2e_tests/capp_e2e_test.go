@@ -3,13 +3,11 @@ package e2e_tests
 import (
 	"context"
 
-	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/dana-team/container-app-operator/test/e2e_tests/mocks"
 	"github.com/dana-team/container-app-operator/test/e2e_tests/testconsts"
 	utilst "github.com/dana-team/container-app-operator/test/e2e_tests/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/util/retry"
 	"knative.dev/serving/pkg/apis/autoscaling"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
@@ -118,61 +116,6 @@ var _ = Describe("Validate capp creation", func() {
 		By("Checking if the revision is ready")
 		checkRevisionReadiness(revisionName)
 	})
-	It("Should create a Capp with a Keda source", func() {
-		By("Creating a Capp instance with a Keda source")
-
-		testCapp := mocks.CreateBaseCapp()
-
-		kedaSourceName := utilst.RandomName("kafka-source")
-
-		kedaSource := cappv1alpha1.KedaSource{
-			Name:       kedaSourceName,
-			ScalarType: testconsts.KedaScalarType,
-			ScalarMetadata: map[string]string{
-				testconsts.Topic: testconsts.KafkaTopic,
-			},
-			MinReplicas: testconsts.MinReplicas,
-			MaxReplicas: testconsts.MaxReplicas,
-			TriggerAuth: &cappv1alpha1.TriggerAuth{
-				Type: testconsts.TriggerAuthType,
-				Name: testconsts.TriggerAuthName,
-				SecretTargets: []cappv1alpha1.AuthSecretTarget{
-					{
-						Parameter: testconsts.AuthParameter,
-						SecretRef: corev1.SecretKeySelector{
-							LocalObjectReference: corev1.LocalObjectReference{
-								Name: testconsts.KedaSecretName,
-							},
-							Key: testconsts.KedaSecretKey,
-						},
-					},
-				},
-			},
-		}
-
-		testCapp.Spec.Sources = append(testCapp.Spec.Sources, kedaSource)
-		testCapp.Spec.ScaleMetric = testconsts.ExternalScaleMetric
-		createdCapp := utilst.CreateCapp(k8sClient, testCapp)
-
-		By("Checking if the Capp instance has a Keda source")
-		Expect(createdCapp.Spec.Sources).Should(HaveLen(1))
-		source := createdCapp.Spec.Sources[0]
-		Expect(source.Name).To(Equal(kedaSourceName))
-		Expect(source.ScalarType).To(Equal(testconsts.KedaScalarType))
-		Expect(source.ScalarMetadata).To(HaveKeyWithValue(testconsts.Topic, testconsts.KafkaTopic))
-		Expect(source.MinReplicas).To(Equal(testconsts.MinReplicas))
-		Expect(source.MaxReplicas).To(Equal(testconsts.MaxReplicas))
-
-		Expect(source.TriggerAuth).NotTo(BeNil())
-		Expect(source.TriggerAuth.Name).To(Equal(testconsts.TriggerAuthName))
-		Expect(source.TriggerAuth.SecretTargets).To(HaveLen(1))
-
-		secretTarget := source.TriggerAuth.SecretTargets[0]
-		Expect(secretTarget.Parameter).To(Equal(testconsts.AuthParameter))
-		Expect(secretTarget.SecretRef.Key).To(Equal(testconsts.KedaSecretKey))
-		Expect(secretTarget.SecretRef.Name).To(Equal(testconsts.KedaSecretName))
-	})
-
 	It("Should validate minReplicas defaulting and validation", func() {
 		baseCapp := mocks.CreateBaseCapp()
 		baseCapp.Name = utilst.GenerateCappName()

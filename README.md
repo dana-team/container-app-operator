@@ -56,7 +56,7 @@ The `container-app-operator` project can work as a standalone solution, but is m
 
 6. `logging-operator` installed on the cluster (you can [use the Helm Chart](https://kube-logging.dev/docs/install/#deploy-logging-operator-with-helm)).
 
-7. `prometheus-operator` and `keda` installed on the cluster (optional, for Keda/Prometheus features).
+7. `prometheus-operator` installed on the cluster (optional, for metrics).
 
 Everything can also be installed by running:
 
@@ -217,51 +217,8 @@ spec:
     index: main
     user: elastic
     passwordSecret: es-elastic-user
-  sources:
-  - name: activemq-input
-    type: activemq
-    metadata:
-      managementEndpoint: "activemq.my-namespace.svc:8161"
-      destinationName: "ordersQueue"
-      brokerName: "my-activemq-broker"
-      # optional thresholds:
-      targetQueueSize: "100"             
-      activationTargetQueueSize: "10"   
-    auth:
-      type: triggerAuthentication
-      name: activemq-trigger-auth
-      secretRefs:
-        - name: activemq-secret
-          key: password
   scaleMetric: concurrency
   minReplicas: 2
   state: enabled
   
-```
-
-
-## Example AuthObject for a scaled object of type `ActiveMQ`
-
-```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: activemq-secret
-type: Opaque
-stringData:
-  username: "myuser"
-  password: "mypassword"
----
-apiVersion: keda.sh/v1alpha1
-kind: TriggerAuthentication
-metadata:
-  name: activemq-trigger-auth
-spec:
-  secretTargetRef:
-    - parameter: username
-      name: activemq-secret
-      key: username
-    - parameter: password
-      name: activemq-secret
-      key: password
 ```

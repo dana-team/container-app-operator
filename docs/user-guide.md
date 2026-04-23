@@ -44,14 +44,6 @@ Defines NFS persistent storage volumes with:
 - `path`: Export path
 - `capacity`: Storage size (e.g., `200Gi`)
 
-### `sources`
-Configures Kafka event sources for event-driven applications:
-- `name`: Source name
-- `type`: `Kafka`
-- `bootstrapServers`: Kafka broker addresses
-- `topic`: Topics to consume from
-- `kafkaAuth`: Username and password reference
-
 ## How to Use Capp
 
 Step-by-step instructions for common scenarios (assumes the operator is installed).
@@ -132,30 +124,7 @@ spec:
           storage: 100Gi
 ```
 
-### Step 6: Connect Kafka Event Sources
-
-```yaml
-spec:
-  sources:
-    - name: kafka-events
-      type: Kafka
-      bootstrapServers:
-        - kafka-broker-1:9092
-      topic:
-        - user-events
-      kafkaAuth:
-        username: kafka-user
-        passwordKey:
-          name: kafka-secret
-          key: password
-```
-
-Create the secret:
-```bash
-kubectl create secret generic kafka-secret --from-literal=password='your-password' -n my-namespace
-```
-
-### Step 7: Manage State and Check Status
+### Step 6: Manage State and Check Status
 
 **Disable/enable application**:
 ```bash
@@ -210,7 +179,7 @@ spec:
 
 Deploys a web application with RPS-based autoscaling, custom HTTPS domain, and resource limits.
 
-### Example 2: Event-Driven Application with Full Features
+### Example 2: Application with Logging, NFS, and Custom Domain
 
 ```yaml
 apiVersion: rcs.dana.io/v1alpha1
@@ -258,34 +227,13 @@ spec:
     index: event-processor-logs
     user: analytics-user
     passwordSecret: es-analytics-secret
-  sources:
-    - name: user-events
-      type: Kafka
-      bootstrapServers:
-        - kafka-1.internal:9092
-        - kafka-2.internal:9092
-        - kafka-3.internal:9092
-      topic:
-        - user-activity
-        - user-transactions
-      kafkaAuth:
-        username: analytics-consumer
-        passwordKey:
-          name: kafka-analytics-secret
-          key: password
 ```
 
-Event-driven processor with Kafka sources, CPU-based autoscaling, NFS persistent storage, and Elasticsearch logging. Create required secrets before applying:
+Application with CPU-based autoscaling, NFS persistent storage, Elasticsearch logging, and a custom HTTPS route. Create the Elasticsearch secret before applying:
 
 ```bash
-# Elasticsearch secret
 kubectl create secret generic es-analytics-secret \
   --from-literal=password='es-password' \
-  -n analytics
-
-# Kafka secret
-kubectl create secret generic kafka-analytics-secret \
-  --from-literal=password='kafka-password' \
   -n analytics
 ```
 

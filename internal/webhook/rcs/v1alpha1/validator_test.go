@@ -31,27 +31,7 @@ func TestCappValidator_Handle(t *testing.T) {
 		expectMsg   string
 	}{
 		{
-			name: "Allow external scale metric with sources",
-			capp: &cappv1alpha1.Capp{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-capp",
-					Namespace: "test-ns",
-				},
-				Spec: cappv1alpha1.CappSpec{
-					ScaleMetric: "external",
-					Sources: []cappv1alpha1.KedaSource{
-						{Name: "test"},
-					},
-					RouteSpec: cappv1alpha1.RouteSpec{
-						Hostname: "valid-hostname.com",
-					},
-					LogSpec: cappv1alpha1.LogSpec{},
-				},
-			},
-			expectAllow: true,
-		},
-		{
-			name: "Deny cpu scale metric with sources",
+			name: "Allow capp without sources",
 			capp: &cappv1alpha1.Capp{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-capp",
@@ -59,36 +39,13 @@ func TestCappValidator_Handle(t *testing.T) {
 				},
 				Spec: cappv1alpha1.CappSpec{
 					ScaleMetric: "cpu",
-					Sources: []cappv1alpha1.KedaSource{
-						{Name: "test"},
-					},
 					RouteSpec: cappv1alpha1.RouteSpec{
 						Hostname: "valid-hostname.com",
 					},
 					LogSpec: cappv1alpha1.LogSpec{},
 				},
 			},
-			expectAllow: false,
-			expectMsg:   "invalid scale metric \"cpu\": must be 'external' when sources are defined",
-		},
-		{
-			name: "Deny external scale metric without sources",
-			capp: &cappv1alpha1.Capp{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-capp",
-					Namespace: "test-ns",
-				},
-				Spec: cappv1alpha1.CappSpec{
-					ScaleMetric: "external",
-					Sources:     []cappv1alpha1.KedaSource{},
-					RouteSpec: cappv1alpha1.RouteSpec{
-						Hostname: "valid-hostname.com",
-					},
-					LogSpec: cappv1alpha1.LogSpec{},
-				},
-			},
-			expectAllow: false,
-			expectMsg:   "invalid scale metric 'external': must have at least one source defined",
+			expectAllow: true,
 		},
 	}
 
