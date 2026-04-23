@@ -77,14 +77,6 @@ func (c *CappValidator) handle(ctx context.Context, capp cappv1alpha1.Capp, oldC
 		}
 	}
 
-	if len(capp.Spec.Sources) > 0 && capp.Spec.ScaleMetric != "external" {
-		return admission.Denied(fmt.Sprintf("invalid scale metric %q: must be 'external' when sources are defined", capp.Spec.ScaleMetric))
-	}
-
-	if capp.Spec.ScaleMetric == "external" && len(capp.Spec.Sources) == 0 {
-		return admission.Denied("invalid scale metric 'external': must have at least one source defined")
-	}
-
 	if capp.Spec.MinReplicas > config.Spec.AutoscaleConfig.MinReplicasLimit {
 		return admission.Denied(fmt.Sprintf("invalid minReplicas %d: must be less than or equal to global min scale %d", capp.Spec.MinReplicas, config.Spec.AutoscaleConfig.MinReplicasLimit))
 	}

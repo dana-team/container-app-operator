@@ -27,30 +27,12 @@ import (
 	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
 )
 
-// AuthSecretTarget maps a secret into the TriggerAuth
-type AuthSecretTarget struct {
-	Parameter string                   `json:"parameter"`
-	SecretRef corev1.SecretKeySelector `json:"secretRef"`
-}
-
-// AuthEnvTarget maps an environment variable into TriggerAuth
-type AuthEnvTarget struct {
-	Parameter string `json:"parameter"`
-	Name      string `json:"name"`
-}
-
-// PodIdentity config for cloud identity bindings
-type PodIdentity struct {
-	// +kubebuilder:validation:Enum=none;azure;aws;gcp
-	Provider string `json:"provider"`
-}
-
 // CappSpec defines the desired state of Capp.
 type CappSpec struct {
 	// ScaleMetric defines which metric type is watched by the Autoscaler.
-	// Possible values examples: "concurrency", "rps", "cpu", "memory", "external".
+	// Possible values examples: "concurrency", "rps", "cpu", "memory".
 	// +kubebuilder:default:="concurrency"
-	// +kubebuilder:validation:Enum=cpu;memory;rps;concurrency;external
+	// +kubebuilder:validation:Enum=cpu;memory;rps;concurrency
 	ScaleMetric string `json:"scaleMetric,omitempty"`
 	// State defines the state of capp
 	// Possible values examples: "enabled", "disabled".
@@ -77,9 +59,6 @@ type CappSpec struct {
 
 	// VolumesSpec defines the volumes specification for the Capp.
 	VolumesSpec VolumesSpec `json:"volumesSpec,omitempty"`
-
-	// Sources define the configuration and status of event sources
-	Sources []KedaSource `json:"sources,omitempty"`
 }
 
 // VolumesSpec defines the volumes specification for the Capp.
@@ -240,55 +219,6 @@ type NFSVolumeStatus struct {
 	NFSPVCStatus nfspvcv1alpha1.NfsPvcStatus `json:"nfsPvcStatus,omitempty"`
 }
 
-// KedaSource defines the configuration of a Keda sources
-type KedaSource struct {
-
-	// Name is the name of the Keda source
-	Name string `json:"name"`
-
-	// ScalarType defines the type of the scalar used
-	ScalarType string `json:"scalarType"`
-
-	// ScalarMetadata defines the data passed directly to the scalar
-	ScalarMetadata map[string]string `json:"scalarMetadata,omitempty"`
-
-	// TriggerAuth defines the authentication for the trigger (if needed)
-	TriggerAuth *TriggerAuth `json:"triggerAuth,omitempty"`
-
-	// MinReplicas is the minimum of replicas allowed
-	MinReplicas *int32 `json:"minReplicas,omitempty"`
-
-	// MaxReplicas is the maximum of replicas allowed
-	MaxReplicas *int32 `json:"maxReplicas,omitempty"`
-}
-
-// TriggerAuth defines the authentication info needed for a scalar trigger
-type TriggerAuth struct {
-
-	// Type defines if the authentication object is "triggerAuthentication" or "clusterTriggerAuthentication"
-	// +kubebuilder:validation:Enum=triggerAuthentication;clusterTriggerAuthentication
-	Type string `json:"type"`
-
-	// Name of the authentication object
-	Name string `json:"name"`
-
-	// SecretTargets are secrets the scalar may need (e.g Kafka scalar)
-	SecretTargets []AuthSecretTarget `json:"secretTargets,omitempty"`
-
-	// EnvTargets are environment variable the scalar may need
-	EnvTargets []AuthEnvTarget `json:"envTargets,omitempty"`
-
-	// PodIdentity information (AWS IAM, Azure AD, etc.)
-	PodIdentity *PodIdentity `json:"podIdentity,omitempty"`
-}
-
-// KedaStatus defines the status of a Keda source
-type KedaStatus struct {
-	// Conditions contain details about the current state of the Keda source.
-	// +optional
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
-}
-
 // CappStatus defines the observed state of Capp.
 type CappStatus struct {
 	// ApplicationLinks contains relevant information about
@@ -323,9 +253,6 @@ type CappStatus struct {
 	// Conditions contain details about the current state of the Capp.
 	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
-
-	// SourceStatus contains details about the current state of a source.
-	SourceStatus []KedaStatus `json:"sourceStatus,omitempty"`
 }
 
 // +kubebuilder:object:root=true
