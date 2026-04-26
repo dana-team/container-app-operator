@@ -72,8 +72,6 @@ func SyncStatus(ctx context.Context, capp cappv1alpha1.Capp, log logr.Logger, r 
 	cappObject.Status.VolumesStatus = volumesStatus
 
 	CreateStateStatus(&cappObject.Status.StateStatus, capp.Spec.State)
-	cappObject.Status.KnativeObjectStatus = knativeObjectStatus
-	cappObject.Status.RevisionInfo = revisionInfo
 	cappObject.Status.ApplicationLinks = *applicationLinks
 
 	if equality.Semantic.DeepEqual(*oldStatus, cappObject.Status) {
