@@ -17,7 +17,6 @@ const (
 	CappKey                         = "capp"
 	Charset                         = "abcdefghijklmnopqrstuvwxyz0123456789"
 	RandStrLength                   = 10
-	UnsupportedScaleMetric          = "storage"
 	EnabledState                    = "enabled"
 	DisabledState                   = "disabled"
 	KnativeMetricAnnotation         = "autoscaling.knative.dev/metric"

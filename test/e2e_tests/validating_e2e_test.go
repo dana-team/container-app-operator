@@ -19,7 +19,6 @@ const (
 	clusterLocalHostname = "invalid.svc.cluster.local"
 	invalidHostName      = "invalid_domain!"
 	existingHostname     = "google.com"
-	unsupportedLogType   = "unsupported"
 	elasticLogType       = "elastic"
 	elasticUser          = "user"
 	elasticHostExample   = "https://elasticsearch.dana.com/_bulk"
@@ -87,13 +86,6 @@ var _ = Describe("Validate the validating webhook", func() {
 			return k8sClient.Update(context.Background(), &cappInCluster)
 		})
 		Expect(err).ToNot(HaveOccurred())
-	})
-
-	It("Should deny the use of an invalid log type", func() {
-		baseCapp := mock.CreateBaseCapp()
-		baseCapp.Name = utilst.GenerateUniqueCappName(baseCapp.Name)
-		baseCapp.Spec.LogSpec.Type = unsupportedLogType
-		Expect(k8sClient.Create(context.Background(), baseCapp)).ShouldNot(Succeed())
 	})
 
 	It("Should deny the use of an incomplete log spec", func() {

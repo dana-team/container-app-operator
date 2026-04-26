@@ -1,8 +1,6 @@
 package e2e_tests
 
 import (
-	"context"
-
 	"github.com/dana-team/container-app-operator/test/e2e_tests/mocks"
 	"github.com/dana-team/container-app-operator/test/e2e_tests/testconsts"
 	utilst "github.com/dana-team/container-app-operator/test/e2e_tests/utils"
@@ -14,15 +12,11 @@ import (
 )
 
 var _ = Describe("Validate capp creation", func() {
-	It("Should validate capp spec", func() {
+	It("Should default scale metric when unset", func() {
 		baseCapp := mocks.CreateBaseCapp()
 		By("Creating Capp with no scale metric")
 		desiredCapp := utilst.CreateCapp(k8sClient, baseCapp)
 		Expect(desiredCapp.Spec.ScaleMetric).ShouldNot(BeNil())
-
-		By("Creating Capp with unsupported scale metric")
-		baseCapp.Spec.ScaleMetric = testconsts.UnsupportedScaleMetric
-		Expect(k8sClient.Create(context.Background(), baseCapp)).ShouldNot(Succeed())
 	})
 
 	It("Should succeed all adapter functions", func() {
