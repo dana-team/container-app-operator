@@ -41,6 +41,9 @@ jobs:
       - name: Run vet
         run: go vet ./...
 
+      - name: Verify chart README (helm-docs)
+        run: make verify-doc-chart
+
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v9
         with:

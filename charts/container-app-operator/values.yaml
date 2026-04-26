@@ -60,7 +60,7 @@ webhookService:
   # -- Type of Kubernetes Service to expose the webhook (ClusterIP, NodePort, LoadBalancer).
   type: ClusterIP
 
-# -- Prometheus metrics (controller-runtime) on the manager pod.
+# -- Metrics Service for the manager; `port` must match `--metrics-bind-address` in manager `args` (default 8443).
 metricsService:
   # -- If true, create a Service targeting the metrics port for scraping.
   enabled: true
