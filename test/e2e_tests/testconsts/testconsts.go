@@ -23,7 +23,6 @@ const (
 	ImageExample                    = "danateam/autoscale-go"
 	ExampleAppName                  = "new-app-name"
 	NewSecretKey                    = "username"
-	ExampleDanaAnnotation           = "rcs.dana.io/app-name"
 	TestContainerName               = "capp-test-container"
 	FirstRevisionSuffix             = "-00001"
 	TestIndex                       = "test"
