@@ -49,12 +49,12 @@ func IsOnOpenshift(config *rest.Config) (bool, error) {
 	return false, nil
 }
 
-// FilterKeysWithoutPrefix removes keys from a map if they don't start with a given prefix
-func FilterKeysWithoutPrefix(object map[string]string, prefix string) map[string]string {
+// ExcludeKeysWithPrefix returns a new map omitting entries whose keys start with prefix.
+func ExcludeKeysWithPrefix(object map[string]string, prefix string) map[string]string {
 	result := make(map[string]string)
 
 	for key, value := range object {
-		if strings.HasPrefix(key, prefix) {
+		if !strings.HasPrefix(key, prefix) {
 			result[key] = value
 		}
 	}

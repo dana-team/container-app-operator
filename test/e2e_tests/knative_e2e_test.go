@@ -178,14 +178,16 @@ var _ = Describe("Validate knative functionality", func() {
 		}, testconsts.Timeout, testconsts.Interval).Should(Equal(testconsts.ImageExample))
 	})
 
-	It("Should update ksvc dana annotation when updating capp's dana annotation", func() {
+	It("Should update ksvc when updating a propagating Capp metadata annotation", func() {
+		const propagationAnnKey = "example.com/e2e-propagation"
+
 		By("Creating a capp instance")
 		testCapp := mocks.CreateBaseCapp()
 		createdCapp := utilst.CreateCapp(k8sClient, testCapp)
 
-		By("Updating capp's dana annotation")
+		By("Updating capp metadata annotation that is copied to the Knative Service")
 		cappAnnotations := map[string]string{}
-		cappAnnotations[testconsts.ExampleDanaAnnotation] = testconsts.ExampleAppName
+		cappAnnotations[propagationAnnKey] = testconsts.ExampleAppName
 
 		var latestReadyRevisionBeforeUpdate string
 		err := retry.RetryOnConflict(utilst.NewRetryOnConflictBackoff(), func() error {
@@ -199,10 +201,10 @@ var _ = Describe("Validate knative functionality", func() {
 
 		verifyLatestReadyRevision(createdCapp.Name, createdCapp.Namespace, latestReadyRevisionBeforeUpdate)
 
-		By("Checking if the ksvc's dana annotation was updated successfully")
+		By("Checking if the ksvc template annotation was updated successfully")
 		Eventually(func() string {
 			ksvc := utilst.GetKSVC(k8sClient, createdCapp.Name, createdCapp.Namespace)
-			return ksvc.Spec.Template.Annotations[testconsts.ExampleDanaAnnotation]
+			return ksvc.Spec.Template.Annotations[propagationAnnKey]
 		}, testconsts.Timeout, testconsts.Interval).Should(Equal(testconsts.ExampleAppName))
 	})
 

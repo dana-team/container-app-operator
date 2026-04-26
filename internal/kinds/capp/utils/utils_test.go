@@ -5,20 +5,14 @@ import (
 
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestFilterKeysWithoutPrefix(t *testing.T) {
+func TestExcludeKeysWithPrefix(t *testing.T) {
 	object := map[string]string{
 		"prefix_key1": "value1",
 		"key2":        "value2",
 		"prefix_key3": "value3",
 	}
-	prefix := "prefix_"
-	expected := map[string]string{
-		"prefix_key1": "value1",
-		"prefix_key3": "value3",
-	}
-
-	assert.Equal(t, expected, utils.FilterKeysWithoutPrefix(object, prefix))
+	require.Equal(t, map[string]string{"key2": "value2"}, utils.ExcludeKeysWithPrefix(object, "prefix_"))
 }

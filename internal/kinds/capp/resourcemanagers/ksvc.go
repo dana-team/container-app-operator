@@ -30,6 +30,8 @@ const (
 	eventCappKnativeServiceCreated        = "KnativeServiceCreated"
 	eventCappDisabled                     = "CappDisabled"
 	eventCappEnabled                      = "CappEnabled"
+
+	kubectlKubernetesIOAnnotationPrefix = "kubectl.kubernetes.io/"
 )
 
 type KnativeServiceManager struct {
@@ -41,7 +43,10 @@ type KnativeServiceManager struct {
 
 // prepareResource generates a Knative Service definition from a given Capp resource.
 func (k KnativeServiceManager) prepareResource(capp cappv1alpha1.Capp, ctx context.Context) knativev1.Service {
-	knativeServiceAnnotations := utils.FilterKeysWithoutPrefix(capp.Annotations, utils.CappAPIGroup)
+	knativeServiceAnnotations := utils.ExcludeKeysWithPrefix(
+		utils.ExcludeKeysWithPrefix(capp.Annotations, utils.CappAPIGroup),
+		kubectlKubernetesIOAnnotationPrefix,
+	)
 	knativeServiceLabels := map[string]string{}
 
 	if capp.Labels != nil {
