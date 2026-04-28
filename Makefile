@@ -211,6 +211,14 @@ uninstall-prereq-helmfile: helmfile helm helm-plugins
 doc-chart: helm-docs helm
 	$(HELM_DOCS) charts/
 
+.PHONY: verify-doc-chart
+verify-doc-chart: doc-chart ## Fail if chart README is out of sync with values.yaml
+	@if ! git diff --exit-code charts/container-app-operator/README.md; then \
+		echo >&2 'chart README out of date; run: make doc-chart, then git add charts/container-app-operator/README.md (and values.yaml if changed).'; \
+		exit 1; \
+	fi
+	@echo 'verify-doc-chart: OK (chart README matches helm-docs)'
+
 .PHONY: create-cappConfig
 create-cappConfig: ## Run the setup-cappConfig-deployer script
 	$(KUBECTL) apply -f $(shell pwd)/hack/manifests/cappconfig.yaml
