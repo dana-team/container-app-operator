@@ -17,6 +17,7 @@ import (
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -86,7 +87,7 @@ func (r *CappReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(
 			&knativev1.Service{},
 			handler.EnqueueRequestsFromMapFunc(r.findCappFromEvent),
-			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
+			builder.WithPredicates(knativeServiceWatchPredicate()),
 		).
 		Watches(
 			&knativev1beta1.DomainMapping{},
@@ -114,6 +115,25 @@ func (r *CappReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
 		).
 		Complete(r)
+}
+
+// knativeServiceWatchPredicate: spec changes (generation) or revision lifecycle status on the Service.
+func knativeServiceWatchPredicate() predicate.Predicate {
+	return predicate.Or(
+		predicate.GenerationChangedPredicate{},
+		predicate.TypedFuncs[client.Object]{
+			UpdateFunc: func(e event.TypedUpdateEvent[client.Object]) bool {
+				oldObj, okOld := e.ObjectOld.(*knativev1.Service)
+				newObj, okNew := e.ObjectNew.(*knativev1.Service)
+				if !okOld || !okNew {
+					return false
+				}
+				oldS, newS := oldObj.Status, newObj.Status
+				return oldS.LatestReadyRevisionName != newS.LatestReadyRevisionName ||
+					oldS.LatestCreatedRevisionName != newS.LatestCreatedRevisionName
+			},
+		},
+	)
 }
 
 // findCappFromKnative maps reconciliation requests to Capp reconciliation requests.
