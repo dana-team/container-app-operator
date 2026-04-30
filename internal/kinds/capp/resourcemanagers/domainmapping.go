@@ -122,7 +122,7 @@ func (k KnativeDomainMappingManager) CleanUp(capp cappv1alpha1.Capp) error {
 			return err
 		}
 
-		if err := deleteTLSSecret(resourceManager.Ctx, resourceManager.K8sclient, utils.GenerateSecretName(domainMapping.Name), domainMapping.Namespace); err != nil {
+		if err := deleteTLSSecret(resourceManager, utils.GenerateSecretName(domainMapping.Name), domainMapping.Namespace); err != nil {
 			return err
 		}
 	}
@@ -245,7 +245,7 @@ func (k KnativeDomainMappingManager) deletePreviousDomainMappings(knativeDomainM
 			if err := resourceManager.DeleteResource(&dm); err != nil {
 				return err
 			}
-			if err := deleteTLSSecret(resourceManager.Ctx, resourceManager.K8sclient, utils.GenerateSecretName(domainMapping.Name), domainMapping.Namespace); err != nil {
+			if err := deleteTLSSecret(resourceManager, utils.GenerateSecretName(domainMapping.Name), domainMapping.Namespace); err != nil {
 				return err
 			}
 		}
@@ -254,18 +254,13 @@ func (k KnativeDomainMappingManager) deletePreviousDomainMappings(knativeDomainM
 }
 
 // deleteTLSSecret deletes the tls secret associated with the DomainMapping.
-func deleteTLSSecret(ctx context.Context, client client.Client, secretName string, namespace string) error {
+func deleteTLSSecret(resourceManager rclient.ResourceManagerClient, secretName, namespace string) error {
 	secret := corev1.Secret{}
-	if err := client.Get(ctx, types.NamespacedName{Name: secretName, Namespace: namespace}, &secret); err != nil {
+	if err := resourceManager.K8sclient.Get(resourceManager.Ctx, types.NamespacedName{Name: secretName, Namespace: namespace}, &secret); err != nil {
 		if errors.IsNotFound(err) {
 			return nil
 		}
 		return err
 	}
-
-	if err := client.Delete(ctx, &secret); err != nil {
-		return err
-	}
-
-	return nil
+	return resourceManager.DeleteResource(&secret)
 }
