@@ -59,8 +59,8 @@ vet: ## Run go vet against code.
 	go vet ./...
 
 .PHONY: test
-test: manifests generate fmt vet envtest ## Run tests.
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test $$(go list ./... | grep -v /e2e) -coverprofile cover.out
+test: manifests generate fmt vet ## Run unit tests.
+	go test $$(go list ./... | grep -v /e2e) -coverprofile cover.out
 
 ifdef E2E_GINKGO_PROCS
 GINKGO_E2E_PROCS_FLAG := --procs=$(E2E_GINKGO_PROCS)
