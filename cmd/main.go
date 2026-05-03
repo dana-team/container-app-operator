@@ -35,6 +35,7 @@ import (
 	routev1 "github.com/openshift/api/route/v1"
 	"go.elastic.co/ecszap"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -77,9 +78,9 @@ func initOpenshiftSchemes() {
 	utilruntime.Must(routev1.Install(scheme))
 }
 
-func initEcsLogger() {
+func initEcsLogger(level zapcore.Level) {
 	encoderConfig := ecszap.NewDefaultEncoderConfig()
-	core := ecszap.NewCore(encoderConfig, os.Stdout, zap.DebugLevel)
+	core := ecszap.NewCore(encoderConfig, os.Stdout, level)
 	logger := zap.New(core, zap.AddCaller())
 	logf.SetLogger(zapr.NewLogger(logger))
 }
@@ -89,6 +90,7 @@ func main() {
 	var enableLeaderElection bool
 	var probeAddr string
 	var ecsLogging bool
+	var logVerbosity int
 	var secureMetrics bool
 	var enableHTTP2 bool
 	var tlsOpts []func(*tls.Config)
@@ -98,16 +100,22 @@ func main() {
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
 	flag.BoolVar(&ecsLogging, "ecs-logging", true, "Display controller logs in ecs format.")
+	flag.IntVar(&logVerbosity, "log-verbosity", 0,
+		"Log verbosity: 0 is default; values above 0 enable more detailed controller diagnostic logs.")
 	flag.BoolVar(&secureMetrics, "metrics-secure", true,
 		"If set, the metrics endpoint is served securely via HTTPS. Use --metrics-secure=false to use HTTP instead.")
 	flag.BoolVar(&enableHTTP2, "enable-http2", false,
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
 	flag.Parse()
 
+	lvl := zapcore.InfoLevel
+	if logVerbosity > 0 {
+		lvl = zapcore.DebugLevel
+	}
 	if ecsLogging {
-		initEcsLogger()
+		initEcsLogger(lvl)
 	} else {
-		ctrl.SetLogger(runtimezap.New())
+		ctrl.SetLogger(runtimezap.New(runtimezap.Level(lvl)))
 	}
 	metricsServerOptions := metricsserver.Options{
 		BindAddress:   metricsAddr,

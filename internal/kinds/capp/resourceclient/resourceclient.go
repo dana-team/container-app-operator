@@ -14,32 +14,46 @@ type ResourceManagerClient struct {
 	Log       logr.Logger
 }
 
+// objectIdentityKeyVals returns key/value pairs identifying obj for structured logs.
+func objectIdentityKeyVals(obj client.Object) []any {
+	gvk := obj.GetObjectKind().GroupVersionKind()
+	kind := gvk.Kind
+	if kind == "" {
+		kind = "Unknown"
+	}
+	return []any{
+		"kind", kind,
+		"group", gvk.Group,
+		"version", gvk.Version,
+		"namespace", obj.GetNamespace(),
+		"name", obj.GetName(),
+		"resourceVersion", obj.GetResourceVersion(),
+	}
+}
+
 // CreateResource creates a resource.
 func (r ResourceManagerClient) CreateResource(resource client.Object) error {
+	r.Log.Info("kubernetes API write create", objectIdentityKeyVals(resource)...)
 	if err := r.K8sclient.Create(r.Ctx, resource); err != nil {
 		return fmt.Errorf("failed to create resource %s %s: %w", resource.GetObjectKind().GroupVersionKind().Kind, resource.GetName(), err)
 	}
-
-	r.Log.Info(fmt.Sprintf("successfully created %s %s", resource.GetObjectKind().GroupVersionKind().Kind, resource.GetName()))
 	return nil
 }
 
 // UpdateResource updates a resource.
 func (r ResourceManagerClient) UpdateResource(resource client.Object) error {
+	r.Log.Info("kubernetes API write update", objectIdentityKeyVals(resource)...)
 	if err := r.K8sclient.Update(r.Ctx, resource); err != nil {
 		return fmt.Errorf("failed to update %s %s: %w", resource.GetObjectKind().GroupVersionKind().Kind, resource.GetName(), err)
 	}
-
-	r.Log.Info(fmt.Sprintf("successfully updated %s %s", resource.GetObjectKind().GroupVersionKind().Kind, resource.GetName()))
 	return nil
 }
 
 // DeleteResource deletes a resource.
 func (r ResourceManagerClient) DeleteResource(resource client.Object) error {
+	r.Log.Info("kubernetes API write delete", objectIdentityKeyVals(resource)...)
 	if err := r.K8sclient.Delete(r.Ctx, resource); err != nil {
 		return fmt.Errorf("failed to delete %s %s: %w", resource.GetObjectKind().GroupVersionKind().Kind, resource.GetName(), err)
 	}
-
-	r.Log.Info(fmt.Sprintf("successfully deleted %s %s", resource.GetObjectKind().GroupVersionKind().Kind, resource.GetName()))
 	return nil
 }
