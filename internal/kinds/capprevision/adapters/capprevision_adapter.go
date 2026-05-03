@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/resourceclient"
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -67,23 +68,20 @@ func CreateCappRevision(ctx context.Context, k8sClient client.Client, logger log
 		return err
 	}
 
-	logger.Info(fmt.Sprintf("Trying to create CappRevision: %q.", cappRevision.Name))
+	logger.Info("kubernetes API write create", rclient.ObjectIdentityKeyVals(&cappRevision)...)
 	if err := k8sClient.Create(ctx, &cappRevision); err != nil {
-		logger.Error(err, fmt.Sprintf("Failed to create CappRevision %q.", cappRevision.Name))
+		logger.Error(err, "failed to create CappRevision", rclient.ObjectIdentityKeyVals(&cappRevision)...)
 		return err
 	}
-
-	logger.Info(fmt.Sprintf("Successfully created CappRevision %q", cappRevision.Name))
 	return nil
 }
 
 // DeleteCappRevision deletes a specified CappRevision and returning an error on failure.
 func DeleteCappRevision(ctx context.Context, k8sClient client.Client, logger logr.Logger, cappRevision *cappv1alpha1.CappRevision) error {
-	logger.Info(fmt.Sprintf("Trying to delete CappRevision: %q", cappRevision.Name))
+	logger.Info("kubernetes API write delete", rclient.ObjectIdentityKeyVals(cappRevision)...)
 	if err := k8sClient.Delete(ctx, cappRevision); err != nil {
-		logger.Error(err, fmt.Sprintf("Failed to delete CappRevision %q.", cappRevision.Name))
+		logger.Error(err, "failed to delete CappRevision", rclient.ObjectIdentityKeyVals(cappRevision)...)
 		return err
 	}
-
 	return nil
 }
