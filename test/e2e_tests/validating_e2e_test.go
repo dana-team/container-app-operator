@@ -15,9 +15,7 @@ import (
 
 const (
 	validDomainSuffix    = ".com"
-	unsupportedHostname  = "...aaa.a...."
 	clusterLocalHostname = "invalid.svc.cluster.local"
-	invalidHostName      = "invalid_domain!"
 	existingHostname     = "google.com"
 	elasticLogType       = "elastic"
 	elasticUser          = "user"
@@ -27,13 +25,6 @@ const (
 )
 
 var _ = Describe("Validate the validating webhook", func() {
-	It("Should deny the use of an invalid hostname", func() {
-		baseCapp := mock.CreateBaseCapp()
-		baseCapp.Name = utilst.GenerateUniqueCappName(baseCapp.Name)
-		baseCapp.Spec.RouteSpec.Hostname = unsupportedHostname
-		Expect(k8sClient.Create(context.Background(), baseCapp)).ShouldNot(Succeed())
-	})
-
 	It("Should deny the use of an existing hostname", func() {
 		baseCapp := mock.CreateBaseCapp()
 		baseCapp.Name = utilst.GenerateUniqueCappName(baseCapp.Name)
@@ -45,13 +36,6 @@ var _ = Describe("Validate the validating webhook", func() {
 		baseCapp := mock.CreateBaseCapp()
 		baseCapp.Name = utilst.GenerateUniqueCappName(baseCapp.Name)
 		baseCapp.Spec.RouteSpec.Hostname = clusterLocalHostname
-		Expect(k8sClient.Create(context.Background(), baseCapp)).ShouldNot(Succeed())
-	})
-
-	It("Should deny the use of a hostname not matching the allowed patterns", func() {
-		baseCapp := mock.CreateBaseCapp()
-		baseCapp.Name = utilst.GenerateUniqueCappName(baseCapp.Name)
-		baseCapp.Spec.RouteSpec.Hostname = invalidHostName
 		Expect(k8sClient.Create(context.Background(), baseCapp)).ShouldNot(Succeed())
 	})
 

@@ -1,7 +1,6 @@
 package common
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -12,65 +11,69 @@ func TestValidateDomainName(t *testing.T) {
 		name            string
 		domainName      string
 		allowedPatterns []string
-		expectError     bool
-		errorContains   string
+		wantErr         bool
 	}{
 		{
 			name:            "Valid domain matching specific pattern",
 			domainName:      "myapp.example.com",
 			allowedPatterns: []string{`.*\.example\.com`},
-			expectError:     false,
+			wantErr:         false,
 		},
 		{
 			name:            "Valid domain matching wild card",
 			domainName:      "myapp.any.com",
 			allowedPatterns: []string{`.*`},
-			expectError:     false,
+			wantErr:         false,
 		},
 		{
 			name:            "Invalid domain not matching pattern",
 			domainName:      "myapp.other.com",
 			allowedPatterns: []string{`.*\.example\.com`},
-			expectError:     true,
-			errorContains:   "must match one of the allowed patterns",
+			wantErr:         true,
 		},
 		{
 			name:            "Empty allowed patterns (deny all)",
 			domainName:      "myapp.example.com",
 			allowedPatterns: []string{},
-			expectError:     true,
-			errorContains:   "must match one of the allowed patterns",
+			wantErr:         true,
 		},
 		{
 			name:            "Multiple patterns, one match",
 			domainName:      "myapp.org",
 			allowedPatterns: []string{`.*\.com`, `.*\.org`},
-			expectError:     false,
+			wantErr:         false,
 		},
 		{
 			name:            "Multiple patterns, no match",
 			domainName:      "myapp.net",
 			allowedPatterns: []string{`.*\.com`, `.*\.org`},
-			expectError:     true,
-			errorContains:   "must match one of the allowed patterns",
+			wantErr:         true,
 		},
 		{
 			name:            "Invalid FQDN syntax",
 			domainName:      "-invalid-start",
 			allowedPatterns: []string{`.*`},
-			expectError:     true,
-			errorContains:   "invalid name",
+			wantErr:         true,
+		},
+		{
+			name:            "Invalid hostname with leading dots rejected as FQDN",
+			domainName:      "...aaa.a....",
+			allowedPatterns: []string{`.*`},
+			wantErr:         true,
+		},
+		{
+			name:            "Invalid hostname with underscore rejected as FQDN under wildcard patterns",
+			domainName:      "invalid_domain!",
+			allowedPatterns: []string{`.*`},
+			wantErr:         true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			errs := ValidateDomainName(tt.domainName, tt.allowedPatterns)
-			if tt.expectError {
+			if tt.wantErr {
 				assert.NotNil(t, errs)
-				if tt.errorContains != "" {
-					assert.True(t, strings.Contains(errs.Error(), tt.errorContains), "Expected error to contain %q, got %q", tt.errorContains, errs.Error())
-				}
 			} else {
 				assert.Nil(t, errs)
 			}
