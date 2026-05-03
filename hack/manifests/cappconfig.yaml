@@ -24,6 +24,9 @@ spec:
       cpu: "10m"
       memory: "64Mi"
   allowedHostnamePatterns:
-    - '.*\.allowed'
-    - '.*\.com'
-    - 'test.dev-.*'
+    - match: '.*\.allowed'
+      explanation: "subdomains of .allowed domain"
+    - match: '.*\.com'
+      explanation: "any .com domain"
+    - match: 'test.dev-.*'
+      explanation: "test subdomains of dev"

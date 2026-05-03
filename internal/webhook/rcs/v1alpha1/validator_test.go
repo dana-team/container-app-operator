@@ -58,7 +58,7 @@ func TestCappValidator_Handle(t *testing.T) {
 					Namespace: utils.CappNS,
 				},
 				Spec: cappv1alpha1.CappConfigSpec{
-					AllowedHostnamePatterns: []string{".*"},
+					AllowedHostnamePatterns: []cappv1alpha1.HostnamePattern{{Match: ".*"}},
 				},
 			}
 

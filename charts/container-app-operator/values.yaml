@@ -135,6 +135,7 @@ config:
       memory: 100Mi
 
   allowedHostnamePatterns:
-    # -- A list of regex patterns that hostnames of Capp workloads must match.
-    # If a Capp hostname matches one of these patterns, its creation will be allowed.
-    - ".*"
+    # -- A list of hostname patterns that Capp workload hostnames must match.
+    # Each entry has a required `pattern` (regex) and an optional `explanation` shown in webhook error messages.
+    - match: ".*"
+      explanation: "any hostname"

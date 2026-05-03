@@ -138,7 +138,7 @@ func CreateBaseCappConfig() *cappv1alpha1.CappConfig {
 					corev1.ResourceMemory: resource.MustParse("512Mi"),
 				},
 			},
-			AllowedHostnamePatterns: []string{".*"},
+			AllowedHostnamePatterns: []cappv1alpha1.HostnamePattern{{Match: ".*"}},
 		},
 	}
 }

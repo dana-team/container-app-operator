@@ -9160,7 +9160,7 @@ spec:
                             The digests are resolved during the creation of Revision.
                             ContainerStatuses holds the container name and image digests
                             for both serving and non serving containers.
-                            ref: http://bit.ly/image-digests
+                            ref: https://bit.ly/image-digests
                           items:
                             description: ContainerStatus holds the information of
                               container name and image digest value
@@ -9183,7 +9183,7 @@ spec:
                             The digests are resolved during the creation of Revision.
                             ContainerStatuses holds the container name and image digests
                             for both serving and non serving containers.
-                            ref: http://bit.ly/image-digests
+                            ref: https://bit.ly/image-digests
                           items:
                             description: ContainerStatus holds the information of
                               container name and image digest value
