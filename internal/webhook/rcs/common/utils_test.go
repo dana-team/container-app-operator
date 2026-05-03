@@ -4,7 +4,9 @@ import (
 	"strings"
 	"testing"
 
+	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestValidateDomainName(t *testing.T) {
@@ -73,6 +75,47 @@ func TestValidateDomainName(t *testing.T) {
 				}
 			} else {
 				assert.Nil(t, errs)
+			}
+		})
+	}
+}
+
+func TestValidateLogSpec(t *testing.T) {
+	const elasticLogHost = "https://elasticsearch.dana.com/_bulk"
+
+	tests := []struct {
+		name    string
+		logSpec cappv1alpha1.LogSpec
+		wantErr bool
+	}{
+		{
+			name: "denies when elastic log configuration omits required fields",
+			logSpec: cappv1alpha1.LogSpec{
+				Type: cappv1alpha1.LogTypeElastic,
+				Host: elasticLogHost,
+			},
+			wantErr: true,
+		},
+		{
+			name: "accepts when elastic log configuration includes all required fields",
+			logSpec: cappv1alpha1.LogSpec{
+				Type:           cappv1alpha1.LogTypeElastic,
+				Host:           elasticLogHost,
+				Index:          "main",
+				User:           "user",
+				PasswordSecret: "elastic-secret",
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateLogSpec(tt.logSpec)
+			if tt.wantErr {
+				require.NotNil(t, err)
+			} else {
+				require.Nil(t, err)
 			}
 		})
 	}
