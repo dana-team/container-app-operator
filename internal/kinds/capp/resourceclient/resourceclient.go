@@ -14,8 +14,8 @@ type ResourceManagerClient struct {
 	Log       logr.Logger
 }
 
-// objectIdentityKeyVals returns key/value pairs identifying obj for structured logs.
-func objectIdentityKeyVals(obj client.Object) []any {
+// ObjectIdentityKeyVals returns key/value pairs identifying obj for structured logs.
+func ObjectIdentityKeyVals(obj client.Object) []any {
 	gvk := obj.GetObjectKind().GroupVersionKind()
 	kind := gvk.Kind
 	if kind == "" {
@@ -33,7 +33,7 @@ func objectIdentityKeyVals(obj client.Object) []any {
 
 // CreateResource creates a resource.
 func (r ResourceManagerClient) CreateResource(resource client.Object) error {
-	r.Log.Info("kubernetes API write create", objectIdentityKeyVals(resource)...)
+	r.Log.Info("kubernetes API write create", ObjectIdentityKeyVals(resource)...)
 	if err := r.K8sclient.Create(r.Ctx, resource); err != nil {
 		return fmt.Errorf("failed to create resource %s %s: %w", resource.GetObjectKind().GroupVersionKind().Kind, resource.GetName(), err)
 	}
@@ -42,7 +42,7 @@ func (r ResourceManagerClient) CreateResource(resource client.Object) error {
 
 // UpdateResource updates a resource.
 func (r ResourceManagerClient) UpdateResource(resource client.Object) error {
-	r.Log.Info("kubernetes API write update", objectIdentityKeyVals(resource)...)
+	r.Log.Info("kubernetes API write update", ObjectIdentityKeyVals(resource)...)
 	if err := r.K8sclient.Update(r.Ctx, resource); err != nil {
 		return fmt.Errorf("failed to update %s %s: %w", resource.GetObjectKind().GroupVersionKind().Kind, resource.GetName(), err)
 	}
@@ -51,7 +51,7 @@ func (r ResourceManagerClient) UpdateResource(resource client.Object) error {
 
 // DeleteResource deletes a resource.
 func (r ResourceManagerClient) DeleteResource(resource client.Object) error {
-	r.Log.Info("kubernetes API write delete", objectIdentityKeyVals(resource)...)
+	r.Log.Info("kubernetes API write delete", ObjectIdentityKeyVals(resource)...)
 	if err := r.K8sclient.Delete(r.Ctx, resource); err != nil {
 		return fmt.Errorf("failed to delete %s %s: %w", resource.GetObjectKind().GroupVersionKind().Kind, resource.GetName(), err)
 	}
