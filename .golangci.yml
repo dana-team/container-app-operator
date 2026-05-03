@@ -28,7 +28,7 @@ linters:
     rules:
       - linters:
           - staticcheck
-        path: test/e2e_tests/*
+        path: test/e2e/*
       - linters:
           - dupl
         path: internal/*

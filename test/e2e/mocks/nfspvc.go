@@ -1,7 +1,7 @@
 package mocks
 
 import (
-	"github.com/dana-team/container-app-operator/test/e2e_tests/testconsts"
+	"github.com/dana-team/container-app-operator/test/e2e/consts"
 	nfspvcv1alpha1 "github.com/dana-team/nfspvc-operator/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -13,12 +13,12 @@ func CreateNFSPVCObject(name string) *nfspvcv1alpha1.NfsPvc {
 	return &nfspvcv1alpha1.NfsPvc{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: testconsts.NSName,
+			Namespace: consts.NSName,
 		},
 		Spec: nfspvcv1alpha1.NfsPvcSpec{
-			Server:   testconsts.Server,
-			Path:     testconsts.Path,
-			Capacity: corev1.ResourceList{corev1.ResourceStorage: resource.MustParse(testconsts.Capacity)},
+			Server:   consts.Server,
+			Path:     consts.Path,
+			Capacity: corev1.ResourceList{corev1.ResourceStorage: resource.MustParse(consts.Capacity)},
 		},
 	}
 }

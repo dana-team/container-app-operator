@@ -1,4 +1,4 @@
-package e2e_tests
+package e2e
 
 import (
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"

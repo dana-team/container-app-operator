@@ -1,9 +1,9 @@
-package e2e_tests
+package e2e
 
 import (
-	"github.com/dana-team/container-app-operator/test/e2e_tests/mocks"
-	"github.com/dana-team/container-app-operator/test/e2e_tests/testconsts"
-	utilst "github.com/dana-team/container-app-operator/test/e2e_tests/utils"
+	"github.com/dana-team/container-app-operator/test/e2e/consts"
+	"github.com/dana-team/container-app-operator/test/e2e/mocks"
+	utilst "github.com/dana-team/container-app-operator/test/e2e/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/client-go/util/retry"
@@ -30,7 +30,7 @@ var _ = Describe("Validate capp creation", func() {
 		By("Checks if Capp updated successfully")
 		err := retry.RetryOnConflict(utilst.NewRetryOnConflictBackoff(), func() error {
 			assertionCapp := utilst.GetCapp(k8sClient, desiredCapp.Name, desiredCapp.Namespace)
-			assertionCapp.Spec.ScaleMetric = testconsts.RPSScaleMetric
+			assertionCapp.Spec.ScaleMetric = consts.RPSScaleMetric
 
 			return utilst.UpdateResource(k8sClient, assertionCapp)
 		})
@@ -39,13 +39,13 @@ var _ = Describe("Validate capp creation", func() {
 		Eventually(func() string {
 			assertionCapp = utilst.GetCapp(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
 			return assertionCapp.Spec.ScaleMetric
-		}, testconsts.Timeout, testconsts.Interval).Should(Equal(testconsts.RPSScaleMetric), "Should fetch capp.")
+		}, consts.Timeout, consts.Interval).Should(Equal(consts.RPSScaleMetric), "Should fetch capp.")
 
 		By("Checks if deleted successfully")
 		utilst.DeleteCapp(k8sClient, assertionCapp)
 		Eventually(func() bool {
 			return utilst.DoesResourceExist(k8sClient, assertionCapp)
-		}, testconsts.Timeout, testconsts.Interval).ShouldNot(BeTrue(), "Should not find a resource.")
+		}, consts.Timeout, consts.Interval).ShouldNot(BeTrue(), "Should not find a resource.")
 	})
 
 	It("Validate state functionality", func() {
@@ -57,22 +57,22 @@ var _ = Describe("Validate capp creation", func() {
 		Eventually(func() string {
 			capp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
 			return capp.Status.StateStatus.State
-		}, testconsts.Timeout, testconsts.Interval).Should(Equal(testconsts.EnabledState))
+		}, consts.Timeout, consts.Interval).Should(Equal(consts.EnabledState))
 
 		By("Checking if the ksvc was created successfully")
 		ksvcObject := mocks.CreateKnativeServiceObject(createdCapp.Name)
 		Eventually(func() bool {
 			return utilst.DoesResourceExist(k8sClient, ksvcObject)
-		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "Should find a resource.")
+		}, consts.Timeout, consts.Interval).Should(BeTrue(), "Should find a resource.")
 
 		By("Checking if the revision is ready")
-		revisionName := createdCapp.Name + testconsts.FirstRevisionSuffix
+		revisionName := createdCapp.Name + consts.FirstRevisionSuffix
 		checkRevisionReadiness(revisionName)
 
 		By("Updating the capp status to be disabled")
 		err := retry.RetryOnConflict(utilst.NewRetryOnConflictBackoff(), func() error {
 			assertionCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-			assertionCapp.Spec.State = testconsts.DisabledState
+			assertionCapp.Spec.State = consts.DisabledState
 
 			return utilst.UpdateResource(k8sClient, assertionCapp)
 		})
@@ -82,21 +82,21 @@ var _ = Describe("Validate capp creation", func() {
 		Eventually(func() string {
 			capp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
 			return capp.Status.StateStatus.State
-		}, testconsts.Timeout, testconsts.Interval).Should(Equal(testconsts.DisabledState))
+		}, consts.Timeout, consts.Interval).Should(Equal(consts.DisabledState))
 
 		By("Checking if the ksvc and the revision were deleted successfully")
 		Eventually(func() bool {
 			return utilst.DoesResourceExist(k8sClient, ksvcObject)
-		}, testconsts.Timeout, testconsts.Interval).ShouldNot(BeTrue(), "Should not find a resource.")
+		}, consts.Timeout, consts.Interval).ShouldNot(BeTrue(), "Should not find a resource.")
 		Eventually(func() bool {
 			revision := mocks.CreateRevisionObject(revisionName)
 			return utilst.DoesResourceExist(k8sClient, revision)
-		}, testconsts.Timeout, testconsts.Interval).ShouldNot(BeTrue(), "Should not find a resource.")
+		}, consts.Timeout, consts.Interval).ShouldNot(BeTrue(), "Should not find a resource.")
 
 		By("Updating the capp status to be enabled")
 		err = retry.RetryOnConflict(utilst.NewRetryOnConflictBackoff(), func() error {
 			assertionCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-			assertionCapp.Spec.State = testconsts.EnabledState
+			assertionCapp.Spec.State = consts.EnabledState
 
 			return utilst.UpdateResource(k8sClient, assertionCapp)
 		})
@@ -105,7 +105,7 @@ var _ = Describe("Validate capp creation", func() {
 		By("Checking if the ksvc was recreated successfully")
 		Eventually(func() bool {
 			return utilst.DoesResourceExist(k8sClient, ksvcObject)
-		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "Should find a resource.")
+		}, consts.Timeout, consts.Interval).Should(BeTrue(), "Should find a resource.")
 
 		By("Checking if the revision is ready")
 		checkRevisionReadiness(revisionName)
@@ -119,7 +119,7 @@ var _ = Describe("Validate capp creation", func() {
 		Eventually(func() int {
 			capp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
 			return capp.Spec.MinReplicas
-		}, testconsts.Timeout, testconsts.Interval).Should(Equal(0))
+		}, consts.Timeout, consts.Interval).Should(Equal(0))
 
 		By("Verifying KSVC annotation for default minReplicas")
 		Eventually(func() bool {
@@ -130,7 +130,7 @@ var _ = Describe("Validate capp creation", func() {
 				return true
 			}
 			return minReplicas == "0"
-		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue())
+		}, consts.Timeout, consts.Interval).Should(BeTrue())
 
 		By("Updating Capp with valid minReplicas")
 		err := retry.RetryOnConflict(utilst.NewRetryOnConflictBackoff(), func() error {
@@ -144,14 +144,14 @@ var _ = Describe("Validate capp creation", func() {
 		Eventually(func() int {
 			capp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
 			return capp.Spec.MinReplicas
-		}, testconsts.Timeout, testconsts.Interval).Should(Equal(3))
+		}, consts.Timeout, consts.Interval).Should(Equal(3))
 
 		By("Verifying KSVC annotation for minReplicas=3")
 		Eventually(func() string {
 			ksvc := &knativev1.Service{}
 			utilst.GetResource(k8sClient, ksvc, createdCapp.Name, createdCapp.Namespace)
 			return ksvc.Spec.Template.Annotations[autoscaling.MinScaleAnnotationKey]
-		}, testconsts.Timeout, testconsts.Interval).Should(Equal("3"))
+		}, consts.Timeout, consts.Interval).Should(Equal("3"))
 
 		By("Updating Capp with invalid minReplicas (> GlobalMinScale)")
 

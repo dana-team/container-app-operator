@@ -3,7 +3,7 @@ package utils
 import (
 	"context"
 
-	"github.com/dana-team/container-app-operator/test/e2e_tests/testconsts"
+	"github.com/dana-team/container-app-operator/test/e2e/consts"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	. "github.com/onsi/gomega"
@@ -19,7 +19,7 @@ func CreateCapp(k8sClient client.Client, capp *cappv1alpha1.Capp) *cappv1alpha1.
 
 	Eventually(func() bool {
 		return DoesResourceExist(k8sClient, newCapp)
-	}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "Capp should exist")
+	}, consts.Timeout, consts.Interval).Should(BeTrue(), "Capp should exist")
 
 	return newCapp
 }
@@ -29,12 +29,12 @@ func DeleteCapp(k8sClient client.Client, capp *cappv1alpha1.Capp) {
 	Expect(k8sClient.Delete(context.Background(), capp)).To(Succeed())
 	Eventually(func() bool {
 		return DoesResourceExist(k8sClient, capp)
-	}, testconsts.TimeoutCapp, testconsts.Interval).ShouldNot(BeTrue(), "Should not find a resource.")
+	}, consts.TimeoutCapp, consts.Interval).ShouldNot(BeTrue(), "Should not find a resource.")
 }
 
 // GenerateCappName generates a new name for Capp.
 func GenerateCappName() string {
-	return generateName(testconsts.CappName)
+	return generateName(consts.CappName)
 }
 
 // GetCapp fetches and returns an existing instance of a Capp.
@@ -46,7 +46,7 @@ func GetCapp(k8sClient client.Client, name string, namespace string) *cappv1alph
 
 // GenerateUniqueCappName generates a unique Capp name.
 func GenerateUniqueCappName(baseCappName string) string {
-	randString := generateRandomString(testconsts.RandStrLength)
+	randString := generateRandomString(consts.RandStrLength)
 	return baseCappName + "-" + randString
 }
 

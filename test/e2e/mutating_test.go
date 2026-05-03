@@ -1,16 +1,16 @@
-package e2e_tests
+package e2e
 
 import (
 	"fmt"
 
-	"github.com/dana-team/container-app-operator/test/e2e_tests/testconsts"
+	"github.com/dana-team/container-app-operator/test/e2e/consts"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/client-go/util/retry"
 
-	mock "github.com/dana-team/container-app-operator/test/e2e_tests/mocks"
-	utilst "github.com/dana-team/container-app-operator/test/e2e_tests/utils"
+	mock "github.com/dana-team/container-app-operator/test/e2e/mocks"
+	utilst "github.com/dana-team/container-app-operator/test/e2e/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -20,14 +20,14 @@ const adminAnnotationValue = "kubernetes-admin"
 var _ = Describe("Validate the mutating webhook", func() {
 	AfterEach(func() {
 		// Revert k8sClient back to use the original configuration
-		utilst.SwitchUser(&k8sClient, cfg, testconsts.NSName, newScheme(), "")
+		utilst.SwitchUser(&k8sClient, cfg, consts.NSName, newScheme(), "")
 	})
 
 	It("Should add annotation on create", func() {
 		baseCapp := mock.CreateBaseCapp()
 		capp := utilst.CreateCapp(k8sClient, baseCapp)
 
-		annotation := capp.ObjectMeta.Annotations[testconsts.LastUpdatedByAnnotationKey]
+		annotation := capp.ObjectMeta.Annotations[consts.LastUpdatedByAnnotationKey]
 		Expect(annotation).To(Equal(adminAnnotationValue))
 	})
 
@@ -35,10 +35,10 @@ var _ = Describe("Validate the mutating webhook", func() {
 		baseCapp := mock.CreateBaseCapp()
 		capp := utilst.CreateCapp(k8sClient, baseCapp)
 
-		annotation := capp.ObjectMeta.Annotations[testconsts.LastUpdatedByAnnotationKey]
+		annotation := capp.ObjectMeta.Annotations[consts.LastUpdatedByAnnotationKey]
 		Expect(annotation).To(Equal(adminAnnotationValue))
 
-		utilst.SwitchUser(&k8sClient, cfg, testconsts.NSName, newScheme(), testconsts.ServiceAccountName)
+		utilst.SwitchUser(&k8sClient, cfg, consts.NSName, newScheme(), consts.ServiceAccountName)
 
 		err := retry.RetryOnConflict(utilst.NewRetryOnConflictBackoff(), func() error {
 			capp = utilst.GetCapp(k8sClient, capp.Name, capp.Namespace)
@@ -53,8 +53,8 @@ var _ = Describe("Validate the mutating webhook", func() {
 		updatedCapp := utilst.GetCapp(k8sClient, capp.Name, capp.Namespace)
 
 		// Check if the annotation has changed
-		updatedAnnotation := updatedCapp.ObjectMeta.Annotations[testconsts.LastUpdatedByAnnotationKey]
-		Expect(updatedAnnotation).To(Equal(fmt.Sprintf(testconsts.ServiceAccountNameFormat, testconsts.NSName, testconsts.ServiceAccountName)))
+		updatedAnnotation := updatedCapp.ObjectMeta.Annotations[consts.LastUpdatedByAnnotationKey]
+		Expect(updatedAnnotation).To(Equal(fmt.Sprintf(consts.ServiceAccountNameFormat, consts.NSName, consts.ServiceAccountName)))
 	})
 
 	It("Should add default resources to Capp", func() {

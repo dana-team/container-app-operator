@@ -1,4 +1,4 @@
-package e2e_tests
+package e2e
 
 import (
 	"context"
@@ -7,9 +7,9 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/errors"
 
-	"github.com/dana-team/container-app-operator/test/e2e_tests/testconsts"
+	"github.com/dana-team/container-app-operator/test/e2e/consts"
 
-	utilst "github.com/dana-team/container-app-operator/test/e2e_tests/utils"
+	utilst "github.com/dana-team/container-app-operator/test/e2e/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -22,7 +22,7 @@ import (
 func TestE2E(t *testing.T) {
 	RegisterFailHandler(Fail)
 
-	SetDefaultEventuallyTimeout(testconsts.DefaultEventually)
+	SetDefaultEventuallyTimeout(consts.DefaultEventually)
 	RunSpecs(t, "Capp Suite")
 }
 
@@ -30,14 +30,14 @@ var _ = SynchronizedBeforeSuite(func() {
 	initClient()
 	cleanUp()
 	createE2ETestNamespace()
-	utilst.CreateTestUser(k8sClient, testconsts.NSName)
+	utilst.CreateTestUser(k8sClient, consts.NSName)
 	utilst.CreateExcludedServiceAccount(k8sClient)
 }, func() {
 	initClient()
 })
 
 var _ = SynchronizedAfterSuite(func() {}, func() {
-	utilst.DeleteTestUser(k8sClient, testconsts.NSName)
+	utilst.DeleteTestUser(k8sClient, consts.NSName)
 	utilst.DeleteExcludedServiceAccount(k8sClient)
 
 	if os.Getenv("E2E_SKIP_CLEANUP") == "true" {
@@ -64,28 +64,28 @@ func initClient() {
 func createE2ETestNamespace() {
 	namespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: testconsts.NSName,
+			Name: consts.NSName,
 		},
 	}
 
 	Expect(k8sClient.Create(context.Background(), namespace)).To(SatisfyAny(BeNil(), WithTransform(errors.IsAlreadyExists, BeTrue())))
 	Eventually(func() bool {
 		return utilst.DoesResourceExist(k8sClient, namespace)
-	}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "The namespace should be created")
+	}, consts.Timeout, consts.Interval).Should(BeTrue(), "The namespace should be created")
 }
 
 // cleanUp make sure the test environment is clean.
 func cleanUp() {
 	namespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: testconsts.NSName,
+			Name: consts.NSName,
 		},
 	}
 
 	if utilst.DoesResourceExist(k8sClient, namespace) {
 		Expect(k8sClient.Delete(context.Background(), namespace)).To(Succeed())
 		Eventually(func() error {
-			return k8sClient.Get(context.Background(), client.ObjectKey{Name: testconsts.NSName}, namespace)
-		}, testconsts.Timeout, testconsts.Interval).Should(HaveOccurred(), "The namespace should be deleted")
+			return k8sClient.Get(context.Background(), client.ObjectKey{Name: consts.NSName}, namespace)
+		}, consts.Timeout, consts.Interval).Should(HaveOccurred(), "The namespace should be deleted")
 	}
 }

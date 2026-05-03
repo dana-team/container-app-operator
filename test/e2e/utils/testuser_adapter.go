@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
-	mock "github.com/dana-team/container-app-operator/test/e2e_tests/mocks"
-	"github.com/dana-team/container-app-operator/test/e2e_tests/testconsts"
+	"github.com/dana-team/container-app-operator/test/e2e/consts"
+	mock "github.com/dana-team/container-app-operator/test/e2e/mocks"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -25,8 +25,8 @@ func CreateTestUser(k8sClient client.Client, namespace string) {
 
 // CreateExcludedServiceAccount configures a service account that should be excluded from the mutating webhook.
 func CreateExcludedServiceAccount(k8sClient client.Client) {
-	createUserServiceAccount(k8sClient, testconsts.ExcludedServiceAccountName, testconsts.ExcludedServiceAccountNamespace)
-	createUserRoleAndRoleBinding(k8sClient, testconsts.ExcludedServiceAccountName, testconsts.ExcludedServiceAccountNamespace)
+	createUserServiceAccount(k8sClient, consts.ExcludedServiceAccountName, consts.ExcludedServiceAccountNamespace)
+	createUserRoleAndRoleBinding(k8sClient, consts.ExcludedServiceAccountName, consts.ExcludedServiceAccountNamespace)
 }
 
 // SwitchUser switches the Kubernetes client's user context to the given serviceAccountName if it's not empty.
@@ -35,7 +35,7 @@ func SwitchUser(k8sClient *client.Client, cfg *rest.Config, namespace string, sc
 	cfg.Impersonate = rest.ImpersonationConfig{}
 	if serviceAccountName != "" {
 		cfg.Impersonate = rest.ImpersonationConfig{
-			UserName: fmt.Sprintf(testconsts.ServiceAccountNameFormat, namespace, serviceAccountName),
+			UserName: fmt.Sprintf(consts.ServiceAccountNameFormat, namespace, serviceAccountName),
 		}
 	}
 
@@ -48,19 +48,19 @@ func SwitchUser(k8sClient *client.Client, cfg *rest.Config, namespace string, sc
 
 // DeleteTestUser deletes the test user created in the specified namespace.
 func DeleteTestUser(k8sClient client.Client, namespace string) {
-	deleteUserRoleAndRoleBinding(k8sClient, testconsts.ServiceAccountName, namespace)
+	deleteUserRoleAndRoleBinding(k8sClient, consts.ServiceAccountName, namespace)
 	deleteTestUserServiceAccount(k8sClient, namespace)
 }
 
 // DeleteExcludedServiceAccount deletes the excluded user created in the specified namespace.
 func DeleteExcludedServiceAccount(k8sClient client.Client) {
-	deleteUserRoleAndRoleBinding(k8sClient, testconsts.ExcludedServiceAccountName, testconsts.ExcludedServiceAccountNamespace)
-	deleteUserServiceAccount(k8sClient, testconsts.ExcludedServiceAccountName, testconsts.ExcludedServiceAccountNamespace)
+	deleteUserRoleAndRoleBinding(k8sClient, consts.ExcludedServiceAccountName, consts.ExcludedServiceAccountNamespace)
+	deleteUserServiceAccount(k8sClient, consts.ExcludedServiceAccountName, consts.ExcludedServiceAccountNamespace)
 }
 
 // createTestUserServiceAccount creates a service account for the test user in the specified namespace.
 func createTestUserServiceAccount(k8sClient client.Client) {
-	createUserServiceAccount(k8sClient, testconsts.ServiceAccountName, "")
+	createUserServiceAccount(k8sClient, consts.ServiceAccountName, "")
 }
 
 // createUserServiceAccount creates a service account for the test user in the specified namespace.
@@ -73,7 +73,7 @@ func createUserServiceAccount(k8sClient client.Client, serviceAccountName, names
 
 // createTestUserRoleAndRoleBinding creates a role and role binding for the test user in the specified namespace.
 func createTestUserRoleAndRoleBinding(k8sClient client.Client, namespace string) {
-	createUserRoleAndRoleBinding(k8sClient, testconsts.ServiceAccountName, namespace)
+	createUserRoleAndRoleBinding(k8sClient, consts.ServiceAccountName, namespace)
 }
 
 // createUserRoleAndRoleBinding creates a role and role binding for a user in the specified namespace.
@@ -113,7 +113,7 @@ func createUserRoleAndRoleBinding(k8sClient client.Client, serviceAccountName, n
 
 // deleteTestUserServiceAccount deletes the service account of the test user in the specified namespace.
 func deleteTestUserServiceAccount(k8sClient client.Client, namespace string) {
-	deleteUserServiceAccount(k8sClient, testconsts.ServiceAccountName, namespace)
+	deleteUserServiceAccount(k8sClient, consts.ServiceAccountName, namespace)
 }
 
 // deleteUserServiceAccount deletes the service account of a user in the specified namespace.

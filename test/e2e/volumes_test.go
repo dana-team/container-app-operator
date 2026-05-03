@@ -1,12 +1,12 @@
-package e2e_tests
+package e2e
 
 import (
 	"context"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
-	"github.com/dana-team/container-app-operator/test/e2e_tests/mocks"
-	"github.com/dana-team/container-app-operator/test/e2e_tests/testconsts"
-	utilst "github.com/dana-team/container-app-operator/test/e2e_tests/utils"
+	"github.com/dana-team/container-app-operator/test/e2e/consts"
+	"github.com/dana-team/container-app-operator/test/e2e/mocks"
+	utilst "github.com/dana-team/container-app-operator/test/e2e/utils"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 
@@ -47,23 +47,23 @@ var _ = Describe("Validate NFSPVC functionality", func() {
 				return capp.Spec.VolumesSpec.NFSVolumes[0].Name
 			}
 			return ""
-		}, testconsts.Timeout, testconsts.Interval).Should(Equal(nfspvcName), "Should fetch capp with volume")
+		}, consts.Timeout, consts.Interval).Should(Equal(nfspvcName), "Should fetch capp with volume")
 
 		By("Checking if the NFSPVC was created successfully")
 		nfspvcObject := mocks.CreateNFSPVCObject(nfspvcName)
 		Eventually(func() bool {
 			return utilst.DoesResourceExist(k8sClient, nfspvcObject)
-		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "Should find a resource.")
+		}, consts.Timeout, consts.Interval).Should(BeTrue(), "Should find a resource.")
 
 		By("Checking the NFSPVC has the needed labels")
-		nfspvcObject = utilst.GetNFSPVC(k8sClient, nfspvcName, testconsts.NSName)
-		Expect(nfspvcObject.Labels[testconsts.CappResourceKey]).Should(Equal(testCapp.Name))
-		Expect(nfspvcObject.Labels[testconsts.ManagedByLabelKey]).Should(Equal(testconsts.CappKey))
+		nfspvcObject = utilst.GetNFSPVC(k8sClient, nfspvcName, consts.NSName)
+		Expect(nfspvcObject.Labels[consts.CappResourceKey]).Should(Equal(testCapp.Name))
+		Expect(nfspvcObject.Labels[consts.ManagedByLabelKey]).Should(Equal(consts.CappKey))
 
 		By("Deleting the Capp instance")
 		utilst.DeleteCapp(k8sClient, testCapp)
 		Eventually(func() bool {
 			return utilst.DoesResourceExist(k8sClient, nfspvcObject)
-		}, testconsts.Timeout, testconsts.Interval).Should(BeFalse(), "Should find a resource.")
+		}, consts.Timeout, consts.Interval).Should(BeFalse(), "Should find a resource.")
 	})
 })

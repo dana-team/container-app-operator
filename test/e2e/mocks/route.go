@@ -2,7 +2,7 @@ package mocks
 
 import (
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
-	"github.com/dana-team/container-app-operator/test/e2e_tests/testconsts"
+	"github.com/dana-team/container-app-operator/test/e2e/consts"
 	dnsrecordv1alpha1 "github.com/dana-team/provider-dns-v2/apis/namespaced/record/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
@@ -13,7 +13,7 @@ func CreateDomainMappingObject(name string) *knativev1beta1.DomainMapping {
 	return &knativev1beta1.DomainMapping{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: testconsts.NSName,
+			Namespace: consts.NSName,
 		},
 	}
 }
@@ -23,7 +23,7 @@ func CreateCertificateObject(name string) *cmapi.Certificate {
 	return &cmapi.Certificate{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: testconsts.NSName,
+			Namespace: consts.NSName,
 		},
 	}
 }
@@ -33,7 +33,7 @@ func CreateDNSRecordObject(name string) *dnsrecordv1alpha1.CNAMERecord {
 	return &dnsrecordv1alpha1.CNAMERecord{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: testconsts.NSName,
+			Namespace: consts.NSName,
 		},
 	}
 }
