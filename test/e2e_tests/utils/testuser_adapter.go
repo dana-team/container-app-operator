@@ -48,7 +48,7 @@ func SwitchUser(k8sClient *client.Client, cfg *rest.Config, namespace string, sc
 
 // DeleteTestUser deletes the test user created in the specified namespace.
 func DeleteTestUser(k8sClient client.Client, namespace string) {
-	deleteTestUserRoleAndRoleBinding(k8sClient, namespace)
+	deleteUserRoleAndRoleBinding(k8sClient, testconsts.ServiceAccountName, namespace)
 	deleteTestUserServiceAccount(k8sClient, namespace)
 }
 
@@ -128,12 +128,7 @@ func deleteUserServiceAccount(k8sClient client.Client, serviceAccountName, names
 	Expect(err).To(SatisfyAny(BeNil(), WithTransform(errors.IsNotFound, BeTrue())))
 }
 
-// deleteTestUserRoleAndRoleBinding deletes the role and role binding of the test user in the specified namespace.
-func deleteTestUserRoleAndRoleBinding(k8sClient client.Client, namespace string) {
-	deleteUserServiceAccount(k8sClient, testconsts.ServiceAccountName, namespace)
-}
-
-// deleteUserRoleAndRoleBinding deletes the role and role binding of s user in the specified namespace.
+// deleteUserRoleAndRoleBinding deletes the role and role binding of a user in the specified namespace.
 func deleteUserRoleAndRoleBinding(k8sClient client.Client, serviceAccountName, namespace string) {
 	roleBinding := &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
