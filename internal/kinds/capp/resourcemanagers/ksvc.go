@@ -194,6 +194,11 @@ func (k KnativeServiceManager) createKSVC(capp *cappv1alpha1.Capp, knativeServic
 // updateKSVC checks if an update to the KnativeService is necessary and performs the update to match desired state.
 func (k KnativeServiceManager) updateKSVC(knativeService, knativeServiceFromCapp *knativev1.Service, resourceManager rclient.ResourceManagerClient) error {
 	if !equality.Semantic.DeepEqual(knativeService.Spec, knativeServiceFromCapp.Spec) {
+		k.Log.V(1).Info("KnativeService spec differs from desired; applying update",
+			"knativeService", knativeService.Name,
+			"namespace", knativeService.Namespace,
+			"resourceVersion", knativeService.ResourceVersion,
+			"generation", knativeService.Generation)
 		knativeService.Spec = knativeServiceFromCapp.Spec
 		return resourceManager.UpdateResource(knativeService)
 	}
