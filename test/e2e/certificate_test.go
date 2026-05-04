@@ -1,12 +1,12 @@
-package e2e_tests
+package e2e
 
 import (
 	"context"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
-	"github.com/dana-team/container-app-operator/test/e2e_tests/mocks"
-	"github.com/dana-team/container-app-operator/test/e2e_tests/testconsts"
-	utilst "github.com/dana-team/container-app-operator/test/e2e_tests/utils"
+	"github.com/dana-team/container-app-operator/test/e2e/consts"
+	"github.com/dana-team/container-app-operator/test/e2e/mocks"
+	utilst "github.com/dana-team/container-app-operator/test/e2e/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -20,16 +20,16 @@ var _ = Describe("Validate Certificate functionality", func() {
 		createdCapp, routeHostname := utilst.CreateHTTPSCapp(k8sClient)
 
 		By("Checking if the Certificate was created successfully")
-		certificateName := utilst.GenerateResourceName(routeHostname, testconsts.ZoneValue)
+		certificateName := utilst.GenerateResourceName(routeHostname, consts.ZoneValue)
 		certificateObject := mocks.CreateCertificateObject(certificateName)
 		Eventually(func() bool {
 			return utilst.DoesResourceExist(k8sClient, certificateObject)
-		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "Should find a resource.")
+		}, consts.Timeout, consts.Interval).Should(BeTrue(), "Should find a resource.")
 
 		By("Checking the Certificate has the needed labels")
-		certificateObject = utilst.GetCertificate(k8sClient, certificateName, testconsts.NSName)
-		Expect(certificateObject.Labels[testconsts.CappResourceKey]).Should(Equal(createdCapp.Name))
-		Expect(certificateObject.Labels[testconsts.ManagedByLabelKey]).Should(Equal(testconsts.CappKey))
+		certificateObject = utilst.GetCertificate(k8sClient, certificateName, consts.NSName)
+		Expect(certificateObject.Labels[consts.CappResourceKey]).Should(Equal(createdCapp.Name))
+		Expect(certificateObject.Labels[consts.ManagedByLabelKey]).Should(Equal(consts.CappKey))
 
 		By("Verifying no Certificate creation failures")
 		Consistently(func() bool {
@@ -44,11 +44,11 @@ var _ = Describe("Validate Certificate functionality", func() {
 				}
 			}
 			return false
-		}, testconsts.DefaultConsistently, testconsts.Interval).Should(BeFalse(), "Should not have Certificate creation failure events")
+		}, consts.DefaultConsistently, consts.Interval).Should(BeFalse(), "Should not have Certificate creation failure events")
 
 		By("Updating the Capp Route hostname and checking the status")
 		var toBeUpdatedCapp *cappv1alpha1.Capp
-		updatedRouteHostname := utilst.GenerateResourceName(utilst.GenerateRouteHostname(), testconsts.ZoneValue)
+		updatedRouteHostname := utilst.GenerateResourceName(utilst.GenerateRouteHostname(), consts.ZoneValue)
 
 		err := retry.RetryOnConflict(utilst.NewRetryOnConflictBackoff(), func() error {
 			toBeUpdatedCapp = utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
@@ -64,24 +64,24 @@ var _ = Describe("Validate Certificate functionality", func() {
 				return ""
 			}
 			return capp.Status.RouteStatus.DomainMappingObjectStatus.URL.Host
-		}, testconsts.Timeout, testconsts.Interval).Should(Equal(updatedRouteHostname), "Should update Route Status of Capp")
+		}, consts.Timeout, consts.Interval).Should(Equal(updatedRouteHostname), "Should update Route Status of Capp")
 
 		By("checking if the Certificate object was updated after changing the Capp Route Hostname")
 		updatedCertificateObject := mocks.CreateCertificateObject(updatedRouteHostname)
 		Eventually(func() bool {
 			return utilst.DoesResourceExist(k8sClient, updatedCertificateObject)
-		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "Should find a resource.")
+		}, consts.Timeout, consts.Interval).Should(BeTrue(), "Should find a resource.")
 
 		Eventually(func() []string {
 			updatedCertificateObject = utilst.GetCertificate(k8sClient, updatedRouteHostname, toBeUpdatedCapp.Namespace)
 			return updatedCertificateObject.Spec.DNSNames
-		}, testconsts.Timeout, testconsts.Interval).Should(Equal([]string{updatedRouteHostname}))
+		}, consts.Timeout, consts.Interval).Should(Equal([]string{updatedRouteHostname}))
 
 		By("Deleting the Capp instance and checking if the Certificate was deleted successfully")
 		utilst.DeleteCapp(k8sClient, createdCapp)
 		Eventually(func() bool {
 			return utilst.DoesResourceExist(k8sClient, updatedCertificateObject)
-		}, testconsts.Timeout, testconsts.Interval).ShouldNot(BeTrue(), "Should not find a resource.")
+		}, consts.Timeout, consts.Interval).ShouldNot(BeTrue(), "Should not find a resource.")
 	})
 
 	It("Should not create Certificate when creating a non-HTTPS Capp instance", func() {
@@ -89,11 +89,11 @@ var _ = Describe("Validate Certificate functionality", func() {
 		_, routeHostname := utilst.CreateCappWithHTTPHostname(k8sClient)
 
 		By("Checking if the Certificate was not created")
-		certificateName := utilst.GenerateResourceName(routeHostname, testconsts.ZoneValue)
+		certificateName := utilst.GenerateResourceName(routeHostname, consts.ZoneValue)
 		certificateObject := mocks.CreateCertificateObject(certificateName)
 		Consistently(func() bool {
 			return utilst.DoesResourceExist(k8sClient, certificateObject)
-		}, testconsts.DefaultConsistently, testconsts.Interval).Should(BeFalse(), "Should not find a resource.")
+		}, consts.DefaultConsistently, consts.Interval).Should(BeFalse(), "Should not find a resource.")
 	})
 
 	It("Should cleanup Certificate when no longer required (tls)", func() {
@@ -101,11 +101,11 @@ var _ = Describe("Validate Certificate functionality", func() {
 		createdCapp, routeHostname := utilst.CreateHTTPSCapp(k8sClient)
 
 		By("Checking if the Certificate was created successfully")
-		certificateName := utilst.GenerateResourceName(routeHostname, testconsts.ZoneValue)
+		certificateName := utilst.GenerateResourceName(routeHostname, consts.ZoneValue)
 		certificateObject := mocks.CreateCertificateObject(certificateName)
 		Eventually(func() bool {
 			return utilst.DoesResourceExist(k8sClient, certificateObject)
-		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "Should find a resource.")
+		}, consts.Timeout, consts.Interval).Should(BeTrue(), "Should find a resource.")
 
 		By("Removing the Certificate requirement from Capp Spec and checking cleanup", func() {
 			err := retry.RetryOnConflict(utilst.NewRetryOnConflictBackoff(), func() error {
@@ -118,7 +118,7 @@ var _ = Describe("Validate Certificate functionality", func() {
 
 			Eventually(func() bool {
 				return utilst.DoesResourceExist(k8sClient, certificateObject)
-			}, testconsts.Timeout, testconsts.Interval).Should(BeFalse(), "Should not find a resource.")
+			}, consts.Timeout, consts.Interval).Should(BeFalse(), "Should not find a resource.")
 		})
 	})
 
@@ -127,11 +127,11 @@ var _ = Describe("Validate Certificate functionality", func() {
 		createdCapp, routeHostname := utilst.CreateHTTPSCapp(k8sClient)
 
 		By("Checking if the Certificate was created successfully")
-		certificateName := utilst.GenerateResourceName(routeHostname, testconsts.ZoneValue)
+		certificateName := utilst.GenerateResourceName(routeHostname, consts.ZoneValue)
 		certificateObject := mocks.CreateCertificateObject(certificateName)
 		Eventually(func() bool {
 			return utilst.DoesResourceExist(k8sClient, certificateObject)
-		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "Should find a resource.")
+		}, consts.Timeout, consts.Interval).Should(BeTrue(), "Should find a resource.")
 
 		By("Removing the Certificate requirement from Capp Spec and checking cleanup", func() {
 			err := retry.RetryOnConflict(utilst.NewRetryOnConflictBackoff(), func() error {
@@ -144,7 +144,7 @@ var _ = Describe("Validate Certificate functionality", func() {
 
 			Eventually(func() bool {
 				return utilst.DoesResourceExist(k8sClient, certificateObject)
-			}, testconsts.Timeout, testconsts.Interval).Should(BeFalse(), "Should not find a resource.")
+			}, consts.Timeout, consts.Interval).Should(BeFalse(), "Should not find a resource.")
 		})
 	})
 

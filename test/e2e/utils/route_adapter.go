@@ -8,7 +8,7 @@ import (
 	dnsrecordv1alpha1 "github.com/dana-team/provider-dns-v2/apis/namespaced/record/v1alpha1"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
-	mock "github.com/dana-team/container-app-operator/test/e2e_tests/mocks"
+	mock "github.com/dana-team/container-app-operator/test/e2e/mocks"
 	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )

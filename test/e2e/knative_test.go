@@ -1,4 +1,4 @@
-package e2e_tests
+package e2e
 
 import (
 	"fmt"
@@ -6,10 +6,10 @@ import (
 	"k8s.io/client-go/util/retry"
 	"knative.dev/serving/pkg/apis/autoscaling"
 
-	"github.com/dana-team/container-app-operator/test/e2e_tests/testconsts"
+	"github.com/dana-team/container-app-operator/test/e2e/consts"
 
-	"github.com/dana-team/container-app-operator/test/e2e_tests/mocks"
-	utilst "github.com/dana-team/container-app-operator/test/e2e_tests/utils"
+	"github.com/dana-team/container-app-operator/test/e2e/mocks"
+	utilst "github.com/dana-team/container-app-operator/test/e2e/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -19,7 +19,7 @@ import (
 func verifyLatestReadyRevision(name, namespace, latestReadyRevisionBeforeUpdate string) {
 	Eventually(func() string {
 		return utilst.GetCapp(k8sClient, name, namespace).Status.KnativeObjectStatus.ConfigurationStatusFields.LatestReadyRevisionName
-	}, testconsts.Timeout, testconsts.Interval).ShouldNot(Equal(latestReadyRevisionBeforeUpdate))
+	}, consts.Timeout, consts.Interval).ShouldNot(Equal(latestReadyRevisionBeforeUpdate))
 
 	actualNewRevision := utilst.GetCapp(k8sClient, name, namespace).Status.KnativeObjectStatus.ConfigurationStatusFields.LatestReadyRevisionName
 	checkRevisionReadiness(actualNewRevision)
@@ -31,11 +31,11 @@ func checkRevisionReadiness(revisionName string) {
 	revisionObject := mocks.CreateRevisionObject(revisionName)
 	Eventually(func() bool {
 		return utilst.DoesResourceExist(k8sClient, revisionObject)
-	}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "Should find a resource.")
+	}, consts.Timeout, consts.Interval).Should(BeTrue(), "Should find a resource.")
 	By("Ensuring that the new revision is ready")
 	Eventually(func() bool {
 		return utilst.GetRevision(k8sClient, revisionObject.Name, revisionObject.Namespace).IsReady()
-	}, testconsts.Timeout, testconsts.Interval).Should(BeTrue())
+	}, consts.Timeout, consts.Interval).Should(BeTrue())
 }
 
 // testMetricAnnotation tests capp instance creation with a specified metric annotation.
@@ -48,13 +48,13 @@ func testMetricAnnotation(metricType string) {
 	By(fmt.Sprintf("Checking if the ksvc was created with %s metric annotation successfully", metricType))
 	Eventually(func() string {
 		ksvc := utilst.GetKSVC(k8sClient, createdCapp.Name, createdCapp.Namespace)
-		return ksvc.Spec.Template.Annotations[testconsts.KnativeMetricAnnotation]
-	}, testconsts.Timeout, testconsts.Interval).Should(Equal(metricType))
+		return ksvc.Spec.Template.Annotations[consts.KnativeMetricAnnotation]
+	}, consts.Timeout, consts.Interval).Should(Equal(metricType))
 }
 
 var _ = Describe("Validate knative functionality", func() {
 	It("Should create a ksvc with cpu metric annotation when creating a capp with cpu scale metric", func() {
-		testMetricAnnotation(testconsts.CPUScaleMetric)
+		testMetricAnnotation(consts.CPUScaleMetric)
 	})
 
 	It("Should create a ksvc with memory metric annotation when creating a capp with memory scale metric", func() {
@@ -68,7 +68,7 @@ var _ = Describe("Validate knative functionality", func() {
 	It("Should create and delete a ksvc when creating and deleting a capp instance", func() {
 		By("Creating a capp instance")
 		testCapp := mocks.CreateBaseCapp()
-		testCapp.Spec.ScaleMetric = testconsts.CPUScaleMetric
+		testCapp.Spec.ScaleMetric = consts.CPUScaleMetric
 		createdCapp := utilst.CreateCapp(k8sClient, testCapp)
 		assertionCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
 
@@ -76,36 +76,36 @@ var _ = Describe("Validate knative functionality", func() {
 		ksvcObject := mocks.CreateKnativeServiceObject(assertionCapp.Name)
 		Eventually(func() bool {
 			return utilst.DoesResourceExist(k8sClient, ksvcObject)
-		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "Should find a resource.")
-		checkRevisionReadiness(assertionCapp.Name + testconsts.FirstRevisionSuffix)
+		}, consts.Timeout, consts.Interval).Should(BeTrue(), "Should find a resource.")
+		checkRevisionReadiness(assertionCapp.Name + consts.FirstRevisionSuffix)
 
 		By("Checking the ksvc has the needed labels")
-		ksvcObject = utilst.GetKSVC(k8sClient, assertionCapp.Name, testconsts.NSName)
-		Expect(ksvcObject.Labels[testconsts.CappResourceKey]).Should(Equal(assertionCapp.Name))
-		Expect(ksvcObject.Labels[testconsts.ManagedByLabelKey]).Should(Equal(testconsts.CappKey))
+		ksvcObject = utilst.GetKSVC(k8sClient, assertionCapp.Name, consts.NSName)
+		Expect(ksvcObject.Labels[consts.CappResourceKey]).Should(Equal(assertionCapp.Name))
+		Expect(ksvcObject.Labels[consts.ManagedByLabelKey]).Should(Equal(consts.CappKey))
 
 		By("Deleting the capp instance")
 		utilst.DeleteCapp(k8sClient, assertionCapp)
 		Eventually(func() bool {
 			return utilst.DoesResourceExist(k8sClient, assertionCapp)
-		}, testconsts.Timeout, testconsts.Interval).ShouldNot(BeTrue(), "Should not find a resource.")
+		}, consts.Timeout, consts.Interval).ShouldNot(BeTrue(), "Should not find a resource.")
 
 		By("Checking if the ksvc exists")
 		Eventually(func() bool {
 			return utilst.DoesResourceExist(k8sClient, ksvcObject)
-		}, testconsts.Timeout, testconsts.Interval).ShouldNot(BeTrue(), "Should not find a resource.")
+		}, consts.Timeout, consts.Interval).ShouldNot(BeTrue(), "Should not find a resource.")
 
 		By("Checking if the revision exists")
-		revisionObject := mocks.CreateRevisionObject(assertionCapp.Name + testconsts.FirstRevisionSuffix)
+		revisionObject := mocks.CreateRevisionObject(assertionCapp.Name + consts.FirstRevisionSuffix)
 		Eventually(func() bool {
 			return utilst.DoesResourceExist(k8sClient, revisionObject)
-		}, testconsts.Timeout, testconsts.Interval).ShouldNot(BeTrue(), "Should not find a resource.")
+		}, consts.Timeout, consts.Interval).ShouldNot(BeTrue(), "Should not find a resource.")
 	})
 
 	It("Should update ksvc metric annotation and create a new revision when updating the capp scale metric", func() {
 		By("Creating a capp instance")
 		testCapp := mocks.CreateBaseCapp()
-		testCapp.Spec.ScaleMetric = testconsts.CPUScaleMetric
+		testCapp.Spec.ScaleMetric = consts.CPUScaleMetric
 		createdCapp := utilst.CreateCapp(k8sClient, testCapp)
 
 		By("Updating the Capp scale metric")
@@ -124,8 +124,8 @@ var _ = Describe("Validate knative functionality", func() {
 		By("Checking if the ksvc was updated successfully")
 		Eventually(func() string {
 			ksvc := utilst.GetKSVC(k8sClient, createdCapp.Name, createdCapp.Namespace)
-			return ksvc.Spec.Template.Annotations[testconsts.KnativeMetricAnnotation]
-		}, testconsts.Timeout, testconsts.Interval).Should(Equal("memory"))
+			return ksvc.Spec.Template.Annotations[consts.KnativeMetricAnnotation]
+		}, consts.Timeout, consts.Interval).Should(Equal("memory"))
 	})
 
 	It("Should update ksvc container name and create a new revision when updating a capp container name", func() {
@@ -139,7 +139,7 @@ var _ = Describe("Validate knative functionality", func() {
 			assertionCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
 			latestReadyRevisionBeforeUpdate = assertionCapp.Status.KnativeObjectStatus.LatestReadyRevisionName
 
-			assertionCapp.Spec.ConfigurationSpec.Template.Spec.Containers[0].Name = testconsts.TestContainerName
+			assertionCapp.Spec.ConfigurationSpec.Template.Spec.Containers[0].Name = consts.TestContainerName
 			return utilst.UpdateResource(k8sClient, assertionCapp)
 		})
 		Expect(err).ToNot(HaveOccurred())
@@ -150,7 +150,7 @@ var _ = Describe("Validate knative functionality", func() {
 		Eventually(func() string {
 			ksvc := utilst.GetKSVC(k8sClient, createdCapp.Name, createdCapp.Namespace)
 			return ksvc.Spec.ConfigurationSpec.Template.Spec.Containers[0].Name
-		}, testconsts.Timeout, testconsts.Interval).Should(Equal(testconsts.TestContainerName))
+		}, consts.Timeout, consts.Interval).Should(Equal(consts.TestContainerName))
 	})
 
 	It("Should update ksvc container image and create a new revision when updating a capp container image", func() {
@@ -164,7 +164,7 @@ var _ = Describe("Validate knative functionality", func() {
 			assertionCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
 			latestReadyRevisionBeforeUpdate = assertionCapp.Status.KnativeObjectStatus.LatestReadyRevisionName
 
-			assertionCapp.Spec.ConfigurationSpec.Template.Spec.Containers[0].Image = testconsts.ImageExample
+			assertionCapp.Spec.ConfigurationSpec.Template.Spec.Containers[0].Image = consts.ImageExample
 			return utilst.UpdateResource(k8sClient, assertionCapp)
 		})
 		Expect(err).ToNot(HaveOccurred())
@@ -175,7 +175,7 @@ var _ = Describe("Validate knative functionality", func() {
 		Eventually(func() string {
 			ksvc := utilst.GetKSVC(k8sClient, createdCapp.Name, createdCapp.Namespace)
 			return ksvc.Spec.ConfigurationSpec.Template.Spec.Containers[0].Image
-		}, testconsts.Timeout, testconsts.Interval).Should(Equal(testconsts.ImageExample))
+		}, consts.Timeout, consts.Interval).Should(Equal(consts.ImageExample))
 	})
 
 	It("Should update ksvc when updating a propagating Capp metadata annotation", func() {
@@ -187,7 +187,7 @@ var _ = Describe("Validate knative functionality", func() {
 
 		By("Updating capp metadata annotation that is copied to the Knative Service")
 		cappAnnotations := map[string]string{}
-		cappAnnotations[propagationAnnKey] = testconsts.ExampleAppName
+		cappAnnotations[propagationAnnKey] = consts.ExampleAppName
 
 		var latestReadyRevisionBeforeUpdate string
 		err := retry.RetryOnConflict(utilst.NewRetryOnConflictBackoff(), func() error {
@@ -205,7 +205,7 @@ var _ = Describe("Validate knative functionality", func() {
 		Eventually(func() string {
 			ksvc := utilst.GetKSVC(k8sClient, createdCapp.Name, createdCapp.Namespace)
 			return ksvc.Spec.Template.Annotations[propagationAnnKey]
-		}, testconsts.Timeout, testconsts.Interval).Should(Equal(testconsts.ExampleAppName))
+		}, consts.Timeout, consts.Interval).Should(Equal(consts.ExampleAppName))
 	})
 
 	It("Should update ksvc environment variable and create a new revision when updating a capp container environment variable", func() {
@@ -219,7 +219,7 @@ var _ = Describe("Validate knative functionality", func() {
 			assertionCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
 			latestReadyRevisionBeforeUpdate = assertionCapp.Status.KnativeObjectStatus.LatestReadyRevisionName
 
-			assertionCapp.Spec.ConfigurationSpec.Template.Spec.Containers[0].Env[0].Value = testconsts.ExampleAppName
+			assertionCapp.Spec.ConfigurationSpec.Template.Spec.Containers[0].Env[0].Value = consts.ExampleAppName
 			return utilst.UpdateResource(k8sClient, assertionCapp)
 		})
 		Expect(err).ToNot(HaveOccurred())
@@ -230,7 +230,7 @@ var _ = Describe("Validate knative functionality", func() {
 		Eventually(func() string {
 			ksvc := utilst.GetKSVC(k8sClient, createdCapp.Name, createdCapp.Namespace)
 			return ksvc.Spec.ConfigurationSpec.Template.Spec.Containers[0].Env[0].Value
-		}, testconsts.Timeout, testconsts.Interval).Should(Equal(testconsts.ExampleAppName))
+		}, consts.Timeout, consts.Interval).Should(Equal(consts.ExampleAppName))
 	})
 
 	It("Should create a new revision in ready state when updating capp's secret environment variable", func() {
@@ -245,12 +245,12 @@ var _ = Describe("Validate knative functionality", func() {
 		createdCapp := utilst.CreateCapp(k8sClient, testCapp)
 		assertionCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
 
-		checkRevisionReadiness(assertionCapp.Name + testconsts.FirstRevisionSuffix)
+		checkRevisionReadiness(assertionCapp.Name + consts.FirstRevisionSuffix)
 
 		By("Updating the secret")
 		err := retry.RetryOnConflict(utilst.NewRetryOnConflictBackoff(), func() error {
 			secretObject := utilst.GetSecret(k8sClient, secretObject.Name, secretObject.Namespace)
-			secretObject.Data = map[string][]byte{testconsts.NewSecretKey: []byte(testconsts.SecretValue)}
+			secretObject.Data = map[string][]byte{consts.NewSecretKey: []byte(consts.SecretValue)}
 
 			return utilst.UpdateResource(k8sClient, secretObject)
 		})
@@ -262,7 +262,7 @@ var _ = Describe("Validate knative functionality", func() {
 			assertionCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
 			latestReadyRevisionBeforeUpdate = assertionCapp.Status.KnativeObjectStatus.LatestReadyRevisionName
 
-			assertionCapp.Spec.ConfigurationSpec.Template.Spec.Containers[0].Env[0].ValueFrom.SecretKeyRef.Key = testconsts.NewSecretKey
+			assertionCapp.Spec.ConfigurationSpec.Template.Spec.Containers[0].Env[0].ValueFrom.SecretKeyRef.Key = consts.NewSecretKey
 			return utilst.UpdateResource(k8sClient, assertionCapp)
 		})
 		Expect(err).ToNot(HaveOccurred())
@@ -284,15 +284,15 @@ var _ = Describe("Validate knative functionality", func() {
 		Eventually(func() string {
 			ksvc := utilst.GetKSVC(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
 			return ksvc.Spec.ConfigurationSpec.Template.Annotations[autoscaling.TargetAnnotationKey]
-		}, testconsts.Timeout, testconsts.Interval).Should(Equal("666"))
+		}, consts.Timeout, consts.Interval).Should(Equal("666"))
 	})
 
 	It("Should propagate Capp labels to the underlying KSVC", func() {
 		By("Creating a capp instance")
 		testCapp := mocks.CreateBaseCapp()
 		labels := map[string]string{
-			testconsts.TestLabelKey:    "test",
-			testconsts.CappResourceKey: "test",
+			consts.TestLabelKey:    "test",
+			consts.CappResourceKey: "test",
 		}
 		testCapp.Labels = labels
 		createdCapp := utilst.CreateCapp(k8sClient, testCapp)
@@ -301,19 +301,19 @@ var _ = Describe("Validate knative functionality", func() {
 		By("Checking if user-defined labels were propagated to the ksvc")
 		Eventually(func() string {
 			ksvc := utilst.GetKSVC(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
-			return ksvc.Spec.ConfigurationSpec.Template.Labels[testconsts.TestLabelKey]
-		}, testconsts.Timeout, testconsts.Interval).Should(Equal("test"))
+			return ksvc.Spec.ConfigurationSpec.Template.Labels[consts.TestLabelKey]
+		}, consts.Timeout, consts.Interval).Should(Equal("test"))
 
 		By("Checking if labels set by the controller cannot be overridden by users")
 		Consistently(func() string {
 			ksvc := utilst.GetKSVC(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
-			return ksvc.Spec.ConfigurationSpec.Template.Labels[testconsts.CappResourceKey]
-		}, testconsts.DefaultConsistently, testconsts.Interval).ShouldNot(Equal("test"))
+			return ksvc.Spec.ConfigurationSpec.Template.Labels[consts.CappResourceKey]
+		}, consts.DefaultConsistently, consts.Interval).ShouldNot(Equal("test"))
 
 		Eventually(func() string {
 			ksvc := utilst.GetKSVC(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
-			return ksvc.Spec.ConfigurationSpec.Template.Labels[testconsts.CappResourceKey]
-		}, testconsts.Timeout, testconsts.Interval).Should(Equal(assertionCapp.Name))
+			return ksvc.Spec.ConfigurationSpec.Template.Labels[consts.CappResourceKey]
+		}, consts.Timeout, consts.Interval).Should(Equal(assertionCapp.Name))
 	})
 
 	It("Should check the default ksvc annotation is equal to the cappConfig's concurrency value", func() {
@@ -322,13 +322,13 @@ var _ = Describe("Validate knative functionality", func() {
 		createdCapp := utilst.CreateCapp(k8sClient, testCapp)
 		assertionCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
 
-		cappConfig := utilst.GetCappConfig(k8sClient, testconsts.CappConfigName, testconsts.ControllerNS)
+		cappConfig := utilst.GetCappConfig(k8sClient, consts.CappConfigName, consts.ControllerNS)
 
 		By("Checking if the ksvc's annotation is equal to the cappConfig's autoScale")
 		Eventually(func() bool {
 			ksvc := utilst.GetKSVC(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
 			return ksvc.Spec.ConfigurationSpec.Template.ObjectMeta.Annotations[autoscaling.TargetAnnotationKey] == fmt.Sprintf("%d", cappConfig.Spec.AutoscaleConfig.Concurrency) &&
 				ksvc.Spec.ConfigurationSpec.Template.ObjectMeta.Annotations[autoscaling.ActivationScaleKey] == fmt.Sprintf("%d", cappConfig.Spec.AutoscaleConfig.ActivationScale)
-		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue())
+		}, consts.Timeout, consts.Interval).Should(BeTrue())
 	})
 })

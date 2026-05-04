@@ -6,7 +6,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/dana-team/container-app-operator/test/e2e_tests/testconsts"
+	"github.com/dana-team/container-app-operator/test/e2e/consts"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 
@@ -25,7 +25,7 @@ var seededRand = rand.New(rand.NewSource(time.Now().UnixNano()))
 func generateRandomString(length int) string {
 	b := make([]byte, length)
 	for i := range b {
-		b[i] = testconsts.Charset[seededRand.Intn(len(testconsts.Charset))]
+		b[i] = consts.Charset[seededRand.Intn(len(consts.Charset))]
 	}
 	return string(b)
 }
@@ -56,7 +56,7 @@ func GetClusterResource(k8sClient client.Client, obj client.Object, name string)
 // generateName generates a new name by combining the given baseName
 // with a randomly generated string of a specified length.
 func generateName(baseName string) string {
-	randString := generateRandomString(testconsts.RandStrLength)
+	randString := generateRandomString(consts.RandStrLength)
 	return baseName + "-" + randString
 }
 
@@ -77,13 +77,13 @@ func GetCappConfig(k8sClient client.Client, name string, namespace string) *capp
 // GenerateRouteHostname generates a new route hostname by calling
 // generateName with the predefined RouteHostname as the baseName.
 func GenerateRouteHostname() string {
-	return generateName(testconsts.RouteHostname)
+	return generateName(consts.RouteHostname)
 }
 
 // GenerateSecretName generates a new secret name by calling
 // generateName with the predefined RouteTlsSecret as the baseName.
 func GenerateSecretName() string {
-	return generateName(testconsts.RouteTLSSecret)
+	return generateName(consts.RouteTLSSecret)
 }
 
 // GenerateCertSecretName generates a capp cert secret name.
@@ -104,7 +104,7 @@ func CreateSecret(k8sClient client.Client, secret *corev1.Secret) {
 // NewRetryOnConflictBackoff returns a preconfigured backoff for RetryOnConflict.
 func NewRetryOnConflictBackoff() wait.Backoff {
 	b := retry.DefaultRetry
-	b.Steps = testconsts.RetryOnConflictSteps
+	b.Steps = consts.RetryOnConflictSteps
 	return b
 }
 

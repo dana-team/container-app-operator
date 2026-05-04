@@ -2,7 +2,7 @@ package mocks
 
 import (
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
-	"github.com/dana-team/container-app-operator/test/e2e_tests/testconsts"
+	"github.com/dana-team/container-app-operator/test/e2e/consts"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -18,11 +18,11 @@ func CreateBaseCapp() *cappv1alpha1.Capp {
 			APIVersion: "rcs.dana.io/v1alpha1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      testconsts.CappName,
-			Namespace: testconsts.NSName,
+			Name:      consts.CappName,
+			Namespace: consts.NSName,
 		},
 		Spec: cappv1alpha1.CappSpec{
-			ScaleMetric: testconsts.ConcurrencyScaleMetric,
+			ScaleMetric: consts.ConcurrencyScaleMetric,
 			ConfigurationSpec: knativev1.ConfigurationSpec{
 				Template: knativev1.RevisionTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
@@ -35,11 +35,11 @@ func CreateBaseCapp() *cappv1alpha1.Capp {
 									Env: []corev1.EnvVar{
 										{
 											Name:  "APP_NAME",
-											Value: testconsts.CappName,
+											Value: consts.CappName,
 										},
 									},
-									Image:     testconsts.CappBaseImage,
-									Name:      testconsts.CappName,
+									Image:     consts.CappBaseImage,
+									Name:      consts.CappName,
 									Resources: corev1.ResourceRequirements{},
 								},
 							},
@@ -59,10 +59,10 @@ func CreateSecretObject(name string) *corev1.Secret {
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: testconsts.NSName,
+			Namespace: consts.NSName,
 		},
 		Type: "Opaque",
-		Data: map[string][]byte{testconsts.SecretKey: []byte(testconsts.SecretValue)},
+		Data: map[string][]byte{consts.SecretKey: []byte(consts.SecretValue)},
 	}
 }
 
@@ -71,7 +71,7 @@ func CreateRole(name string, rules []rbacv1.PolicyRule) *rbacv1.Role {
 	return &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: testconsts.NSName,
+			Namespace: consts.NSName,
 		},
 		Rules: rules,
 	}
@@ -82,7 +82,7 @@ func CreateRoleBinding(name string, roleRef rbacv1.RoleRef, subjects []rbacv1.Su
 	return &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: testconsts.NSName,
+			Namespace: consts.NSName,
 		},
 		RoleRef:  roleRef,
 		Subjects: subjects,
@@ -92,7 +92,7 @@ func CreateRoleBinding(name string, roleRef rbacv1.RoleRef, subjects []rbacv1.Su
 // CreateServiceAccount creates a service account with the specified name in the specified namespace.
 func CreateServiceAccount(name, namespace string) *corev1.ServiceAccount {
 	if namespace == "" {
-		namespace = testconsts.NSName
+		namespace = consts.NSName
 	}
 
 	return &corev1.ServiceAccount{
@@ -111,8 +111,8 @@ func CreateBaseCappConfig() *cappv1alpha1.CappConfig {
 			APIVersion: "rcs.dana.io/v1alpha1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      testconsts.CappConfigName,
-			Namespace: testconsts.NSName,
+			Name:      consts.CappConfigName,
+			Namespace: consts.NSName,
 		},
 		Spec: cappv1alpha1.CappConfigSpec{
 			DNSConfig: cappv1alpha1.DNSConfig{

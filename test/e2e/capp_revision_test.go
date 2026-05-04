@@ -1,4 +1,4 @@
-package e2e_tests
+package e2e
 
 import (
 	"context"
@@ -8,9 +8,9 @@ import (
 	"k8s.io/client-go/util/retry"
 	"knative.dev/pkg/kmeta"
 
-	"github.com/dana-team/container-app-operator/test/e2e_tests/mocks"
-	"github.com/dana-team/container-app-operator/test/e2e_tests/testconsts"
-	utilst "github.com/dana-team/container-app-operator/test/e2e_tests/utils"
+	"github.com/dana-team/container-app-operator/test/e2e/consts"
+	"github.com/dana-team/container-app-operator/test/e2e/mocks"
+	utilst "github.com/dana-team/container-app-operator/test/e2e/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -29,7 +29,7 @@ var _ = Describe("Validate CappRevision creation", func() {
 		Eventually(func() int {
 			cappRevisons, _ := utilst.GetCappRevisions(context.Background(), k8sClient, *desiredCapp)
 			return len(cappRevisons)
-		}, testconsts.Timeout, testconsts.Interval).ShouldNot(BeZero(), "Should create CappRevisions")
+		}, consts.Timeout, consts.Interval).ShouldNot(BeZero(), "Should create CappRevisions")
 
 		cappRevisionName := kmeta.ChildName(desiredCapp.Name, fmt.Sprintf("-%05d", 1))
 		utilst.GetCappRevision(k8sClient, cappRevisionName, desiredCapp.Namespace)
@@ -47,7 +47,7 @@ var _ = Describe("Validate CappRevision creation", func() {
 		Eventually(func() bool {
 			cappRevisions, _ := utilst.GetCappRevisions(context.Background(), k8sClient, *desiredCapp)
 			return len(cappRevisions) > 1
-		}, testconsts.Timeout, testconsts.Interval).Should(BeTrue(), "Should create new CappRevision")
+		}, consts.Timeout, consts.Interval).Should(BeTrue(), "Should create new CappRevision")
 
 		cappRevisionName = kmeta.ChildName(desiredCapp.Name, fmt.Sprintf("-%05d", 2))
 		utilst.GetCappRevision(k8sClient, cappRevisionName, desiredCapp.Namespace)
@@ -57,7 +57,7 @@ var _ = Describe("Validate CappRevision creation", func() {
 		Eventually(func() int {
 			cappRevisons, _ := utilst.GetCappRevisions(context.Background(), k8sClient, *desiredCapp)
 			return len(cappRevisons)
-		}, testconsts.Timeout, testconsts.Interval).Should(BeZero(), "Should delete all CappRevisions")
+		}, consts.Timeout, consts.Interval).Should(BeZero(), "Should delete all CappRevisions")
 
 	})
 
@@ -83,7 +83,7 @@ var _ = Describe("Validate CappRevision creation", func() {
 
 			Eventually(func() string {
 				return utilst.GetCapp(k8sClient, desiredCapp.Name, desiredCapp.Namespace).Annotations["test"]
-			}, testconsts.Timeout, testconsts.Interval).Should(Equal(assertValue), "Should be equal to the updated value")
+			}, consts.Timeout, consts.Interval).Should(Equal(assertValue), "Should be equal to the updated value")
 
 			desiredCapp = utilst.GetCapp(k8sClient, desiredCapp.Name, desiredCapp.Namespace)
 		}
@@ -91,7 +91,7 @@ var _ = Describe("Validate CappRevision creation", func() {
 		Eventually(func() int {
 			cappRevisions, _ := utilst.GetCappRevisions(context.Background(), k8sClient, *desiredCapp)
 			return len(cappRevisions)
-		}, testconsts.Timeout, testconsts.Interval).Should(BeNumerically("<=", revisionsToKeep),
+		}, consts.Timeout, consts.Interval).Should(BeNumerically("<=", revisionsToKeep),
 			fmt.Sprintf("Should limit to at most %s CappRevision", strconv.Itoa(revisionsToKeep)))
 	})
 })

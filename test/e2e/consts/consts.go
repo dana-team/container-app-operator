@@ -1,4 +1,4 @@
-package testconsts
+package consts
 
 import (
 	"time"

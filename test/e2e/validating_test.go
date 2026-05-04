@@ -1,12 +1,12 @@
-package e2e_tests
+package e2e
 
 import (
 	"context"
 	"fmt"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
-	mock "github.com/dana-team/container-app-operator/test/e2e_tests/mocks"
-	utilst "github.com/dana-team/container-app-operator/test/e2e_tests/utils"
+	mock "github.com/dana-team/container-app-operator/test/e2e/mocks"
+	utilst "github.com/dana-team/container-app-operator/test/e2e/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/types"
