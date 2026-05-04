@@ -53,7 +53,7 @@ func (c *CappValidator) handle(ctx context.Context, capp cappv1alpha1.Capp, oldC
 		return admission.Denied("Failed to fetch CappConfig")
 	}
 
-	var allowedHostnamePatterns []string
+	var allowedHostnamePatterns []cappv1alpha1.HostnamePattern
 	if config.Spec.AllowedHostnamePatterns != nil {
 		allowedHostnamePatterns = config.Spec.AllowedHostnamePatterns
 	}

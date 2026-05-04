@@ -20,8 +20,8 @@ import (
 )
 
 // ValidateDomainName checks if the hostname is valid domain name and not part of the cluster's domain.
-// it returns aggregated error if any of the validations falied.
-func ValidateDomainName(domainName string, allowedPatterns []string) (errs *apis.FieldError) {
+// It returns aggregated error if any of the validations failed.
+func ValidateDomainName(domainName string, allowedPatterns []cappv1alpha1.HostnamePattern) (errs *apis.FieldError) {
 	if domainName == "" {
 		return nil
 	}
@@ -31,22 +31,29 @@ func ValidateDomainName(domainName string, allowedPatterns []string) (errs *apis
 			"invalid name %q: %s", domainName, err.ToAggregate()), "name"))
 	}
 	matched := false
-	for _, pattern := range allowedPatterns {
-		if pattern != "" {
-			re, err := regexp.Compile(fmt.Sprintf("%v", pattern))
-			if err != nil {
-				errs = errs.Also(apis.ErrGeneric(fmt.Sprintf("invalid pattern %q: %s", pattern, err), "allowedHostnamePatterns"))
-				continue
-			}
-			if re.MatchString(domainName) {
-				matched = true
-				break
-			}
+	descriptions := make([]string, 0, len(allowedPatterns))
+	for i, hp := range allowedPatterns {
+		re, err := regexp.Compile(hp.Match)
+		if err != nil {
+			errs = errs.Also(apis.ErrGeneric(fmt.Sprintf("invalid pattern %q: %s", hp.Match, err), fmt.Sprintf("allowedHostnamePatterns[%d].pattern", i)))
+			continue
+		}
+		if hp.Explanation != "" {
+			descriptions = append(descriptions, hp.Explanation)
+		} else {
+			descriptions = append(descriptions, hp.Match)
+		}
+		if !matched && re.MatchString(domainName) {
+			matched = true
+			break
 		}
 	}
 	if !matched {
-		errs = errs.Also(apis.ErrGeneric(
-			fmt.Sprintf("invalid name %q: must match one of the allowed patterns", domainName), "name"))
+		msg := fmt.Sprintf("invalid name %q: must match one of the allowed patterns", domainName)
+		if len(descriptions) > 0 {
+			msg = fmt.Sprintf("%s (%s)", msg, strings.Join(descriptions, ", "))
+		}
+		errs = errs.Also(apis.ErrGeneric(msg, "name").ViaField("routeSpec").ViaField("hostname"))
 	}
 
 	clusterLocalDomain := network.GetClusterDomainName()

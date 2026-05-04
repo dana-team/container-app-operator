@@ -5,6 +5,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// HostnamePattern defines a regex pattern for validating Capp hostnames.
+type HostnamePattern struct {
+	// Match is a regex used to match Capp hostnames.
+	// +kubebuilder:validation:MinLength=1
+	Match string `json:"match"`
+	// Explanation is a human-readable description shown in webhook error messages.
+	// +kubebuilder:validation:MaxLength=100
+	// +optional
+	Explanation string `json:"explanation,omitempty"`
+}
+
 // CappConfigSpec defines the desired state of CappConfig
 type CappConfigSpec struct {
 	// +kubebuilder:validation:Required
@@ -17,10 +28,11 @@ type CappConfigSpec struct {
 	// If other resources are specified then they override the default values.
 	DefaultResources corev1.ResourceRequirements `json:"defaultResources"`
 
-	// AllowedHostnamePatterns is an optional slice of regex patterns to be used to validate the hostname of the Capp.
+	// AllowedHostnamePatterns is a list of hostname patterns used to validate Capp hostnames.
 	// If the Capp hostname matches a pattern, it is allowed to be created.
+	// Defaults to an empty list (all hostnames denied) if not specified.
 	// +kubebuilder:default:={}
-	AllowedHostnamePatterns []string `json:"allowedHostnamePatterns"`
+	AllowedHostnamePatterns []HostnamePattern `json:"allowedHostnamePatterns"`
 }
 
 type DNSConfig struct {

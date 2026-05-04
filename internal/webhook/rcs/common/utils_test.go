@@ -12,62 +12,80 @@ func TestValidateDomainName(t *testing.T) {
 	tests := []struct {
 		name            string
 		domainName      string
-		allowedPatterns []string
+		allowedPatterns []cappv1alpha1.HostnamePattern
 		wantErr         bool
+		errContains     string
 	}{
 		{
 			name:            "Valid domain matching specific pattern",
 			domainName:      "myapp.example.com",
-			allowedPatterns: []string{`.*\.example\.com`},
+			allowedPatterns: []cappv1alpha1.HostnamePattern{{Match: `.*\.example\.com`}},
 			wantErr:         false,
 		},
 		{
 			name:            "Valid domain matching wild card",
 			domainName:      "myapp.any.com",
-			allowedPatterns: []string{`.*`},
+			allowedPatterns: []cappv1alpha1.HostnamePattern{{Match: `.*`}},
 			wantErr:         false,
 		},
 		{
 			name:            "Invalid domain not matching pattern",
 			domainName:      "myapp.other.com",
-			allowedPatterns: []string{`.*\.example\.com`},
+			allowedPatterns: []cappv1alpha1.HostnamePattern{{Match: `.*\.example\.com`}},
 			wantErr:         true,
+			errContains:     "must match one of the allowed patterns",
 		},
 		{
 			name:            "Empty allowed patterns (deny all)",
 			domainName:      "myapp.example.com",
-			allowedPatterns: []string{},
+			allowedPatterns: []cappv1alpha1.HostnamePattern{},
 			wantErr:         true,
+			errContains:     "must match one of the allowed patterns",
 		},
 		{
 			name:            "Multiple patterns, one match",
 			domainName:      "myapp.org",
-			allowedPatterns: []string{`.*\.com`, `.*\.org`},
+			allowedPatterns: []cappv1alpha1.HostnamePattern{{Match: `.*\.com`}, {Match: `.*\.org`}},
 			wantErr:         false,
 		},
 		{
 			name:            "Multiple patterns, no match",
 			domainName:      "myapp.net",
-			allowedPatterns: []string{`.*\.com`, `.*\.org`},
+			allowedPatterns: []cappv1alpha1.HostnamePattern{{Match: `.*\.com`}, {Match: `.*\.org`}},
 			wantErr:         true,
+			errContains:     "must match one of the allowed patterns",
 		},
 		{
 			name:            "Invalid FQDN syntax",
 			domainName:      "-invalid-start",
-			allowedPatterns: []string{`.*`},
+			allowedPatterns: []cappv1alpha1.HostnamePattern{{Match: `.*`}},
 			wantErr:         true,
 		},
 		{
 			name:            "Invalid hostname with leading dots rejected as FQDN",
 			domainName:      "...aaa.a....",
-			allowedPatterns: []string{`.*`},
+			allowedPatterns: []cappv1alpha1.HostnamePattern{{Match: `.*`}},
 			wantErr:         true,
 		},
 		{
 			name:            "Invalid hostname with underscore rejected as FQDN under wildcard patterns",
 			domainName:      "invalid_domain!",
-			allowedPatterns: []string{`.*`},
+			allowedPatterns: []cappv1alpha1.HostnamePattern{{Match: `.*`}},
 			wantErr:         true,
+		},
+		{
+			name:            "Explanation appears in error message",
+			domainName:      "myapp.other.com",
+			allowedPatterns: []cappv1alpha1.HostnamePattern{{Match: `.*\.example\.com`, Explanation: "subdomains of example.com only"}},
+			wantErr:         true,
+			errContains:     "subdomains of example.com only",
+		},
+		{
+			name:            "Raw pattern shown when explanation absent",
+			domainName:      "myapp.other.com",
+			allowedPatterns: []cappv1alpha1.HostnamePattern{{Match: `.*\.example\.com`}},
+			wantErr:         true,
+			errContains:     `.*\.example\.com`,
 		},
 	}
 
@@ -76,6 +94,9 @@ func TestValidateDomainName(t *testing.T) {
 			errs := ValidateDomainName(tt.domainName, tt.allowedPatterns)
 			if tt.wantErr {
 				assert.NotNil(t, errs)
+				if tt.errContains != "" {
+					assert.Contains(t, errs.Error(), tt.errContains)
+				}
 			} else {
 				assert.Nil(t, errs)
 			}
