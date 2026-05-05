@@ -31,6 +31,10 @@ var (
 func (c *CappMutator) Handle(ctx context.Context, req admission.Request) admission.Response {
 	logger := log.FromContext(ctx).WithValues("mutation webhook", "capp mutation Webhook", "Name", req.Name)
 
+	if req.SubResource == "status" {
+		return admission.Allowed("")
+	}
+
 	capp := v1alpha2.Capp{}
 	if err := c.Decoder.DecodeRaw(req.Object, &capp); err != nil {
 		logger.Error(err, "could not decode capp object")
