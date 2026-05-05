@@ -2,6 +2,7 @@ package status
 
 import (
 	"context"
+	"sort"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -39,6 +40,16 @@ func buildRevisionsStatus(ctx context.Context, capp cappv1alpha1.Capp, r client.
 	if err := r.List(ctx, &knativeRevisions, &listOptions); err != nil {
 		return revisionsInfo, err
 	}
+
+	sort.Slice(knativeRevisions.Items, func(i, j int) bool {
+		rev1, rev2 := knativeRevisions.Items[i], knativeRevisions.Items[j]
+		t1, t2 := &rev1.CreationTimestamp, &rev2.CreationTimestamp
+		if !t1.Equal(t2) {
+			return t1.Before(t2)
+		}
+		return rev1.Name < rev2.Name
+	})
+
 	for _, revision := range knativeRevisions.Items {
 		revisionsInfo = append(revisionsInfo, cappv1alpha1.RevisionInfo{
 			RevisionName:   revision.Name,
