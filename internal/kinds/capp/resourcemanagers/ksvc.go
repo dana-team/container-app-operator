@@ -67,7 +67,7 @@ func (k KnativeServiceManager) prepareResource(capp cappv1alpha1.Capp, ctx conte
 			Annotations: knativeServiceAnnotations,
 		},
 		Spec: knativev1.ServiceSpec{
-			ConfigurationSpec: capp.Spec.ConfigurationSpec,
+			ConfigurationSpec: *capp.Spec.ConfigurationSpec.DeepCopy(),
 		},
 	}
 
