@@ -75,7 +75,10 @@ func SyncStatus(ctx context.Context, capp cappv1alpha1.Capp, log logr.Logger, r 
 	CreateStateStatus(&cappObject.Status.StateStatus, capp.Spec.State)
 	cappObject.Status.ApplicationLinks = *applicationLinks
 
-	if equality.Semantic.DeepEqual(*oldStatus, cappObject.Status) {
+	if equality.Semantic.DeepEqual(
+		stripVolatileStatusFields(*oldStatus),
+		stripVolatileStatusFields(cappObject.Status),
+	) {
 		return nil
 	}
 
@@ -86,4 +89,22 @@ func SyncStatus(ctx context.Context, capp cappv1alpha1.Capp, log logr.Logger, r 
 	}
 
 	return nil
+}
+
+// stripVolatileStatusFields clears condition transition timestamps for status comparison.
+func stripVolatileStatusFields(s cappv1alpha1.CappStatus) cappv1alpha1.CappStatus {
+	out := *s.DeepCopy()
+	for i := range out.Conditions {
+		out.Conditions[i].LastTransitionTime = metav1.Time{}
+	}
+	for i := range out.LoggingStatus.Conditions {
+		out.LoggingStatus.Conditions[i].LastTransitionTime = metav1.Time{}
+	}
+	for i := range out.RouteStatus.CertificateObjectStatus.Conditions {
+		out.RouteStatus.CertificateObjectStatus.Conditions[i].LastTransitionTime = nil
+	}
+	for i := range out.RouteStatus.DNSRecordObjectStatus.CNAMERecordObjectStatus.Conditions {
+		out.RouteStatus.DNSRecordObjectStatus.CNAMERecordObjectStatus.Conditions[i].LastTransitionTime = metav1.Time{}
+	}
+	return out
 }
