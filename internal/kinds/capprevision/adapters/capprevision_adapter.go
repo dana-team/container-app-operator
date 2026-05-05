@@ -3,6 +3,7 @@ package adapters
 import (
 	"context"
 	"fmt"
+	"maps"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/resourceclient"
@@ -56,9 +57,9 @@ func CreateCappRevision(ctx context.Context, k8sClient client.Client, logger log
 		},
 		Spec: cappv1alpha1.CappRevisionSpec{
 			CappTemplate: cappv1alpha1.CappTemplate{
-				Labels:      capp.Labels,
-				Annotations: capp.Annotations,
-				Spec:        capp.Spec,
+				Labels:      maps.Clone(capp.Labels),
+				Annotations: maps.Clone(capp.Annotations),
+				Spec:        *capp.Spec.DeepCopy(),
 			},
 			RevisionNumber: revisionNumber,
 		},
