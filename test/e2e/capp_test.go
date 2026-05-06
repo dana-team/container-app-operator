@@ -16,7 +16,7 @@ var _ = Describe("Validate capp creation", func() {
 		baseCapp := mocks.CreateBaseCapp()
 		By("Creating Capp with no scale metric")
 		desiredCapp := utilst.CreateCapp(k8sClient, baseCapp)
-		Expect(desiredCapp.Spec.ScaleMetric).ShouldNot(BeNil())
+		Expect(desiredCapp.Spec.ScaleSpec.Metric).ShouldNot(BeNil())
 	})
 
 	It("Should succeed all adapter functions", func() {
@@ -30,7 +30,7 @@ var _ = Describe("Validate capp creation", func() {
 		By("Checks if Capp updated successfully")
 		err := retry.RetryOnConflict(utilst.NewRetryOnConflictBackoff(), func() error {
 			assertionCapp := utilst.GetCapp(k8sClient, desiredCapp.Name, desiredCapp.Namespace)
-			assertionCapp.Spec.ScaleMetric = consts.RPSScaleMetric
+			assertionCapp.Spec.ScaleSpec.Metric = consts.RPSScaleMetric
 
 			return utilst.UpdateResource(k8sClient, assertionCapp)
 		})
@@ -38,7 +38,7 @@ var _ = Describe("Validate capp creation", func() {
 
 		Eventually(func() string {
 			assertionCapp = utilst.GetCapp(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
-			return assertionCapp.Spec.ScaleMetric
+			return assertionCapp.Spec.ScaleSpec.Metric
 		}, consts.Timeout, consts.Interval).Should(Equal(consts.RPSScaleMetric), "Should fetch capp.")
 
 		By("Checks if deleted successfully")
@@ -118,7 +118,7 @@ var _ = Describe("Validate capp creation", func() {
 		createdCapp := utilst.CreateCapp(k8sClient, baseCapp)
 		Eventually(func() int {
 			capp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-			return capp.Spec.MinReplicas
+			return capp.Spec.ScaleSpec.MinReplicas
 		}, consts.Timeout, consts.Interval).Should(Equal(0))
 
 		By("Verifying KSVC annotation for default minReplicas")
@@ -135,7 +135,7 @@ var _ = Describe("Validate capp creation", func() {
 		By("Updating Capp with valid minReplicas")
 		err := retry.RetryOnConflict(utilst.NewRetryOnConflictBackoff(), func() error {
 			capp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-			capp.Spec.MinReplicas = 3
+			capp.Spec.ScaleSpec.MinReplicas = 3
 			return utilst.UpdateResource(k8sClient, capp)
 		})
 		Expect(err).ToNot(HaveOccurred())
@@ -143,7 +143,7 @@ var _ = Describe("Validate capp creation", func() {
 		By("Verifying Capp has minReplicas=3")
 		Eventually(func() int {
 			capp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-			return capp.Spec.MinReplicas
+			return capp.Spec.ScaleSpec.MinReplicas
 		}, consts.Timeout, consts.Interval).Should(Equal(3))
 
 		By("Verifying KSVC annotation for minReplicas=3")
@@ -157,7 +157,7 @@ var _ = Describe("Validate capp creation", func() {
 
 		err = retry.RetryOnConflict(utilst.NewRetryOnConflictBackoff(), func() error {
 			capp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-			capp.Spec.MinReplicas = 20
+			capp.Spec.ScaleSpec.MinReplicas = 20
 			return utilst.UpdateResource(k8sClient, capp)
 		})
 		Expect(err).To(HaveOccurred())

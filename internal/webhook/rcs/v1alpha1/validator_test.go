@@ -38,7 +38,9 @@ func TestCappValidator_Handle(t *testing.T) {
 					Namespace: "test-ns",
 				},
 				Spec: cappv1alpha1.CappSpec{
-					ScaleMetric: "cpu",
+					ScaleSpec: cappv1alpha1.ScaleSpec{
+						Metric: "cpu",
+					},
 					RouteSpec: cappv1alpha1.RouteSpec{
 						Hostname: "valid-hostname.com",
 					},

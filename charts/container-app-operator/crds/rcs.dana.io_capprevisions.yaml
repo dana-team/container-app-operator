@@ -8827,12 +8827,6 @@ spec:
                             description: User defines a User for authentication.
                             type: string
                         type: object
-                      minReplicas:
-                        default: 0
-                        description: MinReplicas is the minimum number of replicas
-                          for the Capp.
-                        minimum: 0
-                        type: integer
                       routeSpec:
                         description: RouteSpec defines the route specification for
                           the Capp.
@@ -8901,17 +8895,27 @@ spec:
                                 type: string
                             type: object
                         type: object
-                      scaleMetric:
-                        default: concurrency
-                        description: |-
-                          ScaleMetric defines which metric type is watched by the Autoscaler.
-                          Possible values examples: "concurrency", "rps", "cpu", "memory".
-                        enum:
-                        - cpu
-                        - memory
-                        - rps
-                        - concurrency
-                        type: string
+                      scaleSpec:
+                        description: ScaleSpec holds the Capp scaling configuration.
+                        properties:
+                          metric:
+                            default: concurrency
+                            description: |-
+                              Metric defines which metric type is watched by the Autoscaler.
+                              Possible values examples: "concurrency", "rps", "cpu", "memory".
+                            enum:
+                            - cpu
+                            - memory
+                            - rps
+                            - concurrency
+                            type: string
+                          minReplicas:
+                            default: 0
+                            description: MinReplicas is the minimum number of replicas
+                              for the Capp.
+                            minimum: 0
+                            type: integer
+                        type: object
                       state:
                         default: enabled
                         description: |-
@@ -8962,6 +8966,7 @@ spec:
                         type: object
                     required:
                     - configurationSpec
+                    - scaleSpec
                     type: object
                   labels:
                     additionalProperties:
