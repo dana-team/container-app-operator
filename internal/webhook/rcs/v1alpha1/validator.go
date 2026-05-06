@@ -94,6 +94,10 @@ func (c *CappValidator) handle(ctx context.Context, capp cappv1alpha1.Capp, oldC
 	if scaleDelay > config.Spec.AutoscaleConfig.MaxScaleDelay {
 		return admission.Denied(fmt.Sprintf("invalid scaleDelaySeconds %d: must be less than or equal to global max scale delay %d", scaleDelay, config.Spec.AutoscaleConfig.MaxScaleDelay))
 	}
+
+	if capp.Spec.ScaleSpec.ScaleDelaySeconds > config.Spec.AutoscaleConfig.MaxScaleDelay {
+		return admission.Denied(fmt.Sprintf("invalid scaleDelaySeconds %d: must be less than or equal to global max scale delay %d", capp.Spec.ScaleSpec.ScaleDelaySeconds, config.Spec.AutoscaleConfig.MaxScaleDelay))
+	}
 	return admission.Allowed("")
 }
 

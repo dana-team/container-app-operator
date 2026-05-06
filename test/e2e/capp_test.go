@@ -1,6 +1,8 @@
 package e2e
 
 import (
+	"time"
+
 	"github.com/dana-team/container-app-operator/test/e2e/consts"
 	"github.com/dana-team/container-app-operator/test/e2e/mocks"
 	utilst "github.com/dana-team/container-app-operator/test/e2e/utils"
@@ -162,6 +164,49 @@ var _ = Describe("Validate capp creation", func() {
 		})
 		Expect(err).To(HaveOccurred())
 		Expect(err.Error()).To(ContainSubstring("must be less than or equal to global min scale"))
+
+		By("Cleaning up")
+		utilst.DeleteCapp(k8sClient, createdCapp)
+	})
+	It("Should validate scaleDelaySeconds validation", func() {
+		baseCapp := mocks.CreateBaseCapp()
+		baseCapp.Name = utilst.GenerateCappName()
+
+		By("Creating Capp with no scaleDelaySeconds (should default to 0)")
+		createdCapp := utilst.CreateCapp(k8sClient, baseCapp)
+		Eventually(func() int {
+			capp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
+			return capp.Spec.ScaleSpec.ScaleDelaySeconds
+		}, consts.Timeout, consts.Interval).Should(Equal(0))
+
+		By("Updating Capp with invalid scaleDelaySeconds (> GlobalMaxScaleDelay)")
+		err := retry.RetryOnConflict(utilst.NewRetryOnConflictBackoff(), func() error {
+			capp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
+			capp.Spec.ScaleSpec.ScaleDelaySeconds = 4000
+			return utilst.UpdateResource(k8sClient, capp)
+		})
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("must be less than or equal to global max scale delay"))
+
+		By("Updating Capp with valid scaleDelaySeconds")
+		err = retry.RetryOnConflict(utilst.NewRetryOnConflictBackoff(), func() error {
+			capp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
+			capp.Spec.ScaleSpec.ScaleDelaySeconds = 3000
+			return utilst.UpdateResource(k8sClient, capp)
+		})
+		Expect(err).ToNot(HaveOccurred())
+
+		By("Verifying KSVC has scaleDelaySeconds=3000")
+		Eventually(func() int {
+			ksvc := &knativev1.Service{}
+			utilst.GetResource(k8sClient, ksvc, createdCapp.Name, createdCapp.Namespace)
+			scaleDelaySeconds, found := ksvc.Spec.Template.Annotations[autoscaling.ScaleDownDelayAnnotationKey]
+			if !found {
+				return 0
+			}
+			delaySeconds, _ := time.ParseDuration(scaleDelaySeconds)
+			return int(delaySeconds.Seconds())
+		}, consts.Timeout, consts.Interval).Should(Equal(3000))
 
 		By("Cleaning up")
 		utilst.DeleteCapp(k8sClient, createdCapp)
