@@ -9,6 +9,7 @@ import (
 
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 
+	xpv1 "github.com/crossplane/crossplane-runtime/v2/apis/common/v1"
 	dnsrecordv1alpha1 "github.com/dana-team/provider-dns-v2/apis/namespaced/record/v1alpha1"
 
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
@@ -102,7 +103,7 @@ func (r *CappReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(
 			&dnsrecordv1alpha1.CNAMERecord{},
 			handler.EnqueueRequestsFromMapFunc(r.findCappFromHostname),
-			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
+			builder.WithPredicates(cnameRecordWatchPredicate()),
 		).
 		Watches(
 			&loggingv1beta1.SyslogNGOutput{},
@@ -136,6 +137,31 @@ func knativeServiceWatchPredicate() predicate.Predicate {
 	)
 }
 
+// cnameRecordWatchPredicate triggers on lifecycle changes that affect Capp flow.
+func cnameRecordWatchPredicate() predicate.Predicate {
+	return predicate.TypedFuncs[client.Object]{
+		DeleteFunc: func(_ event.TypedDeleteEvent[client.Object]) bool { return true },
+		UpdateFunc: func(e event.TypedUpdateEvent[client.Object]) bool {
+			oldObj, okOld := e.ObjectOld.(*dnsrecordv1alpha1.CNAMERecord)
+			newObj, okNew := e.ObjectNew.(*dnsrecordv1alpha1.CNAMERecord)
+			if !okOld || !okNew {
+				return false
+			}
+			return cnameRecordConditionChanged(oldObj, newObj, xpv1.TypeReady) ||
+				cnameRecordConditionChanged(oldObj, newObj, xpv1.TypeSynced)
+		},
+	}
+}
+
+func cnameRecordConditionChanged(
+	oldObj, newObj *dnsrecordv1alpha1.CNAMERecord,
+	conditionType xpv1.ConditionType,
+) bool {
+	oldCond := oldObj.Status.GetCondition(conditionType)
+	newCond := newObj.Status.GetCondition(conditionType)
+	return oldCond.Status != newCond.Status
+}
+
 // findCappFromKnative maps reconciliation requests to Capp reconciliation requests.
 func (r *CappReconciler) findCappFromEvent(ctx context.Context, object client.Object) []reconcile.Request {
 	request := reconcile.Request{NamespacedName: types.NamespacedName{
@@ -149,10 +175,14 @@ func (r *CappReconciler) findCappFromEvent(ctx context.Context, object client.Ob
 // findCappFromDomainMapping maps reconciliation requests to Capp reconciliation requests based on hostname.
 func (r *CappReconciler) findCappFromHostname(ctx context.Context, object client.Object) []reconcile.Request {
 	labels := object.GetLabels()
+	cappName := labels[utils.CappResourceKey]
+	if cappName == "" {
+		return nil
+	}
 
 	request := reconcile.Request{NamespacedName: types.NamespacedName{
 		Namespace: object.GetNamespace(),
-		Name:      labels[utils.CappResourceKey],
+		Name:      cappName,
 	}}
 
 	return []reconcile.Request{request}
