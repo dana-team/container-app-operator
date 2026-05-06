@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/util/retry"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -165,14 +166,34 @@ func (r DNSRecordManager) createDNSRecord(capp cappv1alpha1.Capp, dnsRecordFromC
 
 // updateDNSRecord checks if an update to the DNSRecord is necessary and performs the update to match desired state.
 func (r DNSRecordManager) updateDNSRecord(dnsRecord, dnsRecordFromCapp dnsrecordv1alpha1.CNAMERecord, resourceManager rclient.ResourceManagerClient) error {
-	if !equality.Semantic.DeepEqual(dnsRecord.Spec.ForProvider, dnsRecordFromCapp.Spec.ForProvider) ||
-		!equality.Semantic.DeepEqual(dnsRecord.Spec.ProviderConfigReference, dnsRecordFromCapp.Spec.ProviderConfigReference) {
-		dnsRecord.Spec.ForProvider = dnsRecordFromCapp.Spec.ForProvider
-		dnsRecord.Spec.ProviderConfigReference = dnsRecordFromCapp.Spec.ProviderConfigReference
-		return resourceManager.UpdateResource(&dnsRecord)
+	if dnsRecordNeedsUpdate(dnsRecord, dnsRecordFromCapp) {
+		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			latestRecord := dnsrecordv1alpha1.CNAMERecord{}
+			if err := r.K8sclient.Get(r.Ctx, types.NamespacedName{Namespace: dnsRecord.Namespace, Name: dnsRecord.Name}, &latestRecord); err != nil {
+				return err
+			}
+
+			if !dnsRecordNeedsUpdate(latestRecord, dnsRecordFromCapp) {
+				return nil
+			}
+
+			latestRecord.Spec.ForProvider = *dnsRecordFromCapp.Spec.ForProvider.DeepCopy()
+			if dnsRecordFromCapp.Spec.ProviderConfigReference != nil {
+				latestRecord.Spec.ProviderConfigReference = dnsRecordFromCapp.Spec.ProviderConfigReference.DeepCopy()
+			} else {
+				latestRecord.Spec.ProviderConfigReference = nil
+			}
+
+			return resourceManager.UpdateResource(&latestRecord)
+		})
 	}
 
 	return nil
+}
+
+func dnsRecordNeedsUpdate(current, desired dnsrecordv1alpha1.CNAMERecord) bool {
+	return !equality.Semantic.DeepEqual(current.Spec.ForProvider, desired.Spec.ForProvider) ||
+		!equality.Semantic.DeepEqual(current.Spec.ProviderConfigReference, desired.Spec.ProviderConfigReference)
 }
 
 // handlePreviousDNSRecords takes care of removing unneeded DNSRecord objects. If the new DNSRecord
