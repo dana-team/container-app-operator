@@ -42,7 +42,7 @@ func checkRevisionReadiness(revisionName string) {
 func testMetricAnnotation(metricType string) {
 	By("Creating a capp instance")
 	testCapp := mocks.CreateBaseCapp()
-	testCapp.Spec.ScaleMetric = metricType
+	testCapp.Spec.ScaleSpec.Metric = metricType
 	createdCapp := utilst.CreateCapp(k8sClient, testCapp)
 
 	By(fmt.Sprintf("Checking if the ksvc was created with %s metric annotation successfully", metricType))
@@ -68,7 +68,7 @@ var _ = Describe("Validate knative functionality", func() {
 	It("Should create and delete a ksvc when creating and deleting a capp instance", func() {
 		By("Creating a capp instance")
 		testCapp := mocks.CreateBaseCapp()
-		testCapp.Spec.ScaleMetric = consts.CPUScaleMetric
+		testCapp.Spec.ScaleSpec.Metric = consts.CPUScaleMetric
 		createdCapp := utilst.CreateCapp(k8sClient, testCapp)
 		assertionCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
 
@@ -105,7 +105,7 @@ var _ = Describe("Validate knative functionality", func() {
 	It("Should update ksvc metric annotation and create a new revision when updating the capp scale metric", func() {
 		By("Creating a capp instance")
 		testCapp := mocks.CreateBaseCapp()
-		testCapp.Spec.ScaleMetric = consts.CPUScaleMetric
+		testCapp.Spec.ScaleSpec.Metric = consts.CPUScaleMetric
 		createdCapp := utilst.CreateCapp(k8sClient, testCapp)
 
 		By("Updating the Capp scale metric")
@@ -114,7 +114,7 @@ var _ = Describe("Validate knative functionality", func() {
 			assertionCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
 			latestReadyRevisionBeforeUpdate = assertionCapp.Status.KnativeObjectStatus.LatestReadyRevisionName
 
-			assertionCapp.Spec.ScaleMetric = "memory"
+			assertionCapp.Spec.ScaleSpec.Metric = consts.MemoryScaleMetric
 			return utilst.UpdateResource(k8sClient, assertionCapp)
 		})
 		Expect(err).ToNot(HaveOccurred())

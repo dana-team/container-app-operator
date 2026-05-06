@@ -27,10 +27,10 @@ var TargetDefaultValues = cappv1alpha1.AutoscaleConfig{
 
 var KPAMetrics = []string{"rps", "concurrency"}
 
-// SetAutoScaler takes a Capp and a Knative Service and sets the autoscaler annotations based on the Capp's ScaleMetric.
+// SetAutoScaler takes a Capp and a Knative Service and sets the autoscaler annotations based on the Capp's ScaleSpec.Metric value.
 // Returns a map of the autoscaler annotations that were set.
 func SetAutoScaler(capp cappv1alpha1.Capp, defaults cappv1alpha1.AutoscaleConfig) map[string]string {
-	scaleMetric := capp.Spec.ScaleMetric
+	scaleMetric := capp.Spec.ScaleSpec.Metric
 	autoScaleAnnotations := make(map[string]string)
 	if scaleMetric == "" {
 		return autoScaleAnnotations
@@ -48,8 +48,8 @@ func SetAutoScaler(capp cappv1alpha1.Capp, defaults cappv1alpha1.AutoscaleConfig
 	autoScaleAnnotations[kautoscaling.TargetAnnotationKey] = getTargetValue(scaleMetric, defaults)
 	autoScaleAnnotations[kautoscaling.ActivationScaleKey] = fmt.Sprintf("%d", activationScale)
 
-	if capp.Spec.MinReplicas != 0 {
-		autoScaleAnnotations[kautoscaling.MinScaleAnnotationKey] = fmt.Sprintf("%d", capp.Spec.MinReplicas)
+	if capp.Spec.ScaleSpec.MinReplicas != 0 {
+		autoScaleAnnotations[kautoscaling.MinScaleAnnotationKey] = fmt.Sprintf("%d", capp.Spec.ScaleSpec.MinReplicas)
 	}
 
 	autoScaleAnnotations = utils.MergeMaps(autoScaleAnnotations, givenAutoScaleAnnotation)

@@ -15,7 +15,10 @@ func TestSetAutoScaler(t *testing.T) {
 			Name: "test",
 		},
 		Spec: cappv1alpha1.CappSpec{
-			ScaleMetric: "cpu",
+			ScaleSpec: cappv1alpha1.ScaleSpec{
+
+				Metric: "cpu",
+			},
 		},
 	}
 	exampleCappCpuExpected := map[string]string{
@@ -27,7 +30,7 @@ func TestSetAutoScaler(t *testing.T) {
 	annotationsCpu := SetAutoScaler(exampleCapp, cappv1alpha1.AutoscaleConfig{})
 	assert.Equal(t, exampleCappCpuExpected, annotationsCpu)
 
-	exampleCapp.Spec.ScaleMetric = "rps"
+	exampleCapp.Spec.ScaleSpec.Metric = "rps"
 	exampleCappRpsExpected := map[string]string{
 		"autoscaling.knative.dev/class":            "kpa.autoscaling.knative.dev",
 		"autoscaling.knative.dev/metric":           "rps",

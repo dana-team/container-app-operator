@@ -29,11 +29,6 @@ import (
 
 // CappSpec defines the desired state of Capp.
 type CappSpec struct {
-	// ScaleMetric defines which metric type is watched by the Autoscaler.
-	// Possible values examples: "concurrency", "rps", "cpu", "memory".
-	// +kubebuilder:default:="concurrency"
-	// +kubebuilder:validation:Enum=cpu;memory;rps;concurrency
-	ScaleMetric string `json:"scaleMetric,omitempty"`
 	// State defines the state of capp
 	// Possible values examples: "enabled", "disabled".
 	// +optional
@@ -41,11 +36,8 @@ type CappSpec struct {
 	// +kubebuilder:validation:Enum=enabled;disabled
 	State string `json:"state,omitempty"`
 
-	// MinReplicas is the minimum number of replicas for the Capp.
-	// +kubebuilder:default:=0
-	// +kubebuilder:validation:Minimum=0
-	// +optional
-	MinReplicas int `json:"minReplicas,omitempty"`
+	// ScaleSpec holds the Capp scaling configuration.
+	ScaleSpec ScaleSpec `json:"scaleSpec"`
 
 	// ConfigurationSpec holds the desired state of the Configuration (from the client).
 	ConfigurationSpec knativev1.ConfigurationSpec `json:"configurationSpec"`
@@ -59,6 +51,21 @@ type CappSpec struct {
 
 	// VolumesSpec defines the volumes specification for the Capp.
 	VolumesSpec VolumesSpec `json:"volumesSpec,omitempty"`
+}
+
+// ScaleSpec defines the scale specification for the Capp.
+type ScaleSpec struct {
+	// Metric defines which metric type is watched by the Autoscaler.
+	// Possible values examples: "concurrency", "rps", "cpu", "memory".
+	// +kubebuilder:default:="concurrency"
+	// +kubebuilder:validation:Enum=cpu;memory;rps;concurrency
+	Metric string `json:"metric,omitempty"`
+
+	// MinReplicas is the minimum number of replicas for the Capp.
+	// +kubebuilder:default:=0
+	// +kubebuilder:validation:Minimum=0
+	// +optional
+	MinReplicas int `json:"minReplicas,omitempty"`
 }
 
 // VolumesSpec defines the volumes specification for the Capp.
@@ -258,7 +265,7 @@ type CappStatus struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:printcolumn:name="Site",type="string",JSONPath=".status.applicationLinks.site",description="cluster of the resource"
 // +kubebuilder:printcolumn:name="Custom URL",type="string",JSONPath=".spec.routeSpec.hostname",description="shorten url"
-// +kubebuilder:printcolumn:name="AutoScale Type",type="string",JSONPath=".spec.scaleMetric",description="autoscale metric"
+// +kubebuilder:printcolumn:name="AutoScale Type",type="string",JSONPath=".spec.scaleSpec.metric",description="autoscale metric"
 // +kubebuilder:subresource:status
 
 // Capp is the Schema for the capps API.
