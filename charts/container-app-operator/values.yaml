@@ -120,6 +120,8 @@ config:
     activationScale: 3
     # -- The global minimum scale (maximum allowed value for minReplicas).
     minReplicasLimit: 10
+    # -- The global maximum scale delay in seconds (maximum allowed value for scaleDelaySeconds).
+    maxScaleDelay: 600
 
   defaultResources:
     # -- Default compute resource limits applied to all Capp workloads.

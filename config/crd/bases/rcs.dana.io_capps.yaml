@@ -8731,6 +8731,12 @@ spec:
                       the Capp.
                     minimum: 0
                     type: integer
+                  scaleDelaySeconds:
+                    default: 0
+                    description: ScaleDelaySeconds is the delay in seconds before
+                      the Autoscaler scales down the Capp to zero.
+                    minimum: 0
+                    type: integer
                 type: object
               state:
                 default: enabled

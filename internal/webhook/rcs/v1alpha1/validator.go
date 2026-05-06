@@ -84,8 +84,15 @@ func (c *CappValidator) handle(ctx context.Context, capp cappv1alpha1.Capp, oldC
 		return admission.Denied(err.Error())
 	}
 
-	if capp.Spec.ScaleSpec.MinReplicas > config.Spec.AutoscaleConfig.MinReplicasLimit {
-		return admission.Denied(fmt.Sprintf("invalid minReplicas %d: must be less than or equal to global min scale %d", capp.Spec.ScaleSpec.MinReplicas, config.Spec.AutoscaleConfig.MinReplicasLimit))
+	minReplicas := capp.Spec.ScaleSpec.MinReplicas
+	scaleDelay := capp.Spec.ScaleSpec.ScaleDelaySeconds
+
+	if minReplicas > config.Spec.AutoscaleConfig.MinReplicasLimit {
+		return admission.Denied(fmt.Sprintf("invalid minReplicas %d: must be less than or equal to global min scale %d", minReplicas, config.Spec.AutoscaleConfig.MinReplicasLimit))
+	}
+
+	if scaleDelay > config.Spec.AutoscaleConfig.MaxScaleDelay {
+		return admission.Denied(fmt.Sprintf("invalid scaleDelaySeconds %d: must be less than or equal to global max scale delay %d", scaleDelay, config.Spec.AutoscaleConfig.MaxScaleDelay))
 	}
 	return admission.Allowed("")
 }

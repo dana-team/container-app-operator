@@ -51,6 +51,39 @@ func TestCappValidator_Handle(t *testing.T) {
 			},
 			expectAllow: true,
 		},
+		{
+			name: "Allow Capp with valid scaleDelaySeconds",
+			capp: &cappv1alpha1.Capp{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-capp",
+					Namespace: "test-ns",
+				},
+				Spec: cappv1alpha1.CappSpec{
+					ScaleSpec: cappv1alpha1.ScaleSpec{
+						Metric:            "cpu",
+						ScaleDelaySeconds: 50,
+					},
+				},
+			},
+			expectAllow: true,
+		},
+		{
+			name: "Deny Capp with invalid scaleDelaySeconds",
+			capp: &cappv1alpha1.Capp{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-capp",
+					Namespace: "test-ns",
+				},
+				Spec: cappv1alpha1.CappSpec{
+					ScaleSpec: cappv1alpha1.ScaleSpec{
+						Metric:            "cpu",
+						ScaleDelaySeconds: 150,
+					},
+				},
+			},
+			expectAllow: false,
+			expectMsg:   "must be less than or equal to global max scale delay",
+		},
 	}
 
 	for _, tc := range tests {
@@ -63,6 +96,10 @@ func TestCappValidator_Handle(t *testing.T) {
 				},
 				Spec: cappv1alpha1.CappConfigSpec{
 					AllowedHostnamePatterns: []cappv1alpha1.HostnamePattern{{Match: ".*"}},
+					AutoscaleConfig: cappv1alpha1.AutoscaleConfig{
+						MinReplicasLimit: 10,
+						MaxScaleDelay:    100,
+					},
 				},
 			}
 

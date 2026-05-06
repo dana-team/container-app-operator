@@ -24,7 +24,7 @@ spec:
       name: Custom URL
       type: string
     - description: autoscale metric
-      jsonPath: spec.scaleSpec.metric
+      jsonPath: .spec.scaleSpec.metric
       name: AutoScale Type
       type: string
     name: v1alpha1
@@ -8729,6 +8729,12 @@ spec:
                     default: 0
                     description: MinReplicas is the minimum number of replicas for
                       the Capp.
+                    minimum: 0
+                    type: integer
+                  scaleDelaySeconds:
+                    default: 0
+                    description: ScaleDelaySeconds is the delay in seconds before
+                      the Autoscaler scales down the Capp to zero.
                     minimum: 0
                     type: integer
                 type: object

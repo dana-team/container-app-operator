@@ -13,6 +13,7 @@ spec:
     concurrency: {{ .Values.config.autoscaleConfig.concurrency }}
     activationScale: {{ .Values.config.autoscaleConfig.activationScale }}
     minReplicasLimit: {{ .Values.config.autoscaleConfig.minReplicasLimit }}
+    maxScaleDelay: {{ .Values.config.autoscaleConfig.maxScaleDelay }}
   dnsConfig:
     zone: "{{ .Values.config.dnsConfig.zone }}"
     cname: "{{ .Values.config.dnsConfig.cname }}"
