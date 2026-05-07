@@ -287,6 +287,10 @@ type EventSourceStatus struct {
 	// Ready indicates whether the underlying source resource is ready.
 	// +optional
 	Ready bool `json:"ready,omitempty"`
+
+	// Message contains a human-readable explanation when Ready is false.
+	// +optional
+	Message string `json:"message,omitempty"`
 }
 
 // EventingStatus shows the observed state of event sources linked to the Capp.

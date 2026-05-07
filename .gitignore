@@ -24,3 +24,5 @@ testbin/*
 *~
 
 kubeconfig
+
+docs/superpowers/*

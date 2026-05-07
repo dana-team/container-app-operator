@@ -120,7 +120,7 @@ func (r *CappReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(
 			&sourcesv1.PingSource{},
 			handler.EnqueueRequestsFromMapFunc(r.findCappFromHostname),
-			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
+			builder.WithPredicates(pingSourceWatchPredicate()),
 		).
 		Complete(r)
 }
@@ -139,6 +139,23 @@ func knativeServiceWatchPredicate() predicate.Predicate {
 				oldS, newS := oldObj.Status, newObj.Status
 				return oldS.LatestReadyRevisionName != newS.LatestReadyRevisionName ||
 					oldS.LatestCreatedRevisionName != newS.LatestCreatedRevisionName
+			},
+		},
+	)
+}
+
+// pingSourceWatchPredicate triggers on spec changes or readiness transitions.
+func pingSourceWatchPredicate() predicate.Predicate {
+	return predicate.Or(
+		predicate.GenerationChangedPredicate{},
+		predicate.TypedFuncs[client.Object]{
+			UpdateFunc: func(e event.TypedUpdateEvent[client.Object]) bool {
+				oldObj, okOld := e.ObjectOld.(*sourcesv1.PingSource)
+				newObj, okNew := e.ObjectNew.(*sourcesv1.PingSource)
+				if !okOld || !okNew {
+					return false
+				}
+				return oldObj.Status.IsReady() != newObj.Status.IsReady()
 			},
 		},
 	)

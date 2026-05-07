@@ -3,6 +3,7 @@ package resourcemanagers
 import (
 	"context"
 	"fmt"
+	"maps"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/resourceclient"
@@ -140,13 +141,25 @@ func (e EventSourceManager) createPingSource(capp *cappv1alpha1.Capp, ps *source
 	return nil
 }
 
-// updatePingSource updates an existing PingSource if its spec has drifted.
+// updatePingSource updates an existing PingSource if its spec or managed labels have drifted.
 func (e EventSourceManager) updatePingSource(existing, desired sourcesv1.PingSource, rm rclient.ResourceManagerClient) error {
-	if !equality.Semantic.DeepEqual(existing.Spec, desired.Spec) {
-		existing.Spec = desired.Spec
-		return rm.UpdateResource(&existing)
+	specDrifted := !equality.Semantic.DeepEqual(existing.Spec, desired.Spec)
+	labelsDrifted := false
+	for k, v := range desired.Labels {
+		if existing.Labels[k] != v {
+			labelsDrifted = true
+			break
+		}
 	}
-	return nil
+	if !specDrifted && !labelsDrifted {
+		return nil
+	}
+	existing.Spec = desired.Spec
+	if existing.Labels == nil {
+		existing.Labels = make(map[string]string)
+	}
+	maps.Copy(existing.Labels, desired.Labels)
+	return rm.UpdateResource(&existing)
 }
 
 // getPreviousPingSources lists all PingSources owned by the Capp via label selector.
@@ -154,6 +167,7 @@ func (e EventSourceManager) getPreviousPingSources(capp cappv1alpha1.Capp) (sour
 	list := sourcesv1.PingSourceList{}
 	set := labels.Set{utils.CappResourceKey: capp.Name}
 	listOptions := utils.GetListOptions(set)
+	listOptions.Namespace = capp.Namespace
 	if err := e.K8sclient.List(e.Ctx, &list, &listOptions); err != nil {
 		return list, fmt.Errorf("unable to list PingSources of Capp %q: %w", capp.Name, err)
 	}

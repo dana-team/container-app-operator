@@ -8798,6 +8798,51 @@ spec:
                                 type: object
                             type: object
                         type: object
+                      eventSourcesSpec:
+                        description: EventSourcesSpec defines the event sources for
+                          the Capp.
+                        properties:
+                          sources:
+                            description: Sources is the list of event sources connected
+                              to the Capp's Knative Service.
+                            items:
+                              description: |-
+                                EventSource defines a single Knative Eventing source connected to the Capp.
+                                Exactly one source-type field (PingSource, etc.) must be set.
+                              properties:
+                                name:
+                                  description: |-
+                                    Name is an optional logical identifier for this source.
+                                    If omitted, a stable name is derived as <capp-name>-<type>-<index>.
+                                    Must be unique within the Capp's EventSourcesSpec.Sources list.
+                                  type: string
+                                pingSource:
+                                  description: PingSource configures a Knative PingSource
+                                    (cron-style event emitter).
+                                  properties:
+                                    contentType:
+                                      description: ContentType is the media type of
+                                        Data.
+                                      type: string
+                                    data:
+                                      description: Data is the body of the CloudEvent
+                                        posted to the sink.
+                                      type: string
+                                    schedule:
+                                      description: Schedule is the cron expression
+                                        controlling when events are sent.
+                                      type: string
+                                    timezone:
+                                      description: |-
+                                        Timezone modifies the schedule relative to the given timezone (e.g. "America/New_York").
+                                        Defaults to UTC.
+                                      type: string
+                                  required:
+                                  - schedule
+                                  type: object
+                              type: object
+                            type: array
+                        type: object
                       logSpec:
                         description: LogSpec defines the configuration for shipping
                           Capp logs.

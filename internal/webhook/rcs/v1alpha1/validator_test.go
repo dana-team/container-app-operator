@@ -52,6 +52,87 @@ func TestCappValidator_Handle(t *testing.T) {
 			expectAllow: true,
 		},
 		{
+			name: "Allow Capp with single unnamed source",
+			capp: &cappv1alpha1.Capp{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-capp", Namespace: "test-ns"},
+				Spec: cappv1alpha1.CappSpec{
+					ScaleSpec: cappv1alpha1.ScaleSpec{Metric: "cpu"},
+					EventSourcesSpec: cappv1alpha1.EventSourcesSpec{
+						Sources: []cappv1alpha1.EventSource{
+							{PingSource: &cappv1alpha1.PingSourceSpec{Schedule: "* * * * *"}},
+						},
+					},
+				},
+			},
+			expectAllow: true,
+		},
+		{
+			name: "Allow Capp with multiple explicitly named sources",
+			capp: &cappv1alpha1.Capp{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-capp", Namespace: "test-ns"},
+				Spec: cappv1alpha1.CappSpec{
+					ScaleSpec: cappv1alpha1.ScaleSpec{Metric: "cpu"},
+					EventSourcesSpec: cappv1alpha1.EventSourcesSpec{
+						Sources: []cappv1alpha1.EventSource{
+							{Name: "hourly", PingSource: &cappv1alpha1.PingSourceSpec{Schedule: "0 * * * *"}},
+							{Name: "daily", PingSource: &cappv1alpha1.PingSourceSpec{Schedule: "0 0 * * *"}},
+						},
+					},
+				},
+			},
+			expectAllow: true,
+		},
+		{
+			name: "Deny Capp with multiple sources and one unnamed",
+			capp: &cappv1alpha1.Capp{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-capp", Namespace: "test-ns"},
+				Spec: cappv1alpha1.CappSpec{
+					ScaleSpec: cappv1alpha1.ScaleSpec{Metric: "cpu"},
+					EventSourcesSpec: cappv1alpha1.EventSourcesSpec{
+						Sources: []cappv1alpha1.EventSource{
+							{Name: "hourly", PingSource: &cappv1alpha1.PingSourceSpec{Schedule: "0 * * * *"}},
+							{PingSource: &cappv1alpha1.PingSourceSpec{Schedule: "0 0 * * *"}},
+						},
+					},
+				},
+			},
+			expectAllow: false,
+			expectMsg:   "must have an explicit name when multiple sources are defined",
+		},
+		{
+			name: "Deny Capp with source missing source type",
+			capp: &cappv1alpha1.Capp{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-capp", Namespace: "test-ns"},
+				Spec: cappv1alpha1.CappSpec{
+					ScaleSpec: cappv1alpha1.ScaleSpec{Metric: "cpu"},
+					EventSourcesSpec: cappv1alpha1.EventSourcesSpec{
+						Sources: []cappv1alpha1.EventSource{
+							{Name: "empty"},
+						},
+					},
+				},
+			},
+			expectAllow: false,
+			expectMsg:   "must have exactly one source type set",
+		},
+		{
+			name: "Deny Capp with duplicate source names",
+			capp: &cappv1alpha1.Capp{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-capp", Namespace: "test-ns"},
+				Spec: cappv1alpha1.CappSpec{
+					ScaleSpec: cappv1alpha1.ScaleSpec{Metric: "cpu"},
+					EventSourcesSpec: cappv1alpha1.EventSourcesSpec{
+						Sources: []cappv1alpha1.EventSource{
+							{Name: "dup", PingSource: &cappv1alpha1.PingSourceSpec{Schedule: "0 * * * *"}},
+							{Name: "dup", PingSource: &cappv1alpha1.PingSourceSpec{Schedule: "0 0 * * *"}},
+						},
+					},
+				},
+			},
+			expectAllow: false,
+			expectMsg:   "duplicate source name",
+		},
+		{
 			name: "Allow Capp with valid scaleDelaySeconds",
 			capp: &cappv1alpha1.Capp{
 				ObjectMeta: metav1.ObjectMeta{

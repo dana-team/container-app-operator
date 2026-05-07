@@ -8917,6 +8917,10 @@ spec:
                       description: EventSourceStatus shows the observed state of a
                         single event source.
                       properties:
+                        message:
+                          description: Message contains a human-readable explanation
+                            when Ready is false.
+                          type: string
                         name:
                           description: Name is the K8s name of the underlying source
                             resource.

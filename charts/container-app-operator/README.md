@@ -8,12 +8,12 @@ A Helm chart for Kubernetes
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| config | object | `{"allowedHostnamePatterns":[{"explanation":"any hostname","match":".*"}],"autoscaleConfig":{"activationScale":3,"concurrency":10,"cpu":80,"maxScaleDelay":600,"memory":70,"minReplicasLimit":10,"rps":200},"defaultResources":{"limits":{"cpu":"200m","memory":"200Mi"},"requests":{"cpu":"100m","memory":"100Mi"}},"dnsConfig":{"cname":"ingress.capp-zone.com.","issuer":"cert-issuer","provider":"dns-default","zone":"capp-zone.com."},"enabled":true}` | Configuration for CappConfig CRD |
+| config | object | `{"allowedHostnamePatterns":[{"explanation":"any hostname","match":".*"}],"autoscaleConfig":{"activationScale":3,"concurrency":10,"cpu":80,"maxScaleDelay":3600,"memory":70,"minReplicasLimit":10,"rps":200},"defaultResources":{"limits":{"cpu":"200m","memory":"200Mi"},"requests":{"cpu":"100m","memory":"100Mi"}},"dnsConfig":{"cname":"ingress.capp-zone.com.","issuer":"cert-issuer","provider":"dns-default","zone":"capp-zone.com."},"enabled":true}` | Configuration for CappConfig CRD |
 | config.allowedHostnamePatterns[0] | object | `{"explanation":"any hostname","match":".*"}` | A list of hostname patterns that Capp workload hostnames must match. Each entry has a required `pattern` (regex) and an optional `explanation` shown in webhook error messages. |
 | config.autoscaleConfig.activationScale | int | `3` | The default activation scale (minimum replicas before scaling starts). |
 | config.autoscaleConfig.concurrency | int | `10` | The default concurrency limit for autoscaling. |
 | config.autoscaleConfig.cpu | int | `80` | The default CPU utilization percentage for autoscaling. |
-| config.autoscaleConfig.maxScaleDelay | int | `600` | The global maximum scale delay in seconds (maximum allowed value for scaleDelaySeconds). |
+| config.autoscaleConfig.maxScaleDelay | int | `3600` | The global maximum scale delay in seconds (maximum allowed value for scaleDelaySeconds). |
 | config.autoscaleConfig.memory | int | `70` | The default memory utilization percentage for autoscaling. |
 | config.autoscaleConfig.minReplicasLimit | int | `10` | The global minimum scale (maximum allowed value for minReplicas). |
 | config.autoscaleConfig.rps | int | `200` | The default Requests Per Second (RPS) threshold for autoscaling. |
