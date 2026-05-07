@@ -98,6 +98,11 @@ func (c *CappValidator) handle(ctx context.Context, capp cappv1alpha1.Capp, oldC
 	if capp.Spec.ScaleSpec.ScaleDelaySeconds > config.Spec.AutoscaleConfig.MaxScaleDelay {
 		return admission.Denied(fmt.Sprintf("invalid scaleDelaySeconds %d: must be less than or equal to global max scale delay %d", capp.Spec.ScaleSpec.ScaleDelaySeconds, config.Spec.AutoscaleConfig.MaxScaleDelay))
 	}
+
+	if errs := validateEventSourceNames(capp.Spec.EventSourcesSpec.Sources); errs != nil {
+		return admission.Denied(errs.Error())
+	}
+
 	return admission.Allowed("")
 }
 
@@ -129,4 +134,17 @@ func validateNFSVolumeMounts(capp cappv1alpha1.Capp) error {
 	slices.Sort(missingVolumeNames)
 
 	return fmt.Errorf("invalid nfsVolumes: volumes [%s] must be mounted by at least one container", strings.Join(missingVolumeNames, ", "))
+// validateEventSourceNames returns an error if any two sources share an explicit name.
+func validateEventSourceNames(sources []cappv1alpha1.EventSource) error {
+	seen := make(map[string]bool)
+	for _, s := range sources {
+		if s.Name == "" {
+			continue
+		}
+		if seen[s.Name] {
+			return fmt.Errorf("invalid eventSourcesSpec: duplicate source name %q", s.Name)
+		}
+		seen[s.Name] = true
+	}
+	return nil
 }

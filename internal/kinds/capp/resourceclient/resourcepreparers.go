@@ -6,6 +6,7 @@ import (
 	dnsrecordv1alpha1 "github.com/dana-team/provider-dns-v2/apis/namespaced/record/v1alpha1"
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
 )
@@ -73,6 +74,16 @@ func GetBareSyslogNGOutput(name, namespace string) loggingv1beta1.SyslogNGOutput
 // GetBareDNSRecord returns a DNSRecord object with only ObjectMeta set.
 func GetBareDNSRecord(name, namespace string) dnsrecordv1alpha1.CNAMERecord {
 	return dnsrecordv1alpha1.CNAMERecord{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+	}
+}
+
+// GetBarePingSource returns a PingSource object with only ObjectMeta set.
+func GetBarePingSource(name, namespace string) sourcesv1.PingSource {
+	return sourcesv1.PingSource{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,

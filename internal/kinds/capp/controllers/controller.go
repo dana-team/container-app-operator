@@ -13,6 +13,7 @@ import (
 	dnsrecordv1alpha1 "github.com/dana-team/provider-dns-v2/apis/namespaced/record/v1alpha1"
 
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
+	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 
 	"k8s.io/apimachinery/pkg/types"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
@@ -71,6 +72,7 @@ type CappReconciler struct {
 // +kubebuilder:rbac:groups="nfspvc.dana.io",resources=nfspvcs,verbs=get;list;watch;update;create;delete
 // +kubebuilder:rbac:groups="record.dns-v2.m.crossplane.io",resources=cnamerecords,verbs=get;list;watch;update;create;delete
 // +kubebuilder:rbac:groups="cert-manager.io",resources=certificates,verbs=get;list;watch;update;create;delete
+// +kubebuilder:rbac:groups=sources.knative.dev,resources=pingsources,verbs=get;list;watch;create;update;delete
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *CappReconciler) SetupWithManager(mgr ctrl.Manager) error {
@@ -113,6 +115,11 @@ func (r *CappReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(
 			&loggingv1beta1.SyslogNGFlow{},
 			handler.EnqueueRequestsFromMapFunc(r.findCappFromEvent),
+			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
+		).
+		Watches(
+			&sourcesv1.PingSource{},
+			handler.EnqueueRequestsFromMapFunc(r.findCappFromHostname),
 			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
 		).
 		Complete(r)
@@ -208,6 +215,7 @@ func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		rmanagers.SyslogNGFlow:   rmanagers.SyslogNGFlowManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder},
 		rmanagers.SyslogNGOutput: rmanagers.SyslogNGOutputManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder},
 		rmanagers.NfsPVC:         rmanagers.NFSPVCManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder},
+		rmanagers.EventSources:   rmanagers.EventSourceManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder},
 	}
 
 	err, deleted := finalizer.HandleResourceDeletion(ctx, capp, r.Client, resourceManagers)

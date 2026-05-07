@@ -27,6 +27,48 @@ import (
 	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
 )
 
+// PingSourceSpec defines the desired state for a Knative PingSource.
+// Sink is omitted — it is always auto-set to the Capp's Knative Service.
+type PingSourceSpec struct {
+	// Schedule is the cron expression controlling when events are sent.
+	// +kubebuilder:validation:Required
+	Schedule string `json:"schedule"`
+
+	// ContentType is the media type of Data.
+	// +optional
+	ContentType string `json:"contentType,omitempty"`
+
+	// Data is the body of the CloudEvent posted to the sink.
+	// +optional
+	Data string `json:"data,omitempty"`
+
+	// Timezone modifies the schedule relative to the given timezone (e.g. "America/New_York").
+	// Defaults to UTC.
+	// +optional
+	Timezone string `json:"timezone,omitempty"`
+}
+
+// EventSource defines a single Knative Eventing source connected to the Capp.
+// Exactly one source-type field (PingSource, etc.) must be set.
+type EventSource struct {
+	// Name is an optional logical identifier for this source.
+	// If omitted, a stable name is derived as <capp-name>-<type>-<index>.
+	// Must be unique within the Capp's EventSourcesSpec.Sources list.
+	// +optional
+	Name string `json:"name,omitempty"`
+
+	// PingSource configures a Knative PingSource (cron-style event emitter).
+	// +optional
+	PingSource *PingSourceSpec `json:"pingSource,omitempty"`
+}
+
+// EventSourcesSpec defines all event sources for a Capp.
+type EventSourcesSpec struct {
+	// Sources is the list of event sources connected to the Capp's Knative Service.
+	// +optional
+	Sources []EventSource `json:"sources,omitempty"`
+}
+
 // CappSpec defines the desired state of Capp.
 type CappSpec struct {
 	// State defines the state of capp
@@ -51,6 +93,10 @@ type CappSpec struct {
 
 	// VolumesSpec defines the volumes specification for the Capp.
 	VolumesSpec VolumesSpec `json:"volumesSpec,omitempty"`
+
+	// EventSourcesSpec defines the event sources for the Capp.
+	// +optional
+	EventSourcesSpec EventSourcesSpec `json:"eventSourcesSpec,omitempty"`
 }
 
 // ScaleSpec defines the scale specification for the Capp.
@@ -232,6 +278,24 @@ type NFSVolumeStatus struct {
 	NFSPVCStatus nfspvcv1alpha1.NfsPvcStatus `json:"nfsPvcStatus,omitempty"`
 }
 
+// EventSourceStatus shows the observed state of a single event source.
+type EventSourceStatus struct {
+	// Name is the K8s name of the underlying source resource.
+	// +optional
+	Name string `json:"name,omitempty"`
+
+	// Ready indicates whether the underlying source resource is ready.
+	// +optional
+	Ready bool `json:"ready,omitempty"`
+}
+
+// EventingStatus shows the observed state of event sources linked to the Capp.
+type EventingStatus struct {
+	// EventSources lists the status of each owned event source resource.
+	// +optional
+	EventSources []EventSourceStatus `json:"eventSources,omitempty"`
+}
+
 // CappStatus defines the observed state of Capp.
 type CappStatus struct {
 	// ApplicationLinks contains relevant information about
@@ -262,6 +326,10 @@ type CappStatus struct {
 	// VolumesStatus shows the state of the Volumes objects linked to the Capp.
 	// +optional
 	VolumesStatus VolumesStatus `json:"volumesStatus,omitempty"`
+
+	// EventingStatus shows the state of event sources linked to the Capp.
+	// +optional
+	EventingStatus EventingStatus `json:"eventingStatus,omitempty"`
 
 	// Conditions contain details about the current state of the Capp.
 	// +optional

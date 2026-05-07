@@ -72,6 +72,13 @@ func SyncStatus(ctx context.Context, capp cappv1alpha1.Capp, log logr.Logger, r 
 	}
 	cappObject.Status.VolumesStatus = volumesStatus
 
+	eventSourceManager := resourceManagers[rmanagers.EventSources]
+	eventingStatus, err := buildEventingStatus(ctx, capp, r, eventSourceManager.IsRequired(capp))
+	if err != nil {
+		return err
+	}
+	cappObject.Status.EventingStatus = eventingStatus
+
 	CreateStateStatus(&cappObject.Status.StateStatus, capp.Spec.State)
 	cappObject.Status.ApplicationLinks = *applicationLinks
 

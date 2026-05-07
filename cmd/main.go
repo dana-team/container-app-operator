@@ -40,6 +40,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
+	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -70,6 +71,7 @@ func init() {
 	utilruntime.Must(nfspvcv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(cmapi.AddToScheme(scheme))
 	utilruntime.Must(dnsrecordv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(sourcesv1.AddToScheme(scheme))
 
 	// +kubebuilder:scaffold:scheme
 }

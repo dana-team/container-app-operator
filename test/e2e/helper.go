@@ -17,6 +17,7 @@ import (
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 	knativev1alphav1 "knative.dev/serving/pkg/apis/serving/v1alpha1"
 	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
+	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -36,6 +37,7 @@ func newScheme() *runtime.Scheme {
 	utilruntime.Must(nfspvcv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(cmapi.AddToScheme(scheme))
 	utilruntime.Must(dnsrecordv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(sourcesv1.AddToScheme(scheme))
 	_ = corev1.AddToScheme(scheme)
 	_ = loggingv1beta1.AddToScheme(scheme)
 	_ = knativev1alphav1.AddToScheme(scheme)
