@@ -116,10 +116,7 @@ func (o SyslogNGOutputManager) prepareResource(capp cappv1alpha1.Capp) loggingv1
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      syslogNGOutputName,
 				Namespace: capp.GetNamespace(),
-				Labels: map[string]string{
-					utils.CappResourceKey:   capp.Name,
-					utils.ManagedByLabelKey: utils.CappKey,
-				},
+				Labels:    utils.ManagedResourceLabels(capp.Name),
 			},
 			Spec: syslogNGOutputSpec,
 		}

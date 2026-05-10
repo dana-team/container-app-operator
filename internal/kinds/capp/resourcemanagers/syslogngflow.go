@@ -44,10 +44,7 @@ func (f SyslogNGFlowManager) prepareResource(capp cappv1alpha1.Capp) loggingv1be
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      syslogNGFlowName,
 			Namespace: capp.GetNamespace(),
-			Labels: map[string]string{
-				utils.CappResourceKey:   capp.Name,
-				utils.ManagedByLabelKey: utils.CappKey,
-			},
+			Labels:    utils.ManagedResourceLabels(capp.Name),
 		},
 		Spec: loggingv1beta1.SyslogNGFlowSpec{
 			Match: &loggingv1beta1.SyslogNGMatch{

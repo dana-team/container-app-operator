@@ -58,12 +58,9 @@ func (k KnativeServiceManager) prepareResource(capp cappv1alpha1.Capp, ctx conte
 	knativeService := knativev1.Service{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      capp.Name,
-			Namespace: capp.Namespace,
-			Labels: map[string]string{
-				utils.CappResourceKey:   capp.Name,
-				utils.ManagedByLabelKey: utils.CappKey,
-			},
+			Name:        capp.Name,
+			Namespace:   capp.Namespace,
+			Labels:      utils.ManagedResourceLabels(capp.Name),
 			Annotations: knativeServiceAnnotations,
 		},
 		Spec: knativev1.ServiceSpec{
