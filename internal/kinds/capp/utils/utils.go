@@ -28,6 +28,14 @@ const (
 	CappKey        = "capp"
 )
 
+// ManagedResourceLabels returns labels used for child resources reconciled from a Capp.
+func ManagedResourceLabels(cappName string) map[string]string {
+	return map[string]string{
+		CappResourceKey:   cappName,
+		ManagedByLabelKey: CappKey,
+	}
+}
+
 // IsOnOpenshift returns true if the cluster has the openshift config group
 func IsOnOpenshift(config *rest.Config) (bool, error) {
 	dc, err := discovery.NewDiscoveryClientForConfig(config)

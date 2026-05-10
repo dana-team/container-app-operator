@@ -64,10 +64,7 @@ func (c CertificateManager) prepareResource(capp cappv1alpha1.Capp) (cmapi.Certi
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      resourceName,
 			Namespace: capp.Namespace,
-			Labels: map[string]string{
-				utils.CappResourceKey:   capp.Name,
-				utils.ManagedByLabelKey: utils.CappKey,
-			},
+			Labels:    utils.ManagedResourceLabels(capp.Name),
 		},
 		Spec: cmapi.CertificateSpec{
 			CommonName: utils.TruncateCommonName(resourceName),

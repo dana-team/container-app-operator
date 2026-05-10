@@ -62,11 +62,9 @@ func (r DNSRecordManager) prepareResource(capp cappv1alpha1.Capp) (dnsrecordv1al
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      resourceName,
 			Namespace: capp.Namespace,
-			Labels: map[string]string{
-				utils.CappResourceKey:   capp.Name,
-				utils.CappNamespaceKey:  capp.Namespace,
-				utils.ManagedByLabelKey: utils.CappKey,
-			},
+			Labels: utils.MergeMaps(utils.ManagedResourceLabels(capp.Name), map[string]string{
+				utils.CappNamespaceKey: capp.Namespace,
+			}),
 		},
 		Spec: dnsrecordv1alpha1.CNAMERecordSpec{
 			ForProvider: dnsrecordv1alpha1.CNAMERecordParameters{
