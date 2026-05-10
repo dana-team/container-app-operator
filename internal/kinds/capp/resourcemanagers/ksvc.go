@@ -20,6 +20,7 @@ import (
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const (
@@ -109,18 +110,19 @@ func (k KnativeServiceManager) prepareVolumes(capp cappv1alpha1.Capp) []corev1.V
 	return volumes
 }
 
-// CleanUp attempts to delete the associated KnativeService for a given Capp resource.
+// CleanUp ensures the Knative Service is not left behind when it is no longer required for this Capp.
 func (k KnativeServiceManager) CleanUp(capp cappv1alpha1.Capp) error {
-	resourceManager := rclient.ResourceManagerClient{Ctx: k.Ctx, K8sclient: k.K8sclient, Log: k.Log}
-	ksvc := rclient.GetBareKSVC(capp.Name, capp.Namespace)
-
-	if err := resourceManager.DeleteResource(&ksvc); err != nil {
-		if errors.IsNotFound(err) {
-			return nil
-		}
-		return err
+	var ksvc knativev1.Service
+	if err := k.K8sclient.Get(k.Ctx, types.NamespacedName{Namespace: capp.Namespace, Name: capp.Name}, &ksvc); err != nil {
+		return client.IgnoreNotFound(err)
 	}
-	return nil
+	if capp.DeletionTimestamp != nil {
+		if ok, err := controllerutil.HasOwnerReference(ksvc.OwnerReferences, &capp, k.K8sclient.Scheme()); err != nil || ok {
+			return err
+		}
+	}
+	rm := rclient.ResourceManagerClient{Ctx: k.Ctx, K8sclient: k.K8sclient, Log: k.Log}
+	return client.IgnoreNotFound(rm.DeleteResource(&ksvc))
 }
 
 // IsRequired determines if a Knative service (ksvc) is required based on the Capp's spec.
@@ -174,11 +176,14 @@ func (k KnativeServiceManager) createOrUpdate(capp cappv1alpha1.Capp) error {
 		}
 	}
 
-	return k.updateKSVC(&knativeService, &knativeServiceFromCapp, resourceManager)
+	return k.updateKSVC(&knativeService, &knativeServiceFromCapp, &capp, resourceManager)
 }
 
 // createKSVC creates a new knativeService and emits an event.
 func (k KnativeServiceManager) createKSVC(capp *cappv1alpha1.Capp, knativeServiceFromCapp *knativev1.Service, resourceManager rclient.ResourceManagerClient) error {
+	if err := controllerutil.SetOwnerReference(capp, knativeServiceFromCapp, k.K8sclient.Scheme()); err != nil {
+		return fmt.Errorf("set Knative Service owner reference: %w", err)
+	}
 	if err := resourceManager.CreateResource(knativeServiceFromCapp); err != nil {
 		k.EventRecorder.Event(capp, corev1.EventTypeWarning, eventCappKnativeServiceCreationFailed,
 			fmt.Sprintf("Failed to create KnativeService %s", knativeServiceFromCapp.Name))
@@ -192,16 +197,22 @@ func (k KnativeServiceManager) createKSVC(capp *cappv1alpha1.Capp, knativeServic
 }
 
 // updateKSVC checks if an update to the KnativeService is necessary and performs the update to match desired state.
-func (k KnativeServiceManager) updateKSVC(knativeService, knativeServiceFromCapp *knativev1.Service, resourceManager rclient.ResourceManagerClient) error {
-	if !equality.Semantic.DeepEqual(knativeService.Spec, knativeServiceFromCapp.Spec) {
-		k.Log.V(1).Info("KnativeService spec differs from desired; applying update",
-			"knativeService", knativeService.Name,
-			"namespace", knativeService.Namespace,
-			"resourceVersion", knativeService.ResourceVersion,
-			"generation", knativeService.Generation)
-		knativeService.Spec = knativeServiceFromCapp.Spec
-		return resourceManager.UpdateResource(knativeService)
+func (k KnativeServiceManager) updateKSVC(knativeService, knativeServiceFromCapp *knativev1.Service, capp *cappv1alpha1.Capp, resourceManager rclient.ResourceManagerClient) error {
+	orig := knativeService.DeepCopy()
+	if err := controllerutil.SetOwnerReference(capp, knativeService, k.K8sclient.Scheme()); err != nil {
+		return fmt.Errorf("set Knative Service owner reference: %w", err)
+	}
+	knativeService.Spec = knativeServiceFromCapp.Spec
+
+	if equality.Semantic.DeepEqual(orig.Spec, knativeService.Spec) &&
+		equality.Semantic.DeepEqual(orig.OwnerReferences, knativeService.OwnerReferences) {
+		return nil
 	}
 
-	return nil
+	k.Log.V(1).Info("KnativeService spec or owner metadata differs from desired; applying update",
+		"knativeService", knativeService.Name,
+		"namespace", knativeService.Namespace,
+		"resourceVersion", knativeService.ResourceVersion,
+		"generation", knativeService.Generation)
+	return resourceManager.UpdateResource(knativeService)
 }
