@@ -3,6 +3,9 @@ package webhooks
 import (
 	"context"
 	"fmt"
+	"maps"
+	"slices"
+	"strings"
 
 	"net/http"
 
@@ -77,8 +80,42 @@ func (c *CappValidator) handle(ctx context.Context, capp cappv1alpha1.Capp, oldC
 		}
 	}
 
+	if err := validateNFSVolumeMounts(capp); err != nil {
+		return admission.Denied(err.Error())
+	}
+
 	if capp.Spec.ScaleSpec.MinReplicas > config.Spec.AutoscaleConfig.MinReplicasLimit {
 		return admission.Denied(fmt.Sprintf("invalid minReplicas %d: must be less than or equal to global min scale %d", capp.Spec.ScaleSpec.MinReplicas, config.Spec.AutoscaleConfig.MinReplicasLimit))
 	}
 	return admission.Allowed("")
+}
+
+func validateNFSVolumeMounts(capp cappv1alpha1.Capp) error {
+	if len(capp.Spec.VolumesSpec.NFSVolumes) == 0 {
+		return nil
+	}
+
+	mountedVolumes := make(map[string]struct{})
+	for _, container := range capp.Spec.ConfigurationSpec.Template.Spec.Containers {
+		for _, volumeMount := range container.VolumeMounts {
+			mountedVolumes[volumeMount.Name] = struct{}{}
+		}
+	}
+
+	missingVolumes := make(map[string]struct{})
+	for _, nfsVolume := range capp.Spec.VolumesSpec.NFSVolumes {
+		if _, ok := mountedVolumes[nfsVolume.Name]; ok {
+			continue
+		}
+		missingVolumes[nfsVolume.Name] = struct{}{}
+	}
+
+	if len(missingVolumes) == 0 {
+		return nil
+	}
+
+	missingVolumeNames := slices.Collect(maps.Keys(missingVolumes))
+	slices.Sort(missingVolumeNames)
+
+	return fmt.Errorf("invalid nfsVolumes: volumes [%s] must be mounted by at least one container", strings.Join(missingVolumeNames, ", "))
 }
