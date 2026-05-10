@@ -2,6 +2,7 @@ package autoscale
 
 import (
 	"fmt"
+	"time"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
@@ -50,6 +51,10 @@ func SetAutoScaler(capp cappv1alpha1.Capp, defaults cappv1alpha1.AutoscaleConfig
 
 	if capp.Spec.ScaleSpec.MinReplicas != 0 {
 		autoScaleAnnotations[kautoscaling.MinScaleAnnotationKey] = fmt.Sprintf("%d", capp.Spec.ScaleSpec.MinReplicas)
+	}
+
+	if capp.Spec.ScaleSpec.ScaleDelaySeconds != 0 {
+		autoScaleAnnotations[kautoscaling.ScaleDownDelayAnnotationKey] = (time.Duration(capp.Spec.ScaleSpec.ScaleDelaySeconds) * time.Second).String()
 	}
 
 	autoScaleAnnotations = utils.MergeMaps(autoScaleAnnotations, givenAutoScaleAnnotation)

@@ -60,6 +60,10 @@ type AutoscaleConfig struct {
 	// MinReplicasLimit is the global minimum scale. (maximum allowed value for minReplicas).
 	// +kubebuilder:validation:Minimum=1
 	MinReplicasLimit int `json:"minReplicasLimit"`
+	// MaxScaleDelay is the maximum delay in seconds before the Autoscaler scales down the Capp to zero.
+	// +kubebuilder:default:=3600
+	// +kubebuilder:validation:Minimum=0
+	MaxScaleDelay int `json:"maxScaleDelay"`
 }
 
 // CappConfigStatus defines the observed state of CappConfig

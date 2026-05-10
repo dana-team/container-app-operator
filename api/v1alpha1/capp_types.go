@@ -66,6 +66,12 @@ type ScaleSpec struct {
 	// +kubebuilder:validation:Minimum=0
 	// +optional
 	MinReplicas int `json:"minReplicas,omitempty"`
+
+	// ScaleDelaySeconds is the delay in seconds before the Autoscaler scales down the Capp to zero.
+	// +kubebuilder:default:=0
+	// +kubebuilder:validation:Minimum=0
+	// +optional
+	ScaleDelaySeconds int `json:"scaleDelaySeconds,omitempty"`
 }
 
 // VolumesSpec defines the volumes specification for the Capp.

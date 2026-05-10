@@ -73,6 +73,12 @@ spec:
                   cpu:
                     description: CPU is the desired CPU utilization to trigger upscaling.
                     type: integer
+                  maxScaleDelay:
+                    default: 3600
+                    description: MaxScaleDelay is the maximum delay in seconds before
+                      the Autoscaler scales down the Capp to zero.
+                    minimum: 0
+                    type: integer
                   memory:
                     description: Memory is the desired memory utilization to trigger
                       upscaling.
@@ -90,6 +96,7 @@ spec:
                 - activationScale
                 - concurrency
                 - cpu
+                - maxScaleDelay
                 - memory
                 - minReplicasLimit
                 - rps
