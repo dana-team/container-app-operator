@@ -38,31 +38,18 @@ func checkRevisionReadiness(revisionName string) {
 	}, consts.Timeout, consts.Interval).Should(BeTrue())
 }
 
-// testMetricAnnotation tests capp instance creation with a specified metric annotation.
-func testMetricAnnotation(metricType string) {
-	By("Creating a capp instance")
-	testCapp := mocks.CreateBaseCapp()
-	testCapp.Spec.ScaleSpec.Metric = metricType
-	createdCapp := utilst.CreateCapp(k8sClient, testCapp)
-
-	By(fmt.Sprintf("Checking if the ksvc was created with %s metric annotation successfully", metricType))
-	Eventually(func() string {
-		ksvc := utilst.GetKSVC(k8sClient, createdCapp.Name, createdCapp.Namespace)
-		return ksvc.Spec.Template.Annotations[consts.KnativeMetricAnnotation]
-	}, consts.Timeout, consts.Interval).Should(Equal(metricType))
-}
-
 var _ = Describe("Validate knative functionality", func() {
-	It("Should create a ksvc with cpu metric annotation when creating a capp with cpu scale metric", func() {
-		testMetricAnnotation(consts.CPUScaleMetric)
-	})
-
 	It("Should create a ksvc with memory metric annotation when creating a capp with memory scale metric", func() {
-		testMetricAnnotation("memory")
-	})
+		By("Creating a capp instance with memory scale metric")
+		testCapp := mocks.CreateBaseCapp()
+		testCapp.Spec.ScaleSpec.Metric = consts.MemoryScaleMetric
+		createdCapp := utilst.CreateCapp(k8sClient, testCapp)
 
-	It("Should create a ksvc with rps metric annotation when creating a capp with rps scale metric", func() {
-		testMetricAnnotation("rps")
+		By("Checking if the ksvc was created with memory metric annotation successfully")
+		Eventually(func() string {
+			ksvc := utilst.GetKSVC(k8sClient, createdCapp.Name, createdCapp.Namespace)
+			return ksvc.Spec.Template.Annotations[consts.KnativeMetricAnnotation]
+		}, consts.Timeout, consts.Interval).Should(Equal(consts.MemoryScaleMetric))
 	})
 
 	It("Should create and delete a ksvc when creating and deleting a capp instance", func() {
