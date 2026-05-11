@@ -12,6 +12,7 @@ import (
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -128,14 +129,14 @@ func (c CertificateManager) IsRequired(capp cappv1alpha1.Capp) bool {
 // If it's not, then it cleans up the resource if it exists.
 func (c CertificateManager) Manage(capp cappv1alpha1.Capp) error {
 	if c.IsRequired(capp) {
-		return c.create(capp)
+		return c.reconcileCertificate(capp)
 	}
 
 	return c.CleanUp(capp)
 }
 
-// create creates a Certificate resource.
-func (c CertificateManager) create(capp cappv1alpha1.Capp) error {
+// reconcileCertificate reconciles the cert-manager Certificate for this Capp.
+func (c CertificateManager) reconcileCertificate(capp cappv1alpha1.Capp) error {
 	certificateFromCapp, err := c.prepareResource(capp)
 	if err != nil {
 		return fmt.Errorf("failed to prepare Certificate: %w", err)
@@ -153,6 +154,13 @@ func (c CertificateManager) create(capp cappv1alpha1.Capp) error {
 			return nil
 		} else {
 			return fmt.Errorf("failed to get Certificate %q: %w", certificateFromCapp.Name, err)
+		}
+	}
+
+	if !equality.Semantic.DeepEqual(certificate.Spec, certificateFromCapp.Spec) {
+		certificate.Spec = *certificateFromCapp.Spec.DeepCopy()
+		if err := resourceManager.UpdateResource(&certificate); err != nil {
+			return fmt.Errorf("update Certificate %q: %w", certificate.Name, err)
 		}
 	}
 
