@@ -22,6 +22,7 @@ import (
 	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const (
@@ -109,17 +110,30 @@ func (k KnativeDomainMappingManager) CleanUp(capp cappv1alpha1.Capp) error {
 		return err
 	}
 
-	for _, domainMapping := range domainMappings.Items {
-		dm := rclient.GetBareDomainMapping(domainMapping.Name, domainMapping.Namespace)
-
+	for _, item := range domainMappings.Items {
+		var dm knativev1beta1.DomainMapping
+		if err := k.K8sclient.Get(k.Ctx, client.ObjectKeyFromObject(&item), &dm); err != nil {
+			if err := client.IgnoreNotFound(err); err != nil {
+				return err
+			}
+			continue
+		}
+		if capp.DeletionTimestamp != nil {
+			ok, err := controllerutil.HasOwnerReference(dm.OwnerReferences, &capp, k.K8sclient.Scheme())
+			if err != nil {
+				return err
+			}
+			if ok {
+				continue
+			}
+		}
 		if err := resourceManager.DeleteResource(&dm); err != nil {
 			if errors.IsNotFound(err) {
 				continue
 			}
 			return err
 		}
-
-		if err := deleteTLSSecret(resourceManager, utils.GenerateSecretName(domainMapping.Name), domainMapping.Namespace); err != nil {
+		if err := deleteTLSSecret(resourceManager, utils.GenerateSecretName(dm.Name), dm.Namespace); err != nil {
 			return err
 		}
 	}
@@ -154,7 +168,7 @@ func (k KnativeDomainMappingManager) createOrUpdate(capp cappv1alpha1.Capp) erro
 
 	if err := k.K8sclient.Get(k.Ctx, types.NamespacedName{Namespace: capp.Namespace, Name: domainMappingFromCapp.Name}, &domainMapping); err != nil {
 		if errors.IsNotFound(err) {
-			return k.createDomainMapping(capp, domainMappingFromCapp, resourceManager)
+			return k.createDomainMapping(&capp, domainMappingFromCapp, resourceManager)
 		} else {
 			return fmt.Errorf("failed to get DomainMapping %q: %w", domainMappingFromCapp.Name, err)
 		}
@@ -166,32 +180,39 @@ func (k KnativeDomainMappingManager) createOrUpdate(capp cappv1alpha1.Capp) erro
 		}
 	}
 
-	return k.updateDomainMapping(domainMapping, domainMappingFromCapp, resourceManager)
+	return k.updateDomainMapping(&domainMapping, domainMappingFromCapp, &capp, resourceManager)
 }
 
 // createDomainMapping creates a new DomainMapping and emits an event.
-func (k KnativeDomainMappingManager) createDomainMapping(capp cappv1alpha1.Capp, domainMappingFromCapp knativev1beta1.DomainMapping, resourceManager rclient.ResourceManagerClient) error {
+func (k KnativeDomainMappingManager) createDomainMapping(capp *cappv1alpha1.Capp, domainMappingFromCapp knativev1beta1.DomainMapping, resourceManager rclient.ResourceManagerClient) error {
+	if err := controllerutil.SetOwnerReference(capp, &domainMappingFromCapp, k.K8sclient.Scheme()); err != nil {
+		return fmt.Errorf("set DomainMapping owner reference: %w", err)
+	}
 	if err := resourceManager.CreateResource(&domainMappingFromCapp); err != nil {
-		k.EventRecorder.Event(&capp, corev1.EventTypeWarning, eventCappDomainMappingCreationFailed,
+		k.EventRecorder.Event(capp, corev1.EventTypeWarning, eventCappDomainMappingCreationFailed,
 			fmt.Sprintf("Failed to create DomainMapping %s", domainMappingFromCapp.Name))
 
 		return err
 	}
 
-	k.EventRecorder.Event(&capp, corev1.EventTypeNormal, eventCappDomainMappingCreated,
+	k.EventRecorder.Event(capp, corev1.EventTypeNormal, eventCappDomainMappingCreated,
 		fmt.Sprintf("Created DomainMapping %s", domainMappingFromCapp.Name))
 
 	return nil
 }
 
 // updateDomainMapping checks if an update to the DomainMapping is necessary and performs the update to match desired state.
-func (k KnativeDomainMappingManager) updateDomainMapping(knativeDomainMapping, domainMappingFromCapp knativev1beta1.DomainMapping, resourceManager rclient.ResourceManagerClient) error {
-	if !equality.Semantic.DeepEqual(knativeDomainMapping.Spec, domainMappingFromCapp.Spec) {
-		knativeDomainMapping.Spec = domainMappingFromCapp.Spec
-		return resourceManager.UpdateResource(&knativeDomainMapping)
+func (k KnativeDomainMappingManager) updateDomainMapping(knativeDomainMapping *knativev1beta1.DomainMapping, domainMappingFromCapp knativev1beta1.DomainMapping, capp *cappv1alpha1.Capp, resourceManager rclient.ResourceManagerClient) error {
+	orig := knativeDomainMapping.DeepCopy()
+	if err := controllerutil.SetOwnerReference(capp, knativeDomainMapping, k.K8sclient.Scheme()); err != nil {
+		return fmt.Errorf("set DomainMapping owner reference: %w", err)
 	}
-
-	return nil
+	knativeDomainMapping.Spec = domainMappingFromCapp.Spec
+	if equality.Semantic.DeepEqual(orig.Spec, knativeDomainMapping.Spec) &&
+		equality.Semantic.DeepEqual(orig.OwnerReferences, knativeDomainMapping.OwnerReferences) {
+		return nil
+	}
+	return resourceManager.UpdateResource(knativeDomainMapping)
 }
 
 // handlePreviousDomainMappings takes care of removing unneeded DomainMapping objects. If the DNSRecord
