@@ -232,3 +232,57 @@ func TestValidateNFSVolumeMounts(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateEventSources(t *testing.T) {
+	tests := []struct {
+		name            string
+		sources         []cappv1alpha1.SourceConfiguration
+		wantErrContains []string
+	}{
+		{
+			name: "allows empty sources list",
+		},
+		{
+			name: "allows unique source names",
+			sources: []cappv1alpha1.SourceConfiguration{
+				{Name: "ping-a"},
+				{Name: "ping-b"},
+			},
+		},
+		{
+			name: "rejects duplicate source names",
+			sources: []cappv1alpha1.SourceConfiguration{
+				{Name: "ping-a"},
+				{Name: "ping-a"},
+			},
+			wantErrContains: []string{
+				"spec.eventSourcesSpec.sources",
+				"duplicate",
+				"ping-a",
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			capp := cappv1alpha1.Capp{
+				Spec: cappv1alpha1.CappSpec{
+					EventSourcesSpec: cappv1alpha1.EventSourcesSpec{
+						Sources: tc.sources,
+					},
+				},
+			}
+
+			err := validateEventSources(capp)
+			if len(tc.wantErrContains) == 0 {
+				require.NoError(t, err)
+				return
+			}
+
+			require.Error(t, err)
+			for _, s := range tc.wantErrContains {
+				assert.Contains(t, err.Error(), s)
+			}
+		})
+	}
+}

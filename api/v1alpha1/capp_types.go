@@ -51,6 +51,10 @@ type CappSpec struct {
 
 	// VolumesSpec defines the volumes specification for the Capp.
 	VolumesSpec VolumesSpec `json:"volumesSpec,omitempty"`
+
+	// EventSourcesSpec defines the event sources for the Capp.
+	// +optional
+	EventSourcesSpec EventSourcesSpec `json:"eventSourcesSpec,omitempty"`
 }
 
 // ScaleSpec defines the scale specification for the Capp.
@@ -72,6 +76,21 @@ type ScaleSpec struct {
 	// +kubebuilder:validation:Minimum=0
 	// +optional
 	ScaleDelaySeconds int `json:"scaleDelaySeconds,omitempty"`
+}
+
+// EventSourcesSpec defines all event sources for a Capp.
+type EventSourcesSpec struct {
+	// Sources is the list of event sources connected to the Capp's Knative Service.
+	// +optional
+	Sources []SourceConfiguration `json:"sources,omitempty"`
+}
+
+// SourceConfiguration defines a single Knative Eventing source connected to the Capp.
+type SourceConfiguration struct {
+	// Name is a unique logical identifier for this source within the Capp.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name"`
 }
 
 // VolumesSpec defines the volumes specification for the Capp.
@@ -182,6 +201,23 @@ type StateStatus struct {
 	LastChange metav1.Time `json:"lastChange,omitempty"`
 }
 
+// EventingStatus shows the observed state of all event sources linked to the Capp.
+type EventingStatus struct {
+	// EventSources lists the status of each owned event source resource.
+	// +optional
+	EventSources []EventSourceStatus `json:"eventSources,omitempty"`
+}
+
+// EventSourceStatus shows the observed state of a single event source resource.
+type EventSourceStatus struct {
+	// Name is the K8s name of the underlying source resource.
+	// +optional
+	Name string `json:"name,omitempty"`
+
+	// Condition holds the readiness condition for the underlying source resource.
+	Condition metav1.Condition `json:"condition"`
+}
+
 // LoggingStatus defines the state of the SyslogNGFlow and SyslogNGOutput objects linked to the Capp.
 type LoggingStatus struct {
 	// SyslogNGFlow represents the Status of the SyslogNGFlow used by the Capp.
@@ -262,6 +298,10 @@ type CappStatus struct {
 	// VolumesStatus shows the state of the Volumes objects linked to the Capp.
 	// +optional
 	VolumesStatus VolumesStatus `json:"volumesStatus,omitempty"`
+
+	// EventingStatus shows the state of event sources linked to the Capp.
+	// +optional
+	EventingStatus EventingStatus `json:"eventingStatus,omitempty"`
 
 	// Conditions contain details about the current state of the Capp.
 	// +optional
