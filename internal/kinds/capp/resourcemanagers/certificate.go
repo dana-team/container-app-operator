@@ -22,6 +22,7 @@ import (
 	"github.com/go-logr/logr"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const (
@@ -105,6 +106,15 @@ func (c CertificateManager) CleanUp(capp cappv1alpha1.Capp) error {
 	}
 
 	for _, certificate := range certificates.Items {
+		if capp.DeletionTimestamp != nil {
+			ok, err := controllerutil.HasOwnerReference(certificate.OwnerReferences, &capp, c.K8sclient.Scheme())
+			if err != nil {
+				return err
+			}
+			if ok {
+				continue
+			}
+		}
 		cert := rclient.GetBareCertificate(certificate.Name, certificate.Namespace)
 		if err := resourceManager.DeleteResource(&cert); err != nil {
 			if errors.IsNotFound(err) {
@@ -149,13 +159,18 @@ func (c CertificateManager) reconcileCertificate(capp cappv1alpha1.Capp) error {
 			}
 
 			return nil
-		} else {
-			return fmt.Errorf("failed to get Certificate %q: %w", certificateFromCapp.Name, err)
 		}
+		return fmt.Errorf("failed to get Certificate %q: %w", certificateFromCapp.Name, err)
 	}
 
-	if !equality.Semantic.DeepEqual(certificate.Spec, certificateFromCapp.Spec) {
-		certificate.Spec = *certificateFromCapp.Spec.DeepCopy()
+	orig := certificate.DeepCopy()
+	if err := controllerutil.SetOwnerReference(&capp, &certificate, c.K8sclient.Scheme()); err != nil {
+		return fmt.Errorf("set Certificate owner reference: %w", err)
+	}
+	certificate.Spec = *certificateFromCapp.Spec.DeepCopy()
+
+	if !equality.Semantic.DeepEqual(orig.Spec, certificate.Spec) ||
+		!equality.Semantic.DeepEqual(orig.OwnerReferences, certificate.OwnerReferences) {
 		if err := resourceManager.UpdateResource(&certificate); err != nil {
 			return fmt.Errorf("update Certificate %q: %w", certificate.Name, err)
 		}
@@ -172,6 +187,9 @@ func (c CertificateManager) reconcileCertificate(capp cappv1alpha1.Capp) error {
 
 // createCertificate creates a new Certificate and emits an event.
 func (c CertificateManager) createCertificate(capp cappv1alpha1.Capp, certificateFromCapp cmapi.Certificate, resourceManager rclient.ResourceManagerClient) error {
+	if err := controllerutil.SetOwnerReference(&capp, &certificateFromCapp, c.K8sclient.Scheme()); err != nil {
+		return fmt.Errorf("set Certificate owner reference: %w", err)
+	}
 	if err := resourceManager.CreateResource(&certificateFromCapp); err != nil {
 		c.EventRecorder.Event(&capp, corev1.EventTypeWarning, eventCappCertificateCreationFailed,
 			fmt.Sprintf("Failed to create Certificate %s", certificateFromCapp.Name))
