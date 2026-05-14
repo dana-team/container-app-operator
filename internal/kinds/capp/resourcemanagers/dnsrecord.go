@@ -120,7 +120,7 @@ func (r DNSRecordManager) Manage(capp cappv1alpha1.Capp) error {
 	return r.CleanUp(capp)
 }
 
-// createOrUpdate creates or updates a DomainMapping resource.
+// createOrUpdate creates or updates a DNSRecord resource.
 func (r DNSRecordManager) createOrUpdate(capp cappv1alpha1.Capp) error {
 	dnsRecordFromCapp, err := r.prepareResource(capp)
 	if err != nil {
