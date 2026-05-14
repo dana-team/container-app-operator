@@ -140,7 +140,7 @@ func (r DNSRecordManager) createOrUpdate(capp cappv1alpha1.Capp) error {
 
 	if capp.Status.RouteStatus.DomainMappingObjectStatus.URL != nil {
 		if err := r.handlePreviousDNSRecords(capp, resourceManager, dnsRecordFromCapp.Name); err != nil {
-			return fmt.Errorf("failed to delete previous Certificates: %w", err)
+			return fmt.Errorf("failed to delete previous DNSRecords: %w", err)
 		}
 	}
 
