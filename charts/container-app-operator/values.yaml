@@ -141,3 +141,5 @@ config:
     # Each entry has a required `pattern` (regex) and an optional `explanation` shown in webhook error messages.
     - match: ".*"
       explanation: "any hostname"
+
+  revisionHistoryLimit: 10

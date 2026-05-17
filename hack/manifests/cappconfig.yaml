@@ -31,3 +31,4 @@ spec:
       explanation: "any .com domain"
     - match: 'test.dev-.*'
       explanation: "test subdomains of dev"
+  revisionHistoryLimit: 10

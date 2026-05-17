@@ -33,6 +33,11 @@ type CappConfigSpec struct {
 	// Defaults to an empty list (all hostnames denied) if not specified.
 	// +kubebuilder:default:={}
 	AllowedHostnamePatterns []HostnamePattern `json:"allowedHostnamePatterns"`
+
+	// RevisionHistoryLimit defines how many CappRevisions will be retained
+	// +kubebuilder:default:=10
+	// +kubebuilder:validation:Minimum=1
+	RevisionHistoryLimit int `json:"revisionHistoryLimit,omitempty"`
 }
 
 type DNSConfig struct {

@@ -14,8 +14,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const revisionsToKeep = 10
-
 var annotationToIgnore = utils.CappAPIGroup + "/last-updated-by"
 
 // splitRevisionsAtIndex splits a slice of CappRevisions into two slices:
@@ -73,6 +71,9 @@ func isEqual(capp cappv1alpha1.Capp, revision cappv1alpha1.CappRevision) bool {
 func HandleCappUpdate(ctx context.Context, k8sClient client.Client, capp cappv1alpha1.Capp, logger logr.Logger, cappRevisions []cappv1alpha1.CappRevision) error {
 	sortByCreationTime(cappRevisions)
 	numOfRevisions := len(cappRevisions)
+
+	cappConfig, _ := utils.GetCappConfig(k8sClient)
+	revisionsToKeep := cappConfig.Spec.RevisionHistoryLimit
 
 	latestRevision := cappRevisions[0]
 	if isEqual(capp, latestRevision) {
