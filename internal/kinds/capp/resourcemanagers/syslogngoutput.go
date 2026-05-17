@@ -26,7 +26,7 @@ import (
 const (
 	SyslogNGOutput                        = "syslogNGOutput"
 	eventCappSyslogNGOutputCreationFailed = "SyslogNGOutputCreationFailed"
-	eventCappSyslogNGlSOutputCreated      = "SyslogNGOutputCreated"
+	eventCappSyslogNGOutputCreated        = "SyslogNGOutputCreated"
 	elasticSSLVersion                     = "tlsv1_2"
 	elasticTemplate                       = "$(format-json --subkeys json# --key-delimiter #)"
 	elasticDataStreamTemplate             = "--subkeys json# --key-delimiter # --exclude DATE --key ISODATE @timestamp=${ISODATE}"
@@ -196,7 +196,7 @@ func (o SyslogNGOutputManager) createSyslogNGOutput(syslogNGOutputFromCapp loggi
 		return err
 	}
 
-	o.EventRecorder.Event(&capp, corev1.EventTypeNormal, eventCappSyslogNGlSOutputCreated,
+	o.EventRecorder.Event(&capp, corev1.EventTypeNormal, eventCappSyslogNGOutputCreated,
 		fmt.Sprintf("Created SyslogNGOutput %s", syslogNGOutputFromCapp.Name))
 
 	return nil
