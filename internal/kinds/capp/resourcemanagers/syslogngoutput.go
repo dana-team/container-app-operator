@@ -46,6 +46,18 @@ var syslogNGOutputCreators = map[cappv1alpha1.LogType]func(cappv1alpha1.LogSpec)
 	cappv1alpha1.LogTypeElasticDataStream: createElasticDataStreamOutput,
 }
 
+func isSupportedLogType(logType cappv1alpha1.LogType) bool {
+	_, ok := syslogNGOutputCreators[logType]
+	return ok
+}
+
+func isLogSpecRequired(capp cappv1alpha1.Capp) bool {
+	if capp.Spec.LogSpec == (cappv1alpha1.LogSpec{}) {
+		return false
+	}
+	return isSupportedLogType(capp.Spec.LogSpec.Type)
+}
+
 // createElasticsearchOutput creates an Elasticsearch SyslogNGOutput object based on the provided logSpec.
 // It constructs the Elasticsearch SyslogNGOutput which is returned as a SyslogNGOutputSpec.
 func createElasticsearchOutput(logSpec cappv1alpha1.LogSpec) loggingv1beta1.SyslogNGOutputSpec {
@@ -143,7 +155,7 @@ func (o SyslogNGOutputManager) CleanUp(capp cappv1alpha1.Capp) error {
 
 // IsRequired is responsible to determine if resource logging operator is required.
 func (o SyslogNGOutputManager) IsRequired(capp cappv1alpha1.Capp) bool {
-	return capp.Spec.LogSpec != cappv1alpha1.LogSpec{}
+	return isLogSpecRequired(capp)
 }
 
 // Manage creates or updates a SyslogNGOutput resource based on the provided Capp if it's required.
@@ -159,6 +171,9 @@ func (o SyslogNGOutputManager) Manage(capp cappv1alpha1.Capp) error {
 // createOrUpdate creates or updates a SyslogNGOutput resource.
 func (o SyslogNGOutputManager) createOrUpdate(capp cappv1alpha1.Capp) error {
 	syslogNGOutputFromCapp := o.prepareResource(capp)
+	if !isSupportedLogType(capp.Spec.LogSpec.Type) {
+		return fmt.Errorf("unsupported log type %q", capp.Spec.LogSpec.Type)
+	}
 	syslogNGOutput := loggingv1beta1.SyslogNGOutput{}
 	resourceManager := rclient.ResourceManagerClient{Ctx: o.Ctx, K8sclient: o.K8sclient, Log: o.Log}
 
