@@ -139,7 +139,7 @@ func (n NFSPVCManager) createOrUpdate(capp cappv1alpha1.Capp) error {
 	return nil
 }
 
-// createKSVC creates a new NFSPVC and emits an event.
+// createNFSPVC creates a new NFSPVC and emits an event.
 func (n NFSPVCManager) createNFSPVC(capp *cappv1alpha1.Capp, nfspvc *nfspvcv1alpha1.NfsPvc, resourceManager rclient.ResourceManagerClient) error {
 	if err := resourceManager.CreateResource(nfspvc); err != nil {
 		n.EventRecorder.Event(capp, corev1.EventTypeWarning, eventNFSPVCCreationFailed,
