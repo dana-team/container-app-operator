@@ -77,7 +77,7 @@ func (f SyslogNGFlowManager) CleanUp(capp cappv1alpha1.Capp) error {
 
 // IsRequired is responsible to determine if resource logging operator SyslogNGFlow is required.
 func (f SyslogNGFlowManager) IsRequired(capp cappv1alpha1.Capp) bool {
-	return capp.Spec.LogSpec != cappv1alpha1.LogSpec{}
+	return isLogSpecRequired(capp)
 }
 
 // Manage creates or updates a SyslogNGFlow resource based on the provided Capp if it's required.
