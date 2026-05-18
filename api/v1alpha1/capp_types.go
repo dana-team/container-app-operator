@@ -91,6 +91,11 @@ type SourceConfiguration struct {
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
+
+	// URI is the relative URI path that the source will send events to.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:XValidation:rule="self == '' || self.startsWith('/')",message="path must start with '/' if specified"
+	URI string `json:"uri,omitempty"`
 }
 
 // VolumesSpec defines the volumes specification for the Capp.

@@ -8632,6 +8632,13 @@ spec:
                             source within the Capp.
                           minLength: 1
                           type: string
+                        uri:
+                          description: URI is the relative URI path that the source
+                            will send events to.
+                          type: string
+                          x-kubernetes-validations:
+                          - message: path must start with '/' if specified
+                            rule: self == '' || self.startsWith('/')
                       required:
                       - name
                       type: object
