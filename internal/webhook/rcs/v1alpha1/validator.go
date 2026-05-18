@@ -84,6 +84,10 @@ func (c *CappValidator) handle(ctx context.Context, capp cappv1alpha1.Capp, oldC
 		return admission.Denied(err.Error())
 	}
 
+	if err := validateEventSources(capp); err != nil {
+		return admission.Denied(err.Error())
+	}
+
 	minReplicas := capp.Spec.ScaleSpec.MinReplicas
 	scaleDelay := capp.Spec.ScaleSpec.ScaleDelaySeconds
 
@@ -125,4 +129,15 @@ func validateNFSVolumeMounts(capp cappv1alpha1.Capp) error {
 	slices.Sort(missingVolumeNames)
 
 	return fmt.Errorf("invalid nfsVolumes: volumes [%s] must be mounted by at least one container", strings.Join(missingVolumeNames, ", "))
+}
+
+func validateEventSources(capp cappv1alpha1.Capp) error {
+	seen := make(map[string]struct{})
+	for i, src := range capp.Spec.EventSourcesSpec.Sources {
+		if _, dup := seen[src.Name]; dup {
+			return fmt.Errorf("spec.eventSourcesSpec.sources[%d].name: duplicate value %q", i, src.Name)
+		}
+		seen[src.Name] = struct{}{}
+	}
+	return nil
 }

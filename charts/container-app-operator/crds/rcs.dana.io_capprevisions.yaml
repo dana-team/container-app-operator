@@ -8798,6 +8798,27 @@ spec:
                                 type: object
                             type: object
                         type: object
+                      eventSourcesSpec:
+                        description: EventSourcesSpec defines the event sources for
+                          the Capp.
+                        properties:
+                          sources:
+                            description: Sources is the list of event sources connected
+                              to the Capp's Knative Service.
+                            items:
+                              description: SourceConfiguration defines a single Knative
+                                Eventing source connected to the Capp.
+                              properties:
+                                name:
+                                  description: Name is a unique logical identifier
+                                    for this source within the Capp.
+                                  minLength: 1
+                                  type: string
+                              required:
+                              - name
+                              type: object
+                            type: array
+                        type: object
                       logSpec:
                         description: LogSpec defines the configuration for shipping
                           Capp logs.
