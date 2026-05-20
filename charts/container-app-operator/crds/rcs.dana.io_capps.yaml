@@ -15,10 +15,6 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - description: cluster of the resource
-      jsonPath: .status.applicationLinks.site
-      name: Site
-      type: string
     - description: shorten url
       jsonPath: .spec.routeSpec.hostname
       name: Custom URL
@@ -8818,20 +8814,6 @@ spec:
           status:
             description: CappStatus defines the observed state of Capp.
             properties:
-              applicationLinks:
-                description: |-
-                  ApplicationLinks contains relevant information about
-                  the cluster that the Capp is deployed in.
-                properties:
-                  consoleLink:
-                    description: ConsoleLink holds a link for the Openshift cluster
-                      console.
-                    type: string
-                  site:
-                    description: Site holds the cluster name that the Capp is deployed
-                      on.
-                    type: string
-                type: object
               conditions:
                 description: Conditions contain details about the current state of
                   the Capp.

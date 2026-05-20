@@ -32,7 +32,6 @@ import (
 	nfspvcv1alpha1 "github.com/dana-team/nfspvc-operator/api/v1alpha1"
 	"github.com/go-logr/zapr"
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
-	routev1 "github.com/openshift/api/route/v1"
 	"go.elastic.co/ecszap"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -50,7 +49,6 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	cappcontroller "github.com/dana-team/container-app-operator/internal/kinds/capp/controllers"
-	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 	crcontroller "github.com/dana-team/container-app-operator/internal/kinds/capprevision/controllers"
 	webhooks "github.com/dana-team/container-app-operator/internal/webhook/rcs/v1alpha1"
 	// +kubebuilder:scaffold:imports
@@ -72,10 +70,6 @@ func init() {
 	utilruntime.Must(dnsrecordv1alpha1.AddToScheme(scheme))
 
 	// +kubebuilder:scaffold:scheme
-}
-
-func initOpenshiftSchemes() {
-	utilruntime.Must(routev1.Install(scheme))
 }
 
 func initEcsLogger(level zapcore.Level) {
@@ -158,20 +152,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	onOpenshift, err := utils.IsOnOpenshift(mgr.GetConfig())
-	if err != nil {
-		setupLog.Error(err, "failed to check if controller is running on Openshift")
-		os.Exit(1)
-	}
-
-	if onOpenshift {
-		initOpenshiftSchemes()
-	}
-
 	if err = (&cappcontroller.CappReconciler{
 		Client:        mgr.GetClient(),
 		Scheme:        mgr.GetScheme(),
-		OnOpenshift:   onOpenshift,
 		EventRecorder: mgr.GetEventRecorderFor("container-app-controller"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Capp")

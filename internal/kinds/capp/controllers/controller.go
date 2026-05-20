@@ -49,7 +49,6 @@ type CappReconciler struct {
 	Log logr.Logger
 	client.Client
 	Scheme        *runtime.Scheme
-	OnOpenshift   bool
 	EventRecorder record.EventRecorder
 }
 
@@ -62,7 +61,6 @@ type CappReconciler struct {
 // +kubebuilder:rbac:groups=serving.knative.dev,resources=revisions,verbs=get;list;watch;update;create
 // +kubebuilder:rbac:groups=logging.banzaicloud.io,resources=syslogngflows,verbs=get;list;watch;update;create;delete
 // +kubebuilder:rbac:groups=logging.banzaicloud.io,resources=syslogngoutputs,verbs=get;list;watch;update;create;delete
-// +kubebuilder:rbac:groups=route.openshift.io,resources=routes,verbs=get;list;watch;update;create
 // +kubebuilder:rbac:groups="",resources=nodes,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;update;create;patch;delete
 // +kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch
@@ -243,7 +241,7 @@ func (r *CappReconciler) SyncApplication(ctx context.Context, capp cappv1alpha1.
 		}
 	}
 
-	if err := status.SyncStatus(ctx, capp, logger, r.Client, r.OnOpenshift, resourceManagers); err != nil {
+	if err := status.SyncStatus(ctx, capp, logger, r.Client, resourceManagers); err != nil {
 		return err
 	}
 	return nil

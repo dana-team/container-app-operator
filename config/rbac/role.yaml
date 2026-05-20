@@ -119,16 +119,6 @@ rules:
   - update
   - watch
 - apiGroups:
-  - route.openshift.io
-  resources:
-  - routes
-  verbs:
-  - create
-  - get
-  - list
-  - update
-  - watch
-- apiGroups:
   - serving.knative.dev
   resources:
   - domainmappings

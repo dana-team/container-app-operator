@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
-	routev1 "github.com/openshift/api/route/v1"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -24,7 +23,6 @@ func newScheme() *runtime.Scheme {
 	_ = cappv1alpha1.AddToScheme(s)
 	_ = knativev1beta1.AddToScheme(s)
 	_ = knativev1.AddToScheme(s)
-	_ = routev1.Install(s)
 	_ = scheme.AddToScheme(s)
 	return s
 }

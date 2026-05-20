@@ -173,18 +173,6 @@ type LogSpec struct {
 	PasswordSecret string `json:"passwordSecret,omitempty"`
 }
 
-// ApplicationLinks contains relevant information about
-// the cluster that the Capp is deployed in.
-type ApplicationLinks struct {
-	// ConsoleLink holds a link for the Openshift cluster console.
-	// +optional
-	ConsoleLink string `json:"consoleLink,omitempty"`
-
-	// Site holds the cluster name that the Capp is deployed on.
-	// +optional
-	Site string `json:"site,omitempty"`
-}
-
 // RevisionInfo shows the revision information.
 type RevisionInfo struct {
 	// RevisionStatus communicates the observed state of the Revision (from the controller).
@@ -275,11 +263,6 @@ type NFSVolumeStatus struct {
 
 // CappStatus defines the observed state of Capp.
 type CappStatus struct {
-	// ApplicationLinks contains relevant information about
-	// the cluster that the Capp is deployed in.
-	// +optional
-	ApplicationLinks ApplicationLinks `json:"applicationLinks,omitempty"`
-
 	// KnativeObjectStatus represents the Status stanza of the Service resource.
 	// +optional
 	KnativeObjectStatus knativev1.ServiceStatus `json:"knativeObjectStatus,omitempty"`
@@ -314,7 +297,6 @@ type CappStatus struct {
 }
 
 // +kubebuilder:object:root=true
-// +kubebuilder:printcolumn:name="Site",type="string",JSONPath=".status.applicationLinks.site",description="cluster of the resource"
 // +kubebuilder:printcolumn:name="Custom URL",type="string",JSONPath=".spec.routeSpec.hostname",description="shorten url"
 // +kubebuilder:printcolumn:name="AutoScale Type",type="string",JSONPath=".spec.scaleSpec.metric",description="autoscale metric"
 // +kubebuilder:subresource:status

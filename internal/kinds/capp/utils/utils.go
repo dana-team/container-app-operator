@@ -9,10 +9,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
-
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/discovery"
-	"k8s.io/client-go/rest"
 )
 
 var (
@@ -34,27 +30,6 @@ func ManagedResourceLabels(cappName string) map[string]string {
 		CappResourceKey:   cappName,
 		ManagedByLabelKey: CappKey,
 	}
-}
-
-// IsOnOpenshift returns true if the cluster has the openshift config group
-func IsOnOpenshift(config *rest.Config) (bool, error) {
-	dc, err := discovery.NewDiscoveryClientForConfig(config)
-	if err != nil {
-		return false, err
-	}
-	apiGroups, err := dc.ServerGroups()
-	if err != nil {
-		return false, err
-	}
-	kind := schema.GroupVersionKind{Group: "config.openshift.io", Version: "v1", Kind: "ClusterVersion"}
-	for _, apiGroup := range apiGroups.Groups {
-		for _, supportedVersion := range apiGroup.Versions {
-			if supportedVersion.GroupVersion == kind.GroupVersion().String() {
-				return true, nil
-			}
-		}
-	}
-	return false, nil
 }
 
 // ExcludeKeysWithPrefix returns a new map omitting entries whose keys start with prefix.
