@@ -76,8 +76,13 @@ func (r DNSRecordManager) prepareResource(capp cappv1alpha1.Capp) (dnsrecordv1al
 		},
 	}
 
+	provider, err := utils.GetXPProviderFromConfig(dnsConfig)
+	if err != nil {
+		return dnsrecordv1alpha1.CNAMERecord{}, err
+	}
+
 	dnsRecord.Spec.ProviderConfigReference = &xpv1.ProviderConfigReference{
-		Name: "default",
+		Name: provider,
 		Kind: ClusterProviderConfigKind,
 	}
 
