@@ -183,6 +183,12 @@ spec:
                 - provider
                 - zone
                 type: object
+              revisionHistoryLimit:
+                default: 10
+                description: RevisionHistoryLimit defines how many CappRevisions will
+                  be retained
+                minimum: 1
+                type: integer
             required:
             - allowedHostnamePatterns
             - autoscaleConfig

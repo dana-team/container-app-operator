@@ -150,6 +150,7 @@ metadata:
   name: capp-config
   namespace: container-app-operator-system
 spec:
+  revisionHistoryLimit: 10
   autoscaleConfig:
     rps: 200
     cpu: 80
@@ -162,6 +163,16 @@ spec:
     cname: "ingress.capp-zone.com."
     provider: "dns-default"
     issuer: "cert-issuer"
+  defaultResources:
+    requests:
+      cpu: "250m"
+      memory: "512Mi"
+    limits:
+      cpu: "1"
+      memory: "1Gi"
+  allowedHostnamePatterns:
+    - regex: ".*\\.apps\\.capp-zone\\.com"
+    - regex: ".*\\.internal\\.capp-zone\\.com"
 
 ```
 
