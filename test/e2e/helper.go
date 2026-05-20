@@ -8,7 +8,6 @@ import (
 	"github.com/go-logr/logr"
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
 	networkingv1 "github.com/openshift/api/network/v1"
-	routev1 "github.com/openshift/api/route/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -41,7 +40,6 @@ func newScheme() *runtime.Scheme {
 	_ = knativev1alphav1.AddToScheme(scheme)
 	_ = knativev1.AddToScheme(scheme)
 	_ = networkingv1.Install(scheme)
-	_ = routev1.Install(scheme)
 
 	return scheme
 }
