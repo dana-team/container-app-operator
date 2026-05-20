@@ -108,9 +108,10 @@ func TestValidateLogSpec(t *testing.T) {
 	const elasticLogHost = "https://elasticsearch.dana.com/_bulk"
 
 	tests := []struct {
-		name    string
-		logSpec cappv1alpha1.LogSpec
-		wantErr bool
+		name        string
+		logSpec     cappv1alpha1.LogSpec
+		wantErr     bool
+		errContains []string
 	}{
 		{
 			name: "denies when elastic log configuration omits required fields",
@@ -119,6 +120,17 @@ func TestValidateLogSpec(t *testing.T) {
 				Host: elasticLogHost,
 			},
 			wantErr: true,
+		},
+		{
+			name: "denies when log type is invalid",
+			logSpec: cappv1alpha1.LogSpec{
+				Type: cappv1alpha1.LogType("bogus"),
+			},
+			wantErr: true,
+			errContains: []string{
+				string(cappv1alpha1.LogTypeElastic),
+				string(cappv1alpha1.LogTypeElasticDataStream),
+			},
 		},
 		{
 			name: "accepts when elastic log configuration includes all required fields",
@@ -138,6 +150,9 @@ func TestValidateLogSpec(t *testing.T) {
 			err := ValidateLogSpec(tt.logSpec)
 			if tt.wantErr {
 				require.NotNil(t, err)
+				for _, sub := range tt.errContains {
+					require.Contains(t, err.Error(), sub)
+				}
 			} else {
 				require.Nil(t, err)
 			}

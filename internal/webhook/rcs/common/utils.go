@@ -3,9 +3,9 @@ package common
 import (
 	"context"
 	"fmt"
-
 	"net"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
@@ -88,6 +88,7 @@ func ValidateLogSpec(logSpec cappv1alpha1.LogSpec) *apis.FieldError {
 		for validType := range requiredFields {
 			validTypes = append(validTypes, string(validType))
 		}
+		sort.Strings(validTypes)
 		return apis.ErrGeneric(
 			fmt.Sprintf("Invalid LogSpec Type: %q. Valid types are: %q", logSpec.Type, strings.Join(validTypes, ", ")),
 			"logSpec.Type")
