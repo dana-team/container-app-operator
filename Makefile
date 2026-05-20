@@ -38,7 +38,10 @@ all: build
 
 .PHONY: help
 help: ## Display this help.
-	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
+	@w=$$(awk 'BEGIN {FS = ":.*##"} /^[a-zA-Z_0-9-]+:.*?##/ { if (length($$1) > w) w = length($$1) } END { print w + 0 }' $(MAKEFILE_LIST)); \
+	awk -v w="$$w" 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} \
+		/^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5); next } \
+		/^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-*s\033[0m %s\n", w, $$1, $$2 }' $(MAKEFILE_LIST)
 
 ##@ Development
 
@@ -71,7 +74,7 @@ GINKGO_E2E_FOCUS_FLAG := --focus="$(E2E_GINKGO_FOCUS)"
 endif
 
 .PHONY: test-e2e
-test-e2e:
+test-e2e: ## Run e2e tests (requires kubeconfig).
 	@test -n "${KUBECONFIG}" -o -r ${HOME}/.kube/config || (echo "Failed to find kubeconfig in ~/.kube/config or no KUBECONFIG set"; exit 1)
 	echo "Running e2e tests"
 	go clean -testcache
@@ -160,17 +163,17 @@ KNATIVE_HPA_URL ?= https://github.com/knative/serving/releases/download/knative-
 CROSSPLANE_SCC_CRB ?= hack/crossplane-scc-clusterrolebinding.yaml
 PREREQ_HELMFILE ?= charts/capp-prereq-helmfile.gotmpl
 
-.PHONY: prereq ## Install every prerequisite needed to develop and run the operator.
-prereq: install install-knative enable-nfs-knative install-prereq-helmfile
+.PHONY: prereq
+prereq: install install-knative enable-nfs-knative install-prereq-helmfile ## Install prerequisites for dev (CRDs, Knative, helmfile).
 
-.PHONY: prereq-openshift ## Install every prerequisite needed to develop and run the operator on OpenShift with Serverless already installed.
-prereq-openshift: enable-nfs-knative install-crossplane-scc install-prereq-helmfile
+.PHONY: prereq-openshift
+prereq-openshift: enable-nfs-knative install-crossplane-scc install-prereq-helmfile ## Install prerequisites on OpenShift (Serverless already installed).
 
-.PHONY: uninstall-prereq ## Uninstall every prerequisite needed to develop and run the operator.
-uninstall-prereq: uninstall-prereq-helmfile
+.PHONY: uninstall-prereq
+uninstall-prereq: uninstall-prereq-helmfile ## Uninstall prerequisites installed by prereq.
 
-.PHONY: uninstall-prereq-openshift  ## Uninstall every prerequisite needed to develop and run the operator.
-uninstall-prereq-openshift: uninstall-prereq-helmfile uninstall-crossplane-scc
+.PHONY: uninstall-prereq-openshift
+uninstall-prereq-openshift: uninstall-prereq-helmfile uninstall-crossplane-scc ## Uninstall prerequisites installed by prereq-openshift.
 
 .PHONY: enable-nfs-knative
 enable-nfs-knative: ## Enable NFS for Knative
@@ -188,13 +191,12 @@ install-knative: ## Install knative controller on the kind cluster
 install-crossplane-scc: ## Install crossplane rbac on the cluster
 	kubectl apply -f $(CROSSPLANE_SCC_CRB)
 
-CROSSPLANE_SCC_CRB ?= hack/crossplane-scc-clusterrolebinding.yaml
 .PHONY: uninstall-crossplane-scc
 uninstall-crossplane-scc: ## Uninstall crossplane rbac from the kind cluster
 	kubectl delete -f $(CROSSPLANE_SCC_CRB)
 
 .PHONY: install-prereq-helmfile
-install-prereq-helmfile: helmfile helm helm-plugins
+install-prereq-helmfile: helmfile helm helm-plugins ## Apply capp prerequisite Helm releases.
 	${HELMFILE} apply -f $(PREREQ_HELMFILE) \
 	--state-values-set providerDNSRealmName=${PROVIDER_DNS_REALM} \
 	--state-values-set providerDNSKDCName=${PROVIDER_DNS_KDC} \
@@ -204,11 +206,11 @@ install-prereq-helmfile: helmfile helm helm-plugins
 	--state-values-set providerDNSPassword=${PROVIDER_DNS_PASSWORD}
 
 .PHONY: uninstall-prereq-helmfile
-uninstall-prereq-helmfile: helmfile helm helm-plugins
+uninstall-prereq-helmfile: helmfile helm helm-plugins ## Destroy capp prerequisite Helm releases.
 	${HELMFILE} destroy -f $(PREREQ_HELMFILE)
 
 .PHONY: doc-chart
-doc-chart: helm-docs helm
+doc-chart: helm-docs helm ## Generate Helm chart README from values.yaml.
 	$(HELM_DOCS) charts/
 
 .PHONY: verify-doc-chart
@@ -300,7 +302,7 @@ $(HELMFILE): $(LOCALBIN)
 	mv $(LOCALBIN)/helmfile $(LOCALBIN)/helmfile-$(HELMFILE_VERSION)
 
 .PHONY: helm-docs
-helm-docs: $(HELM_DOCS)
+helm-docs: $(HELM_DOCS) ## Download helm-docs locally if necessary.
 $(HELM_DOCS): $(LOCALBIN)
 	$(call go-install-tool,$(HELM_DOCS),github.com/norwoodj/helm-docs/cmd/helm-docs,$(HELM_DOCS_VERSION))
 
