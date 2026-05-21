@@ -29,6 +29,8 @@ const (
 	unchangedHostname      = "same.example.com"
 	oldHostname            = "old.example.com"
 	newHostname            = "new.example.com"
+	elasticHost            = "https://elastic.example.com"
+	elasticIndex           = "my-index"
 )
 
 func TestCappValidatorHandle(t *testing.T) {
@@ -112,6 +114,77 @@ func TestCappValidatorHandle(t *testing.T) {
 			oldCapp:     newCapp(oldHostname),
 			expectAllow: false,
 			expectMsg:   "spec.routeSpec.hostname is immutable once set",
+		},
+		{
+			name:      "Deny Capp when PasswordSecret does not exist",
+			operation: admissionv1.Create,
+			capp: &cappv1alpha1.Capp{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      cappName,
+					Namespace: nsName,
+				},
+				Spec: cappv1alpha1.CappSpec{
+					ScaleSpec: cappv1alpha1.ScaleSpec{
+						Metric: knativeautoscaling.CPU,
+					},
+					LogSpec: cappv1alpha1.LogSpec{
+						Type:           cappv1alpha1.LogTypeElastic,
+						Host:           elasticHost,
+						Index:          elasticIndex,
+						User:           elasticSecretKey,
+						PasswordSecret: "missing-secret",
+					},
+				},
+			},
+			expectAllow: false,
+			expectMsg:   "secret \"missing-secret\" not found",
+		},
+		{
+			name:      "Allow Capp when PasswordSecret exists",
+			operation: admissionv1.Create,
+			capp: &cappv1alpha1.Capp{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      cappName,
+					Namespace: nsName,
+				},
+				Spec: cappv1alpha1.CappSpec{
+					ScaleSpec: cappv1alpha1.ScaleSpec{
+						Metric: knativeautoscaling.CPU,
+					},
+					LogSpec: cappv1alpha1.LogSpec{
+						Type:           cappv1alpha1.LogTypeElastic,
+						Host:           elasticHost,
+						Index:          elasticIndex,
+						User:           elasticSecretKey,
+						PasswordSecret: "existing-secret",
+					},
+				},
+			},
+			expectAllow: true,
+		},
+		{
+			name:      "Deny Capp when PasswordSecret exists but missing required key",
+			operation: admissionv1.Create,
+			capp: &cappv1alpha1.Capp{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      cappName,
+					Namespace: nsName,
+				},
+				Spec: cappv1alpha1.CappSpec{
+					ScaleSpec: cappv1alpha1.ScaleSpec{
+						Metric: knativeautoscaling.CPU,
+					},
+					LogSpec: cappv1alpha1.LogSpec{
+						Type:           cappv1alpha1.LogTypeElastic,
+						Host:           elasticHost,
+						Index:          elasticIndex,
+						User:           elasticSecretKey,
+						PasswordSecret: "bad-key-secret",
+					},
+				},
+			},
+			expectAllow: false,
+			expectMsg:   "missing required key",
 		},
 	}
 
@@ -403,9 +476,25 @@ func newScheme(t *testing.T) *runtime.Scheme {
 func newCappValidator(t *testing.T, scheme *runtime.Scheme, decoder admission.Decoder) *CappValidator {
 	t.Helper()
 
+	existingSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "existing-secret",
+			Namespace: nsName,
+		},
+		Data: map[string][]byte{elasticSecretKey: []byte("password")},
+	}
+
+	badKeySecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "bad-key-secret",
+			Namespace: nsName,
+		},
+		Data: map[string][]byte{"wrong-key": []byte("value")},
+	}
+
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(newCappConfig()).
+		WithObjects(newCappConfig(), existingSecret, badKeySecret).
 		Build()
 
 	return &CappValidator{

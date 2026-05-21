@@ -91,9 +91,12 @@ func UpdateResource(k8sClient client.Client, object client.Object) error {
 	return k8sClient.Update(context.Background(), object)
 }
 
-// CreateSecret creates a new secret.
+// CreateSecret creates a new secret, ignoring AlreadyExists errors.
 func CreateSecret(k8sClient client.Client, secret *corev1.Secret) {
-	Expect(k8sClient.Create(context.Background(), secret)).To(Succeed())
+	err := k8sClient.Create(context.Background(), secret)
+	if err != nil && !errors.IsAlreadyExists(err) {
+		Expect(err).ToNot(HaveOccurred())
+	}
 }
 
 // NewRetryOnConflictBackoff returns a preconfigured backoff for RetryOnConflict.

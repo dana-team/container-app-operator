@@ -47,14 +47,14 @@ func editCappLogSpec(capp *cappv1alpha1.Capp, logType cappv1alpha1.LogType) {
 // a Capp instance with a specified logger type.
 func testCappWithLogger(logType cappv1alpha1.LogType) {
 	It(fmt.Sprintf("Should create, update, and delete SyslogNGFlow and SyslogNGOutput when creating, updating, and deleting a Capp instance with %s logger", logType), func() {
+		By(fmt.Sprintf("Creating a secret containing %s credentials", logType))
+		utils.CreateCredentialsSecret(logType, k8sClient)
+
 		By(fmt.Sprintf("Creating a Capp with %s logger", logType))
 		createdCapp := utils.CreateCappWithLogger(logType, k8sClient)
 
 		syslogNGOutputName := createdCapp.Name
 		syslogNGOutputObject := mocks.CreateSyslogNGOutputObject(syslogNGOutputName)
-
-		By(fmt.Sprintf("Creating a secret containing %s credentials", logType))
-		utils.CreateCredentialsSecret(logType, k8sClient)
 
 		By("Checking if the SyslogNGOutput is active and has no problems")
 		syslogNGOutput := &loggingv1beta1.SyslogNGOutput{}
@@ -126,6 +126,9 @@ func testCappWithLogger(logType cappv1alpha1.LogType) {
 	})
 
 	It("Should cleanup SyslogNGFlow and SyslogNGOutput when they are no longer required", func() {
+		By(fmt.Sprintf("Creating a secret containing %s credentials", logType))
+		utils.CreateCredentialsSecret(logType, k8sClient)
+
 		By(fmt.Sprintf("Creating a Capp with %s logger", logType))
 		createdCapp := utils.CreateCappWithLogger(logType, k8sClient)
 

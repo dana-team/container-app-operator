@@ -13,6 +13,9 @@ import (
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/dana-team/container-app-operator/internal/webhook/rcs/common"
 	admissionv1 "k8s.io/api/admission/v1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	servingv1 "knative.dev/serving/pkg/apis/serving/v1"
@@ -24,7 +27,8 @@ import (
 )
 
 const (
-	eventSourcePath = "spec.eventSourcesSpec.sources"
+	eventSourcePath  = "spec.eventSourcesSpec.sources"
+	elasticSecretKey = "elastic"
 )
 
 type CappValidator struct {
@@ -84,6 +88,10 @@ func (c *CappValidator) handle(ctx context.Context, operation admissionv1.Operat
 		if taken {
 			return admission.Denied(fmt.Sprintf("invalid name %q: hostname must be unique and not already taken", capp.Spec.RouteSpec.Hostname))
 		}
+	}
+
+	if err := validatePasswordSecret(ctx, c.Client, capp); err != nil {
+		return admission.Denied(err.Error())
 	}
 
 	if err := validateNFSVolumeMounts(capp); err != nil {
@@ -149,6 +157,32 @@ func validateNFSVolumeMounts(capp cappv1alpha1.Capp) error {
 	slices.Sort(missingVolumeNames)
 
 	return fmt.Errorf("invalid nfsVolumes: volumes [%s] must be mounted by at least one container", strings.Join(missingVolumeNames, ", "))
+}
+
+func validatePasswordSecret(ctx context.Context, r client.Reader, capp cappv1alpha1.Capp) error {
+	if capp.Spec.LogSpec.PasswordSecret == "" {
+		return nil
+	}
+	return validateSecretHasKeys(ctx, r, capp.Namespace, capp.Spec.LogSpec.PasswordSecret, []string{elasticSecretKey})
+}
+
+func validateSecretHasKeys(ctx context.Context, r client.Reader, namespace, name string, requiredKeys []string) error {
+	secret := &corev1.Secret{}
+	key := types.NamespacedName{Namespace: namespace, Name: name}
+	if err := r.Get(ctx, key, secret); err != nil {
+		if errors.IsNotFound(err) {
+			return fmt.Errorf("secret %q not found in namespace %q", name, namespace)
+		}
+		return fmt.Errorf("failed to look up secret %q: %w", name, err)
+	}
+
+	for _, k := range requiredKeys {
+		if _, ok := secret.Data[k]; !ok {
+			return fmt.Errorf("secret %q is missing required key %q", name, k)
+		}
+	}
+
+	return nil
 }
 
 func validateEventSources(ctx context.Context, capp cappv1alpha1.Capp) error {
