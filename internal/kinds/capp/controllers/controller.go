@@ -15,6 +15,7 @@ import (
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
 
 	"k8s.io/apimachinery/pkg/types"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -91,12 +92,12 @@ func (r *CappReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(
 			&knativev1beta1.DomainMapping{},
 			handler.EnqueueRequestsFromMapFunc(r.findCappFromHostname),
-			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
+			builder.WithPredicates(domainMappingWatchPredicate()),
 		).
 		Watches(
 			&cmapi.Certificate{},
 			handler.EnqueueRequestsFromMapFunc(r.findCappFromHostname),
-			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
+			builder.WithPredicates(certificateWatchPredicate()),
 		).
 		Watches(
 			&dnsrecordv1alpha1.CNAMERecord{},
@@ -158,6 +159,84 @@ func cnameRecordConditionChanged(
 	oldCond := oldObj.Status.GetCondition(conditionType)
 	newCond := newObj.Status.GetCondition(conditionType)
 	return oldCond.Status != newCond.Status
+}
+
+// conditionStatusChanged reports whether the status value of condType differs
+// between oldConds and newConds. Both type and status are compared as strings
+// so this works across knative, cert-manager, and any other condition schema.
+func conditionStatusChanged(oldConds, newConds []conditionPair, condType string) bool {
+	find := func(conds []conditionPair) string {
+		for _, c := range conds {
+			if c.condType == condType {
+				return c.status
+			}
+		}
+		return ""
+	}
+	return find(oldConds) != find(newConds)
+}
+
+type conditionPair struct {
+	condType string
+	status   string
+}
+
+// domainMappingWatchPredicate triggers on spec changes (generation) or Ready condition status changes.
+func domainMappingWatchPredicate() predicate.Predicate {
+	return predicate.Or(
+		predicate.GenerationChangedPredicate{},
+		predicate.TypedFuncs[client.Object]{
+			UpdateFunc: func(e event.TypedUpdateEvent[client.Object]) bool {
+				oldObj, okOld := e.ObjectOld.(*knativev1beta1.DomainMapping)
+				newObj, okNew := e.ObjectNew.(*knativev1beta1.DomainMapping)
+				if !okOld || !okNew {
+					return false
+				}
+				return conditionStatusChanged(
+					knativeConditions(oldObj.Status.Conditions),
+					knativeConditions(newObj.Status.Conditions),
+					string(knativev1beta1.DomainMappingConditionReady),
+				)
+			},
+		},
+	)
+}
+
+func knativeConditions(conds duckv1.Conditions) []conditionPair {
+	out := make([]conditionPair, len(conds))
+	for i, c := range conds {
+		out[i] = conditionPair{condType: string(c.Type), status: string(c.Status)}
+	}
+	return out
+}
+
+// certificateWatchPredicate triggers on spec changes (generation) or Ready condition status changes.
+func certificateWatchPredicate() predicate.Predicate {
+	return predicate.Or(
+		predicate.GenerationChangedPredicate{},
+		predicate.TypedFuncs[client.Object]{
+			UpdateFunc: func(e event.TypedUpdateEvent[client.Object]) bool {
+				oldObj, okOld := e.ObjectOld.(*cmapi.Certificate)
+				newObj, okNew := e.ObjectNew.(*cmapi.Certificate)
+				if !okOld || !okNew {
+					return false
+				}
+				return conditionStatusChanged(
+					certificateConditions(oldObj.Status.Conditions),
+					certificateConditions(newObj.Status.Conditions),
+					string(cmapi.CertificateConditionReady),
+				)
+			},
+		},
+	)
+}
+
+func certificateConditions(conds []cmapi.CertificateCondition) []conditionPair {
+	out := make([]conditionPair, len(conds))
+	for i, c := range conds {
+		out[i] = conditionPair{condType: string(c.Type), status: string(c.Status)}
+	}
+	return out
 }
 
 // findCappFromKnative maps reconciliation requests to Capp reconciliation requests.
