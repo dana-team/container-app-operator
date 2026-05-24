@@ -44,6 +44,15 @@ Defines NFS persistent storage volumes with:
 - `path`: Export path
 - `capacity`: Storage size (e.g., `200Gi`)
 
+### `eventSourcesSpec`
+Attaches Knative Eventing sources to the Capp. Each source in `sources` requires:
+- `name`: Unique identifier for this source within the Capp
+- `pingSourceConfiguration` (optional): Trigger on a cron schedule
+  - `schedule`: Cron expression (e.g., `"*/5 * * * *"`)
+  - `data`: JSON payload sent with each trigger (e.g., `'{"key":"value"}'`)
+
+The operator creates a `PingSource` named `{capp-name}-{source-name}` in the same namespace, with the Capp's Knative Service as the sink. Source readiness is reported in `status.eventingStatus.eventSources`.
+
 ## How to Use Capp
 
 Step-by-step instructions for common scenarios (assumes the operator is installed).
@@ -124,7 +133,28 @@ spec:
           storage: 100Gi
 ```
 
-### Step 6: Manage State and Check Status
+### Step 6: Attach an Event Source
+
+To trigger your Capp on a schedule, add a `PingSource` under `eventSourcesSpec`:
+
+```yaml
+spec:
+  eventSourcesSpec:
+    sources:
+      - name: hourly
+        pingSourceConfiguration:
+          schedule: "0 * * * *"
+          data: '{"trigger":"hourly"}'
+```
+
+The operator creates a `PingSource` named `{capp-name}-hourly` that sends the payload to the Capp's endpoint every hour. Check its status:
+
+```bash
+kubectl get pingsource {capp-name}-hourly -n my-namespace
+kubectl get capp my-app -n my-namespace -o jsonpath='{.status.eventingStatus}'
+```
+
+### Step 7: Manage State and Check Status
 
 **Disable/enable application**:
 ```bash
@@ -138,7 +168,7 @@ kubectl get capp my-app -n my-namespace              # basic status
 kubectl describe capp my-app -n my-namespace         # detailed status
 ```
 
-The status section includes: `knativeObjectStatus`, `routeStatus`, `loggingStatus`, `volumesStatus`, and `conditions`.
+The status section includes: `knativeObjectStatus`, `routeStatus`, `loggingStatus`, `volumesStatus`, `eventingStatus`, and `conditions`.
 
 ## Practical Examples
 

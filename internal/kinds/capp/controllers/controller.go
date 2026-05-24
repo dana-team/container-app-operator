@@ -36,6 +36,7 @@ import (
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	rmanagers "github.com/dana-team/container-app-operator/internal/kinds/capp/resourcemanagers"
 	"github.com/go-logr/logr"
+	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
@@ -70,6 +71,7 @@ type CappReconciler struct {
 // +kubebuilder:rbac:groups="nfspvc.dana.io",resources=nfspvcs,verbs=get;list;watch;update;create;delete
 // +kubebuilder:rbac:groups="record.dns-v2.m.crossplane.io",resources=cnamerecords,verbs=get;list;watch;update;create;delete
 // +kubebuilder:rbac:groups="cert-manager.io",resources=certificates,verbs=get;list;watch;update;create;delete
+// +kubebuilder:rbac:groups="sources.knative.dev",resources=pingsources,verbs=get;list;watch;update;create;delete
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *CappReconciler) SetupWithManager(mgr ctrl.Manager) error {
@@ -91,17 +93,17 @@ func (r *CappReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		).
 		Watches(
 			&knativev1beta1.DomainMapping{},
-			handler.EnqueueRequestsFromMapFunc(r.findCappFromHostname),
+			handler.EnqueueRequestsFromMapFunc(r.findCappFromLabels),
 			builder.WithPredicates(domainMappingWatchPredicate()),
 		).
 		Watches(
 			&cmapi.Certificate{},
-			handler.EnqueueRequestsFromMapFunc(r.findCappFromHostname),
+			handler.EnqueueRequestsFromMapFunc(r.findCappFromLabels),
 			builder.WithPredicates(certificateWatchPredicate()),
 		).
 		Watches(
 			&dnsrecordv1alpha1.CNAMERecord{},
-			handler.EnqueueRequestsFromMapFunc(r.findCappFromHostname),
+			handler.EnqueueRequestsFromMapFunc(r.findCappFromLabels),
 			builder.WithPredicates(cnameRecordWatchPredicate()),
 		).
 		Watches(
@@ -114,6 +116,12 @@ func (r *CappReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			handler.EnqueueRequestsFromMapFunc(r.findCappFromEvent),
 			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
 		).
+		Watches(
+			&sourcesv1.PingSource{},
+			handler.EnqueueRequestsFromMapFunc(r.findCappFromLabels),
+			builder.WithPredicates(eventSourceWatchPredicate(func(s *sourcesv1.PingSource) bool {
+				return s.Status.IsReady()
+			}))).
 		Complete(r)
 }
 
@@ -131,6 +139,23 @@ func knativeServiceWatchPredicate() predicate.Predicate {
 				oldS, newS := oldObj.Status, newObj.Status
 				return oldS.LatestReadyRevisionName != newS.LatestReadyRevisionName ||
 					oldS.LatestCreatedRevisionName != newS.LatestCreatedRevisionName
+			},
+		},
+	)
+}
+
+// eventSourceWatchPredicate triggers on spec changes (generation) or condition changes that affect Capp flow.
+func eventSourceWatchPredicate[T client.Object](isReady func(T) bool) predicate.Predicate {
+	return predicate.Or(
+		predicate.GenerationChangedPredicate{},
+		predicate.TypedFuncs[client.Object]{
+			UpdateFunc: func(e event.TypedUpdateEvent[client.Object]) bool {
+				oldObj, okOld := e.ObjectOld.(T)
+				newObj, okNew := e.ObjectNew.(T)
+				if !okOld || !okNew {
+					return false
+				}
+				return isReady(oldObj) != isReady(newObj)
 			},
 		},
 	)
@@ -249,8 +274,8 @@ func (r *CappReconciler) findCappFromEvent(ctx context.Context, object client.Ob
 	return []reconcile.Request{request}
 }
 
-// findCappFromDomainMapping maps reconciliation requests to Capp reconciliation requests based on hostname.
-func (r *CappReconciler) findCappFromHostname(ctx context.Context, object client.Object) []reconcile.Request {
+// findCappFromLabels finds the owner Capp of a resource based on labels.
+func (r *CappReconciler) findCappFromLabels(ctx context.Context, object client.Object) []reconcile.Request {
 	labels := object.GetLabels()
 	cappName := labels[utils.CappResourceKey]
 	if cappName == "" {

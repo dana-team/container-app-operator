@@ -8628,13 +8628,28 @@ spec:
                             source within the Capp.
                           minLength: 1
                           type: string
+                        pingSourceConfiguration:
+                          description: Configuration for a ping source.
+                          properties:
+                            data:
+                              description: |-
+                                Data is the payload that the PingSource will send when it triggers.
+                                Must be valid JSON.
+                              type: string
+                            schedule:
+                              default: '* * * * *'
+                              description: Schedule is the cron expression that defines
+                                the schedule for the PingSource.
+                              type: string
+                          required:
+                          - schedule
+                          type: object
                         uri:
-                          description: URI is the relative URI path that the source
-                            will send events to.
+                          description: URI is a relative path appended to the resolved
+                            Capp Knative Service address (e.g. "/path"). The sink
+                            Ref always points to the Capp's Knative Service; URI is
+                            passed alongside it as a sub-path.
                           type: string
-                          x-kubernetes-validations:
-                          - message: path must start with '/' if specified
-                            rule: self == '' || self.startsWith('/')
                       required:
                       - name
                       type: object

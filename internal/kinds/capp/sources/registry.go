@@ -10,13 +10,19 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+const (
+	PingSourceKindName = "PingSource"
+)
+
 // EventSourceKind defines the interface for managing a specific Knative Eventing source type.
 // Each source type (e.g., PingSource, ApiServerSource) should implement this interface.
 type EventSourceKind interface {
+	Generate(capp cappv1alpha1.Capp, source cappv1alpha1.SourceConfiguration) client.Object
 	CreateOrUpdate(ctx context.Context, rm rclient.ResourceManagerClient, log logr.Logger, capp cappv1alpha1.Capp, source cappv1alpha1.SourceConfiguration) error
 	List(ctx context.Context, rm rclient.ResourceManagerClient, log logr.Logger, capp cappv1alpha1.Capp) ([]client.Object, error)
 	Delete(ctx context.Context, rm rclient.ResourceManagerClient, log logr.Logger, capp cappv1alpha1.Capp, source cappv1alpha1.SourceConfiguration) error
 	GetStatus(ctx context.Context, rm rclient.ResourceManagerClient, log logr.Logger, capp cappv1alpha1.Capp) ([]cappv1alpha1.EventSourceStatus, error)
+	Validate(capp cappv1alpha1.Capp, source cappv1alpha1.SourceConfiguration) error
 }
 
 var (
@@ -50,6 +56,12 @@ func AllKinds() []EventSourceKind {
 // GetEventSourceKind returns the registered kind for the source type encoded in source.
 func GetEventSourceKind(source cappv1alpha1.SourceConfiguration) (EventSourceKind, bool) {
 	sourceType := ""
+	switch {
+	case source.PingSourceConfiguration != nil:
+		sourceType = PingSourceKindName
+	default:
+		sourceType = ""
+	}
 	if sourceType == "" {
 		return nil, false
 	}

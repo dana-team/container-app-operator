@@ -158,6 +158,7 @@ undeploy: kustomize ## Undeploy controller from the K8s cluster specified in ~/.
 
 ##@ Capp prerequisites
 KNATIVE_VERSION ?= v1.17.0
+KNATIVE_EVENTING_VERSION ?= v1.22.0
 KNATIVE_URL ?= https://github.com/knative-extensions/kn-plugin-quickstart/releases/download/knative-$(KNATIVE_VERSION)/kn-quickstart-linux-amd64
 KNATIVE_HPA_URL ?= https://github.com/knative/serving/releases/download/knative-$(KNATIVE_VERSION)/serving-hpa.yaml
 CROSSPLANE_SCC_CRB ?= hack/crossplane-scc-clusterrolebinding.yaml
@@ -184,7 +185,7 @@ install-knative: ## Install knative controller on the kind cluster
 	wget -O $(LOCALBIN)/kn-quickstart $(KNATIVE_URL)
 	chmod +x $(LOCALBIN)/kn-quickstart
 	@CLUSTER_NAME=$$(kubectl config current-context | awk -F '-' '{ print $$2}'); \
-	(yes no || true) | $(LOCALBIN)/kn-quickstart kind -n $$CLUSTER_NAME --install-serving
+	(yes no || true) | $(LOCALBIN)/kn-quickstart kind -n $$CLUSTER_NAME --install-serving --install-eventing
 	$(KUBECTL) apply -f $(KNATIVE_HPA_URL)
 
 .PHONY: install-crossplane-scc

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	_ "github.com/dana-team/container-app-operator/internal/kinds/capp/resourcemanagers/eventsources"
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -245,20 +246,57 @@ func TestValidateEventSources(t *testing.T) {
 		{
 			name: "allows unique source names",
 			sources: []cappv1alpha1.SourceConfiguration{
-				{Name: "ping-a"},
-				{Name: "ping-b"},
+				{Name: "ping-a", PingSourceConfiguration: &cappv1alpha1.PingSourceConfiguration{}},
+				{Name: "ping-b", PingSourceConfiguration: &cappv1alpha1.PingSourceConfiguration{}},
 			},
 		},
 		{
 			name: "rejects duplicate source names",
 			sources: []cappv1alpha1.SourceConfiguration{
-				{Name: "ping-a"},
-				{Name: "ping-a"},
+				{Name: "ping-a", PingSourceConfiguration: &cappv1alpha1.PingSourceConfiguration{}},
+				{Name: "ping-a", PingSourceConfiguration: &cappv1alpha1.PingSourceConfiguration{}},
 			},
 			wantErrContains: []string{
 				"spec.eventSourcesSpec.sources",
 				"duplicate",
 				"ping-a",
+			},
+		},
+		{
+			name: "rejects source with no configuration",
+			sources: []cappv1alpha1.SourceConfiguration{
+				{Name: "ping-a"},
+			},
+			wantErrContains: []string{
+				"spec.eventSourcesSpec.sources[0]",
+				"ping-a",
+				"must specify at least one source configuration",
+			},
+		},
+		{
+			name: "allows source with ping configuration",
+			sources: []cappv1alpha1.SourceConfiguration{
+				{Name: "ping-a", PingSourceConfiguration: &cappv1alpha1.PingSourceConfiguration{Schedule: "* * * * *"}},
+			},
+		},
+		{
+			name: "rejects source with invalid cron schedule",
+			sources: []cappv1alpha1.SourceConfiguration{
+				{Name: "ping-a", PingSourceConfiguration: &cappv1alpha1.PingSourceConfiguration{Schedule: "not-a-cron"}},
+			},
+			wantErrContains: []string{"schedule"},
+		},
+		{
+			name: "rejects source with invalid JSON data",
+			sources: []cappv1alpha1.SourceConfiguration{
+				{Name: "ping-a", PingSourceConfiguration: &cappv1alpha1.PingSourceConfiguration{Schedule: "* * * * *", Data: "not-json{"}},
+			},
+			wantErrContains: []string{"data"},
+		},
+		{
+			name: "allows source with valid schedule and valid JSON",
+			sources: []cappv1alpha1.SourceConfiguration{
+				{Name: "ping-a", PingSourceConfiguration: &cappv1alpha1.PingSourceConfiguration{Schedule: "*/5 * * * *", Data: `{"key":"value"}`}},
 			},
 		},
 	}

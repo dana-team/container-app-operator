@@ -10,6 +10,7 @@ import (
 	"net/http"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	"github.com/dana-team/container-app-operator/internal/kinds/capp/sources"
 	"github.com/dana-team/container-app-operator/internal/webhook/rcs/common"
 
 	admissionv1 "k8s.io/api/admission/v1"
@@ -18,6 +19,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+)
+
+const (
+	sourcePathFormat = "spec.eventSourcesSpec.sources[%d]"
 )
 
 type CappValidator struct {
@@ -135,9 +140,17 @@ func validateEventSources(capp cappv1alpha1.Capp) error {
 	seen := make(map[string]struct{})
 	for i, src := range capp.Spec.EventSourcesSpec.Sources {
 		if _, dup := seen[src.Name]; dup {
-			return fmt.Errorf("spec.eventSourcesSpec.sources[%d].name: duplicate value %q", i, src.Name)
+			return fmt.Errorf("%s.name: duplicate value %q", fmt.Sprintf(sourcePathFormat, i), src.Name)
 		}
 		seen[src.Name] = struct{}{}
+
+		kind, ok := sources.GetEventSourceKind(src)
+		if !ok {
+			return fmt.Errorf("%s: source %q must specify at least one source configuration (e.g. pingSourceConfiguration)", fmt.Sprintf(sourcePathFormat, i), src.Name)
+		}
+		if err := kind.Validate(capp, src); err != nil {
+			return fmt.Errorf("%s: %w", fmt.Sprintf(sourcePathFormat, i), err)
+		}
 	}
 	return nil
 }

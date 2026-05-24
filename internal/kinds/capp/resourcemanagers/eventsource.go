@@ -34,7 +34,10 @@ func (e EventSourceManager) IsRequired(capp cappv1alpha1.Capp) bool {
 // Manage creates/updates sources when required, or cleans all up when not.
 func (e EventSourceManager) Manage(capp cappv1alpha1.Capp) error {
 	if e.IsRequired(capp) {
-		return e.createOrUpdateSources(capp)
+		if err := e.createOrUpdateSources(capp); err != nil {
+			return err
+		}
+		return e.cleanUpOrphans(capp)
 	}
 	return e.CleanUp(capp)
 }
@@ -71,6 +74,37 @@ func (e EventSourceManager) GetStatus(capp cappv1alpha1.Capp) (cappv1alpha1.Even
 	}
 	sort.Slice(statuses, func(i, j int) bool { return statuses[i].Name < statuses[j].Name })
 	return cappv1alpha1.EventingStatus{EventSources: statuses}, nil
+}
+
+// cleanUpOrphans deletes owned source resources that are no longer declared in the spec.
+// Called after createOrUpdateSources to handle partial source removal.
+func (e EventSourceManager) cleanUpOrphans(capp cappv1alpha1.Capp) error {
+	rm := rclient.ResourceManagerClient{Ctx: e.Ctx, K8sclient: e.K8sclient, Log: e.Log}
+
+	desired := make(map[string]struct{})
+	for _, source := range capp.Spec.EventSourcesSpec.Sources {
+		kind, exists := sources.GetEventSourceKind(source)
+		if !exists {
+			continue
+		}
+		obj := kind.Generate(capp, source)
+		desired[obj.GetName()] = struct{}{}
+	}
+
+	for _, kind := range sources.AllKinds() {
+		owned, err := kind.List(e.Ctx, rm, e.Log, capp)
+		if err != nil {
+			return fmt.Errorf("failed to list owned event sources for orphan cleanup: %w", err)
+		}
+		for _, obj := range owned {
+			if _, keep := desired[obj.GetName()]; !keep {
+				if err := e.K8sclient.Delete(e.Ctx, obj); client.IgnoreNotFound(err) != nil {
+					return fmt.Errorf("failed to delete orphaned event source %q: %w", obj.GetName(), err)
+				}
+			}
+		}
+	}
+	return nil
 }
 
 // createOrUpdateSources applies CreateOrUpdate for each source declared in the spec.
