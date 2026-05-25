@@ -4,7 +4,7 @@ import (
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/dana-team/container-app-operator/test/e2e/consts"
 	"github.com/dana-team/container-app-operator/test/e2e/mocks"
-	utilst "github.com/dana-team/container-app-operator/test/e2e/utils"
+	"github.com/dana-team/container-app-operator/test/e2e/utils"
 	"k8s.io/client-go/util/retry"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -14,23 +14,23 @@ import (
 var _ = Describe("Validate DomainMapping functionality", func() {
 	It("Should create, update and delete DomainMapping when creating, updating and deleting a Capp instance", func() {
 		By("Creating a capp with a route")
-		createdCapp, routeHostname := utilst.CreateCappWithHTTPHostname(k8sClient)
+		createdCapp, routeHostname := utils.CreateCappWithHTTPHostname(k8sClient)
 
 		By("Checking if the domainMapping was created successfully")
-		domainMappingName := utilst.GenerateResourceName(routeHostname, consts.ZoneValue)
+		domainMappingName := utils.GenerateResourceName(routeHostname, consts.ZoneValue)
 		domainMappingObject := mocks.CreateDomainMappingObject(domainMappingName)
 		Eventually(func() bool {
-			return utilst.DoesResourceExist(k8sClient, domainMappingObject)
+			return utils.DoesResourceExist(k8sClient, domainMappingObject)
 		}, consts.Timeout, consts.Interval).Should(BeTrue(), "Should find a resource.")
 
 		By("Checking the domainMapping has the needed labels")
-		domainMappingObject = utilst.GetDomainMapping(k8sClient, domainMappingName, consts.NSName)
+		domainMappingObject = utils.GetDomainMapping(k8sClient, domainMappingName, consts.NSName)
 		Expect(domainMappingObject.Labels[consts.CappResourceKey]).Should(Equal(createdCapp.Name))
 		Expect(domainMappingObject.Labels[consts.ManagedByLabelKey]).Should(Equal(consts.CappKey))
 
 		By("Checking if the RouteStatus of the Capp was updated successfully")
 		Eventually(func() string {
-			capp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
+			capp := utils.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
 			if capp.Status.RouteStatus.DomainMappingObjectStatus.URL == nil {
 				return ""
 			}
@@ -38,17 +38,17 @@ var _ = Describe("Validate DomainMapping functionality", func() {
 		}, consts.Timeout, consts.Interval).Should(Equal(domainMappingName), "Should update Route Status of Capp")
 
 		By("Updating the Capp Route hostname and checking the status")
-		updatedRouteHostname := utilst.GenerateResourceName(utilst.GenerateRouteHostname(), consts.ZoneValue)
-		err := retry.RetryOnConflict(utilst.NewRetryOnConflictBackoff(), func() error {
-			toBeUpdatedCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
+		updatedRouteHostname := utils.GenerateResourceName(utils.GenerateRouteHostname(), consts.ZoneValue)
+		err := retry.RetryOnConflict(utils.NewRetryOnConflictBackoff(), func() error {
+			toBeUpdatedCapp := utils.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
 			toBeUpdatedCapp.Spec.RouteSpec.Hostname = updatedRouteHostname
 
-			return utilst.UpdateResource(k8sClient, toBeUpdatedCapp)
+			return utils.UpdateResource(k8sClient, toBeUpdatedCapp)
 		})
 		Expect(err).ToNot(HaveOccurred())
 
 		Eventually(func() string {
-			capp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
+			capp := utils.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
 			if capp.Status.RouteStatus.DomainMappingObjectStatus.URL == nil {
 				return ""
 			}
@@ -58,47 +58,47 @@ var _ = Describe("Validate DomainMapping functionality", func() {
 		By("checking if the domainMapping was updated")
 		updatedDomainMappingObject := mocks.CreateDomainMappingObject(updatedRouteHostname)
 		Eventually(func() bool {
-			return utilst.DoesResourceExist(k8sClient, updatedDomainMappingObject)
+			return utils.DoesResourceExist(k8sClient, updatedDomainMappingObject)
 		}, consts.Timeout, consts.Interval).Should(BeTrue(), "Should find a resource.")
 
 		By("Deleting the Capp instance")
-		utilst.DeleteCapp(k8sClient, createdCapp)
+		utils.DeleteCapp(k8sClient, createdCapp)
 		Eventually(func() bool {
-			return utilst.DoesResourceExist(k8sClient, createdCapp)
+			return utils.DoesResourceExist(k8sClient, createdCapp)
 		}, consts.Timeout, consts.Interval).ShouldNot(BeTrue(), "Should not find a resource.")
 
 		By("Checking if the domainMapping was deleted successfully")
 		Eventually(func() bool {
-			return utilst.DoesResourceExist(k8sClient, updatedDomainMappingObject)
+			return utils.DoesResourceExist(k8sClient, updatedDomainMappingObject)
 		}, consts.Timeout, consts.Interval).ShouldNot(BeTrue(), "Should not find a resource.")
 	})
 
 	It("Should create DomainMapping with secret when Creating an HTTPS Capp instance", func() {
 		By("Creating an HTTP Capp")
-		createdCapp, routeHostname := utilst.CreateCappWithHTTPHostname(k8sClient)
+		createdCapp, routeHostname := utils.CreateCappWithHTTPHostname(k8sClient)
 
 		By("Making sure the tls secret exists in advance")
-		resourceName := utilst.GenerateResourceName(routeHostname, consts.ZoneValue)
-		secretName := utilst.GenerateCertSecretName(resourceName)
+		resourceName := utils.GenerateResourceName(routeHostname, consts.ZoneValue)
+		secretName := utils.GenerateCertSecretName(resourceName)
 		secretObject := mocks.CreateSecretObject(secretName)
-		utilst.CreateSecret(k8sClient, secretObject)
+		utils.CreateSecret(k8sClient, secretObject)
 		Eventually(func() bool {
-			return utilst.DoesResourceExist(k8sClient, secretObject)
+			return utils.DoesResourceExist(k8sClient, secretObject)
 		}, consts.Timeout, consts.Interval).Should(BeTrue(), "Should find a resource.")
 
 		By("Changing Capp to be HTTPS")
-		err := retry.RetryOnConflict(utilst.NewRetryOnConflictBackoff(), func() error {
-			assertionCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
+		err := retry.RetryOnConflict(utils.NewRetryOnConflictBackoff(), func() error {
+			assertionCapp := utils.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
 			assertionCapp.Spec.RouteSpec.TlsEnabled = true
 
-			return utilst.UpdateResource(k8sClient, assertionCapp)
+			return utils.UpdateResource(k8sClient, assertionCapp)
 		})
 		Expect(err).ToNot(HaveOccurred())
 
 		By("Checking if the secret reference exists at the domainMapping")
-		domainMappingName := utilst.GenerateResourceName(routeHostname, consts.ZoneValue)
+		domainMappingName := utils.GenerateResourceName(routeHostname, consts.ZoneValue)
 		Eventually(func() string {
-			domainMapping := utilst.GetDomainMapping(k8sClient, domainMappingName, createdCapp.Namespace)
+			domainMapping := utils.GetDomainMapping(k8sClient, domainMappingName, createdCapp.Namespace)
 			if domainMapping.Spec.TLS != nil {
 				return domainMapping.Spec.TLS.SecretName
 			}
@@ -108,12 +108,12 @@ var _ = Describe("Validate DomainMapping functionality", func() {
 
 	It("Should update the RouteStatus of the Capp accordingly", func() {
 		By("Creating a capp with a route")
-		createdCapp, routeHostname := utilst.CreateCappWithHTTPHostname(k8sClient)
+		createdCapp, routeHostname := utils.CreateCappWithHTTPHostname(k8sClient)
 
-		domainMappingName := utilst.GenerateResourceName(routeHostname, consts.ZoneValue)
+		domainMappingName := utils.GenerateResourceName(routeHostname, consts.ZoneValue)
 		By("Checking if the RouteStatus of the Capp was updated successfully")
 		Eventually(func() string {
-			capp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
+			capp := utils.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
 			if capp.Status.RouteStatus.DomainMappingObjectStatus.URL == nil {
 				return ""
 			}
@@ -121,21 +121,21 @@ var _ = Describe("Validate DomainMapping functionality", func() {
 		}, consts.Timeout, consts.Interval).Should(Equal(domainMappingName), "Should update Route Status of Capp")
 
 		By("Removing the Route from the Capp and check the status and resource clean up")
-		err := retry.RetryOnConflict(utilst.NewRetryOnConflictBackoff(), func() error {
-			toBeUpdatedCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
+		err := retry.RetryOnConflict(utils.NewRetryOnConflictBackoff(), func() error {
+			toBeUpdatedCapp := utils.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
 			toBeUpdatedCapp.Spec.RouteSpec = cappv1alpha1.RouteSpec{}
 
-			return utilst.UpdateResource(k8sClient, toBeUpdatedCapp)
+			return utils.UpdateResource(k8sClient, toBeUpdatedCapp)
 		})
 		Expect(err).ToNot(HaveOccurred())
 
 		domainMappingObject := mocks.CreateDomainMappingObject(domainMappingName)
 		Eventually(func() bool {
-			return utilst.DoesResourceExist(k8sClient, domainMappingObject)
+			return utils.DoesResourceExist(k8sClient, domainMappingObject)
 		}, consts.Timeout, consts.Interval).ShouldNot(BeTrue(), "Should not find a resource.")
 
 		Eventually(func() cappv1alpha1.RouteStatus {
-			capp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
+			capp := utils.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
 			return capp.Status.RouteStatus
 		}, consts.Timeout, consts.Interval).Should(Equal(cappv1alpha1.RouteStatus{}), "Should update Route Status of Capp")
 	})
