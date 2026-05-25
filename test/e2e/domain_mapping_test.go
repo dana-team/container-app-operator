@@ -41,7 +41,7 @@ var _ = Describe("Validate DomainMapping functionality", func() {
 		updatedRouteHostname := utilst.GenerateResourceName(utilst.GenerateRouteHostname(), consts.ZoneValue)
 		err := retry.RetryOnConflict(utilst.NewRetryOnConflictBackoff(), func() error {
 			toBeUpdatedCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-			toBeUpdatedCapp.Spec.RouteSpec.Hostname = updatedRouteHostname
+			utilst.ConfirmHostnameChange(toBeUpdatedCapp, updatedRouteHostname)
 
 			return utilst.UpdateResource(k8sClient, toBeUpdatedCapp)
 		})

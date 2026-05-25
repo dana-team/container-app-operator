@@ -52,7 +52,7 @@ var _ = Describe("Validate Certificate functionality", func() {
 
 		err := retry.RetryOnConflict(utilst.NewRetryOnConflictBackoff(), func() error {
 			toBeUpdatedCapp = utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-			toBeUpdatedCapp.Spec.RouteSpec.Hostname = updatedRouteHostname
+			utilst.ConfirmHostnameChange(toBeUpdatedCapp, updatedRouteHostname)
 
 			return utilst.UpdateResource(k8sClient, toBeUpdatedCapp)
 		})
@@ -136,7 +136,7 @@ var _ = Describe("Validate Certificate functionality", func() {
 		By("Removing the Certificate requirement from Capp Spec and checking cleanup", func() {
 			err := retry.RetryOnConflict(utilst.NewRetryOnConflictBackoff(), func() error {
 				toBeUpdatedCapp := utilst.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-				toBeUpdatedCapp.Spec.RouteSpec.Hostname = ""
+				utilst.ConfirmHostnameChange(toBeUpdatedCapp, "")
 
 				return utilst.UpdateResource(k8sClient, toBeUpdatedCapp)
 			})

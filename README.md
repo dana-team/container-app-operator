@@ -135,6 +135,8 @@ The `autoscaleConfig` section of the `CappConfig` CRD specifies the scale metric
 
 `Capp` enables using a custom hostname for the application. This in turn creates `DomainMapping`, a DNS Record object and a `Certificate` object if `TLS` is desired.
 
+To change an existing hostname, set annotation `rcs.dana.io/confirm-hostname-change` to the target hostname on the same update.
+
 To correctly create the resources, it is needed to provide the operator with the `DNS Config` where the application is exposed. 
 
 This is done using the `dnsConfig` section of the `CappConfig CRD` called `capp-config` which needs to be created in the operator namespace. 

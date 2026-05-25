@@ -8860,8 +8860,10 @@ spec:
                           the Capp.
                         properties:
                           hostname:
-                            description: Hostname is a custom DNS name for the Capp
-                              route.
+                            description: |-
+                              Hostname is a custom DNS name for the Capp route.
+                              Changing an existing hostname is disruptive and may cause external route downtime.
+                              On Capp update, set metadata annotation rcs.dana.io/confirm-hostname-change to the target hostname.
                             type: string
                           routeTimeoutSeconds:
                             description: |-
