@@ -135,6 +135,80 @@ func TestCappValidator_Handle(t *testing.T) {
 	}
 }
 
+func TestEnsureHostnameChangeConfirmed(t *testing.T) {
+	oldHostname := "old.example.com"
+	newHostname := "new.example.com"
+
+	tests := []struct {
+		name            string
+		oldHostname     string
+		newHostname     string
+		annotations     map[string]string
+		wantErrContains []string
+	}{
+		{
+			name:        "rejects hostname change without confirmation",
+			oldHostname: oldHostname,
+			newHostname: newHostname,
+			wantErrContains: []string{
+				"disruptive",
+				utils.ConfirmHostnameChangeAnnotationKey,
+			},
+		},
+		{
+			name:        "rejects hostname change when confirmation targets a different hostname",
+			oldHostname: oldHostname,
+			newHostname: newHostname,
+			annotations: map[string]string{
+				utils.ConfirmHostnameChangeAnnotationKey: "other.example.com",
+			},
+			wantErrContains: []string{
+				"disruptive",
+				utils.ConfirmHostnameChangeAnnotationKey,
+			},
+		},
+		{
+			name:        "allows confirmed hostname change",
+			oldHostname: oldHostname,
+			newHostname: newHostname,
+			annotations: map[string]string{
+				utils.ConfirmHostnameChangeAnnotationKey: newHostname,
+			},
+		},
+		{
+			name:        "rejects clearing hostname without confirmation",
+			oldHostname: oldHostname,
+			wantErrContains: []string{
+				"disruptive",
+				utils.ConfirmHostnameChangeAnnotationKey,
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			capp := cappv1alpha1.Capp{
+				ObjectMeta: metav1.ObjectMeta{Annotations: tc.annotations},
+				Spec:       cappv1alpha1.CappSpec{RouteSpec: cappv1alpha1.RouteSpec{Hostname: tc.newHostname}},
+			}
+			oldCapp := &cappv1alpha1.Capp{
+				Spec: cappv1alpha1.CappSpec{RouteSpec: cappv1alpha1.RouteSpec{Hostname: tc.oldHostname}},
+			}
+
+			err := ensureHostnameChangeConfirmed(capp, oldCapp)
+			if len(tc.wantErrContains) == 0 {
+				require.NoError(t, err)
+				return
+			}
+
+			require.Error(t, err)
+			for _, expectedSubstring := range tc.wantErrContains {
+				require.Contains(t, err.Error(), expectedSubstring)
+			}
+		})
+	}
+}
+
 func TestValidateNFSVolumeMounts(t *testing.T) {
 	invalidNFSVolumesMsg := "invalid nfsVolumes"
 	mustBeMountedMsg := "must be mounted by at least one container"

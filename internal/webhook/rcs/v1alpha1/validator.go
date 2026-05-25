@@ -10,6 +10,7 @@ import (
 	"net/http"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 	"github.com/dana-team/container-app-operator/internal/webhook/rcs/common"
 
 	admissionv1 "k8s.io/api/admission/v1"
@@ -61,6 +62,10 @@ func (c *CappValidator) handle(ctx context.Context, capp cappv1alpha1.Capp, oldC
 		allowedHostnamePatterns = config.Spec.AllowedHostnamePatterns
 	}
 
+	if err := ensureHostnameChangeConfirmed(capp, oldCapp); err != nil {
+		return admission.Denied(err.Error())
+	}
+
 	if oldCapp == nil || capp.Spec.RouteSpec.Hostname != oldCapp.Spec.RouteSpec.Hostname {
 		if errs := common.ValidateDomainName(capp.Spec.RouteSpec.Hostname, allowedHostnamePatterns); errs != nil {
 			return admission.Denied(errs.Error())
@@ -99,6 +104,31 @@ func (c *CappValidator) handle(ctx context.Context, capp cappv1alpha1.Capp, oldC
 		return admission.Denied(fmt.Sprintf("invalid scaleDelaySeconds %d: must be less than or equal to global max scale delay %d", scaleDelay, config.Spec.AutoscaleConfig.MaxScaleDelay))
 	}
 	return admission.Allowed("")
+}
+
+func ensureHostnameChangeConfirmed(capp cappv1alpha1.Capp, oldCapp *cappv1alpha1.Capp) error {
+	if oldCapp == nil {
+		return nil
+	}
+
+	oldHostname := oldCapp.Spec.RouteSpec.Hostname
+	newHostname := capp.Spec.RouteSpec.Hostname
+	if oldHostname == "" || oldHostname == newHostname {
+		return nil
+	}
+
+	confirm, ok := "", false
+	if capp.Annotations != nil {
+		confirm, ok = capp.Annotations[utils.ConfirmHostnameChangeAnnotationKey]
+	}
+	if !ok || confirm != newHostname {
+		return fmt.Errorf(
+			"changing hostname from %q to %q is disruptive; set annotation %s=%q to proceed",
+			oldHostname, newHostname, utils.ConfirmHostnameChangeAnnotationKey, newHostname,
+		)
+	}
+
+	return nil
 }
 
 func validateNFSVolumeMounts(capp cappv1alpha1.Capp) error {

@@ -12,10 +12,11 @@ import (
 )
 
 var (
-	CappAPIGroup      = cappv1alpha1.GroupVersion.Group
-	CappNamespaceKey  = CappAPIGroup + "/parent-capp-ns"
-	CappResourceKey   = CappAPIGroup + "/parent-capp"
-	ManagedByLabelKey = CappAPIGroup + "/managed-by"
+	CappAPIGroup                       = cappv1alpha1.GroupVersion.Group
+	CappNamespaceKey                   = CappAPIGroup + "/parent-capp-ns"
+	CappResourceKey                    = CappAPIGroup + "/parent-capp"
+	ManagedByLabelKey                  = CappAPIGroup + "/managed-by"
+	ConfirmHostnameChangeAnnotationKey = CappAPIGroup + "/confirm-hostname-change"
 )
 
 const (

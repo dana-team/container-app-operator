@@ -41,7 +41,7 @@ var _ = Describe("Validate DomainMapping functionality", func() {
 		updatedRouteHostname := utils.GenerateResourceName(utils.GenerateRouteHostname(), consts.ZoneValue)
 		err := retry.RetryOnConflict(utils.NewRetryOnConflictBackoff(), func() error {
 			toBeUpdatedCapp := utils.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-			toBeUpdatedCapp.Spec.RouteSpec.Hostname = updatedRouteHostname
+			utils.ConfirmHostnameChange(toBeUpdatedCapp, updatedRouteHostname)
 
 			return utils.UpdateResource(k8sClient, toBeUpdatedCapp)
 		})
@@ -123,7 +123,7 @@ var _ = Describe("Validate DomainMapping functionality", func() {
 		By("Removing the Route from the Capp and check the status and resource clean up")
 		err := retry.RetryOnConflict(utils.NewRetryOnConflictBackoff(), func() error {
 			toBeUpdatedCapp := utils.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-			toBeUpdatedCapp.Spec.RouteSpec = cappv1alpha1.RouteSpec{}
+			utils.ConfirmHostnameChange(toBeUpdatedCapp, "")
 
 			return utils.UpdateResource(k8sClient, toBeUpdatedCapp)
 		})

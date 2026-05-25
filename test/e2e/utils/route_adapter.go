@@ -8,6 +8,7 @@ import (
 	dnsrecordv1alpha1 "github.com/dana-team/provider-dns-v2/apis/namespaced/record/v1alpha1"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 	mock "github.com/dana-team/container-app-operator/test/e2e/mocks"
 	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -32,6 +33,15 @@ func CreateHTTPSCapp(k8sClient client.Client) (*cappv1alpha1.Capp, string) {
 	httpsCapp.Spec.RouteSpec.TlsEnabled = true
 
 	return CreateCapp(k8sClient, httpsCapp), hostname
+}
+
+// ConfirmHostnameChange sets the annotation and hostname required to change a Capp route.
+func ConfirmHostnameChange(capp *cappv1alpha1.Capp, hostname string) {
+	if capp.Annotations == nil {
+		capp.Annotations = map[string]string{}
+	}
+	capp.Annotations[utils.ConfirmHostnameChangeAnnotationKey] = hostname
+	capp.Spec.RouteSpec.Hostname = hostname
 }
 
 // GetDomainMapping fetches and returns an existing instance of a DomainMapping.

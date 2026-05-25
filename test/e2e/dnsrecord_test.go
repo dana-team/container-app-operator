@@ -34,7 +34,7 @@ var _ = Describe("Validate DNSRecord functionality", func() {
 
 		err := retry.RetryOnConflict(utils.NewRetryOnConflictBackoff(), func() error {
 			toBeUpdatedCapp := utils.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-			toBeUpdatedCapp.Spec.RouteSpec.Hostname = updatedRouteHostname
+			utils.ConfirmHostnameChange(toBeUpdatedCapp, updatedRouteHostname)
 
 			return utils.UpdateResource(k8sClient, toBeUpdatedCapp)
 		})
@@ -73,7 +73,7 @@ var _ = Describe("Validate DNSRecord functionality", func() {
 		By("Removing the DNSRecord requirement from Capp Spec and checking cleanup", func() {
 			err := retry.RetryOnConflict(utils.NewRetryOnConflictBackoff(), func() error {
 				toBeUpdatedCapp := utils.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-				toBeUpdatedCapp.Spec.RouteSpec.Hostname = ""
+				utils.ConfirmHostnameChange(toBeUpdatedCapp, "")
 
 				return utils.UpdateResource(k8sClient, toBeUpdatedCapp)
 			})

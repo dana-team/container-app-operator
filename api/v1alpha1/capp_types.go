@@ -122,6 +122,8 @@ type NFSVolume struct {
 // RouteSpec defines the route specification for the Capp.
 type RouteSpec struct {
 	// Hostname is a custom DNS name for the Capp route.
+	// Changing an existing hostname is disruptive and may cause external route downtime.
+	// On Capp update, set metadata annotation rcs.dana.io/confirm-hostname-change to the target hostname.
 	// +optional
 	Hostname string `json:"hostname,omitempty"`
 
