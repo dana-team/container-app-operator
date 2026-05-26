@@ -2,6 +2,7 @@ package common
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"regexp"
@@ -68,7 +69,8 @@ func ValidateDomainName(domainName string, allowedPatterns []cappv1alpha1.Hostna
 func IsDomainNameTaken(domainName string) (bool, error) {
 	_, err := net.LookupHost(domainName)
 	if err != nil {
-		if err.(*net.DNSError).IsNotFound {
+		var dnsErr *net.DNSError
+		if errors.As(err, &dnsErr) && dnsErr.IsNotFound {
 			return false, nil
 		}
 		return false, err
