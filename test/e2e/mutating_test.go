@@ -10,7 +10,7 @@ import (
 	"k8s.io/client-go/util/retry"
 
 	mock "github.com/dana-team/container-app-operator/test/e2e/mocks"
-	utilst "github.com/dana-team/container-app-operator/test/e2e/utils"
+	"github.com/dana-team/container-app-operator/test/e2e/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -20,12 +20,12 @@ const adminAnnotationValue = "kubernetes-admin"
 var _ = Describe("Validate the mutating webhook", func() {
 	AfterEach(func() {
 		// Revert k8sClient back to use the original configuration
-		utilst.SwitchUser(&k8sClient, cfg, consts.NSName, newScheme(), "")
+		utils.SwitchUser(&k8sClient, cfg, consts.NSName, newScheme(), "")
 	})
 
 	It("Should add annotation on create", func() {
 		baseCapp := mock.CreateBaseCapp()
-		capp := utilst.CreateCapp(k8sClient, baseCapp)
+		capp := utils.CreateCapp(k8sClient, baseCapp)
 
 		annotation := capp.ObjectMeta.Annotations[consts.LastUpdatedByAnnotationKey]
 		Expect(annotation).To(Equal(adminAnnotationValue))
@@ -33,24 +33,24 @@ var _ = Describe("Validate the mutating webhook", func() {
 
 	It("Should add annotation on update", func() {
 		baseCapp := mock.CreateBaseCapp()
-		capp := utilst.CreateCapp(k8sClient, baseCapp)
+		capp := utils.CreateCapp(k8sClient, baseCapp)
 
 		annotation := capp.ObjectMeta.Annotations[consts.LastUpdatedByAnnotationKey]
 		Expect(annotation).To(Equal(adminAnnotationValue))
 
-		utilst.SwitchUser(&k8sClient, cfg, consts.NSName, newScheme(), consts.ServiceAccountName)
+		utils.SwitchUser(&k8sClient, cfg, consts.NSName, newScheme(), consts.ServiceAccountName)
 
-		err := retry.RetryOnConflict(utilst.NewRetryOnConflictBackoff(), func() error {
-			capp = utilst.GetCapp(k8sClient, capp.Name, capp.Namespace)
+		err := retry.RetryOnConflict(utils.NewRetryOnConflictBackoff(), func() error {
+			capp = utils.GetCapp(k8sClient, capp.Name, capp.Namespace)
 			if capp.ObjectMeta.Annotations == nil {
 				capp.ObjectMeta.Annotations = map[string]string{}
 			}
 			capp.ObjectMeta.Annotations["test"] = "test"
-			return utilst.UpdateResource(k8sClient, capp)
+			return utils.UpdateResource(k8sClient, capp)
 		})
 		Expect(err).ToNot(HaveOccurred())
 
-		updatedCapp := utilst.GetCapp(k8sClient, capp.Name, capp.Namespace)
+		updatedCapp := utils.GetCapp(k8sClient, capp.Name, capp.Namespace)
 
 		// Check if the annotation has changed
 		updatedAnnotation := updatedCapp.ObjectMeta.Annotations[consts.LastUpdatedByAnnotationKey]
@@ -59,7 +59,7 @@ var _ = Describe("Validate the mutating webhook", func() {
 
 	It("Should add default resources to Capp", func() {
 		baseCapp := mock.CreateBaseCapp()
-		capp := utilst.CreateCapp(k8sClient, baseCapp)
+		capp := utils.CreateCapp(k8sClient, baseCapp)
 
 		cpuRequest := capp.Spec.ConfigurationSpec.Template.Spec.Containers[0].Resources.Requests.Cpu()
 		Expect(cpuRequest.String()).ToNot(Equal(""))
@@ -80,7 +80,7 @@ var _ = Describe("Validate the mutating webhook", func() {
 				corev1.ResourceMemory: resource.MustParse("23Mi"),
 			},
 		}
-		capp := utilst.CreateCapp(k8sClient, baseCapp)
+		capp := utils.CreateCapp(k8sClient, baseCapp)
 
 		cpuRequest := capp.Spec.ConfigurationSpec.Template.Spec.Containers[0].Resources.Requests.Cpu()
 		Expect(cpuRequest.String()).To(Equal("23m"))

@@ -9,7 +9,7 @@ import (
 
 	"github.com/dana-team/container-app-operator/test/e2e/consts"
 
-	utilst "github.com/dana-team/container-app-operator/test/e2e/utils"
+	"github.com/dana-team/container-app-operator/test/e2e/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -30,15 +30,15 @@ var _ = SynchronizedBeforeSuite(func() {
 	initClient()
 	cleanUp()
 	createE2ETestNamespace()
-	utilst.CreateTestUser(k8sClient, consts.NSName)
-	utilst.CreateExcludedServiceAccount(k8sClient)
+	utils.CreateTestUser(k8sClient, consts.NSName)
+	utils.CreateExcludedServiceAccount(k8sClient)
 }, func() {
 	initClient()
 })
 
 var _ = SynchronizedAfterSuite(func() {}, func() {
-	utilst.DeleteTestUser(k8sClient, consts.NSName)
-	utilst.DeleteExcludedServiceAccount(k8sClient)
+	utils.DeleteTestUser(k8sClient, consts.NSName)
+	utils.DeleteExcludedServiceAccount(k8sClient)
 
 	if os.Getenv("E2E_SKIP_CLEANUP") == "true" {
 		return
@@ -70,7 +70,7 @@ func createE2ETestNamespace() {
 
 	Expect(k8sClient.Create(context.Background(), namespace)).To(SatisfyAny(BeNil(), WithTransform(errors.IsAlreadyExists, BeTrue())))
 	Eventually(func() bool {
-		return utilst.DoesResourceExist(k8sClient, namespace)
+		return utils.DoesResourceExist(k8sClient, namespace)
 	}, consts.Timeout, consts.Interval).Should(BeTrue(), "The namespace should be created")
 }
 
@@ -82,7 +82,7 @@ func cleanUp() {
 		},
 	}
 
-	if utilst.DoesResourceExist(k8sClient, namespace) {
+	if utils.DoesResourceExist(k8sClient, namespace) {
 		Expect(k8sClient.Delete(context.Background(), namespace)).To(Succeed())
 		Eventually(func() error {
 			return k8sClient.Get(context.Background(), client.ObjectKey{Name: consts.NSName}, namespace)
