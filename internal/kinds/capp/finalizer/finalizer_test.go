@@ -10,6 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/scale/scheme"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
@@ -19,11 +20,11 @@ import (
 
 func newScheme() *runtime.Scheme {
 	s := runtime.NewScheme()
-	_ = corev1.AddToScheme(s)
-	_ = cappv1alpha1.AddToScheme(s)
-	_ = knativev1beta1.AddToScheme(s)
-	_ = knativev1.AddToScheme(s)
-	_ = scheme.AddToScheme(s)
+	utilruntime.Must(corev1.AddToScheme(s))
+	utilruntime.Must(cappv1alpha1.AddToScheme(s))
+	utilruntime.Must(knativev1beta1.AddToScheme(s))
+	utilruntime.Must(knativev1.AddToScheme(s))
+	utilruntime.Must(scheme.AddToScheme(s))
 	return s
 }
 

@@ -72,7 +72,10 @@ func HandleCappUpdate(ctx context.Context, k8sClient client.Client, capp cappv1a
 	sortByCreationTime(cappRevisions)
 	numOfRevisions := len(cappRevisions)
 
-	cappConfig, _ := utils.GetCappConfig(k8sClient)
+	cappConfig, err := utils.GetCappConfig(k8sClient)
+	if err != nil {
+		return err
+	}
 	revisionsToKeep := cappConfig.Spec.RevisionHistoryLimit
 
 	latestRevision := cappRevisions[0]
