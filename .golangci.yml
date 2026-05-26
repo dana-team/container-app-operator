@@ -12,6 +12,7 @@ linters:
     - govet
     - ineffassign
     - misspell
+    - noctx
     - nakedret
     - staticcheck
     - prealloc

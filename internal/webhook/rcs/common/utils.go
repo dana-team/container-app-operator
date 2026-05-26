@@ -65,8 +65,8 @@ func ValidateDomainName(domainName string, allowedPatterns []cappv1alpha1.Hostna
 }
 
 // IsDomainNameTaken checks if the given hostname is already in use.
-func IsDomainNameTaken(domainName string) (bool, error) {
-	_, err := net.LookupHost(domainName)
+func IsDomainNameTaken(ctx context.Context, domainName string) (bool, error) {
+	_, err := net.DefaultResolver.LookupHost(ctx, domainName)
 	if err != nil {
 		if err.(*net.DNSError).IsNotFound {
 			return false, nil
