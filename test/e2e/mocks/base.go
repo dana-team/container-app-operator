@@ -5,7 +5,6 @@ import (
 	"github.com/dana-team/container-app-operator/test/e2e/consts"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 )
@@ -101,46 +100,6 @@ func CreateServiceAccount(name, namespace string) *corev1.ServiceAccount {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
-		},
-	}
-}
-
-// CreateBaseCappConfig is responsible for making the most lean version of CappConfig, so we can manipulate it in the tests.
-func CreateBaseCappConfig() *cappv1alpha1.CappConfig {
-	return &cappv1alpha1.CappConfig{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "CappConfig",
-			APIVersion: "rcs.dana.io/v1alpha1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      consts.CappConfigName,
-			Namespace: consts.NSName,
-		},
-		Spec: cappv1alpha1.CappConfigSpec{
-			DNSConfig: cappv1alpha1.DNSConfig{
-				Zone:     "example.com",
-				CNAME:    "cname.example.com",
-				Provider: "mock-dns",
-				Issuer:   "letsencrypt",
-			},
-			AutoscaleConfig: cappv1alpha1.AutoscaleConfig{
-				RPS:             100,
-				CPU:             50,
-				Memory:          50,
-				Concurrency:     10,
-				ActivationScale: 1,
-			},
-			DefaultResources: corev1.ResourceRequirements{
-				Requests: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("100m"),
-					corev1.ResourceMemory: resource.MustParse("128Mi"),
-				},
-				Limits: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("500m"),
-					corev1.ResourceMemory: resource.MustParse("512Mi"),
-				},
-			},
-			AllowedHostnamePatterns: []cappv1alpha1.HostnamePattern{{Match: ".*"}},
 		},
 	}
 }

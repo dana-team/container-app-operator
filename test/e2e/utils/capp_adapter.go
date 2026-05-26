@@ -49,8 +49,3 @@ func GenerateUniqueCappName(baseCappName string) string {
 	randString := generateRandomString(consts.RandStrLength)
 	return baseCappName + "-" + randString
 }
-
-// UpdateCapp updates the provided Capp instance in the Kubernetes cluster, and returns it.
-func UpdateCapp(k8sClient client.Client, capp *cappv1alpha1.Capp) {
-	Expect(k8sClient.Update(context.Background(), capp)).To(Succeed())
-}

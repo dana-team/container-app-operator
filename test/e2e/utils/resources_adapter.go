@@ -48,11 +48,6 @@ func GetResource(k8sClient client.Client, obj client.Object, name, namespace str
 	Expect(k8sClient.Get(context.Background(), client.ObjectKey{Name: name, Namespace: namespace}, obj))
 }
 
-// GetClusterResource fetches an existing Cluster resource and returns an instance of it.
-func GetClusterResource(k8sClient client.Client, obj client.Object, name string) {
-	Expect(k8sClient.Get(context.Background(), client.ObjectKey{Name: name}, obj))
-}
-
 // generateName generates a new name by combining the given baseName
 // with a randomly generated string of a specified length.
 func generateName(baseName string) string {
@@ -106,14 +101,4 @@ func NewRetryOnConflictBackoff() wait.Backoff {
 	b := retry.DefaultRetry
 	b.Steps = consts.RetryOnConflictSteps
 	return b
-}
-
-// RandomName generates random names like kafka-source-x7k9p2
-func RandomName(prefix string) string {
-	const letters = "abcdefghijklmnopqrstuvwxyz0123456789"
-	b := make([]byte, 6)
-	for i := range b {
-		b[i] = letters[rand.Intn(len(letters))]
-	}
-	return fmt.Sprintf("%s-%s", prefix, b)
 }
