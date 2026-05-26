@@ -75,14 +75,14 @@ func (e EventSourceManager) GetStatus(capp cappv1alpha1.Capp) (cappv1alpha1.Even
 
 // createOrUpdateSources applies CreateOrUpdate for each source declared in the spec.
 func (e EventSourceManager) createOrUpdateSources(capp cappv1alpha1.Capp) error {
-	client := rclient.ResourceManagerClient{Ctx: e.Ctx, K8sclient: e.K8sclient, Log: e.Log}
+	rm := rclient.ResourceManagerClient{Ctx: e.Ctx, K8sclient: e.K8sclient, Log: e.Log}
 	for _, source := range capp.Spec.EventSourcesSpec.Sources {
 		kind, exists := sources.GetEventSourceKind(source)
 		if !exists {
 			e.Log.Info("No kind registered for source, skipping", "sourceName", source.Name)
 			continue
 		}
-		err := kind.CreateOrUpdate(e.Ctx, client, e.Log, capp, source)
+		err := kind.CreateOrUpdate(e.Ctx, rm, e.Log, capp, source)
 		if err != nil {
 			return fmt.Errorf("failed to create or update %q source: %w", source.Name, err)
 		}

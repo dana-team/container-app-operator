@@ -8,7 +8,7 @@ import (
 )
 
 // CreateCappWithLogger creates a Capp instance with the specified logger type and returns the created Capp object.
-func CreateCappWithLogger(logType cappv1alpha1.LogType, client client.Client) *cappv1alpha1.Capp {
+func CreateCappWithLogger(logType cappv1alpha1.LogType, k8sClient client.Client) *cappv1alpha1.Capp {
 	capp := mock.CreateBaseCapp()
 	switch logType {
 	case cappv1alpha1.LogTypeElastic:
@@ -16,18 +16,18 @@ func CreateCappWithLogger(logType cappv1alpha1.LogType, client client.Client) *c
 	case cappv1alpha1.LogTypeElasticDataStream:
 		capp.Spec.LogSpec = mock.CreateElasticDataStreamLogSpec()
 	}
-	return CreateCapp(client, capp)
+	return CreateCapp(k8sClient, capp)
 }
 
 // CreateCredentialsSecret creates a Kubernetes secret containing credentials for the specified logger type.
-func CreateCredentialsSecret(logType cappv1alpha1.LogType, client client.Client) {
+func CreateCredentialsSecret(logType cappv1alpha1.LogType, k8sClient client.Client) {
 	switch logType {
 	case cappv1alpha1.LogTypeElastic:
 		elasticSecret := mock.CreateElasticSecretObject()
-		CreateSecret(client, elasticSecret)
+		CreateSecret(k8sClient, elasticSecret)
 	case cappv1alpha1.LogTypeElasticDataStream:
 		elasticDataStreamSecret := mock.CreateElasticDataStreamSecretObject()
-		CreateSecret(client, elasticDataStreamSecret)
+		CreateSecret(k8sClient, elasticDataStreamSecret)
 	}
 }
 

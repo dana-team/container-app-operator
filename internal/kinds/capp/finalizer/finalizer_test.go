@@ -29,8 +29,8 @@ func newScheme() *runtime.Scheme {
 }
 
 func newFakeClient() client.Client {
-	scheme := newScheme()
-	return fake.NewClientBuilder().WithScheme(scheme).Build()
+	runtimeScheme := newScheme()
+	return fake.NewClientBuilder().WithScheme(runtimeScheme).Build()
 }
 
 func TestEnsureFinalizer(t *testing.T) {
