@@ -26,10 +26,11 @@ var _ = Describe("Validate CappRevision creation", func() {
 		By("Creating regular Capp")
 		desiredCapp := utils.CreateCapp(k8sClient, baseCapp)
 
-		Eventually(func() int {
-			cappRevisons, _ := utils.GetCappRevisions(context.Background(), k8sClient, *desiredCapp)
-			return len(cappRevisons)
-		}, consts.Timeout, consts.Interval).ShouldNot(BeZero(), "Should create CappRevisions")
+		Eventually(func(g Gomega) {
+			cappRevisions, err := utils.GetCappRevisions(context.Background(), k8sClient, *desiredCapp)
+			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(cappRevisions).ShouldNot(BeEmpty())
+		}, consts.Timeout, consts.Interval).Should(Succeed(), "Should create CappRevisions")
 
 		cappRevisionName := kmeta.ChildName(desiredCapp.Name, fmt.Sprintf("-%05d", 1))
 		utils.GetCappRevision(k8sClient, cappRevisionName, desiredCapp.Namespace)
@@ -44,20 +45,22 @@ var _ = Describe("Validate CappRevision creation", func() {
 		})
 		Expect(err).ToNot(HaveOccurred())
 
-		Eventually(func() bool {
-			cappRevisions, _ := utils.GetCappRevisions(context.Background(), k8sClient, *desiredCapp)
-			return len(cappRevisions) > 1
-		}, consts.Timeout, consts.Interval).Should(BeTrue(), "Should create new CappRevision")
+		Eventually(func(g Gomega) {
+			cappRevisions, err := utils.GetCappRevisions(context.Background(), k8sClient, *desiredCapp)
+			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(len(cappRevisions)).To(BeNumerically(">", 1))
+		}, consts.Timeout, consts.Interval).Should(Succeed(), "Should create new CappRevision")
 
 		cappRevisionName = kmeta.ChildName(desiredCapp.Name, fmt.Sprintf("-%05d", 2))
 		utils.GetCappRevision(k8sClient, cappRevisionName, desiredCapp.Namespace)
 
 		By("Deleting Capp")
 		utils.DeleteCapp(k8sClient, desiredCapp)
-		Eventually(func() int {
-			cappRevisons, _ := utils.GetCappRevisions(context.Background(), k8sClient, *desiredCapp)
-			return len(cappRevisons)
-		}, consts.Timeout, consts.Interval).Should(BeZero(), "Should delete all CappRevisions")
+		Eventually(func(g Gomega) {
+			cappRevisions, err := utils.GetCappRevisions(context.Background(), k8sClient, *desiredCapp)
+			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(cappRevisions).To(BeEmpty())
+		}, consts.Timeout, consts.Interval).Should(Succeed(), "Should delete all CappRevisions")
 
 	})
 
@@ -88,10 +91,11 @@ var _ = Describe("Validate CappRevision creation", func() {
 			desiredCapp = utils.GetCapp(k8sClient, desiredCapp.Name, desiredCapp.Namespace)
 		}
 
-		Eventually(func() int {
-			cappRevisions, _ := utils.GetCappRevisions(context.Background(), k8sClient, *desiredCapp)
-			return len(cappRevisions)
-		}, consts.Timeout, consts.Interval).Should(BeNumerically("<=", revisionsToKeep),
+		Eventually(func(g Gomega) {
+			cappRevisions, err := utils.GetCappRevisions(context.Background(), k8sClient, *desiredCapp)
+			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(len(cappRevisions)).To(BeNumerically("<=", revisionsToKeep))
+		}, consts.Timeout, consts.Interval).Should(Succeed(),
 			fmt.Sprintf("Should limit to at most %s CappRevision", strconv.Itoa(revisionsToKeep)))
 	})
 })

@@ -20,6 +20,8 @@ linters:
     - unparam
     - unused
   settings:
+    errcheck:
+      check-blank: true
     revive:
       rules:
         - name: comment-spacings

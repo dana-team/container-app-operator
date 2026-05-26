@@ -35,11 +35,9 @@ func newScheme() *runtime.Scheme {
 	utilruntime.Must(nfspvcv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(cmapi.AddToScheme(scheme))
 	utilruntime.Must(dnsrecordv1alpha1.AddToScheme(scheme))
-	_ = corev1.AddToScheme(scheme)
-	_ = loggingv1beta1.AddToScheme(scheme)
-	_ = knativev1alphav1.AddToScheme(scheme)
-	_ = knativev1.AddToScheme(scheme)
-	_ = networkingv1.Install(scheme)
+	utilruntime.Must(corev1.AddToScheme(scheme))
+	utilruntime.Must(knativev1alphav1.AddToScheme(scheme))
+	utilruntime.Must(networkingv1.Install(scheme))
 
 	return scheme
 }
