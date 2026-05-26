@@ -9,7 +9,7 @@ import (
 	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/resourceclient"
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/sources"
 	"github.com/go-logr/logr"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -23,7 +23,7 @@ type EventSourceManager struct {
 	Ctx           context.Context
 	K8sclient     client.Client
 	Log           logr.Logger
-	EventRecorder record.EventRecorder
+	EventRecorder events.EventRecorder
 }
 
 // IsRequired returns true when at least one event source is declared in the spec.

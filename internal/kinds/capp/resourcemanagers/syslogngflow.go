@@ -16,7 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -33,7 +33,7 @@ type SyslogNGFlowManager struct {
 	Ctx           context.Context
 	K8sclient     client.Client
 	Log           logr.Logger
-	EventRecorder record.EventRecorder
+	EventRecorder events.EventRecorder
 }
 
 // prepareResource prepares a SyslogNGFlow resource based on the provided Capp.
@@ -114,12 +114,12 @@ func (f SyslogNGFlowManager) createSyslogNGFlow(syslogNGFlowFromCapp loggingv1be
 		return fmt.Errorf("set SyslogNGFlow owner reference: %w", err)
 	}
 	if err := resourceManager.CreateResource(&syslogNGFlowFromCapp); err != nil {
-		f.EventRecorder.Event(&capp, corev1.EventTypeWarning, eventCappSyslogNGFlowCreationFailed,
+		f.EventRecorder.Eventf(&capp, nil, corev1.EventTypeWarning, eventCappSyslogNGFlowCreationFailed, eventCappSyslogNGFlowCreationFailed,
 			fmt.Sprintf("Failed to create SyslogNGFlow %s", syslogNGFlowFromCapp.Name))
 		return err
 	}
 
-	f.EventRecorder.Event(&capp, corev1.EventTypeNormal, eventCappSyslogNGFlowCreated,
+	f.EventRecorder.Eventf(&capp, nil, corev1.EventTypeNormal, eventCappSyslogNGFlowCreated, eventCappSyslogNGFlowCreated,
 		fmt.Sprintf("Created SyslogNGFlow %s", syslogNGFlowFromCapp.Name))
 
 	return nil

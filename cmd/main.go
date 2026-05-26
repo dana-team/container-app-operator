@@ -155,7 +155,7 @@ func main() {
 	if err = (&cappcontroller.CappReconciler{
 		Client:        mgr.GetClient(),
 		Scheme:        mgr.GetScheme(),
-		EventRecorder: mgr.GetEventRecorderFor("container-app-controller"),
+		EventRecorder: mgr.GetEventRecorder("container-app-controller"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Capp")
 		os.Exit(1)
@@ -164,7 +164,7 @@ func main() {
 	if err = (&crcontroller.CappRevisionReconciler{
 		Client:        mgr.GetClient(),
 		Scheme:        mgr.GetScheme(),
-		EventRecorder: mgr.GetEventRecorderFor("capprevision-controller"),
+		EventRecorder: mgr.GetEventRecorder("capprevision-controller"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "CappRevision")
 		os.Exit(1)

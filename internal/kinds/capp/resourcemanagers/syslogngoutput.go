@@ -18,7 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -38,7 +38,7 @@ type SyslogNGOutputManager struct {
 	Ctx           context.Context
 	K8sclient     client.Client
 	Log           logr.Logger
-	EventRecorder record.EventRecorder
+	EventRecorder events.EventRecorder
 }
 
 // syslogNGOutputCreators is a map that associates log types with their corresponding SyslogNGOutput creation functions.
@@ -195,12 +195,12 @@ func (o SyslogNGOutputManager) createSyslogNGOutput(syslogNGOutputFromCapp loggi
 		return fmt.Errorf("set SyslogNGOutput owner reference: %w", err)
 	}
 	if err := resourceManager.CreateResource(&syslogNGOutputFromCapp); err != nil {
-		o.EventRecorder.Event(&capp, corev1.EventTypeWarning, eventCappSyslogNGOutputCreationFailed,
+		o.EventRecorder.Eventf(&capp, nil, corev1.EventTypeWarning, eventCappSyslogNGOutputCreationFailed, eventCappSyslogNGOutputCreationFailed,
 			fmt.Sprintf("Failed to create SyslogNGOutput %s", syslogNGOutputFromCapp.Name))
 		return err
 	}
 
-	o.EventRecorder.Event(&capp, corev1.EventTypeNormal, eventCappSyslogNGOutputCreated,
+	o.EventRecorder.Eventf(&capp, nil, corev1.EventTypeNormal, eventCappSyslogNGOutputCreated, eventCappSyslogNGOutputCreated,
 		fmt.Sprintf("Created SyslogNGOutput %s", syslogNGOutputFromCapp.Name))
 
 	return nil

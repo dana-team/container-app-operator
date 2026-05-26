@@ -16,7 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -39,7 +39,7 @@ type KnativeServiceManager struct {
 	Ctx           context.Context
 	K8sclient     client.Client
 	Log           logr.Logger
-	EventRecorder record.EventRecorder
+	EventRecorder events.EventRecorder
 }
 
 // prepareResource generates a Knative Service definition from a given Capp resource.
@@ -145,7 +145,7 @@ func (k KnativeServiceManager) Manage(capp cappv1alpha1.Capp) error {
 		return err
 	}
 
-	k.EventRecorder.Event(&capp, corev1.EventTypeNormal, eventCappDisabled, fmt.Sprintf("Capp %s state changed to disabled", capp.Name))
+	k.EventRecorder.Eventf(&capp, nil, corev1.EventTypeNormal, eventCappDisabled, eventCappDisabled, fmt.Sprintf("Capp %s state changed to disabled", capp.Name))
 	k.Log.Info("Successfully disabled Capp")
 
 	return nil
@@ -165,7 +165,7 @@ func (k KnativeServiceManager) createOrUpdate(capp cappv1alpha1.Capp) error {
 
 			if k.isResumed(capp) {
 				k.Log.Info("Capp resumed to enabled state")
-				k.EventRecorder.Event(&capp, corev1.EventTypeNormal, eventCappEnabled, fmt.Sprintf("Capp %q state changed to enabled", capp.Name))
+				k.EventRecorder.Eventf(&capp, nil, corev1.EventTypeNormal, eventCappEnabled, eventCappEnabled, fmt.Sprintf("Capp %q state changed to enabled", capp.Name))
 			}
 			return nil
 		} else {
@@ -182,12 +182,12 @@ func (k KnativeServiceManager) createKSVC(capp *cappv1alpha1.Capp, knativeServic
 		return fmt.Errorf("set Knative Service owner reference: %w", err)
 	}
 	if err := resourceManager.CreateResource(knativeServiceFromCapp); err != nil {
-		k.EventRecorder.Event(capp, corev1.EventTypeWarning, eventCappKnativeServiceCreationFailed,
+		k.EventRecorder.Eventf(capp, nil, corev1.EventTypeWarning, eventCappKnativeServiceCreationFailed, eventCappKnativeServiceCreationFailed,
 			fmt.Sprintf("Failed to create KnativeService %s", knativeServiceFromCapp.Name))
 		return err
 	}
 
-	k.EventRecorder.Event(capp, corev1.EventTypeNormal, eventCappKnativeServiceCreated,
+	k.EventRecorder.Eventf(capp, nil, corev1.EventTypeNormal, eventCappKnativeServiceCreated, eventCappKnativeServiceCreated,
 		fmt.Sprintf("Created KnativeService %s", knativeServiceFromCapp.Name))
 
 	return nil
