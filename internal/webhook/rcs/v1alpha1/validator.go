@@ -65,7 +65,7 @@ func (c *CappValidator) handle(ctx context.Context, capp cappv1alpha1.Capp, oldC
 		if errs := common.ValidateDomainName(capp.Spec.RouteSpec.Hostname, allowedHostnamePatterns); errs != nil {
 			return admission.Denied(errs.Error())
 		}
-		taken, err := common.IsDomainNameTaken(capp.Spec.RouteSpec.Hostname)
+		taken, err := common.IsDomainNameTaken(ctx, capp.Spec.RouteSpec.Hostname)
 		if err != nil {
 			return admission.Denied(fmt.Sprintf("hostname check error: %v", err))
 		}
