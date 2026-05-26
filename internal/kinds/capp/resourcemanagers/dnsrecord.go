@@ -107,8 +107,8 @@ func (r DNSRecordManager) CleanUp(capp cappv1alpha1.Capp) error {
 				continue
 			}
 		}
-		record := rclient.GetBareDNSRecord(dnsRecord.Name, dnsRecord.Namespace)
-		if err := resourceManager.DeleteResource(&record); err != nil {
+		bareRecord := rclient.GetBareDNSRecord(dnsRecord.Name, dnsRecord.Namespace)
+		if err := resourceManager.DeleteResource(&bareRecord); err != nil {
 			if errors.IsNotFound(err) {
 				continue
 			}
