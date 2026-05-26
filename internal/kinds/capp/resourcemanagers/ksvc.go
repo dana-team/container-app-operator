@@ -79,7 +79,7 @@ func (k KnativeServiceManager) prepareResource(capp cappv1alpha1.Capp, ctx conte
 	volumes := k.prepareVolumes(capp)
 	knativeService.Spec.Template.Spec.Volumes = append(knativeService.Spec.Template.Spec.Volumes, volumes...)
 
-	cappConfig, err := utils.GetCappConfig(k.K8sclient)
+	cappConfig, err := utils.GetCappConfig(ctx, k.K8sclient)
 	if err != nil {
 		k.Log.Error(err, fmt.Sprintf("could not fetch cappConfig from namespace %q", utils.CappNS))
 	}
