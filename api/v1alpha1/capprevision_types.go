@@ -66,7 +66,3 @@ type CappRevisionList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []CappRevision `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&CappRevision{}, &CappRevisionList{})
-}

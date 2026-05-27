@@ -17,7 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"k8s.io/client-go/util/retry"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -35,7 +35,7 @@ type DNSRecordManager struct {
 	Ctx           context.Context
 	K8sclient     client.Client
 	Log           logr.Logger
-	EventRecorder record.EventRecorder
+	EventRecorder events.EventRecorder
 }
 
 // prepareResource prepares a DNSRecord resource based on the provided Capp.
@@ -167,13 +167,13 @@ func (r DNSRecordManager) createDNSRecord(capp cappv1alpha1.Capp, dnsRecordFromC
 		return fmt.Errorf("set DNSRecord owner reference: %w", err)
 	}
 	if err := resourceManager.CreateResource(&dnsRecordFromCapp); err != nil {
-		r.EventRecorder.Event(&capp, corev1.EventTypeWarning, eventCappDNSRecordCreationFailed,
+		r.EventRecorder.Eventf(&capp, nil, corev1.EventTypeWarning, eventCappDNSRecordCreationFailed, eventCappDNSRecordCreationFailed,
 			fmt.Sprintf("Failed to create DNSRecord %s", dnsRecordFromCapp.Name))
 
 		return err
 	}
 
-	r.EventRecorder.Event(&capp, corev1.EventTypeNormal, eventCappDNSRecordCreated,
+	r.EventRecorder.Eventf(&capp, nil, corev1.EventTypeNormal, eventCappDNSRecordCreated, eventCappDNSRecordCreated,
 		fmt.Sprintf("Created DNSRecord %s", dnsRecordFromCapp.Name))
 
 	return nil

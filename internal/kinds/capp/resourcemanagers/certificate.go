@@ -20,7 +20,7 @@ import (
 
 	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/resourceclient"
 	"github.com/go-logr/logr"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -38,7 +38,7 @@ type CertificateManager struct {
 	Ctx           context.Context
 	K8sclient     client.Client
 	Log           logr.Logger
-	EventRecorder record.EventRecorder
+	EventRecorder events.EventRecorder
 }
 
 // prepareResource prepares a Certificate resource based on the provided Capp.
@@ -191,13 +191,13 @@ func (c CertificateManager) createCertificate(capp cappv1alpha1.Capp, certificat
 		return fmt.Errorf("set Certificate owner reference: %w", err)
 	}
 	if err := resourceManager.CreateResource(&certificateFromCapp); err != nil {
-		c.EventRecorder.Event(&capp, corev1.EventTypeWarning, eventCappCertificateCreationFailed,
+		c.EventRecorder.Eventf(&capp, nil, corev1.EventTypeWarning, eventCappCertificateCreationFailed, eventCappCertificateCreationFailed,
 			fmt.Sprintf("Failed to create Certificate %s", certificateFromCapp.Name))
 
 		return err
 	}
 
-	c.EventRecorder.Event(&capp, corev1.EventTypeNormal, eventCappCertificateCreated,
+	c.EventRecorder.Eventf(&capp, nil, corev1.EventTypeNormal, eventCappCertificateCreated, eventCappCertificateCreated,
 		fmt.Sprintf("Created Certificate %s", certificateFromCapp.Name))
 
 	return nil

@@ -16,7 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
@@ -36,7 +36,7 @@ type KnativeDomainMappingManager struct {
 	Ctx           context.Context
 	K8sclient     client.Client
 	Log           logr.Logger
-	EventRecorder record.EventRecorder
+	EventRecorder events.EventRecorder
 }
 
 // PrepareKnativeDomainMapping creates a new DomainMapping for a Knative service.
@@ -189,13 +189,13 @@ func (k KnativeDomainMappingManager) createDomainMapping(capp *cappv1alpha1.Capp
 		return fmt.Errorf("set DomainMapping owner reference: %w", err)
 	}
 	if err := resourceManager.CreateResource(&domainMappingFromCapp); err != nil {
-		k.EventRecorder.Event(capp, corev1.EventTypeWarning, eventCappDomainMappingCreationFailed,
+		k.EventRecorder.Eventf(capp, nil, corev1.EventTypeWarning, eventCappDomainMappingCreationFailed, eventCappDomainMappingCreationFailed,
 			fmt.Sprintf("Failed to create DomainMapping %s", domainMappingFromCapp.Name))
 
 		return err
 	}
 
-	k.EventRecorder.Event(capp, corev1.EventTypeNormal, eventCappDomainMappingCreated,
+	k.EventRecorder.Eventf(capp, nil, corev1.EventTypeNormal, eventCappDomainMappingCreated, eventCappDomainMappingCreated,
 		fmt.Sprintf("Created DomainMapping %s", domainMappingFromCapp.Name))
 
 	return nil

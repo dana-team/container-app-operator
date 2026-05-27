@@ -16,7 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -32,7 +32,7 @@ type NFSPVCManager struct {
 	Ctx           context.Context
 	K8sclient     client.Client
 	Log           logr.Logger
-	EventRecorder record.EventRecorder
+	EventRecorder events.EventRecorder
 }
 
 // prepareResource prepares the NfsPvc resource based on the Capp object.
@@ -156,12 +156,12 @@ func (n NFSPVCManager) createNFSPVC(capp *cappv1alpha1.Capp, nfspvc *nfspvcv1alp
 		return fmt.Errorf("set NfsPvc owner reference: %w", err)
 	}
 	if err := resourceManager.CreateResource(nfspvc); err != nil {
-		n.EventRecorder.Event(capp, corev1.EventTypeWarning, eventNFSPVCCreationFailed,
+		n.EventRecorder.Eventf(capp, nil, corev1.EventTypeWarning, eventNFSPVCCreationFailed, eventNFSPVCCreationFailed,
 			fmt.Sprintf("Failed to create NFSPVC %s", nfspvc.Name))
 		return err
 	}
 
-	n.EventRecorder.Event(capp, corev1.EventTypeNormal, eventNFSPVCCreated,
+	n.EventRecorder.Eventf(capp, nil, corev1.EventTypeNormal, eventNFSPVCCreated, eventNFSPVCCreated,
 		fmt.Sprintf("Created NFSPVC %s", nfspvc.Name))
 
 	return nil
