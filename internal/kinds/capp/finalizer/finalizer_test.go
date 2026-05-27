@@ -18,6 +18,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
+const (
+	cappName = "test-capp"
+	nsName   = "test-ns"
+)
+
 func newScheme() *runtime.Scheme {
 	s := runtime.NewScheme()
 	utilruntime.Must(corev1.AddToScheme(s))
@@ -42,15 +47,15 @@ func TestEnsureFinalizer(t *testing.T) {
 			},
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-capp",
-			Namespace: "test-ns",
+			Name:      cappName,
+			Namespace: nsName,
 		},
 	}
 	fakeClient := newFakeClient()
 	assert.NoError(t, fakeClient.Create(ctx, capp), "Expected no error when creating capp")
-	assert.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: "test-capp", Namespace: "test-ns"}, capp))
+	assert.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: nsName}, capp))
 	assert.NoError(t, EnsureFinalizer(ctx, *capp, fakeClient))
-	assert.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: "test-capp", Namespace: "test-ns"}, capp))
+	assert.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: nsName}, capp))
 	assert.Contains(t, capp.Finalizers, CappCleanupFinalizer)
 
 	// Check if there is no error after the finalizer exists.
@@ -66,8 +71,8 @@ func TestRemoveFinalizer(t *testing.T) {
 			},
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-capp",
-			Namespace: "test-ns",
+			Name:      cappName,
+			Namespace: nsName,
 			Finalizers: []string{
 				CappCleanupFinalizer,
 			},
@@ -75,9 +80,9 @@ func TestRemoveFinalizer(t *testing.T) {
 	}
 	fakeClient := newFakeClient()
 	assert.NoError(t, fakeClient.Create(ctx, capp))
-	assert.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: "test-capp", Namespace: "test-ns"}, capp))
+	assert.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: nsName}, capp))
 	assert.NoError(t, RemoveFinalizer(ctx, *capp, fakeClient), "Expected no error when removing finalizer")
-	assert.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: "test-capp", Namespace: "test-ns"}, capp))
+	assert.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: nsName}, capp))
 	assert.NotContains(t, capp.Finalizers, CappCleanupFinalizer)
 
 	// Check if there is no error after the finalizer removed.

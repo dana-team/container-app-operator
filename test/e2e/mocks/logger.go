@@ -57,7 +57,7 @@ func CreateElasticSecretObject() *corev1.Secret {
 			Name:      consts.ElasticSecretName + "-elastic",
 			Namespace: consts.NSName,
 		},
-		Type: "Opaque",
+		Type: corev1.SecretTypeOpaque,
 		Data: map[string][]byte{consts.ElasticUserName: []byte(consts.SecretValue)},
 	}
 }
@@ -70,7 +70,7 @@ func CreateElasticDataStreamSecretObject() *corev1.Secret {
 			Name:      consts.ElasticSecretName + "-datastream",
 			Namespace: consts.NSName,
 		},
-		Type: "Opaque",
+		Type: corev1.SecretTypeOpaque,
 		Data: map[string][]byte{consts.ElasticUserName: []byte(consts.SecretValue)},
 	}
 }

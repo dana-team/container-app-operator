@@ -99,7 +99,7 @@ var _ = Describe("Validate DNSRecord functionality", func() {
 		By("Simulating external mutation of DNSRecord spec")
 		err := retry.RetryOnConflict(utils.NewRetryOnConflictBackoff(), func() error {
 			dnsRecord := utils.GetDNSRecord(k8sClient, dnsRecordName, createdCapp.Namespace)
-			dnsRecord.Spec.ManagementPolicies = []xpv1.ManagementAction{"Create"}
+			dnsRecord.Spec.ManagementPolicies = []xpv1.ManagementAction{xpv1.ManagementActionCreate}
 			return utils.UpdateResource(k8sClient, dnsRecord)
 		})
 		Expect(err).ToNot(HaveOccurred())
@@ -108,12 +108,12 @@ var _ = Describe("Validate DNSRecord functionality", func() {
 		Eventually(func() []xpv1.ManagementAction {
 			currentDNSRecord := utils.GetDNSRecord(k8sClient, dnsRecordName, createdCapp.Namespace)
 			return currentDNSRecord.Spec.ManagementPolicies
-		}, consts.Timeout, consts.Interval).Should(Equal([]xpv1.ManagementAction{"Create"}))
+		}, consts.Timeout, consts.Interval).Should(Equal([]xpv1.ManagementAction{xpv1.ManagementActionCreate}))
 
 		By("Should preserve external DNSRecord spec fields on Capp metadata-only changes")
 		Consistently(func() []xpv1.ManagementAction {
 			currentDNSRecord := utils.GetDNSRecord(k8sClient, dnsRecordName, createdCapp.Namespace)
 			return currentDNSRecord.Spec.ManagementPolicies
-		}, consts.DefaultConsistently, consts.Interval).Should(Equal([]xpv1.ManagementAction{"Create"}))
+		}, consts.DefaultConsistently, consts.Interval).Should(Equal([]xpv1.ManagementAction{xpv1.ManagementActionCreate}))
 	})
 })

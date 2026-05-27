@@ -20,6 +20,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+const (
+	logSpecFieldHost           = "Host"
+	logSpecFieldIndex          = "Index"
+	logSpecFieldUser           = "User"
+	logSpecFieldPasswordSecret = "PasswordSecret"
+)
+
 // ValidateDomainName checks if the hostname is valid domain name and not part of the cluster's domain.
 // It returns aggregated error if any of the validations failed.
 func ValidateDomainName(domainName string, allowedPatterns []cappv1alpha1.HostnamePattern) (errs *apis.FieldError) {
@@ -81,8 +88,8 @@ func IsDomainNameTaken(ctx context.Context, domainName string) (bool, error) {
 // ValidateLogSpec checks if the LogSpec is valid based on the Type field.
 func ValidateLogSpec(logSpec cappv1alpha1.LogSpec) *apis.FieldError {
 	requiredFields := map[cappv1alpha1.LogType][]string{
-		cappv1alpha1.LogTypeElastic:           {"Host", "Index", "User", "PasswordSecret"},
-		cappv1alpha1.LogTypeElasticDataStream: {"Host", "User", "PasswordSecret"},
+		cappv1alpha1.LogTypeElastic:           {logSpecFieldHost, logSpecFieldIndex, logSpecFieldUser, logSpecFieldPasswordSecret},
+		cappv1alpha1.LogTypeElasticDataStream: {logSpecFieldHost, logSpecFieldUser, logSpecFieldPasswordSecret},
 	}
 	required, exists := requiredFields[logSpec.Type]
 	if !exists {
@@ -108,10 +115,10 @@ func ValidateLogSpec(logSpec cappv1alpha1.LogSpec) *apis.FieldError {
 func findMissingFields(logSpec cappv1alpha1.LogSpec, required []string) []string {
 	var missingFields []string
 	fieldValues := map[string]string{
-		"Host":           logSpec.Host,
-		"Index":          logSpec.Index,
-		"User":           logSpec.User,
-		"PasswordSecret": logSpec.PasswordSecret,
+		logSpecFieldHost:           logSpec.Host,
+		logSpecFieldIndex:          logSpec.Index,
+		logSpecFieldUser:           logSpec.User,
+		logSpecFieldPasswordSecret: logSpec.PasswordSecret,
 	}
 	for _, reqField := range required {
 		if value, ok := fieldValues[reqField]; !ok || value == "" {
