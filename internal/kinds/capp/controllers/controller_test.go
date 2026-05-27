@@ -7,10 +7,13 @@ import (
 	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	knativeapis "knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
 )
+
+const conditionTypeReady = "Ready"
 
 func TestConditionStatusChanged(t *testing.T) {
 	tests := []struct {
@@ -22,44 +25,44 @@ func TestConditionStatusChanged(t *testing.T) {
 	}{
 		{
 			name:     "no change when both have same status",
-			oldConds: []conditionPair{{condType: "Ready", status: "True"}},
-			newConds: []conditionPair{{condType: "Ready", status: "True"}},
-			condType: "Ready",
+			oldConds: []conditionPair{{condType: conditionTypeReady, status: string(metav1.ConditionTrue)}},
+			newConds: []conditionPair{{condType: conditionTypeReady, status: string(metav1.ConditionTrue)}},
+			condType: conditionTypeReady,
 			expected: false,
 		},
 		{
 			name:     "no change when neither has the condition",
 			oldConds: []conditionPair{},
 			newConds: []conditionPair{},
-			condType: "Ready",
+			condType: conditionTypeReady,
 			expected: false,
 		},
 		{
 			name:     "changed when status transitions",
-			oldConds: []conditionPair{{condType: "Ready", status: "False"}},
-			newConds: []conditionPair{{condType: "Ready", status: "True"}},
-			condType: "Ready",
+			oldConds: []conditionPair{{condType: conditionTypeReady, status: string(metav1.ConditionFalse)}},
+			newConds: []conditionPair{{condType: conditionTypeReady, status: string(metav1.ConditionTrue)}},
+			condType: conditionTypeReady,
 			expected: true,
 		},
 		{
 			name:     "changed when condition appears",
 			oldConds: []conditionPair{},
-			newConds: []conditionPair{{condType: "Ready", status: "True"}},
-			condType: "Ready",
+			newConds: []conditionPair{{condType: conditionTypeReady, status: string(metav1.ConditionTrue)}},
+			condType: conditionTypeReady,
 			expected: true,
 		},
 		{
 			name:     "changed when condition disappears",
-			oldConds: []conditionPair{{condType: "Ready", status: "True"}},
+			oldConds: []conditionPair{{condType: conditionTypeReady, status: string(metav1.ConditionTrue)}},
 			newConds: []conditionPair{},
-			condType: "Ready",
+			condType: conditionTypeReady,
 			expected: true,
 		},
 		{
 			name:     "ignores other condition types",
-			oldConds: []conditionPair{{condType: "Ready", status: "True"}, {condType: "Synced", status: "False"}},
-			newConds: []conditionPair{{condType: "Ready", status: "True"}, {condType: "Synced", status: "True"}},
-			condType: "Ready",
+			oldConds: []conditionPair{{condType: conditionTypeReady, status: string(metav1.ConditionTrue)}, {condType: "Synced", status: string(metav1.ConditionFalse)}},
+			newConds: []conditionPair{{condType: conditionTypeReady, status: string(metav1.ConditionTrue)}, {condType: "Synced", status: string(metav1.ConditionTrue)}},
+			condType: conditionTypeReady,
 			expected: false,
 		},
 	}
@@ -78,8 +81,8 @@ func TestKnativeConditions(t *testing.T) {
 	}
 	pairs := knativeConditions(conds)
 	assert.Equal(t, []conditionPair{
-		{condType: "Ready", status: "True"},
-		{condType: "IngressReady", status: "False"},
+		{condType: string(knativev1beta1.DomainMappingConditionReady), status: string(metav1.ConditionTrue)},
+		{condType: string(knativev1beta1.DomainMappingConditionIngressReady), status: string(metav1.ConditionFalse)},
 	}, pairs)
 }
 
@@ -90,8 +93,8 @@ func TestCertificateConditions(t *testing.T) {
 	}
 	pairs := certificateConditions(conds)
 	assert.Equal(t, []conditionPair{
-		{condType: "Ready", status: "True"},
-		{condType: "Issuing", status: "False"},
+		{condType: string(cmapi.CertificateConditionReady), status: string(metav1.ConditionTrue)},
+		{condType: string(cmapi.CertificateConditionIssuing), status: string(metav1.ConditionFalse)},
 	}, pairs)
 }
 

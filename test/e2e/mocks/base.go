@@ -62,7 +62,7 @@ func CreateSecretObject(name string) *corev1.Secret {
 			Name:      name,
 			Namespace: consts.NSName,
 		},
-		Type: "Opaque",
+		Type: corev1.SecretTypeOpaque,
 		Data: map[string][]byte{consts.SecretKey: []byte(consts.SecretValue)},
 	}
 }

@@ -8,6 +8,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const (
+	allowedHostnamePattern      = `.*\.example\.com`
+	nonMatchingHostname         = "myapp.other.com"
+	errMustMatchAllowedPatterns = "must match one of the allowed patterns"
+)
+
 func TestValidateDomainName(t *testing.T) {
 	tests := []struct {
 		name            string
@@ -19,7 +25,7 @@ func TestValidateDomainName(t *testing.T) {
 		{
 			name:            "Valid domain matching specific pattern",
 			domainName:      "myapp.example.com",
-			allowedPatterns: []cappv1alpha1.HostnamePattern{{Match: `.*\.example\.com`}},
+			allowedPatterns: []cappv1alpha1.HostnamePattern{{Match: allowedHostnamePattern}},
 			wantErr:         false,
 		},
 		{
@@ -30,17 +36,17 @@ func TestValidateDomainName(t *testing.T) {
 		},
 		{
 			name:            "Invalid domain not matching pattern",
-			domainName:      "myapp.other.com",
-			allowedPatterns: []cappv1alpha1.HostnamePattern{{Match: `.*\.example\.com`}},
+			domainName:      nonMatchingHostname,
+			allowedPatterns: []cappv1alpha1.HostnamePattern{{Match: allowedHostnamePattern}},
 			wantErr:         true,
-			errContains:     "must match one of the allowed patterns",
+			errContains:     errMustMatchAllowedPatterns,
 		},
 		{
 			name:            "Empty allowed patterns (deny all)",
 			domainName:      "myapp.example.com",
 			allowedPatterns: []cappv1alpha1.HostnamePattern{},
 			wantErr:         true,
-			errContains:     "must match one of the allowed patterns",
+			errContains:     errMustMatchAllowedPatterns,
 		},
 		{
 			name:            "Multiple patterns, one match",
@@ -53,7 +59,7 @@ func TestValidateDomainName(t *testing.T) {
 			domainName:      "myapp.net",
 			allowedPatterns: []cappv1alpha1.HostnamePattern{{Match: `.*\.com`}, {Match: `.*\.org`}},
 			wantErr:         true,
-			errContains:     "must match one of the allowed patterns",
+			errContains:     errMustMatchAllowedPatterns,
 		},
 		{
 			name:            "Invalid FQDN syntax",
@@ -75,17 +81,17 @@ func TestValidateDomainName(t *testing.T) {
 		},
 		{
 			name:            "Explanation appears in error message",
-			domainName:      "myapp.other.com",
-			allowedPatterns: []cappv1alpha1.HostnamePattern{{Match: `.*\.example\.com`, Explanation: "subdomains of example.com only"}},
+			domainName:      nonMatchingHostname,
+			allowedPatterns: []cappv1alpha1.HostnamePattern{{Match: allowedHostnamePattern, Explanation: "subdomains of example.com only"}},
 			wantErr:         true,
 			errContains:     "subdomains of example.com only",
 		},
 		{
 			name:            "Raw pattern shown when explanation absent",
-			domainName:      "myapp.other.com",
-			allowedPatterns: []cappv1alpha1.HostnamePattern{{Match: `.*\.example\.com`}},
+			domainName:      nonMatchingHostname,
+			allowedPatterns: []cappv1alpha1.HostnamePattern{{Match: allowedHostnamePattern}},
 			wantErr:         true,
-			errContains:     `.*\.example\.com`,
+			errContains:     allowedHostnamePattern,
 		},
 	}
 

@@ -39,7 +39,7 @@ var _ = Describe("Validate CappRevision creation", func() {
 		err := retry.RetryOnConflict(utils.NewRetryOnConflictBackoff(), func() error {
 			desiredCapp = utils.GetCapp(k8sClient, desiredCapp.Name, desiredCapp.Namespace)
 			desiredCapp.Annotations = make(map[string]string)
-			desiredCapp.Annotations["test"] = "test"
+			desiredCapp.Annotations[consts.TestIndex] = consts.TestIndex
 
 			return utils.UpdateResource(k8sClient, desiredCapp)
 		})
@@ -78,14 +78,14 @@ var _ = Describe("Validate CappRevision creation", func() {
 			err := retry.RetryOnConflict(utils.NewRetryOnConflictBackoff(), func() error {
 				desiredCapp = utils.GetCapp(k8sClient, desiredCapp.Name, desiredCapp.Namespace)
 				desiredCapp.Annotations = make(map[string]string)
-				desiredCapp.Annotations["test"] = assertValue
+				desiredCapp.Annotations[consts.TestIndex] = assertValue
 
 				return utils.UpdateResource(k8sClient, desiredCapp)
 			})
 			Expect(err).ToNot(HaveOccurred())
 
 			Eventually(func() string {
-				return utils.GetCapp(k8sClient, desiredCapp.Name, desiredCapp.Namespace).Annotations["test"]
+				return utils.GetCapp(k8sClient, desiredCapp.Name, desiredCapp.Namespace).Annotations[consts.TestIndex]
 			}, consts.Timeout, consts.Interval).Should(Equal(assertValue), "Should be equal to the updated value")
 
 			desiredCapp = utils.GetCapp(k8sClient, desiredCapp.Name, desiredCapp.Namespace)

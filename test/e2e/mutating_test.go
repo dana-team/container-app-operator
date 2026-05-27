@@ -45,7 +45,7 @@ var _ = Describe("Validate the mutating webhook", func() {
 			if capp.ObjectMeta.Annotations == nil {
 				capp.ObjectMeta.Annotations = map[string]string{}
 			}
-			capp.ObjectMeta.Annotations["test"] = "test"
+			capp.ObjectMeta.Annotations[consts.TestIndex] = consts.TestIndex
 			return utils.UpdateResource(k8sClient, capp)
 		})
 		Expect(err).ToNot(HaveOccurred())

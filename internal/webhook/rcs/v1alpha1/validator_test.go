@@ -15,8 +15,17 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	knativeautoscaling "knative.dev/serving/pkg/apis/autoscaling"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+)
+
+const (
+	cappName               = "test-capp"
+	nsName                 = "test-ns"
+	mountedNFSVolumeName   = "mounted"
+	unmountedNFSVolumeName = "a-data"
+	eventSourceName        = "ping-a"
 )
 
 func TestCappValidator_Handle(t *testing.T) {
@@ -36,12 +45,12 @@ func TestCappValidator_Handle(t *testing.T) {
 			name: "Allow capp without sources",
 			capp: &cappv1alpha1.Capp{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-capp",
-					Namespace: "test-ns",
+					Name:      cappName,
+					Namespace: nsName,
 				},
 				Spec: cappv1alpha1.CappSpec{
 					ScaleSpec: cappv1alpha1.ScaleSpec{
-						Metric: "cpu",
+						Metric: knativeautoscaling.CPU,
 					},
 					RouteSpec: cappv1alpha1.RouteSpec{
 						Hostname: "valid-hostname.com",
@@ -55,12 +64,12 @@ func TestCappValidator_Handle(t *testing.T) {
 			name: "Allow Capp with valid scaleDelaySeconds",
 			capp: &cappv1alpha1.Capp{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-capp",
-					Namespace: "test-ns",
+					Name:      cappName,
+					Namespace: nsName,
 				},
 				Spec: cappv1alpha1.CappSpec{
 					ScaleSpec: cappv1alpha1.ScaleSpec{
-						Metric:            "cpu",
+						Metric:            knativeautoscaling.CPU,
 						ScaleDelaySeconds: 50,
 					},
 				},
@@ -71,12 +80,12 @@ func TestCappValidator_Handle(t *testing.T) {
 			name: "Deny Capp with invalid scaleDelaySeconds",
 			capp: &cappv1alpha1.Capp{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-capp",
-					Namespace: "test-ns",
+					Name:      cappName,
+					Namespace: nsName,
 				},
 				Spec: cappv1alpha1.CappSpec{
 					ScaleSpec: cappv1alpha1.ScaleSpec{
-						Metric:            "cpu",
+						Metric:            knativeautoscaling.CPU,
 						ScaleDelaySeconds: 150,
 					},
 				},
@@ -121,8 +130,8 @@ func TestCappValidator_Handle(t *testing.T) {
 					Object: runtime.RawExtension{
 						Raw: raw,
 					},
-					Name:      "test-capp",
-					Namespace: "test-ns",
+					Name:      cappName,
+					Namespace: nsName,
 				},
 			}
 
@@ -185,22 +194,22 @@ func TestValidateNFSVolumeMounts(t *testing.T) {
 		{
 			name: "reports missing volumes",
 			nfsVolumes: []cappv1alpha1.NFSVolume{
-				{Name: "mounted"},
+				{Name: mountedNFSVolumeName},
 				{Name: "z-data"},
-				{Name: "a-data"},
-				{Name: "a-data"},
+				{Name: unmountedNFSVolumeName},
+				{Name: unmountedNFSVolumeName},
 			},
 			containers: []corev1.Container{
 				{
-					Name: "mounted",
+					Name: mountedNFSVolumeName,
 					VolumeMounts: []corev1.VolumeMount{
-						{Name: "mounted", MountPath: "/mnt/mounted"},
+						{Name: mountedNFSVolumeName, MountPath: "/mnt/mounted"},
 					},
 				},
 			},
 			wantErrContains: []string{
 				invalidNFSVolumesMsg,
-				"a-data",
+				unmountedNFSVolumeName,
 				"z-data",
 				mustBeMountedMsg,
 			},
@@ -245,20 +254,20 @@ func TestValidateEventSources(t *testing.T) {
 		{
 			name: "allows unique source names",
 			sources: []cappv1alpha1.SourceConfiguration{
-				{Name: "ping-a"},
+				{Name: eventSourceName},
 				{Name: "ping-b"},
 			},
 		},
 		{
 			name: "rejects duplicate source names",
 			sources: []cappv1alpha1.SourceConfiguration{
-				{Name: "ping-a"},
-				{Name: "ping-a"},
+				{Name: eventSourceName},
+				{Name: eventSourceName},
 			},
 			wantErrContains: []string{
 				"spec.eventSourcesSpec.sources",
 				"duplicate",
-				"ping-a",
+				eventSourceName,
 			},
 		},
 	}

@@ -278,8 +278,8 @@ var _ = Describe("Validate knative functionality", func() {
 		By("Creating a capp instance")
 		testCapp := mocks.CreateBaseCapp()
 		labels := map[string]string{
-			consts.TestLabelKey:    "test",
-			consts.CappResourceKey: "test",
+			consts.TestLabelKey:    consts.TestIndex,
+			consts.CappResourceKey: consts.TestIndex,
 		}
 		testCapp.Labels = labels
 		createdCapp := utils.CreateCapp(k8sClient, testCapp)
@@ -289,13 +289,13 @@ var _ = Describe("Validate knative functionality", func() {
 		Eventually(func() string {
 			ksvc := utils.GetKSVC(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
 			return ksvc.Spec.ConfigurationSpec.Template.Labels[consts.TestLabelKey]
-		}, consts.Timeout, consts.Interval).Should(Equal("test"))
+		}, consts.Timeout, consts.Interval).Should(Equal(consts.TestIndex))
 
 		By("Checking if labels set by the controller cannot be overridden by users")
 		Consistently(func() string {
 			ksvc := utils.GetKSVC(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
 			return ksvc.Spec.ConfigurationSpec.Template.Labels[consts.CappResourceKey]
-		}, consts.DefaultConsistently, consts.Interval).ShouldNot(Equal("test"))
+		}, consts.DefaultConsistently, consts.Interval).ShouldNot(Equal(consts.TestIndex))
 
 		Eventually(func() string {
 			ksvc := utils.GetKSVC(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
