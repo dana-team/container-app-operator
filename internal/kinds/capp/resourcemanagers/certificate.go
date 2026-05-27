@@ -77,7 +77,7 @@ func (c CertificateManager) prepareResource(capp cappv1alpha1.Capp) (cmapi.Certi
 				Size:      PrivateKeySize,
 			},
 			IsCA: false,
-			IssuerRef: cmmeta.ObjectReference{
+			IssuerRef: cmmeta.IssuerReference{
 				Name:  issuer,
 				Kind:  clusterIssuerKind,
 				Group: certv1alpha1.GroupVersion.Group,
