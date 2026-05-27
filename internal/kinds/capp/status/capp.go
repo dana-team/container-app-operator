@@ -12,6 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/apimachinery/pkg/types"
+	kapis "knative.dev/pkg/apis"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -66,8 +67,8 @@ func SyncStatus(ctx context.Context, capp cappv1alpha1.Capp, log logr.Logger, r 
 	}
 	cappObject.Status.VolumesStatus = volumesStatus
 
-	if esm, ok := resourceManagers[rmanagers.EventSources].(rmanagers.EventSourceManager); ok {
-		eventingStatus, err := esm.GetStatus(capp)
+	if psm, ok := resourceManagers[rmanagers.PingSource].(rmanagers.PingSourceManager); ok {
+		eventingStatus, err := psm.GetStatus(capp)
 		if err != nil {
 			return err
 		}
@@ -107,5 +108,9 @@ func stripVolatileStatusFields(s cappv1alpha1.CappStatus) cappv1alpha1.CappStatu
 	for i := range out.RouteStatus.DNSRecordObjectStatus.CNAMERecordObjectStatus.Conditions {
 		out.RouteStatus.DNSRecordObjectStatus.CNAMERecordObjectStatus.Conditions[i].LastTransitionTime = metav1.Time{}
 	}
+	for i := range out.EventingStatus.EventSources {
+		out.EventingStatus.EventSources[i].Condition.LastTransitionTime = kapis.VolatileTime{Inner: metav1.Time{}}
+	}
+
 	return out
 }

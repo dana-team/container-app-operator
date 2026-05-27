@@ -31,6 +31,7 @@ const (
 	eventCappKnativeServiceCreated        = "KnativeServiceCreated"
 	eventCappDisabled                     = "CappDisabled"
 	eventCappEnabled                      = "CappEnabled"
+	knativeServiceKind                    = "Service"
 
 	kubectlKubernetesIOAnnotationPrefix = "kubectl.kubernetes.io/"
 )

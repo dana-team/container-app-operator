@@ -29,7 +29,6 @@ const (
 	DomainMapping                        = "domainMapping"
 	eventCappDomainMappingCreationFailed = "DomainMappingCreationFailed"
 	eventCappDomainMappingCreated        = "DomainMappingCreated"
-	referenceKind                        = "Service"
 )
 
 type KnativeDomainMappingManager struct {
@@ -65,7 +64,7 @@ func (k KnativeDomainMappingManager) prepareResource(capp cappv1alpha1.Capp) (kn
 			Ref: duckv1.KReference{
 				APIVersion: knativev1.SchemeGroupVersion.String(),
 				Name:       capp.Name,
-				Kind:       referenceKind,
+				Kind:       knativeServiceKind,
 			},
 		},
 	}

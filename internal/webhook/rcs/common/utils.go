@@ -138,3 +138,13 @@ func GetCappConfig(ctx context.Context, k8sClient client.Client) (*cappv1alpha1.
 
 	return &config, nil
 }
+
+// ValidateURI checks if the provided URI is valid and is a relative path.
+func ValidateURI(uri *apis.URL) error {
+
+	_, err := apis.ParseURL(uri.String())
+	if err != nil {
+		return err
+	}
+	return nil
+}

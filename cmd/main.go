@@ -29,6 +29,9 @@ import (
 	dnsrecordv1alpha1 "github.com/dana-team/provider-dns-v2/apis/namespaced/record/v1alpha1"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	cappcontroller "github.com/dana-team/container-app-operator/internal/kinds/capp/controllers"
+	crcontroller "github.com/dana-team/container-app-operator/internal/kinds/capprevision/controllers"
+	webhooks "github.com/dana-team/container-app-operator/internal/webhook/rcs/v1alpha1"
 	nfspvcv1alpha1 "github.com/dana-team/nfspvc-operator/api/v1alpha1"
 	"github.com/go-logr/zapr"
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
@@ -39,6 +42,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
+	eventingv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -47,10 +51,6 @@ import (
 	runtimezap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
-
-	cappcontroller "github.com/dana-team/container-app-operator/internal/kinds/capp/controllers"
-	crcontroller "github.com/dana-team/container-app-operator/internal/kinds/capprevision/controllers"
-	webhooks "github.com/dana-team/container-app-operator/internal/webhook/rcs/v1alpha1"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -68,6 +68,7 @@ func init() {
 	utilruntime.Must(nfspvcv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(cmapi.AddToScheme(scheme))
 	utilruntime.Must(dnsrecordv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(eventingv1.AddToScheme(scheme))
 
 	// +kubebuilder:scaffold:scheme
 }

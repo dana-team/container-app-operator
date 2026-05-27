@@ -23,6 +23,7 @@ import (
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kapis "knative.dev/pkg/apis"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
 )
@@ -85,6 +86,19 @@ type EventSourcesSpec struct {
 	Sources []SourceConfiguration `json:"sources,omitempty"`
 }
 
+// PingSourceConfiguration defines the configuration for a Capp PingSource.
+// This event source sends a specified payload to the capp at regular intervals defined by a cron expression schedule.
+type PingSourceConfiguration struct {
+
+	// Schedule is the cron expression that defines the schedule for the PingSource.
+	// +kubebuilder:default:="* * * * *"
+	Schedule string `json:"schedule"`
+	// Data is the payload that the PingSource will send when it triggers.
+	// Must be valid JSON.
+	// +optional
+	Data string `json:"data,omitempty"`
+}
+
 // SourceConfiguration defines a single Knative Eventing source connected to the Capp.
 type SourceConfiguration struct {
 	// Name is a unique logical identifier for this source within the Capp.
@@ -92,10 +106,14 @@ type SourceConfiguration struct {
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 
-	// URI is the relative URI path that the source will send events to.
+	// URI is a relative path appended to the resolved Capp Knative Service address (e.g. "/path").
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:validation:XValidation:rule="self == '' || self.startsWith('/')",message="path must start with '/' if specified"
-	URI string `json:"uri,omitempty"`
+	// +kubebuilder:xValidation:rule="self == null || self.startsWith('/')",message="uri must be a relative path"
+	URI *kapis.URL `json:"uri,omitempty"`
+
+	// Configuration for a PingSource.
+	// +optional
+	PingSourceConfiguration *PingSourceConfiguration `json:"pingSourceConfiguration,omitempty"`
 }
 
 // VolumesSpec defines the volumes specification for the Capp.
@@ -208,7 +226,7 @@ type EventSourceStatus struct {
 	Name string `json:"name,omitempty"`
 
 	// Condition holds the readiness condition for the underlying source resource.
-	Condition metav1.Condition `json:"condition"`
+	Condition kapis.Condition `json:"condition"`
 }
 
 // LoggingStatus defines the state of the SyslogNGFlow and SyslogNGOutput objects linked to the Capp.
