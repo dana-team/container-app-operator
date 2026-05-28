@@ -26,9 +26,12 @@ const (
 	mountedNFSVolumeName   = "mounted"
 	unmountedNFSVolumeName = "a-data"
 	eventSourceName        = "ping-a"
+	unchangedHostname      = "same.example.com"
+	oldHostname            = "old.example.com"
+	newHostname            = "new.example.com"
 )
 
-func TestCappValidator_Handle(t *testing.T) {
+func TestCappValidatorHandle(t *testing.T) {
 	scheme := runtime.NewScheme()
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(cappv1alpha1.AddToScheme(scheme))
@@ -37,12 +40,15 @@ func TestCappValidator_Handle(t *testing.T) {
 
 	tests := []struct {
 		name        string
+		operation   admissionv1.Operation
 		capp        *cappv1alpha1.Capp
+		oldCapp     *cappv1alpha1.Capp
 		expectAllow bool
 		expectMsg   string
 	}{
 		{
-			name: "Allow capp without sources",
+			name:      "Allow capp without sources",
+			operation: admissionv1.Create,
 			capp: &cappv1alpha1.Capp{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      cappName,
@@ -61,7 +67,8 @@ func TestCappValidator_Handle(t *testing.T) {
 			expectAllow: true,
 		},
 		{
-			name: "Allow Capp with valid scaleDelaySeconds",
+			name:      "Allow Capp with valid scaleDelaySeconds",
+			operation: admissionv1.Create,
 			capp: &cappv1alpha1.Capp{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      cappName,
@@ -77,7 +84,8 @@ func TestCappValidator_Handle(t *testing.T) {
 			expectAllow: true,
 		},
 		{
-			name: "Deny Capp with invalid scaleDelaySeconds",
+			name:      "Deny Capp with invalid scaleDelaySeconds",
+			operation: admissionv1.Create,
 			capp: &cappv1alpha1.Capp{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      cappName,
@@ -92,6 +100,61 @@ func TestCappValidator_Handle(t *testing.T) {
 			},
 			expectAllow: false,
 			expectMsg:   "must be less than or equal to global max scale delay",
+		},
+		{
+			name:      "allows update when hostname remains unchanged",
+			operation: admissionv1.Update,
+			capp: &cappv1alpha1.Capp{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      cappName,
+					Namespace: nsName,
+				},
+				Spec: cappv1alpha1.CappSpec{
+					RouteSpec: cappv1alpha1.RouteSpec{
+						Hostname: unchangedHostname,
+					},
+				},
+			},
+			oldCapp: &cappv1alpha1.Capp{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      cappName,
+					Namespace: nsName,
+				},
+				Spec: cappv1alpha1.CappSpec{
+					RouteSpec: cappv1alpha1.RouteSpec{
+						Hostname: unchangedHostname,
+					},
+				},
+			},
+			expectAllow: true,
+		},
+		{
+			name:      "rejects update when hostname changes",
+			operation: admissionv1.Update,
+			capp: &cappv1alpha1.Capp{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      cappName,
+					Namespace: nsName,
+				},
+				Spec: cappv1alpha1.CappSpec{
+					RouteSpec: cappv1alpha1.RouteSpec{
+						Hostname: newHostname,
+					},
+				},
+			},
+			oldCapp: &cappv1alpha1.Capp{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      cappName,
+					Namespace: nsName,
+				},
+				Spec: cappv1alpha1.CappSpec{
+					RouteSpec: cappv1alpha1.RouteSpec{
+						Hostname: oldHostname,
+					},
+				},
+			},
+			expectAllow: false,
+			expectMsg:   "spec.routeSpec.hostname is immutable once set",
 		},
 	}
 
@@ -126,7 +189,7 @@ func TestCappValidator_Handle(t *testing.T) {
 
 			req := admission.Request{
 				AdmissionRequest: admissionv1.AdmissionRequest{
-					Operation: admissionv1.Create,
+					Operation: tc.operation,
 					Object: runtime.RawExtension{
 						Raw: raw,
 					},
@@ -134,12 +197,80 @@ func TestCappValidator_Handle(t *testing.T) {
 					Namespace: nsName,
 				},
 			}
+			if tc.operation == admissionv1.Update {
+				oldRaw, marshalErr := json.Marshal(tc.oldCapp)
+				require.NoError(t, marshalErr)
+				req.OldObject = runtime.RawExtension{Raw: oldRaw}
+			}
 
 			resp := validator.Handle(context.Background(), req)
 			assert.Equal(t, tc.expectAllow, resp.Allowed, "Expected allowed: %v, got: %v. Result: %v", tc.expectAllow, resp.Allowed, resp.Result)
 			if !tc.expectAllow && tc.expectMsg != "" {
 				assert.Contains(t, resp.Result.Message, tc.expectMsg)
 			}
+		})
+	}
+
+}
+
+func TestValidateHostnameImmutability(t *testing.T) {
+	tests := []struct {
+		name        string
+		operation   admissionv1.Operation
+		oldHostname string
+		newHostname string
+		wantErr     bool
+	}{
+		{
+			name:      "allows create",
+			operation: admissionv1.Create,
+		},
+		{
+			name:        "allows update when hostname remains unchanged",
+			operation:   admissionv1.Update,
+			oldHostname: unchangedHostname,
+			newHostname: unchangedHostname,
+		},
+		{
+			name:        "allows update when hostname is set from empty",
+			operation:   admissionv1.Update,
+			newHostname: newHostname,
+		},
+		{
+			name:        "rejects update when hostname changes",
+			operation:   admissionv1.Update,
+			oldHostname: oldHostname,
+			newHostname: newHostname,
+			wantErr:     true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			capp := cappv1alpha1.Capp{
+				Spec: cappv1alpha1.CappSpec{
+					RouteSpec: cappv1alpha1.RouteSpec{
+						Hostname: tc.newHostname,
+					},
+				},
+			}
+			oldCapp := &cappv1alpha1.Capp{
+				Spec: cappv1alpha1.CappSpec{
+					RouteSpec: cappv1alpha1.RouteSpec{
+						Hostname: tc.oldHostname,
+					},
+				},
+			}
+
+			err := validateHostnameImmutability(tc.operation, capp, oldCapp)
+			if !tc.wantErr {
+				require.NoError(t, err)
+				return
+			}
+
+			require.Error(t, err)
+			require.Contains(t, err.Error(), "spec.routeSpec.hostname")
+			require.Contains(t, err.Error(), "immutable")
 		})
 	}
 }

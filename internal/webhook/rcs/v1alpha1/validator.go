@@ -45,8 +45,9 @@ func (c *CappValidator) Handle(ctx context.Context, req admission.Request) admis
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	oldCapp := &cappv1alpha1.Capp{}
+	var oldCapp *cappv1alpha1.Capp
 	if req.Operation == admissionv1.Update {
+		oldCapp = &cappv1alpha1.Capp{}
 		err := c.Decoder.DecodeRaw(req.OldObject, oldCapp)
 		if err != nil {
 			logger.Error(err, "could not decode old capp object")
@@ -54,10 +55,10 @@ func (c *CappValidator) Handle(ctx context.Context, req admission.Request) admis
 		}
 	}
 
-	return c.handle(ctx, capp, oldCapp)
+	return c.handle(ctx, req.Operation, capp, oldCapp)
 }
 
-func (c *CappValidator) handle(ctx context.Context, capp cappv1alpha1.Capp, oldCapp *cappv1alpha1.Capp) admission.Response {
+func (c *CappValidator) handle(ctx context.Context, operation admissionv1.Operation, capp cappv1alpha1.Capp, oldCapp *cappv1alpha1.Capp) admission.Response {
 	config, err := common.GetCappConfig(ctx, c.Client)
 	if err != nil {
 		return admission.Denied("Failed to fetch CappConfig")
@@ -68,7 +69,11 @@ func (c *CappValidator) handle(ctx context.Context, capp cappv1alpha1.Capp, oldC
 		allowedHostnamePatterns = config.Spec.AllowedHostnamePatterns
 	}
 
-	if oldCapp == nil || capp.Spec.RouteSpec.Hostname != oldCapp.Spec.RouteSpec.Hostname {
+	if err := validateHostnameImmutability(operation, capp, oldCapp); err != nil {
+		return admission.Denied(err.Error())
+	}
+
+	if operation == admissionv1.Create || capp.Spec.RouteSpec.Hostname != oldCapp.Spec.RouteSpec.Hostname {
 		if errs := common.ValidateDomainName(capp.Spec.RouteSpec.Hostname, allowedHostnamePatterns); errs != nil {
 			return admission.Denied(errs.Error())
 		}
@@ -106,6 +111,20 @@ func (c *CappValidator) handle(ctx context.Context, capp cappv1alpha1.Capp, oldC
 		return admission.Denied(fmt.Sprintf("invalid scaleDelaySeconds %d: must be less than or equal to global max scale delay %d", scaleDelay, config.Spec.AutoscaleConfig.MaxScaleDelay))
 	}
 	return admission.Allowed("")
+}
+
+func validateHostnameImmutability(operation admissionv1.Operation, capp cappv1alpha1.Capp, oldCapp *cappv1alpha1.Capp) error {
+	if operation != admissionv1.Update {
+		return nil
+	}
+
+	oldHostname := oldCapp.Spec.RouteSpec.Hostname
+	newHostname := capp.Spec.RouteSpec.Hostname
+	if oldHostname == newHostname || oldHostname == "" {
+		return nil
+	}
+
+	return fmt.Errorf("spec.routeSpec.hostname is immutable once set")
 }
 
 func validateNFSVolumeMounts(capp cappv1alpha1.Capp) error {

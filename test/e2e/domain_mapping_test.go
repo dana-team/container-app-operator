@@ -1,7 +1,6 @@
 package e2e
 
 import (
-	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/dana-team/container-app-operator/test/e2e/consts"
 	"github.com/dana-team/container-app-operator/test/e2e/mocks"
 	"github.com/dana-team/container-app-operator/test/e2e/utils"
@@ -37,29 +36,23 @@ var _ = Describe("Validate DomainMapping functionality", func() {
 			return capp.Status.RouteStatus.DomainMappingObjectStatus.URL.Host
 		}, consts.Timeout, consts.Interval).Should(Equal(domainMappingName), "Should update Route Status of Capp")
 
-		By("Updating the Capp Route hostname and checking the status")
-		updatedRouteHostname := utils.GenerateResourceName(utils.GenerateRouteHostname(), consts.ZoneValue)
+		By("Updating route timeout and checking DomainMapping is preserved")
+		routeTimeoutSeconds := int64(30)
 		err := retry.RetryOnConflict(utils.NewRetryOnConflictBackoff(), func() error {
 			toBeUpdatedCapp := utils.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-			toBeUpdatedCapp.Spec.RouteSpec.Hostname = updatedRouteHostname
+			toBeUpdatedCapp.Spec.RouteSpec.RouteTimeoutSeconds = &routeTimeoutSeconds
 
 			return utils.UpdateResource(k8sClient, toBeUpdatedCapp)
 		})
 		Expect(err).ToNot(HaveOccurred())
 
 		Eventually(func() string {
-			capp := utils.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-			if capp.Status.RouteStatus.DomainMappingObjectStatus.URL == nil {
+			domainMapping := utils.GetDomainMapping(k8sClient, domainMappingName, createdCapp.Namespace)
+			if domainMapping.Spec.Ref.Name == "" {
 				return ""
 			}
-			return capp.Status.RouteStatus.DomainMappingObjectStatus.URL.Host
-		}, consts.Timeout, consts.Interval).Should(Equal(updatedRouteHostname), "Should update Route Status of Capp")
-
-		By("checking if the domainMapping was updated")
-		updatedDomainMappingObject := mocks.CreateDomainMappingObject(updatedRouteHostname)
-		Eventually(func() bool {
-			return utils.DoesResourceExist(k8sClient, updatedDomainMappingObject)
-		}, consts.Timeout, consts.Interval).Should(BeTrue(), "Should find a resource.")
+			return domainMapping.Spec.Ref.Name
+		}, consts.Timeout, consts.Interval).Should(Equal(createdCapp.Name), "Should keep DomainMapping after route timeout update")
 
 		By("Deleting the Capp instance")
 		utils.DeleteCapp(k8sClient, createdCapp)
@@ -69,7 +62,7 @@ var _ = Describe("Validate DomainMapping functionality", func() {
 
 		By("Checking if the domainMapping was deleted successfully")
 		Eventually(func() bool {
-			return utils.DoesResourceExist(k8sClient, updatedDomainMappingObject)
+			return utils.DoesResourceExist(k8sClient, domainMappingObject)
 		}, consts.Timeout, consts.Interval).ShouldNot(BeTrue(), "Should not find a resource.")
 	})
 
@@ -120,23 +113,30 @@ var _ = Describe("Validate DomainMapping functionality", func() {
 			return capp.Status.RouteStatus.DomainMappingObjectStatus.URL.Host
 		}, consts.Timeout, consts.Interval).Should(Equal(domainMappingName), "Should update Route Status of Capp")
 
-		By("Removing the Route from the Capp and check the status and resource clean up")
+		By("Updating route timeout and checking RouteStatus is preserved")
+		routeTimeoutSeconds := int64(45)
 		err := retry.RetryOnConflict(utils.NewRetryOnConflictBackoff(), func() error {
 			toBeUpdatedCapp := utils.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-			toBeUpdatedCapp.Spec.RouteSpec = cappv1alpha1.RouteSpec{}
+			toBeUpdatedCapp.Spec.RouteSpec.RouteTimeoutSeconds = &routeTimeoutSeconds
 
 			return utils.UpdateResource(k8sClient, toBeUpdatedCapp)
 		})
 		Expect(err).ToNot(HaveOccurred())
 
-		domainMappingObject := mocks.CreateDomainMappingObject(domainMappingName)
-		Eventually(func() bool {
-			return utils.DoesResourceExist(k8sClient, domainMappingObject)
-		}, consts.Timeout, consts.Interval).ShouldNot(BeTrue(), "Should not find a resource.")
-
-		Eventually(func() cappv1alpha1.RouteStatus {
+		Eventually(func() string {
 			capp := utils.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-			return capp.Status.RouteStatus
-		}, consts.Timeout, consts.Interval).Should(Equal(cappv1alpha1.RouteStatus{}), "Should update Route Status of Capp")
+			if capp.Status.RouteStatus.DomainMappingObjectStatus.URL == nil {
+				return ""
+			}
+			return capp.Status.RouteStatus.DomainMappingObjectStatus.URL.Host
+		}, consts.Timeout, consts.Interval).Should(Equal(domainMappingName), "Should keep Route Status of Capp")
+
+		Eventually(func() string {
+			domainMapping := utils.GetDomainMapping(k8sClient, domainMappingName, createdCapp.Namespace)
+			if domainMapping.Spec.Ref.Name == "" {
+				return ""
+			}
+			return domainMapping.Spec.Ref.Name
+		}, consts.Timeout, consts.Interval).Should(Equal(createdCapp.Name), "Should keep DomainMapping after route timeout update")
 	})
 })

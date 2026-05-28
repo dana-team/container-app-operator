@@ -29,23 +29,20 @@ var _ = Describe("Validate DNSRecord functionality", func() {
 		Expect(dnsRecordObject.Labels[consts.CappNamespaceKey]).Should(Equal(createdCapp.Namespace))
 		Expect(dnsRecordObject.Labels[consts.ManagedByLabelKey]).Should(Equal(consts.CappKey))
 
-		By("checking if the DNSRecord object was updated after changing the Capp Route Hostname")
-		updatedRouteHostname := utils.GenerateRouteHostname()
-
+		By("checking if the DNSRecord object is preserved after a route timeout update")
+		routeTimeoutSeconds := int64(30)
 		err := retry.RetryOnConflict(utils.NewRetryOnConflictBackoff(), func() error {
 			toBeUpdatedCapp := utils.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-			toBeUpdatedCapp.Spec.RouteSpec.Hostname = updatedRouteHostname
+			toBeUpdatedCapp.Spec.RouteSpec.RouteTimeoutSeconds = &routeTimeoutSeconds
 
 			return utils.UpdateResource(k8sClient, toBeUpdatedCapp)
 		})
 		Expect(err).ToNot(HaveOccurred())
 
-		updatedDNSRecord := dnsRecordObject
-		updatedDNSRecordName := utils.GenerateResourceName(updatedRouteHostname, consts.ZoneValue)
 		Eventually(func() *string {
-			updatedDNSRecord = utils.GetDNSRecord(k8sClient, updatedDNSRecordName, createdCapp.Namespace)
-			return updatedDNSRecord.Spec.ForProvider.Name
-		}, consts.Timeout, consts.Interval).Should(Equal(&updatedRouteHostname))
+			currentDNSRecord := utils.GetDNSRecord(k8sClient, dnsRecordName, createdCapp.Namespace)
+			return currentDNSRecord.Spec.ForProvider.Name
+		}, consts.Timeout, consts.Interval).Should(Equal(&createdCapp.Spec.RouteSpec.Hostname))
 
 		By("Deleting the Capp instance")
 		utils.DeleteCapp(k8sClient, createdCapp)
@@ -55,34 +52,8 @@ var _ = Describe("Validate DNSRecord functionality", func() {
 
 		By("Checking if the DNSRecord was deleted successfully")
 		Eventually(func() bool {
-			return utils.DoesResourceExist(k8sClient, updatedDNSRecord)
-		}, consts.Timeout, consts.Interval).ShouldNot(BeTrue(), "Should not find a resource.")
-	})
-
-	It("Should cleanup DNSRecord when no longer required", func() {
-		By("Creating a capp with a route")
-		createdCapp, _ := utils.CreateCappWithHTTPHostname(k8sClient)
-
-		By("Checking if the DNSRecord was created successfully")
-		dnsRecordName := utils.GenerateResourceName(createdCapp.Spec.RouteSpec.Hostname, consts.ZoneValue)
-		dnsRecordObject := mocks.CreateDNSRecordObject(dnsRecordName)
-		Eventually(func() bool {
 			return utils.DoesResourceExist(k8sClient, dnsRecordObject)
-		}, consts.Timeout, consts.Interval).Should(BeTrue(), "Should find a resource.")
-
-		By("Removing the DNSRecord requirement from Capp Spec and checking cleanup", func() {
-			err := retry.RetryOnConflict(utils.NewRetryOnConflictBackoff(), func() error {
-				toBeUpdatedCapp := utils.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-				toBeUpdatedCapp.Spec.RouteSpec.Hostname = ""
-
-				return utils.UpdateResource(k8sClient, toBeUpdatedCapp)
-			})
-			Expect(err).ToNot(HaveOccurred())
-
-			Eventually(func() bool {
-				return utils.DoesResourceExist(k8sClient, dnsRecordObject)
-			}, consts.Timeout, consts.Interval).Should(BeFalse(), "Should not find a resource.")
-		})
+		}, consts.Timeout, consts.Interval).ShouldNot(BeTrue(), "Should not find a resource.")
 	})
 
 	It("Should not update DNSRecord when only Capp metadata changes", func() {
