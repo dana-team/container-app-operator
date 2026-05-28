@@ -137,6 +137,7 @@ var _ = Describe("Validate Certificate functionality", func() {
 			err := retry.RetryOnConflict(utils.NewRetryOnConflictBackoff(), func() error {
 				toBeUpdatedCapp := utils.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
 				toBeUpdatedCapp.Spec.RouteSpec.Hostname = ""
+				toBeUpdatedCapp.Spec.RouteSpec.TlsEnabled = false
 
 				return utils.UpdateResource(k8sClient, toBeUpdatedCapp)
 			})

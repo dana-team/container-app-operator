@@ -120,12 +120,14 @@ type NFSVolume struct {
 }
 
 // RouteSpec defines the route specification for the Capp.
+// +kubebuilder:validation:XValidation:rule="!has(self.tlsEnabled) || !self.tlsEnabled || (has(self.hostname) && size(self.hostname) > 0)",message="hostname must be set when tlsEnabled is true"
 type RouteSpec struct {
-	// Hostname is a custom DNS name for the Capp route.
+	// Hostname is the custom DNS name for the Capp route.
+	// Required when tlsEnabled is true.
 	// +optional
 	Hostname string `json:"hostname,omitempty"`
 
-	// TlsEnabled determines whether to enable TLS for the Capp route.
+	// TlsEnabled enables HTTPS and automatic certificate management for hostname.
 	// +optional
 	TlsEnabled bool `json:"tlsEnabled,omitempty"`
 
