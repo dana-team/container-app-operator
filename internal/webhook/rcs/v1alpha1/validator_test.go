@@ -32,10 +32,7 @@ const (
 )
 
 func TestCappValidatorHandle(t *testing.T) {
-	scheme := runtime.NewScheme()
-	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-	utilruntime.Must(cappv1alpha1.AddToScheme(scheme))
-
+	scheme := newScheme(t)
 	decoder := admission.NewDecoder(scheme)
 
 	tests := []struct {
@@ -102,57 +99,17 @@ func TestCappValidatorHandle(t *testing.T) {
 			expectMsg:   "must be less than or equal to global max scale delay",
 		},
 		{
-			name:      "allows update when hostname remains unchanged",
-			operation: admissionv1.Update,
-			capp: &cappv1alpha1.Capp{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      cappName,
-					Namespace: nsName,
-				},
-				Spec: cappv1alpha1.CappSpec{
-					RouteSpec: cappv1alpha1.RouteSpec{
-						Hostname: unchangedHostname,
-					},
-				},
-			},
-			oldCapp: &cappv1alpha1.Capp{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      cappName,
-					Namespace: nsName,
-				},
-				Spec: cappv1alpha1.CappSpec{
-					RouteSpec: cappv1alpha1.RouteSpec{
-						Hostname: unchangedHostname,
-					},
-				},
-			},
+			name:        "allows update when hostname remains unchanged",
+			operation:   admissionv1.Update,
+			capp:        newCapp(unchangedHostname),
+			oldCapp:     newCapp(unchangedHostname),
 			expectAllow: true,
 		},
 		{
-			name:      "rejects update when hostname changes",
-			operation: admissionv1.Update,
-			capp: &cappv1alpha1.Capp{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      cappName,
-					Namespace: nsName,
-				},
-				Spec: cappv1alpha1.CappSpec{
-					RouteSpec: cappv1alpha1.RouteSpec{
-						Hostname: newHostname,
-					},
-				},
-			},
-			oldCapp: &cappv1alpha1.Capp{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      cappName,
-					Namespace: nsName,
-				},
-				Spec: cappv1alpha1.CappSpec{
-					RouteSpec: cappv1alpha1.RouteSpec{
-						Hostname: oldHostname,
-					},
-				},
-			},
+			name:        "rejects update when hostname changes",
+			operation:   admissionv1.Update,
+			capp:        newCapp(newHostname),
+			oldCapp:     newCapp(oldHostname),
 			expectAllow: false,
 			expectMsg:   "spec.routeSpec.hostname is immutable once set",
 		},
@@ -160,27 +117,7 @@ func TestCappValidatorHandle(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// Add default capp config
-			cappConfig := &cappv1alpha1.CappConfig{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      utils.CappConfigName,
-					Namespace: utils.CappNS,
-				},
-				Spec: cappv1alpha1.CappConfigSpec{
-					AllowedHostnamePatterns: []cappv1alpha1.HostnamePattern{{Match: ".*"}},
-					AutoscaleConfig: cappv1alpha1.AutoscaleConfig{
-						MinReplicasLimit: 10,
-						MaxScaleDelay:    100,
-					},
-				},
-			}
-
-			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(cappConfig).Build()
-
-			validator := &CappValidator{
-				Client:  fakeClient,
-				Decoder: decoder,
-			}
+			validator := newCappValidator(t, scheme, decoder)
 
 			raw, err := json.Marshal(tc.capp)
 			if err != nil {
@@ -247,20 +184,8 @@ func TestValidateHostnameImmutability(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			capp := cappv1alpha1.Capp{
-				Spec: cappv1alpha1.CappSpec{
-					RouteSpec: cappv1alpha1.RouteSpec{
-						Hostname: tc.newHostname,
-					},
-				},
-			}
-			oldCapp := &cappv1alpha1.Capp{
-				Spec: cappv1alpha1.CappSpec{
-					RouteSpec: cappv1alpha1.RouteSpec{
-						Hostname: tc.oldHostname,
-					},
-				},
-			}
+			capp := *newCapp(tc.newHostname)
+			oldCapp := newCapp(tc.oldHostname)
 
 			err := validateHostnameImmutability(tc.operation, capp, oldCapp)
 			if !tc.wantErr {
@@ -462,5 +387,59 @@ func TestValidateEventSources(t *testing.T) {
 				assert.Contains(t, err.Error(), s)
 			}
 		})
+	}
+}
+
+func newScheme(t *testing.T) *runtime.Scheme {
+	t.Helper()
+
+	scheme := runtime.NewScheme()
+	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+	utilruntime.Must(cappv1alpha1.AddToScheme(scheme))
+
+	return scheme
+}
+
+func newCappValidator(t *testing.T, scheme *runtime.Scheme, decoder admission.Decoder) *CappValidator {
+	t.Helper()
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(newCappConfig()).
+		Build()
+
+	return &CappValidator{
+		Client:  fakeClient,
+		Decoder: decoder,
+	}
+}
+
+func newCappConfig() *cappv1alpha1.CappConfig {
+	return &cappv1alpha1.CappConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      utils.CappConfigName,
+			Namespace: utils.CappNS,
+		},
+		Spec: cappv1alpha1.CappConfigSpec{
+			AllowedHostnamePatterns: []cappv1alpha1.HostnamePattern{{Match: ".*"}},
+			AutoscaleConfig: cappv1alpha1.AutoscaleConfig{
+				MinReplicasLimit: 10,
+				MaxScaleDelay:    100,
+			},
+		},
+	}
+}
+
+func newCapp(hostname string) *cappv1alpha1.Capp {
+	return &cappv1alpha1.Capp{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      cappName,
+			Namespace: nsName,
+		},
+		Spec: cappv1alpha1.CappSpec{
+			RouteSpec: cappv1alpha1.RouteSpec{
+				Hostname: hostname,
+			},
+		},
 	}
 }
