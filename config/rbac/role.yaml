@@ -95,17 +95,16 @@ rules:
 - apiGroups:
   - rcs.dana.io
   resources:
-  - capprevisions/status
-  - capps/status
+  - capps/finalizers
   verbs:
-  - get
-  - patch
   - update
 - apiGroups:
   - rcs.dana.io
   resources:
-  - capps/finalizers
+  - capps/status
   verbs:
+  - get
+  - patch
   - update
 - apiGroups:
   - record.dns-v2.m.crossplane.io

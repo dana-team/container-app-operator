@@ -96,7 +96,6 @@ rules:
 - apiGroups:
   - rcs.dana.io
   resources:
-  - capprevisions/status
   - capps/status
   verbs:
   - get
