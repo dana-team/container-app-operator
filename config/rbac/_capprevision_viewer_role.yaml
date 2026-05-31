@@ -19,9 +19,3 @@ rules:
   - get
   - list
   - watch
-- apiGroups:
-  - rcs.dana.io
-  resources:
-  - capprevisions/status
-  verbs:
-  - get

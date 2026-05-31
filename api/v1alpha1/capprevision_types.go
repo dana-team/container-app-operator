@@ -29,9 +29,6 @@ type CappRevisionSpec struct {
 	CappTemplate CappTemplate `json:"cappTemplate"`
 }
 
-// CappRevisionStatus defines the observed state of CappRevision
-type CappRevisionStatus struct{}
-
 // CappTemplate template of Capp.
 type CappTemplate struct {
 	// Spec is the related Capp spec
@@ -47,15 +44,13 @@ type CappTemplate struct {
 }
 
 // +kubebuilder:object:root=true
-// +kubebuilder:subresource:status
 
 // CappRevision is the Schema for the CappRevisions API
 type CappRevision struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   CappRevisionSpec   `json:"spec,omitempty"`
-	Status CappRevisionStatus `json:"status,omitempty"`
+	Spec CappRevisionSpec `json:"spec,omitempty"`
 }
 
 // +kubebuilder:object:root=true

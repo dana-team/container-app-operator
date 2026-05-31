@@ -37,7 +37,6 @@ type CappRevisionReconciler struct {
 // +kubebuilder:rbac:groups=rcs.dana.io,resources=capps/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=rcs.dana.io,resources=capps/finalizers,verbs=update
 // +kubebuilder:rbac:groups=rcs.dana.io,resources=capprevisions,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=rcs.dana.io,resources=capprevisions/status,verbs=get;update;patch
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *CappRevisionReconciler) SetupWithManager(mgr ctrl.Manager) error {
