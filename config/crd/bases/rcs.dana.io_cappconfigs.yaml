@@ -166,17 +166,24 @@ spec:
                 properties:
                   cname:
                     description: CNAME defines the CNAME record that will be used
-                      for Capp Hostnames
+                      for Capp Hostnames.
+                    minLength: 1
                     type: string
                   issuer:
-                    description: Issuer defines the certificate issuer
+                    description: Issuer defines the certificate issuer.
+                    minLength: 1
                     type: string
                   provider:
-                    description: Provider defines the DNS provider
+                    description: Provider defines the DNS provider.
+                    minLength: 1
                     type: string
                   zone:
-                    description: Zone defines the DNS zone for Capp Hostnames
+                    description: Zone defines the DNS zone for Capp Hostnames.
+                    minLength: 1
                     type: string
+                    x-kubernetes-validations:
+                    - message: zone must end with '.'
+                      rule: self.endsWith('.')
                 required:
                 - cname
                 - issuer
