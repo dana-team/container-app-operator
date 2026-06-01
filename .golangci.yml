@@ -5,12 +5,17 @@ linters:
   default: none
   enable:
     - copyloopvar
+    - bodyclose
     - dupl
+    - durationcheck
     - errcheck
+    - errname
     - errorlint
+    - forbidigo
     - contextcheck
     - goconst
     - gocyclo
+    - gosec
     - govet
     - ineffassign
     - misspell
@@ -34,6 +39,9 @@ linters:
     rules:
       - linters:
           - staticcheck
+        path: test/e2e/*
+      - linters:
+          - gosec
         path: test/e2e/*
       - linters:
           - dupl
