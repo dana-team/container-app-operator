@@ -8859,8 +8859,9 @@ spec:
                           the Capp.
                         properties:
                           hostname:
-                            description: Hostname is a custom DNS name for the Capp
-                              route.
+                            description: |-
+                              Hostname is the custom DNS name for the Capp route.
+                              Required when tlsEnabled is true.
                             type: string
                           routeTimeoutSeconds:
                             description: |-
@@ -8869,8 +8870,8 @@ spec:
                             format: int64
                             type: integer
                           tlsEnabled:
-                            description: TlsEnabled determines whether to enable TLS
-                              for the Capp route.
+                            description: TlsEnabled enables HTTPS and automatic certificate
+                              management for hostname.
                             type: boolean
                           trafficTarget:
                             description: TrafficTarget holds a single entry of the
@@ -8922,6 +8923,10 @@ spec:
                                 type: string
                             type: object
                         type: object
+                        x-kubernetes-validations:
+                        - message: hostname must be set when tlsEnabled is true
+                          rule: '!has(self.tlsEnabled) || !self.tlsEnabled || (has(self.hostname)
+                            && size(self.hostname) > 0)'
                       scaleSpec:
                         description: ScaleSpec holds the Capp scaling configuration.
                         properties:
