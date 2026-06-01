@@ -8985,14 +8985,22 @@ spec:
                                   type: object
                                 name:
                                   description: Name is the name of the volume.
+                                  maxLength: 63
+                                  minLength: 1
+                                  pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                   type: string
                                 path:
                                   description: Path is the exported path on the NFS
                                     server.
+                                  minLength: 1
                                   type: string
+                                  x-kubernetes-validations:
+                                  - message: path must start with '/'
+                                    rule: self.startsWith('/')
                                 server:
                                   description: Server is the hostname or IP address
                                     of the NFS server.
+                                  minLength: 1
                                   type: string
                               required:
                               - capacity

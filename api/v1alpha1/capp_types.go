@@ -107,12 +107,18 @@ type VolumesSpec struct {
 // NFSVolume defines the NFS volume specification for the Capp.
 type NFSVolume struct {
 	// Server is the hostname or IP address of the NFS server.
+	// +kubebuilder:validation:MinLength=1
 	Server string `json:"server"`
 
 	// Path is the exported path on the NFS server.
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:XValidation:rule="self.startsWith('/')",message="path must start with '/'"
 	Path string `json:"path"`
 
 	// Name is the name of the volume.
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=63
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
 	Name string `json:"name"`
 
 	// Capacity is the capacity of the volume.
