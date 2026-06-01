@@ -48,17 +48,7 @@ func (c CertificateManager) prepareResource(capp cappv1alpha1.Capp) (cmapi.Certi
 		return cmapi.Certificate{}, err
 	}
 
-	zone, err := utils.GetZoneFromConfig(dnsConfig)
-	if err != nil {
-		return cmapi.Certificate{}, err
-	}
-
-	issuer, err := utils.GetIssuerNameFromConfig(dnsConfig)
-	if err != nil {
-		return cmapi.Certificate{}, err
-	}
-
-	resourceName := utils.GenerateResourceName(capp.Spec.RouteSpec.Hostname, zone)
+	resourceName := utils.GenerateResourceName(capp.Spec.RouteSpec.Hostname, dnsConfig.Zone)
 	secretName := utils.GenerateSecretName(resourceName)
 
 	certificate := cmapi.Certificate{
@@ -78,7 +68,7 @@ func (c CertificateManager) prepareResource(capp cappv1alpha1.Capp) (cmapi.Certi
 			},
 			IsCA: false,
 			IssuerRef: cmmeta.IssuerReference{
-				Name:  issuer,
+				Name:  dnsConfig.Issuer,
 				Kind:  clusterIssuerKind,
 				Group: certv1alpha1.GroupVersion.Group,
 			},

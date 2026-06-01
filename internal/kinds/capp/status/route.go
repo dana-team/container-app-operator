@@ -26,22 +26,17 @@ func buildRouteStatus(ctx context.Context, kubeClient client.Client, capp cappv1
 		return routeStatus, err
 	}
 
-	zone, err := utils.GetZoneFromConfig(dnsConfig)
+	domainMappingStatus, err := buildDomainMappingStatus(ctx, kubeClient, capp, isRequired[rmanagers.DomainMapping], dnsConfig.Zone)
 	if err != nil {
 		return routeStatus, err
 	}
 
-	domainMappingStatus, err := buildDomainMappingStatus(ctx, kubeClient, capp, isRequired[rmanagers.DomainMapping], zone)
+	dnsRecordStatus, err := buildDNSRecordStatus(ctx, kubeClient, capp, isRequired[rmanagers.DNSRecord], dnsConfig.Zone)
 	if err != nil {
 		return routeStatus, err
 	}
 
-	dnsRecordStatus, err := buildDNSRecordStatus(ctx, kubeClient, capp, isRequired[rmanagers.DNSRecord], zone)
-	if err != nil {
-		return routeStatus, err
-	}
-
-	certificateStatus, err := buildCertificateStatus(ctx, kubeClient, capp, isRequired[rmanagers.Certificate], zone)
+	certificateStatus, err := buildCertificateStatus(ctx, kubeClient, capp, isRequired[rmanagers.Certificate], dnsConfig.Zone)
 	if err != nil {
 		return routeStatus, err
 	}

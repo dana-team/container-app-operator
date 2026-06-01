@@ -46,12 +46,7 @@ func (k KnativeDomainMappingManager) prepareResource(capp cappv1alpha1.Capp) (kn
 		return knativev1beta1.DomainMapping{}, err
 	}
 
-	zone, err := utils.GetZoneFromConfig(dnsConfig)
-	if err != nil {
-		return knativev1beta1.DomainMapping{}, err
-	}
-
-	resourceName := utils.GenerateResourceName(capp.Spec.RouteSpec.Hostname, zone)
+	resourceName := utils.GenerateResourceName(capp.Spec.RouteSpec.Hostname, dnsConfig.Zone)
 	secretName := utils.GenerateSecretName(resourceName)
 
 	knativeDomainMapping := &knativev1beta1.DomainMapping{

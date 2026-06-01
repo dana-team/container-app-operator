@@ -45,18 +45,8 @@ func (r DNSRecordManager) prepareResource(capp cappv1alpha1.Capp) (dnsrecordv1al
 		return dnsrecordv1alpha1.CNAMERecord{}, err
 	}
 
-	zone, err := utils.GetZoneFromConfig(dnsConfig)
-	if err != nil {
-		return dnsrecordv1alpha1.CNAMERecord{}, err
-	}
-
-	cname, err := utils.GetDNSRecordFromConfig(dnsConfig)
-	if err != nil {
-		return dnsrecordv1alpha1.CNAMERecord{}, err
-	}
-
-	resourceName := utils.GenerateResourceName(capp.Spec.RouteSpec.Hostname, zone)
-	recordName := utils.GenerateRecordName(capp.Spec.RouteSpec.Hostname, zone)
+	resourceName := utils.GenerateResourceName(capp.Spec.RouteSpec.Hostname, dnsConfig.Zone)
+	recordName := utils.GenerateRecordName(capp.Spec.RouteSpec.Hostname, dnsConfig.Zone)
 
 	dnsRecord := dnsrecordv1alpha1.CNAMERecord{
 		TypeMeta: metav1.TypeMeta{},
@@ -70,18 +60,13 @@ func (r DNSRecordManager) prepareResource(capp cappv1alpha1.Capp) (dnsrecordv1al
 		Spec: dnsrecordv1alpha1.CNAMERecordSpec{
 			ForProvider: dnsrecordv1alpha1.CNAMERecordParameters{
 				Name:  &recordName,
-				Zone:  &zone,
-				Cname: &cname,
+				Zone:  &dnsConfig.Zone,
+				Cname: &dnsConfig.CNAME,
 			},
 		},
 	}
-	provider, err := utils.GetXPProviderFromConfig(dnsConfig)
-	if err != nil {
-		return dnsrecordv1alpha1.CNAMERecord{}, err
-	}
-
 	dnsRecord.Spec.ProviderConfigReference = &xpv1.ProviderConfigReference{
-		Name: provider,
+		Name: dnsConfig.Provider,
 		Kind: ClusterProviderConfigKind,
 	}
 

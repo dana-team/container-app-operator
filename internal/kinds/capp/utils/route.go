@@ -46,52 +46,6 @@ func GetDNSConfig(ctx context.Context, k8sClient client.Client) (cappv1alpha1.DN
 	return cappConfig.Spec.DNSConfig, nil
 }
 
-// GetDNSRecordFromConfig returns the DNSRecord to be used for the record from a CappConfig CRD.
-func GetDNSRecordFromConfig(dnsConfig cappv1alpha1.DNSConfig) (string, error) {
-	dnsRecord := dnsConfig.CNAME
-
-	if dnsRecord == "" {
-		return "", fmt.Errorf("%q is empty in CappConfig DNSConfig data", "CNAME")
-	}
-	return dnsRecord, nil
-}
-
-// GetZoneFromConfig returns the zone to be used for the record from the CappConfig CRD.
-func GetZoneFromConfig(dnsConfig cappv1alpha1.DNSConfig) (string, error) {
-	zone := dnsConfig.Zone
-
-	if zone == "" {
-		return "", fmt.Errorf("%q is empty in CappConfig DNSConfig data", "Zone")
-	} else if !strings.HasSuffix(zone, dot) {
-		return "", fmt.Errorf("%q value must end with a %q in CappConfig DNSConfig data", "Zone", dot)
-	}
-
-	return zone, nil
-}
-
-// GetXPProviderFromConfig returns the Crossplane provider to be used for the record from the CappConfig CRD.
-func GetXPProviderFromConfig(dnsConfig cappv1alpha1.DNSConfig) (string, error) {
-	provider := dnsConfig.Provider
-
-	if provider == "" {
-		return "", fmt.Errorf("%q is empty in CappConfig DNSConfig data", "Provider")
-	}
-
-	return provider, nil
-}
-
-// GetIssuerNameFromConfig returns the name of the Certificate Issuer
-// to be used for the Certificate from a CappConfig CRD.
-func GetIssuerNameFromConfig(dnsConfig cappv1alpha1.DNSConfig) (string, error) {
-	issuer := dnsConfig.Issuer
-
-	if issuer == "" {
-		return "", fmt.Errorf("%q is empty in CappConfig DNSConfig data", "Issuer")
-	}
-
-	return issuer, nil
-}
-
 // GenerateResourceName generates the hostname based on the provided suffix and a dot(".") trailing character.
 // If the hostname does not already end with the suffix (minus the trailing dot), it appends the suffix to the hostname.
 func GenerateResourceName(hostname, suffix string) string {
