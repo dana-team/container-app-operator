@@ -86,12 +86,6 @@ func (c *CappValidator) handle(ctx context.Context, operation admissionv1.Operat
 		}
 	}
 
-	if capp.Spec.LogSpec != (cappv1alpha1.LogSpec{}) {
-		if errs := common.ValidateLogSpec(capp.Spec.LogSpec); errs != nil {
-			return admission.Denied(errs.Error())
-		}
-	}
-
 	if err := validateNFSVolumeMounts(capp); err != nil {
 		return admission.Denied(err.Error())
 	}

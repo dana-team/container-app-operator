@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net"
 	"regexp"
-	"sort"
 	"strings"
 
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
@@ -18,13 +17,6 @@ import (
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/network"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-)
-
-const (
-	logSpecFieldHost           = "Host"
-	logSpecFieldIndex          = "Index"
-	logSpecFieldUser           = "User"
-	logSpecFieldPasswordSecret = "PasswordSecret"
 )
 
 // ValidateDomainName checks if the hostname is valid domain name and not part of the cluster's domain.
@@ -83,49 +75,6 @@ func IsDomainNameTaken(ctx context.Context, domainName string) (bool, error) {
 		return false, err
 	}
 	return true, nil
-}
-
-// ValidateLogSpec checks if the LogSpec is valid based on the Type field.
-func ValidateLogSpec(logSpec cappv1alpha1.LogSpec) *apis.FieldError {
-	requiredFields := map[cappv1alpha1.LogType][]string{
-		cappv1alpha1.LogTypeElastic:           {logSpecFieldHost, logSpecFieldIndex, logSpecFieldUser, logSpecFieldPasswordSecret},
-		cappv1alpha1.LogTypeElasticDataStream: {logSpecFieldHost, logSpecFieldUser, logSpecFieldPasswordSecret},
-	}
-	required, exists := requiredFields[logSpec.Type]
-	if !exists {
-		validTypes := make([]string, 0, len(requiredFields))
-		for validType := range requiredFields {
-			validTypes = append(validTypes, string(validType))
-		}
-		sort.Strings(validTypes)
-		return apis.ErrGeneric(
-			fmt.Sprintf("Invalid LogSpec Type: %q. Valid types are: %q", logSpec.Type, strings.Join(validTypes, ", ")),
-			"logSpec.Type")
-	}
-	missingFields := findMissingFields(logSpec, required)
-	if len(missingFields) > 0 {
-		return apis.ErrGeneric(
-			fmt.Sprintf("%s log configuration is missing required fields: %q", logSpec.Type, strings.Join(missingFields, ", ")),
-			"logSpec")
-	}
-	return nil
-}
-
-// findMissingFields checks for missing fields in LogSpec.
-func findMissingFields(logSpec cappv1alpha1.LogSpec, required []string) []string {
-	var missingFields []string
-	fieldValues := map[string]string{
-		logSpecFieldHost:           logSpec.Host,
-		logSpecFieldIndex:          logSpec.Index,
-		logSpecFieldUser:           logSpec.User,
-		logSpecFieldPasswordSecret: logSpec.PasswordSecret,
-	}
-	for _, reqField := range required {
-		if value, ok := fieldValues[reqField]; !ok || value == "" {
-			missingFields = append(missingFields, reqField)
-		}
-	}
-	return missingFields
 }
 
 // GetCappConfig returns an instance of Capp Config.

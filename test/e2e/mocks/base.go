@@ -49,7 +49,6 @@ func CreateBaseCapp() *cappv1alpha1.Capp {
 				},
 			},
 			RouteSpec: cappv1alpha1.RouteSpec{},
-			LogSpec:   cappv1alpha1.LogSpec{},
 		},
 	}
 }

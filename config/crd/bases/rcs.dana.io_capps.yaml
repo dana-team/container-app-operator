@@ -8680,6 +8680,26 @@ spec:
                     description: User defines a User for authentication.
                     type: string
                 type: object
+                x-kubernetes-validations:
+                - message: elastic log configuration requires host, index, user, and
+                    passwordSecret
+                  rule: '!has(self.type) || self.type != ''elastic'' || (has(self.host)
+                    && size(self.host) > 0 && has(self.index) && size(self.index)
+                    > 0 && has(self.user) && size(self.user) > 0 && has(self.passwordSecret)
+                    && size(self.passwordSecret) > 0)'
+                - message: elastic-datastream log configuration requires host, user,
+                    and passwordSecret
+                  rule: '!has(self.type) || self.type != ''elastic-datastream'' ||
+                    (has(self.host) && size(self.host) > 0 && has(self.user) && size(self.user)
+                    > 0 && has(self.passwordSecret) && size(self.passwordSecret) >
+                    0)'
+                - message: type must be elastic or elastic-datastream when log configuration
+                    fields are set
+                  rule: (!has(self.host) || size(self.host) == 0) && (!has(self.index)
+                    || size(self.index) == 0) && (!has(self.user) || size(self.user)
+                    == 0) && (!has(self.passwordSecret) || size(self.passwordSecret)
+                    == 0) || (has(self.type) && (self.type == 'elastic' || self.type
+                    == 'elastic-datastream'))
               routeSpec:
                 description: RouteSpec defines the route specification for the Capp.
                 properties:
