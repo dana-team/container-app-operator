@@ -69,8 +69,8 @@ type AutoscaleConfig struct {
 	// Concurrency is the maximum concurrency of a Capp.
 	// +kubebuilder:validation:Minimum=1
 	Concurrency int `json:"concurrency"`
-	// ActivationScale is the default scale.
-	// +kubebuilder:validation:Minimum=1
+	// ActivationScale is the default number of replicas used when a scale-to-zero Capp scales up from idle.
+	// +kubebuilder:validation:Minimum=2
 	ActivationScale int `json:"activationScale"`
 	// MinReplicasLimit is the global minimum scale. (maximum allowed value for minReplicas).
 	// +kubebuilder:validation:Minimum=1

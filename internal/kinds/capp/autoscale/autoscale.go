@@ -29,23 +29,23 @@ func SetAutoScaler(capp cappv1alpha1.Capp, defaults cappv1alpha1.AutoscaleConfig
 		return autoScaleAnnotations
 	}
 
-	activationScale := defaults.ActivationScale
-
 	givenAutoScaleAnnotation := utils.FilterMap(capp.Spec.ConfigurationSpec.Template.Annotations, AutoScalerSubString)
 	autoScaleAnnotations[kautoscaling.ClassAnnotationKey] = getAutoScaleClassByMetric(scaleMetric)
 	autoScaleAnnotations[kautoscaling.MetricAnnotationKey] = scaleMetric
 	autoScaleAnnotations[kautoscaling.TargetAnnotationKey] = getTargetValue(scaleMetric, defaults)
-	autoScaleAnnotations[kautoscaling.ActivationScaleKey] = fmt.Sprintf("%d", activationScale)
-
-	if capp.Spec.ScaleSpec.MinReplicas != 0 {
-		autoScaleAnnotations[kautoscaling.MinScaleAnnotationKey] = fmt.Sprintf("%d", capp.Spec.ScaleSpec.MinReplicas)
-	}
 
 	if capp.Spec.ScaleSpec.ScaleDelaySeconds != 0 {
 		autoScaleAnnotations[kautoscaling.ScaleDownDelayAnnotationKey] = (time.Duration(capp.Spec.ScaleSpec.ScaleDelaySeconds) * time.Second).String()
 	}
 
 	autoScaleAnnotations = utils.MergeMaps(autoScaleAnnotations, givenAutoScaleAnnotation)
+	if capp.Spec.ScaleSpec.MinReplicas != 0 {
+		delete(autoScaleAnnotations, kautoscaling.ActivationScaleKey)
+		autoScaleAnnotations[kautoscaling.MinScaleAnnotationKey] = fmt.Sprintf("%d", capp.Spec.ScaleSpec.MinReplicas)
+	} else {
+		delete(autoScaleAnnotations, kautoscaling.MinScaleAnnotationKey)
+		autoScaleAnnotations[kautoscaling.ActivationScaleKey] = fmt.Sprintf("%d", defaults.ActivationScale)
+	}
 
 	return autoScaleAnnotations
 }
