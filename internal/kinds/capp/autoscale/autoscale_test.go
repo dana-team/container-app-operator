@@ -16,7 +16,7 @@ func TestSetAutoScaler(t *testing.T) {
 		expected map[string]string
 	}{
 		{
-			name:   "uses HPA class and default cpu target for cpu metric",
+			name:   "uses HPA class and cpu target from autoscale config",
 			metric: kautoscaling.CPU,
 			expected: map[string]string{
 				kautoscaling.ClassAnnotationKey:  kautoscaling.HPA,
@@ -26,7 +26,7 @@ func TestSetAutoScaler(t *testing.T) {
 			},
 		},
 		{
-			name:   "uses KPA class and default rps target for rps metric",
+			name:   "uses KPA class and rps target from autoscale config",
 			metric: kautoscaling.RPS,
 			expected: map[string]string{
 				kautoscaling.ClassAnnotationKey:  kautoscaling.KPA,
@@ -36,7 +36,7 @@ func TestSetAutoScaler(t *testing.T) {
 			},
 		},
 		{
-			name:   "uses HPA class and default memory target for memory metric",
+			name:   "uses HPA class and memory target from autoscale config",
 			metric: kautoscaling.Memory,
 			expected: map[string]string{
 				kautoscaling.ClassAnnotationKey:  kautoscaling.HPA,
@@ -60,7 +60,13 @@ func TestSetAutoScaler(t *testing.T) {
 					},
 				},
 			}
-			annotations := SetAutoScaler(capp, cappv1alpha1.AutoscaleConfig{})
+			annotations := SetAutoScaler(capp, cappv1alpha1.AutoscaleConfig{
+				RPS:             200,
+				CPU:             80,
+				Memory:          70,
+				Concurrency:     10,
+				ActivationScale: 3,
+			})
 			assert.Equal(t, tt.expected, annotations)
 		})
 	}
