@@ -243,6 +243,7 @@ func TestValidateNFSVolumeMounts(t *testing.T) {
 }
 
 func TestValidateEventSources(t *testing.T) {
+	ctx := context.Background()
 	tests := []struct {
 		name            string
 		sources         []cappv1alpha1.SourceConfiguration
@@ -254,20 +255,57 @@ func TestValidateEventSources(t *testing.T) {
 		{
 			name: "allows unique source names",
 			sources: []cappv1alpha1.SourceConfiguration{
-				{Name: eventSourceName},
-				{Name: "ping-b"},
+				{Name: eventSourceName, PingSourceConfiguration: &cappv1alpha1.PingSourceConfiguration{}},
+				{Name: "ping-b", PingSourceConfiguration: &cappv1alpha1.PingSourceConfiguration{}},
 			},
 		},
 		{
 			name: "rejects duplicate source names",
 			sources: []cappv1alpha1.SourceConfiguration{
-				{Name: eventSourceName},
-				{Name: eventSourceName},
+				{Name: eventSourceName, PingSourceConfiguration: &cappv1alpha1.PingSourceConfiguration{}},
+				{Name: eventSourceName, PingSourceConfiguration: &cappv1alpha1.PingSourceConfiguration{}},
 			},
 			wantErrContains: []string{
 				"spec.eventSourcesSpec.sources",
 				"duplicate",
 				eventSourceName,
+			},
+		},
+		{
+			name: "rejects source with no configuration",
+			sources: []cappv1alpha1.SourceConfiguration{
+				{Name: eventSourceName},
+			},
+			wantErrContains: []string{
+				"spec.eventSourcesSpec.sources[0]",
+				eventSourceName,
+				"must specify at least one source configuration",
+			},
+		},
+		{
+			name: "allows source with ping configuration",
+			sources: []cappv1alpha1.SourceConfiguration{
+				{Name: eventSourceName, PingSourceConfiguration: &cappv1alpha1.PingSourceConfiguration{Schedule: "* * * * * *"}},
+			},
+		},
+		{
+			name: "rejects source with invalid cron schedule",
+			sources: []cappv1alpha1.SourceConfiguration{
+				{Name: eventSourceName, PingSourceConfiguration: &cappv1alpha1.PingSourceConfiguration{Schedule: "not-a-cron"}},
+			},
+			wantErrContains: []string{"schedule"},
+		},
+		{
+			name: "rejects source with invalid JSON data",
+			sources: []cappv1alpha1.SourceConfiguration{
+				{Name: eventSourceName, PingSourceConfiguration: &cappv1alpha1.PingSourceConfiguration{Schedule: "* * * * *", Data: "not-json{"}},
+			},
+			wantErrContains: []string{"data"},
+		},
+		{
+			name: "allows source with valid schedule and valid JSON",
+			sources: []cappv1alpha1.SourceConfiguration{
+				{Name: eventSourceName, PingSourceConfiguration: &cappv1alpha1.PingSourceConfiguration{Schedule: "*/5 * * * *", Data: `{"key":"value"}`}},
 			},
 		},
 	}
@@ -282,7 +320,7 @@ func TestValidateEventSources(t *testing.T) {
 				},
 			}
 
-			err := validateEventSources(capp)
+			err := validateEventSources(ctx, capp)
 			if len(tc.wantErrContains) == 0 {
 				require.NoError(t, err)
 				return

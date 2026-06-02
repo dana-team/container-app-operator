@@ -9,15 +9,22 @@ import (
 
 	"net/http"
 
+	"github.com/cloudevents/sdk-go/v2/event"
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/dana-team/container-app-operator/internal/webhook/rcs/common"
-
 	admissionv1 "k8s.io/api/admission/v1"
+	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
+	servingv1 "knative.dev/serving/pkg/apis/serving/v1"
 
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+)
+
+const (
+	eventSourcePath = "spec.eventSourcesSpec.sources"
 )
 
 type CappValidator struct {
@@ -84,7 +91,7 @@ func (c *CappValidator) handle(ctx context.Context, capp cappv1alpha1.Capp, oldC
 		return admission.Denied(err.Error())
 	}
 
-	if err := validateEventSources(capp); err != nil {
+	if err := validateEventSources(ctx, capp); err != nil {
 		return admission.Denied(err.Error())
 	}
 
@@ -131,13 +138,54 @@ func validateNFSVolumeMounts(capp cappv1alpha1.Capp) error {
 	return fmt.Errorf("invalid nfsVolumes: volumes [%s] must be mounted by at least one container", strings.Join(missingVolumeNames, ", "))
 }
 
-func validateEventSources(capp cappv1alpha1.Capp) error {
+func validateEventSources(ctx context.Context, capp cappv1alpha1.Capp) error {
 	seen := make(map[string]struct{})
 	for i, src := range capp.Spec.EventSourcesSpec.Sources {
 		if _, dup := seen[src.Name]; dup {
-			return fmt.Errorf("spec.eventSourcesSpec.sources[%d].name: duplicate value %q", i, src.Name)
+			return fmt.Errorf("%s[%d].name: duplicate value %q", eventSourcePath, i, src.Name)
 		}
 		seen[src.Name] = struct{}{}
+
+		if src.PingSourceConfiguration != nil {
+			if err := validatePingSourceConfiguration(ctx, src.PingSourceConfiguration); err != nil {
+				return fmt.Errorf("%s[%d]: %w", eventSourcePath, i, err)
+			}
+		} else {
+			return fmt.Errorf("%s[%d]: source %q must specify at least one source configuration (e.g. pingSourceConfiguration)", eventSourcePath, i, src.Name)
+		}
+
+		if src.URI != nil {
+			if err := common.ValidateURI(src.URI); err != nil {
+				return fmt.Errorf("%s[%d].uri: %w", eventSourcePath, i, err)
+			}
+		}
+	}
+	return nil
+}
+
+// validatePingSourceConfiguration makes sure a pingSource has a valid cron schedule and that the data field (if specified) is valid JSON.
+func validatePingSourceConfiguration(ctx context.Context, cfg *cappv1alpha1.PingSourceConfiguration) error {
+	schedule := cfg.Schedule
+	if schedule == "" {
+		schedule = "* * * * *"
+	}
+	ps := sourcesv1.PingSourceSpec{
+		SourceSpec: duckv1.SourceSpec{
+			Sink: duckv1.Destination{
+				Ref: &duckv1.KReference{
+					APIVersion: servingv1.SchemeGroupVersion.String(),
+					Kind:       "Service",
+					Name:       "placeholder",
+				},
+			},
+		},
+		Schedule:    schedule,
+		Data:        cfg.Data,
+		ContentType: event.ApplicationJSON,
+	}
+
+	if err := ps.Validate(ctx); err != nil {
+		return err
 	}
 	return nil
 }

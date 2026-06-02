@@ -139,3 +139,14 @@ rules:
   - list
   - update
   - watch
+- apiGroups:
+  - sources.knative.dev
+  resources:
+  - pingsources
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - update
+  - watch

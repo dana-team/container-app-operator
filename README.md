@@ -39,6 +39,7 @@ The `container-app-operator` project can work as a standalone solution, but is m
 - [x] Support for changing the state of `Capp` from `enabled` (workload is in running state) to `disabled` (workload is not in running state).
 - [x] Support for external NFS storage connected to `Capp` by using `volumeMounts`.
 - [x] Support for `CappRevisions` to keep track of changes to `Capp` in a different CRD (up to 10 `CappRevisions` are saved for each `Capp`)
+- [x] Support for `Knative Eventing` event sources (e.g., `PingSource`) to trigger `Capp` workloads on a schedule
 
 ## Getting Started
 
@@ -56,7 +57,9 @@ The `container-app-operator` project can work as a standalone solution, but is m
 
 6. `logging-operator` installed on the cluster (you can [use the Helm Chart](https://kube-logging.dev/docs/install/#deploy-logging-operator-with-helm)).
 
-7. `prometheus-operator` installed on the cluster (optional, for metrics).
+7. `knative-eventing` installed on the cluster (required for event sources; you can [use the quickstart](https://knative.dev/docs/getting-started/quickstart-install/)).
+
+8. `prometheus-operator` installed on the cluster (optional, for metrics).
 
 Everything can also be installed by running:
 
@@ -175,6 +178,26 @@ spec:
     - regex: ".*\\.internal\\.capp-zone\\.com"
 
 ```
+
+### Using Event Sources
+
+`Capp` supports attaching `Knative Eventing` event sources to trigger workloads on a schedule or from external events. Event sources are configured via the `eventSourcesSpec.sources` field.
+
+Each source requires a `name` and a source-type configuration block. Currently supported:
+
+- **`pingSourceConfiguration`**: Triggers the Capp on a cron schedule, sending an optional JSON payload.
+
+```yaml
+spec:
+  eventSourcesSpec:
+    sources:
+      - name: my-ping
+        pingSourceConfiguration:
+          schedule: "*/5 * * * *"
+          data: '{"type":"scheduled-run"}'
+```
+
+The operator creates a `PingSource` named `{capp-name}-{source-name}` in the same namespace. Its readiness is reflected in `status.eventingStatus.eventSources`.
 
 ### Enable Persistent Volume extension in Knative
 
