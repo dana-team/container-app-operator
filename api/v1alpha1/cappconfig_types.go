@@ -58,14 +58,19 @@ type DNSConfig struct {
 
 type AutoscaleConfig struct {
 	// RPS is the desired requests per second to trigger upscaling.
+	// +kubebuilder:validation:Minimum=1
 	RPS int `json:"rps"`
 	// CPU is the desired CPU utilization to trigger upscaling.
+	// +kubebuilder:validation:Minimum=1
 	CPU int `json:"cpu"`
 	// Memory is the desired memory utilization to trigger upscaling.
+	// +kubebuilder:validation:Minimum=1
 	Memory int `json:"memory"`
 	// Concurrency is the maximum concurrency of a Capp.
+	// +kubebuilder:validation:Minimum=1
 	Concurrency int `json:"concurrency"`
 	// ActivationScale is the default scale.
+	// +kubebuilder:validation:Minimum=1
 	ActivationScale int `json:"activationScale"`
 	// MinReplicasLimit is the global minimum scale. (maximum allowed value for minReplicas).
 	// +kubebuilder:validation:Minimum=1

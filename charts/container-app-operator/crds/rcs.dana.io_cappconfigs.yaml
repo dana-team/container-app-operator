@@ -66,12 +66,15 @@ spec:
                 properties:
                   activationScale:
                     description: ActivationScale is the default scale.
+                    minimum: 1
                     type: integer
                   concurrency:
                     description: Concurrency is the maximum concurrency of a Capp.
+                    minimum: 1
                     type: integer
                   cpu:
                     description: CPU is the desired CPU utilization to trigger upscaling.
+                    minimum: 1
                     type: integer
                   maxScaleDelay:
                     default: 3600
@@ -82,6 +85,7 @@ spec:
                   memory:
                     description: Memory is the desired memory utilization to trigger
                       upscaling.
+                    minimum: 1
                     type: integer
                   minReplicasLimit:
                     description: MinReplicasLimit is the global minimum scale. (maximum
@@ -91,6 +95,7 @@ spec:
                   rps:
                     description: RPS is the desired requests per second to trigger
                       upscaling.
+                    minimum: 1
                     type: integer
                 required:
                 - activationScale
