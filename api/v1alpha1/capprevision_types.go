@@ -44,6 +44,7 @@ type CappTemplate struct {
 }
 
 // +kubebuilder:object:root=true
+// +kubebuilder:storageversion
 
 // CappRevision is the Schema for the CappRevisions API
 type CappRevision struct {
