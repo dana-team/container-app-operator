@@ -5,7 +5,7 @@ go 1.26.0
 require (
 	github.com/cert-manager/cert-manager v1.20.2
 	github.com/cisco-open/operator-tools v0.37.0
-	github.com/cloudevents/sdk-go/v2 v2.16.1
+	github.com/cloudevents/sdk-go/v2 v2.16.2
 	github.com/crossplane/crossplane-runtime/v2 v2.2.2
 	github.com/dana-team/cert-external-issuer v0.2.1
 	github.com/dana-team/nfspvc-operator v0.5.2
