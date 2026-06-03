@@ -27,4 +27,4 @@ webhooks:
     - UPDATE
     resources:
     - capps
-  sideEffects: NoneOnDryRun
+  sideEffects: None
