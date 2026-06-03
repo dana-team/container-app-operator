@@ -34,6 +34,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/resourceclient"
 	rmanagers "github.com/dana-team/container-app-operator/internal/kinds/capp/resourcemanagers"
 	"github.com/go-logr/logr"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
@@ -304,15 +305,16 @@ func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, fmt.Errorf("failed to get Capp: %s", err.Error())
 	}
 
+	rmClient := rclient.ResourceManagerClient{Ctx: ctx, K8sclient: r.Client, Log: logger}
 	resourceManagers := map[string]rmanagers.ResourceManager{
-		rmanagers.KnativeServing: rmanagers.KnativeServiceManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder},
-		rmanagers.DNSRecord:      rmanagers.DNSRecordManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder},
-		rmanagers.Certificate:    rmanagers.CertificateManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder},
-		rmanagers.DomainMapping:  rmanagers.KnativeDomainMappingManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder},
-		rmanagers.SyslogNGFlow:   rmanagers.SyslogNGFlowManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder},
-		rmanagers.SyslogNGOutput: rmanagers.SyslogNGOutputManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder},
-		rmanagers.NfsPVC:         rmanagers.NFSPVCManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder},
-		rmanagers.PingSource:     rmanagers.PingSourceManager{Ctx: ctx, Log: logger, K8sclient: r.Client, EventRecorder: r.EventRecorder},
+		rmanagers.KnativeServing: rmanagers.KnativeServiceManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},
+		rmanagers.DNSRecord:      rmanagers.DNSRecordManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},
+		rmanagers.Certificate:    rmanagers.CertificateManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},
+		rmanagers.DomainMapping:  rmanagers.KnativeDomainMappingManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},
+		rmanagers.SyslogNGFlow:   rmanagers.SyslogNGFlowManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},
+		rmanagers.SyslogNGOutput: rmanagers.SyslogNGOutputManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},
+		rmanagers.NfsPVC:         rmanagers.NFSPVCManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},
+		rmanagers.PingSource:     rmanagers.PingSourceManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},
 	}
 
 	err, deleted := finalizer.HandleResourceDeletion(ctx, capp, r.Client, resourceManagers)

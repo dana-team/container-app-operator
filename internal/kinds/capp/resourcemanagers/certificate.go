@@ -1,8 +1,6 @@
 package resourcemanagers
 
 import (
-	"context"
-
 	"fmt"
 
 	certv1alpha1 "github.com/dana-team/cert-external-issuer/api/v1alpha1"
@@ -11,17 +9,13 @@ import (
 	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 
 	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/resourceclient"
-	"github.com/go-logr/logr"
 	"k8s.io/client-go/tools/events"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
@@ -35,9 +29,7 @@ const (
 )
 
 type CertificateManager struct {
-	Ctx           context.Context
-	K8sclient     client.Client
-	Log           logr.Logger
+	rclient.ResourceManagerClient
 	EventRecorder events.EventRecorder
 }
 
@@ -88,8 +80,6 @@ func (c CertificateManager) prepareResource(capp cappv1alpha1.Capp) (cmapi.Certi
 
 // CleanUp attempts to delete all Certificates associated with a given Capp resource.
 func (c CertificateManager) CleanUp(capp cappv1alpha1.Capp) error {
-	resourceManager := rclient.ResourceManagerClient{Ctx: c.Ctx, K8sclient: c.K8sclient, Log: c.Log}
-
 	certificates, err := c.getPreviousCertificates(capp)
 	if err != nil {
 		return err
@@ -106,7 +96,7 @@ func (c CertificateManager) CleanUp(capp cappv1alpha1.Capp) error {
 			}
 		}
 		cert := rclient.GetBareCertificate(certificate.Name, certificate.Namespace)
-		if err := resourceManager.DeleteResource(&cert); err != nil {
+		if err := c.DeleteResource(&cert); err != nil {
 			if errors.IsNotFound(err) {
 				continue
 			}
@@ -140,34 +130,26 @@ func (c CertificateManager) reconcileCertificate(capp cappv1alpha1.Capp) error {
 	}
 
 	certificate := cmapi.Certificate{}
-	resourceManager := rclient.ResourceManagerClient{Ctx: c.Ctx, K8sclient: c.K8sclient, Log: c.Log}
 
 	if err := c.K8sclient.Get(c.Ctx, types.NamespacedName{Namespace: capp.Namespace, Name: certificateFromCapp.Name}, &certificate); err != nil {
 		if errors.IsNotFound(err) {
-			if err := c.createCertificate(capp, certificateFromCapp, resourceManager); err != nil {
-				return err
-			}
-
-			return nil
+			return createManagedResource(c.K8sclient, c.CreateResource, c.EventRecorder, &capp, &certificateFromCapp,
+				"Certificate", eventCappCertificateCreated, eventCappCertificateCreationFailed)
 		}
 		return fmt.Errorf("failed to get Certificate %q: %w", certificateFromCapp.Name, err)
 	}
 
 	orig := certificate.DeepCopy()
-	if err := controllerutil.SetOwnerReference(&capp, &certificate, c.K8sclient.Scheme()); err != nil {
-		return fmt.Errorf("set Certificate owner reference: %w", err)
-	}
 	certificate.Spec = *certificateFromCapp.Spec.DeepCopy()
-
-	if !equality.Semantic.DeepEqual(orig.Spec, certificate.Spec) ||
-		!equality.Semantic.DeepEqual(orig.OwnerReferences, certificate.OwnerReferences) {
-		if err := resourceManager.UpdateResource(&certificate); err != nil {
-			return fmt.Errorf("update Certificate %q: %w", certificate.Name, err)
-		}
+	if err := ensureOwnerReference(c.K8sclient, &capp, &certificate, "Certificate"); err != nil {
+		return err
+	}
+	if err := updateManagedResourceIfNeeded(c.UpdateResource, &certificate, orig.Spec, certificate.Spec, orig.OwnerReferences); err != nil {
+		return fmt.Errorf("update Certificate %q: %w", certificate.Name, err)
 	}
 
 	if capp.Status.RouteStatus.DomainMappingObjectStatus.URL != nil {
-		if err := c.handlePreviousCertificates(capp, resourceManager, certificateFromCapp.Name); err != nil {
+		if err := c.handlePreviousCertificates(capp, certificateFromCapp.Name); err != nil {
 			return fmt.Errorf("failed to handle previous Certificates: %w", err)
 		}
 	}
@@ -175,28 +157,10 @@ func (c CertificateManager) reconcileCertificate(capp cappv1alpha1.Capp) error {
 	return nil
 }
 
-// createCertificate creates a new Certificate and emits an event.
-func (c CertificateManager) createCertificate(capp cappv1alpha1.Capp, certificateFromCapp cmapi.Certificate, resourceManager rclient.ResourceManagerClient) error {
-	if err := controllerutil.SetOwnerReference(&capp, &certificateFromCapp, c.K8sclient.Scheme()); err != nil {
-		return fmt.Errorf("set Certificate owner reference: %w", err)
-	}
-	if err := resourceManager.CreateResource(&certificateFromCapp); err != nil {
-		c.EventRecorder.Eventf(&capp, nil, corev1.EventTypeWarning, eventCappCertificateCreationFailed, eventCappCertificateCreationFailed,
-			fmt.Sprintf("Failed to create Certificate %s", certificateFromCapp.Name))
-
-		return err
-	}
-
-	c.EventRecorder.Eventf(&capp, nil, corev1.EventTypeNormal, eventCappCertificateCreated, eventCappCertificateCreated,
-		fmt.Sprintf("Created Certificate %s", certificateFromCapp.Name))
-
-	return nil
-}
-
 // handlePreviousCertificates takes care of removing unneeded Certificate objects. If the DNSRecord
 // which corresponds to the latest Certificate object is not yet available then return early
 // and do not delete the previous Certificates.
-func (c CertificateManager) handlePreviousCertificates(capp cappv1alpha1.Capp, resourceManager rclient.ResourceManagerClient, name string) error {
+func (c CertificateManager) handlePreviousCertificates(capp cappv1alpha1.Capp, name string) error {
 	var available bool
 	var err error
 
@@ -214,7 +178,7 @@ func (c CertificateManager) handlePreviousCertificates(capp cappv1alpha1.Capp, r
 		return err
 	}
 
-	return c.deletePreviousCertificates(certificates, resourceManager, capp.Spec.RouteSpec.Hostname)
+	return c.deletePreviousCertificates(certificates, capp.Spec.RouteSpec.Hostname)
 }
 
 // getPreviousCertificates returns a list of all Certificate objects that are related to the given Capp.
@@ -234,11 +198,11 @@ func (c CertificateManager) getPreviousCertificates(capp cappv1alpha1.Capp) (cma
 }
 
 // deletePreviousCertificates deletes all previous Certificates associated with a Capp.
-func (c CertificateManager) deletePreviousCertificates(certificates cmapi.CertificateList, resourceManager rclient.ResourceManagerClient, hostname string) error {
+func (c CertificateManager) deletePreviousCertificates(certificates cmapi.CertificateList, hostname string) error {
 	for _, certificate := range certificates.Items {
 		if certificate.Name != hostname {
 			cert := rclient.GetBareCertificate(certificate.Name, certificate.Namespace)
-			if err := resourceManager.DeleteResource(&cert); err != nil {
+			if err := c.DeleteResource(&cert); err != nil {
 				return err
 			}
 		}

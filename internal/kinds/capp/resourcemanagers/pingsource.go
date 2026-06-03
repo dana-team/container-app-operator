@@ -1,17 +1,15 @@
 package resourcemanagers
 
 import (
-	"context"
 	"fmt"
 	"sort"
 
 	"github.com/cloudevents/sdk-go/v2/event"
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/resourceclient"
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
-	"github.com/go-logr/logr"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -21,7 +19,6 @@ import (
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	servingv1 "knative.dev/serving/pkg/apis/serving/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const (
@@ -31,9 +28,7 @@ const (
 )
 
 type PingSourceManager struct {
-	Ctx           context.Context
-	K8sclient     client.Client
-	Log           logr.Logger
+	rclient.ResourceManagerClient
 	EventRecorder events.EventRecorder
 }
 
@@ -56,7 +51,7 @@ func (p PingSourceManager) CleanUp(capp cappv1alpha1.Capp) error {
 	}
 	for i := range pingSources.Items {
 		ps := &pingSources.Items[i]
-		if err := p.K8sclient.Delete(p.Ctx, ps); client.IgnoreNotFound(err) != nil {
+		if err := client.IgnoreNotFound(p.DeleteResource(ps)); err != nil {
 			return fmt.Errorf("failed to delete PingSource %q: %w", ps.Name, err)
 		}
 	}
@@ -116,38 +111,19 @@ func (p PingSourceManager) createOrUpdate(capp cappv1alpha1.Capp, source cappv1a
 		if !errors.IsNotFound(err) {
 			return fmt.Errorf("failed to get PingSource %q: %w", desired.Name, err)
 		}
-		return p.createPingSource(&capp, desired)
+		return createManagedResource(p.K8sclient, p.CreateResource, p.EventRecorder, &capp, desired,
+			"PingSource", eventPingSourceCreated, eventPingSourceCreationFailed)
 	}
-	return p.updatePingSource(&capp, existing, desired)
-}
 
-func (p PingSourceManager) createPingSource(capp *cappv1alpha1.Capp, ps *sourcesv1.PingSource) error {
-	if err := controllerutil.SetOwnerReference(capp, ps, p.K8sclient.Scheme()); err != nil {
-		return fmt.Errorf("set PingSource owner reference: %w", err)
-	}
-	p.Log.Info("Creating PingSource", "Name", ps.Name)
-	if err := p.K8sclient.Create(p.Ctx, ps); err != nil {
-		p.EventRecorder.Eventf(capp, nil, corev1.EventTypeWarning, eventPingSourceCreationFailed, eventPingSourceCreationFailed,
-			"Failed to create PingSource %s", ps.Name)
+	orig := existing.DeepCopy()
+	existing.Spec = desired.Spec
+	if err := ensureOwnerReference(p.K8sclient, &capp, existing, "PingSource"); err != nil {
 		return err
 	}
-	p.EventRecorder.Eventf(capp, nil, corev1.EventTypeNormal, eventPingSourceCreated, eventPingSourceCreated,
-		"Created PingSource %s", ps.Name)
-	return nil
-}
-
-func (p PingSourceManager) updatePingSource(capp *cappv1alpha1.Capp, existing, desired *sourcesv1.PingSource) error {
-	orig := existing.DeepCopy()
-	if err := controllerutil.SetOwnerReference(capp, existing, p.K8sclient.Scheme()); err != nil {
-		return fmt.Errorf("set PingSource owner reference: %w", err)
+	if managedResourceNeedsUpdate(orig.Spec, existing.Spec, orig.OwnerReferences, existing.OwnerReferences) {
+		p.Log.Info("Updating PingSource", "Name", existing.Name)
 	}
-	existing.Spec = desired.Spec
-	if equality.Semantic.DeepEqual(orig.Spec, existing.Spec) &&
-		equality.Semantic.DeepEqual(orig.OwnerReferences, existing.OwnerReferences) {
-		return nil
-	}
-	p.Log.Info("Updating PingSource", "Name", existing.Name)
-	return p.K8sclient.Update(p.Ctx, existing)
+	return updateManagedResourceIfNeeded(p.UpdateResource, existing, orig.Spec, existing.Spec, orig.OwnerReferences)
 }
 
 func (p PingSourceManager) cleanUpOrphans(capp cappv1alpha1.Capp) error {
@@ -164,7 +140,7 @@ func (p PingSourceManager) cleanUpOrphans(capp cappv1alpha1.Capp) error {
 	for i := range owned.Items {
 		ps := &owned.Items[i]
 		if _, keep := desired[ps.Name]; !keep {
-			if err := p.K8sclient.Delete(p.Ctx, ps); client.IgnoreNotFound(err) != nil {
+			if err := client.IgnoreNotFound(p.DeleteResource(ps)); err != nil {
 				return fmt.Errorf("failed to delete orphaned PingSource %q: %w", ps.Name, err)
 			}
 		}

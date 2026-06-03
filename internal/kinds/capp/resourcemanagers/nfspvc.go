@@ -1,7 +1,6 @@
 package resourcemanagers
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
@@ -10,9 +9,7 @@ import (
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	nfspvcv1alpha1 "github.com/dana-team/nfspvc-operator/api/v1alpha1"
-	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -29,9 +26,7 @@ const (
 )
 
 type NFSPVCManager struct {
-	Ctx           context.Context
-	K8sclient     client.Client
-	Log           logr.Logger
+	rclient.ResourceManagerClient
 	EventRecorder events.EventRecorder
 }
 
@@ -81,8 +76,6 @@ func (n NFSPVCManager) getPreviousNFSPVCs(capp cappv1alpha1.Capp) (nfspvcv1alpha
 
 // CleanUp attempts to delete the associated NFSPVCs for a given Capp resource.
 func (n NFSPVCManager) CleanUp(capp cappv1alpha1.Capp) error {
-	resourceManager := rclient.ResourceManagerClient{Ctx: n.Ctx, K8sclient: n.K8sclient, Log: n.Log}
-
 	nfsPvcs, err := n.getPreviousNFSPVCs(capp)
 	if err != nil {
 		return err
@@ -100,7 +93,7 @@ func (n NFSPVCManager) CleanUp(capp cappv1alpha1.Capp) error {
 		}
 		nfsPvcVolume := rclient.GetBareNFSPVC(nfsPvc.Name, nfsPvc.Namespace)
 
-		if err := resourceManager.DeleteResource(&nfsPvcVolume); err != nil {
+		if err := n.DeleteResource(&nfsPvcVolume); err != nil {
 			if errors.IsNotFound(err) {
 				continue
 			}
@@ -129,56 +122,30 @@ func (n NFSPVCManager) Manage(capp cappv1alpha1.Capp) error {
 // createOrUpdate creates or updates a NFSPVC resource.
 func (n NFSPVCManager) createOrUpdate(capp cappv1alpha1.Capp) error {
 	generatedNFSPVCs := n.prepareResource(capp)
-	resourceManager := rclient.ResourceManagerClient{Ctx: n.Ctx, K8sclient: n.K8sclient, Log: n.Log}
 
 	for i := range generatedNFSPVCs {
 		nfspvc := &generatedNFSPVCs[i]
 		existingNFSPVC := nfspvcv1alpha1.NfsPvc{}
 		if err := n.K8sclient.Get(n.Ctx, client.ObjectKey{Namespace: nfspvc.Namespace, Name: nfspvc.Name}, &existingNFSPVC); err != nil {
 			if errors.IsNotFound(err) {
-				if err := n.createNFSPVC(&capp, nfspvc, resourceManager); err != nil {
+				if err := createManagedResource(n.K8sclient, n.CreateResource, n.EventRecorder, &capp, nfspvc,
+					"NFSPVC", eventNFSPVCCreated, eventNFSPVCCreationFailed); err != nil {
 					return err
 				}
 			} else {
 				return fmt.Errorf("failed to get NFSPVC %q: %w", nfspvc.Name, err)
 			}
-		} else if err := n.updateNFSPVC(&capp, existingNFSPVC, nfspvc, resourceManager); err != nil {
-			return err
+		} else {
+			orig := existingNFSPVC.DeepCopy()
+			existingNFSPVC.Spec = *nfspvc.Spec.DeepCopy()
+			if err := ensureOwnerReference(n.K8sclient, &capp, &existingNFSPVC, "NfsPvc"); err != nil {
+				return err
+			}
+			if err := updateManagedResourceIfNeeded(n.UpdateResource, &existingNFSPVC, orig.Spec, existingNFSPVC.Spec, orig.OwnerReferences); err != nil {
+				return err
+			}
 		}
 	}
 
 	return nil
-}
-
-// createNFSPVC creates a new NFSPVC and emits an event.
-func (n NFSPVCManager) createNFSPVC(capp *cappv1alpha1.Capp, nfspvc *nfspvcv1alpha1.NfsPvc, resourceManager rclient.ResourceManagerClient) error {
-	if err := controllerutil.SetOwnerReference(capp, nfspvc, n.K8sclient.Scheme()); err != nil {
-		return fmt.Errorf("set NfsPvc owner reference: %w", err)
-	}
-	if err := resourceManager.CreateResource(nfspvc); err != nil {
-		n.EventRecorder.Eventf(capp, nil, corev1.EventTypeWarning, eventNFSPVCCreationFailed, eventNFSPVCCreationFailed,
-			fmt.Sprintf("Failed to create NFSPVC %s", nfspvc.Name))
-		return err
-	}
-
-	n.EventRecorder.Eventf(capp, nil, corev1.EventTypeNormal, eventNFSPVCCreated, eventNFSPVCCreated,
-		fmt.Sprintf("Created NFSPVC %s", nfspvc.Name))
-
-	return nil
-}
-
-// updateNFSPVC checks if an update to the NFSPVC is necessary and performs the update to match desired state.
-func (n NFSPVCManager) updateNFSPVC(capp *cappv1alpha1.Capp, existingNFSPVC nfspvcv1alpha1.NfsPvc, nfspvc *nfspvcv1alpha1.NfsPvc, resourceManager rclient.ResourceManagerClient) error {
-	orig := existingNFSPVC.DeepCopy()
-	if err := controllerutil.SetOwnerReference(capp, &existingNFSPVC, n.K8sclient.Scheme()); err != nil {
-		return fmt.Errorf("set NfsPvc owner reference: %w", err)
-	}
-	existingNFSPVC.Spec = *nfspvc.Spec.DeepCopy()
-
-	if equality.Semantic.DeepEqual(orig.Spec, existingNFSPVC.Spec) &&
-		equality.Semantic.DeepEqual(orig.OwnerReferences, existingNFSPVC.OwnerReferences) {
-		return nil
-	}
-
-	return resourceManager.UpdateResource(&existingNFSPVC)
 }
