@@ -128,12 +128,6 @@ func (r DNSRecordManager) createOrUpdate(capp cappv1alpha1.Capp) error {
 		return fmt.Errorf("failed to get DNSRecord %q: %w", dnsRecordFromCapp.Name, err)
 	}
 
-	if capp.Status.RouteStatus.DomainMappingObjectStatus.URL != nil {
-		if err := r.handlePreviousDNSRecords(capp, dnsRecordFromCapp.Name); err != nil {
-			return fmt.Errorf("failed to delete previous DNSRecords: %w", err)
-		}
-	}
-
 	return r.updateDNSRecord(dnsRecord, dnsRecordFromCapp, &capp)
 }
 
@@ -191,26 +185,6 @@ func (r DNSRecordManager) dnsRecordNeedsUpdate(current, desired dnsrecordv1alpha
 	return !ok, nil
 }
 
-// handlePreviousDNSRecords takes care of removing unneeded DNSRecord objects. If the new DNSRecord
-// is not yet available then return early and do not delete the previous Records.
-func (r DNSRecordManager) handlePreviousDNSRecords(capp cappv1alpha1.Capp, name string) error {
-	available, err := utils.IsDNSRecordAvailable(r.Ctx, r.K8sclient, name, capp.Namespace)
-	if err != nil {
-		return err
-	}
-
-	if !available {
-		return nil
-	}
-
-	dnsRecords, err := r.getPreviousDNSRecords(capp)
-	if err != nil {
-		return err
-	}
-
-	return r.deletePreviousDNSRecords(dnsRecords, capp.Spec.RouteSpec.Hostname)
-}
-
 // getPreviousDNSRecords returns a list of all DNSRecord objects that are related to the given Capp.
 func (r DNSRecordManager) getPreviousDNSRecords(capp cappv1alpha1.Capp) (dnsrecordv1alpha1.CNAMERecordList, error) {
 	dnsRecords := dnsrecordv1alpha1.CNAMERecordList{}
@@ -227,17 +201,4 @@ func (r DNSRecordManager) getPreviousDNSRecords(capp cappv1alpha1.Capp) (dnsreco
 	}
 
 	return dnsRecords, nil
-}
-
-// deletePreviousDNSRecords deletes all previous DNSRecords associated with a Capp.
-func (r DNSRecordManager) deletePreviousDNSRecords(dnsRecords dnsrecordv1alpha1.CNAMERecordList, hostname string) error {
-	for _, dnsRecord := range dnsRecords.Items {
-		if dnsRecord.Name != hostname {
-			recordset := rclient.GetBareDNSRecord(dnsRecord.Name, dnsRecord.Namespace)
-			if err := r.DeleteResource(&recordset); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
 }

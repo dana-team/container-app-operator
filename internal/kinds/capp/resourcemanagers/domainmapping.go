@@ -159,42 +159,12 @@ func (k KnativeDomainMappingManager) createOrUpdate(capp cappv1alpha1.Capp) erro
 		return fmt.Errorf("failed to get DomainMapping %q: %w", domainMappingFromCapp.Name, err)
 	}
 
-	if capp.Status.RouteStatus.DomainMappingObjectStatus.URL != nil {
-		if err := k.handlePreviousDomainMappings(capp, domainMappingFromCapp.Name); err != nil {
-			return fmt.Errorf("failed to delete previous DomainMappings: %w", err)
-		}
-	}
-
 	orig := domainMapping.DeepCopy()
 	domainMapping.Spec = domainMappingFromCapp.Spec
 	if err := ensureOwnerReference(k.K8sclient, &capp, &domainMapping, "DomainMapping"); err != nil {
 		return err
 	}
 	return updateManagedResourceIfNeeded(k.UpdateResource, &domainMapping, orig.Spec, domainMapping.Spec, orig.OwnerReferences)
-}
-
-// handlePreviousDomainMappings takes care of removing unneeded DomainMapping objects. If the DNSRecord
-// which corresponds to the latest DomainMapping object is not yet available then return early
-// and do not delete the previous DomainMappings.
-func (k KnativeDomainMappingManager) handlePreviousDomainMappings(capp cappv1alpha1.Capp, name string) error {
-	var available bool
-	var err error
-
-	available, err = utils.IsDNSRecordAvailable(k.Ctx, k.K8sclient, name, capp.Namespace)
-	if err != nil {
-		return err
-	}
-
-	if !available {
-		return nil
-	}
-
-	domainMappings, err := k.getPreviousDomainMappings(capp)
-	if err != nil {
-		return err
-	}
-
-	return k.deletePreviousDomainMappings(domainMappings, capp.Spec.RouteSpec.Hostname)
 }
 
 // getPreviousDomainMappings returns a list of all DomainMapping objects that are related to the given Capp.
@@ -211,22 +181,6 @@ func (k KnativeDomainMappingManager) getPreviousDomainMappings(capp cappv1alpha1
 	}
 
 	return knativeDomainMappings, nil
-}
-
-// deletePreviousDomainMappings deletes all previous DomainMappings associated with a Capp.
-func (k KnativeDomainMappingManager) deletePreviousDomainMappings(knativeDomainMappings knativev1beta1.DomainMappingList, hostname string) error {
-	for _, domainMapping := range knativeDomainMappings.Items {
-		if domainMapping.Name != hostname {
-			dm := rclient.GetBareDomainMapping(domainMapping.Name, domainMapping.Namespace)
-			if err := k.DeleteResource(&dm); err != nil {
-				return err
-			}
-			if err := k.deleteTLSSecret(utils.GenerateSecretName(domainMapping.Name), domainMapping.Namespace); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
 }
 
 // deleteTLSSecret deletes the tls secret associated with the DomainMapping.
