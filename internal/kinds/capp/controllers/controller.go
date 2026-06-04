@@ -305,7 +305,7 @@ func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, fmt.Errorf("failed to get Capp: %s", err.Error())
 	}
 
-	rmClient := rclient.ResourceManagerClient{Ctx: ctx, K8sclient: r.Client, Log: logger}
+	rmClient := rclient.ResourceManagerClient{K8sclient: r.Client, Log: logger}
 	resourceManagers := map[string]rmanagers.ResourceManager{
 		rmanagers.KnativeServing: rmanagers.KnativeServiceManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},
 		rmanagers.DNSRecord:      rmanagers.DNSRecordManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},
@@ -344,7 +344,7 @@ func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 // It ensures all manifests are applied according to the specification and synchronizes the status accordingly.
 func (r *CappReconciler) SyncApplication(ctx context.Context, capp cappv1alpha1.Capp, resourceManagers map[string]rmanagers.ResourceManager, logger logr.Logger) error {
 	for _, manager := range resourceManagers {
-		if err := manager.Manage(capp); err != nil {
+		if err := manager.Manage(ctx, capp); err != nil {
 			return err
 		}
 	}

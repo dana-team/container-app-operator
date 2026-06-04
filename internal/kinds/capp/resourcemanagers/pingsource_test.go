@@ -46,7 +46,7 @@ func newPingSourceScheme() *runtime.Scheme {
 
 func newPingSourceManager(k8sClient client.Client) PingSourceManager {
 	return PingSourceManager{
-		ResourceManagerClient: rclient.ResourceManagerClient{Ctx: context.Background(), K8sclient: k8sClient, Log: logr.Discard()},
+		ResourceManagerClient: rclient.ResourceManagerClient{K8sclient: k8sClient, Log: logr.Discard()},
 		EventRecorder:         events.NewFakeRecorder(10),
 	}
 }
@@ -115,7 +115,7 @@ func TestPingSourceCleanUpOrphans(t *testing.T) {
 			}
 			pm := newPingSourceManager(fakeClient)
 			capp := newCapp(cappName, cappNamespace, tt.sources)
-			assert.NoError(t, pm.cleanUpOrphans(capp))
+			assert.NoError(t, pm.cleanUpOrphans(ctx, capp))
 			for _, name := range tt.expectKept {
 				got := &sourcesv1.PingSource{}
 				assert.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: name, Namespace: cappNamespace}, got))
@@ -165,7 +165,7 @@ func TestPingSourceCreateOrUpdate(t *testing.T) {
 						Data:     tt.preData,
 					},
 				}
-				assert.NoError(t, pm.createOrUpdate(capp, src))
+				assert.NoError(t, pm.createOrUpdate(ctx, capp, src))
 			}
 
 			src := cappv1alpha1.SourceConfiguration{
@@ -175,7 +175,7 @@ func TestPingSourceCreateOrUpdate(t *testing.T) {
 					Data:     tt.data,
 				},
 			}
-			assert.NoError(t, pm.createOrUpdate(capp, src))
+			assert.NoError(t, pm.createOrUpdate(ctx, capp, src))
 			got := &sourcesv1.PingSource{}
 			assert.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: pingSourceName(sourceName), Namespace: cappNamespace}, got))
 			assert.Equal(t, tt.expectedData, got.Spec.Data)
@@ -220,7 +220,7 @@ func TestPingSourceGetStatus(t *testing.T) {
 			}
 			pm := newPingSourceManager(fakeClient)
 			capp := newCapp(cappName, cappNamespace, nil)
-			result, err := pm.GetStatus(capp)
+			result, err := pm.GetStatus(ctx, capp)
 			assert.NoError(t, err)
 			if tt.expectedNames == nil {
 				assert.Nil(t, result.EventSources)
@@ -234,7 +234,6 @@ func TestPingSourceGetStatus(t *testing.T) {
 				assert.Equal(t, corev1.ConditionUnknown, result.EventSources[0].Condition.Status)
 				assert.Equal(t, "Source readiness not known", result.EventSources[0].Condition.Message)
 			}
-			_ = ctx
 		})
 	}
 }

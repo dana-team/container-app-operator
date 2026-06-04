@@ -1,6 +1,7 @@
 package resourcemanagers
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
@@ -135,9 +136,9 @@ func (o SyslogNGOutputManager) prepareResource(capp cappv1alpha1.Capp) loggingv1
 }
 
 // CleanUp attempts to delete the associated SyslogNGOutput for a given Capp resource.
-func (o SyslogNGOutputManager) CleanUp(capp cappv1alpha1.Capp) error {
+func (o SyslogNGOutputManager) CleanUp(ctx context.Context, capp cappv1alpha1.Capp) error {
 	var syslogNGOutput loggingv1beta1.SyslogNGOutput
-	if err := o.K8sclient.Get(o.Ctx, types.NamespacedName{Namespace: capp.Namespace, Name: capp.Name}, &syslogNGOutput); err != nil {
+	if err := o.K8sclient.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: capp.Name}, &syslogNGOutput); err != nil {
 		return client.IgnoreNotFound(err)
 	}
 	if capp.DeletionTimestamp != nil {
@@ -145,7 +146,7 @@ func (o SyslogNGOutputManager) CleanUp(capp cappv1alpha1.Capp) error {
 			return err
 		}
 	}
-	return client.IgnoreNotFound(o.DeleteResource(&syslogNGOutput))
+	return client.IgnoreNotFound(o.DeleteResource(ctx, &syslogNGOutput))
 }
 
 // IsRequired is responsible to determine if resource logging operator is required.
@@ -155,25 +156,25 @@ func (o SyslogNGOutputManager) IsRequired(capp cappv1alpha1.Capp) bool {
 
 // Manage creates or updates a SyslogNGOutput resource based on the provided Capp if it's required.
 // If it's not, then it cleans up the resource if it exists.
-func (o SyslogNGOutputManager) Manage(capp cappv1alpha1.Capp) error {
+func (o SyslogNGOutputManager) Manage(ctx context.Context, capp cappv1alpha1.Capp) error {
 	if o.IsRequired(capp) {
-		return o.createOrUpdate(capp)
+		return o.createOrUpdate(ctx, capp)
 	}
 
-	return o.CleanUp(capp)
+	return o.CleanUp(ctx, capp)
 }
 
 // createOrUpdate creates or updates a SyslogNGOutput resource.
-func (o SyslogNGOutputManager) createOrUpdate(capp cappv1alpha1.Capp) error {
+func (o SyslogNGOutputManager) createOrUpdate(ctx context.Context, capp cappv1alpha1.Capp) error {
 	syslogNGOutputFromCapp := o.prepareResource(capp)
 	if !isSupportedLogType(capp.Spec.LogSpec.Type) {
 		return fmt.Errorf("unsupported log type %q", capp.Spec.LogSpec.Type)
 	}
 	syslogNGOutput := loggingv1beta1.SyslogNGOutput{}
 
-	if err := o.K8sclient.Get(o.Ctx, types.NamespacedName{Namespace: capp.Namespace, Name: syslogNGOutputFromCapp.Name}, &syslogNGOutput); err != nil {
+	if err := o.K8sclient.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: syslogNGOutputFromCapp.Name}, &syslogNGOutput); err != nil {
 		if errors.IsNotFound(err) {
-			return createManagedResource(o.K8sclient, o.CreateResource, o.EventRecorder, &capp, &syslogNGOutputFromCapp,
+			return createManagedResource(ctx, o.K8sclient, o.CreateResource, o.EventRecorder, &capp, &syslogNGOutputFromCapp,
 				"SyslogNGOutput", eventCappSyslogNGOutputCreated, eventCappSyslogNGOutputCreationFailed)
 		}
 		return fmt.Errorf("failed to get SyslogNGOutput %q: %w", syslogNGOutputFromCapp.Name, err)
@@ -184,5 +185,5 @@ func (o SyslogNGOutputManager) createOrUpdate(capp cappv1alpha1.Capp) error {
 	if err := ensureOwnerReference(o.K8sclient, &capp, &syslogNGOutput, "SyslogNGOutput"); err != nil {
 		return err
 	}
-	return updateManagedResourceIfNeeded(o.UpdateResource, &syslogNGOutput, orig.Spec, syslogNGOutput.Spec, orig.OwnerReferences)
+	return updateManagedResourceIfNeeded(ctx, o.UpdateResource, &syslogNGOutput, orig.Spec, syslogNGOutput.Spec, orig.OwnerReferences)
 }

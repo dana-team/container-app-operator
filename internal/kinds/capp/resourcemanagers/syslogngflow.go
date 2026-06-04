@@ -1,6 +1,7 @@
 package resourcemanagers
 
 import (
+	"context"
 	"fmt"
 
 	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/resourceclient"
@@ -56,9 +57,9 @@ func (f SyslogNGFlowManager) prepareResource(capp cappv1alpha1.Capp) loggingv1be
 }
 
 // CleanUp attempts to delete the associated SyslogNGFlow for a given Capp resource.
-func (f SyslogNGFlowManager) CleanUp(capp cappv1alpha1.Capp) error {
+func (f SyslogNGFlowManager) CleanUp(ctx context.Context, capp cappv1alpha1.Capp) error {
 	var syslogNGFlow loggingv1beta1.SyslogNGFlow
-	if err := f.K8sclient.Get(f.Ctx, types.NamespacedName{Namespace: capp.Namespace, Name: capp.Name}, &syslogNGFlow); err != nil {
+	if err := f.K8sclient.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: capp.Name}, &syslogNGFlow); err != nil {
 		return client.IgnoreNotFound(err)
 	}
 	if capp.DeletionTimestamp != nil {
@@ -66,7 +67,7 @@ func (f SyslogNGFlowManager) CleanUp(capp cappv1alpha1.Capp) error {
 			return err
 		}
 	}
-	return client.IgnoreNotFound(f.DeleteResource(&syslogNGFlow))
+	return client.IgnoreNotFound(f.DeleteResource(ctx, &syslogNGFlow))
 }
 
 // IsRequired is responsible to determine if resource logging operator SyslogNGFlow is required.
@@ -76,22 +77,22 @@ func (f SyslogNGFlowManager) IsRequired(capp cappv1alpha1.Capp) bool {
 
 // Manage creates or updates a SyslogNGFlow resource based on the provided Capp if it's required.
 // If it's not, then it cleans up the resource if it exists.
-func (f SyslogNGFlowManager) Manage(capp cappv1alpha1.Capp) error {
+func (f SyslogNGFlowManager) Manage(ctx context.Context, capp cappv1alpha1.Capp) error {
 	if f.IsRequired(capp) {
-		return f.createOrUpdate(capp)
+		return f.createOrUpdate(ctx, capp)
 	}
 
-	return f.CleanUp(capp)
+	return f.CleanUp(ctx, capp)
 }
 
 // createOrUpdate creates or updates a SyslogNGFlow resource.
-func (f SyslogNGFlowManager) createOrUpdate(capp cappv1alpha1.Capp) error {
+func (f SyslogNGFlowManager) createOrUpdate(ctx context.Context, capp cappv1alpha1.Capp) error {
 	syslogNGFlowFromCapp := f.prepareResource(capp)
 	syslogNGFlow := loggingv1beta1.SyslogNGFlow{}
 
-	if err := f.K8sclient.Get(f.Ctx, types.NamespacedName{Namespace: capp.Namespace, Name: syslogNGFlowFromCapp.Name}, &syslogNGFlow); err != nil {
+	if err := f.K8sclient.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: syslogNGFlowFromCapp.Name}, &syslogNGFlow); err != nil {
 		if errors.IsNotFound(err) {
-			return createManagedResource(f.K8sclient, f.CreateResource, f.EventRecorder, &capp, &syslogNGFlowFromCapp,
+			return createManagedResource(ctx, f.K8sclient, f.CreateResource, f.EventRecorder, &capp, &syslogNGFlowFromCapp,
 				"SyslogNGFlow", eventCappSyslogNGFlowCreated, eventCappSyslogNGFlowCreationFailed)
 		}
 		return fmt.Errorf("failed to get SyslogNGFlow %q: %w", syslogNGFlow.Name, err)
@@ -102,5 +103,5 @@ func (f SyslogNGFlowManager) createOrUpdate(capp cappv1alpha1.Capp) error {
 	if err := ensureOwnerReference(f.K8sclient, &capp, &syslogNGFlow, "SyslogNGFlow"); err != nil {
 		return err
 	}
-	return updateManagedResourceIfNeeded(f.UpdateResource, &syslogNGFlow, orig.Spec, syslogNGFlow.Spec, orig.OwnerReferences)
+	return updateManagedResourceIfNeeded(ctx, f.UpdateResource, &syslogNGFlow, orig.Spec, syslogNGFlow.Spec, orig.OwnerReferences)
 }

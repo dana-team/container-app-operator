@@ -105,9 +105,9 @@ func (k KnativeServiceManager) prepareVolumes(capp cappv1alpha1.Capp) []corev1.V
 }
 
 // CleanUp ensures the Knative Service is not left behind when it is no longer required for this Capp.
-func (k KnativeServiceManager) CleanUp(capp cappv1alpha1.Capp) error {
+func (k KnativeServiceManager) CleanUp(ctx context.Context, capp cappv1alpha1.Capp) error {
 	var ksvc knativev1.Service
-	if err := k.K8sclient.Get(k.Ctx, types.NamespacedName{Namespace: capp.Namespace, Name: capp.Name}, &ksvc); err != nil {
+	if err := k.K8sclient.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: capp.Name}, &ksvc); err != nil {
 		return client.IgnoreNotFound(err)
 	}
 	if capp.DeletionTimestamp != nil {
@@ -115,7 +115,7 @@ func (k KnativeServiceManager) CleanUp(capp cappv1alpha1.Capp) error {
 			return err
 		}
 	}
-	return client.IgnoreNotFound(k.DeleteResource(&ksvc))
+	return client.IgnoreNotFound(k.DeleteResource(ctx, &ksvc))
 }
 
 // IsRequired determines if a Knative service (ksvc) is required based on the Capp's spec.
@@ -131,13 +131,13 @@ func (k KnativeServiceManager) isResumed(capp cappv1alpha1.Capp) bool {
 
 // Manage creates or updates a KnativeService resource based on the provided Capp if it's required.
 // If it's not, then it cleans up the resource if it exists.
-func (k KnativeServiceManager) Manage(capp cappv1alpha1.Capp) error {
+func (k KnativeServiceManager) Manage(ctx context.Context, capp cappv1alpha1.Capp) error {
 	if k.IsRequired(capp) {
-		return k.createOrUpdate(capp)
+		return k.createOrUpdate(ctx, capp)
 	}
 
 	k.Log.Info("Attempting to disable Capp")
-	if err := k.CleanUp(capp); err != nil {
+	if err := k.CleanUp(ctx, capp); err != nil {
 		return err
 	}
 
@@ -148,13 +148,13 @@ func (k KnativeServiceManager) Manage(capp cappv1alpha1.Capp) error {
 }
 
 // createOrUpdate creates or updates a KSVC resource.
-func (k KnativeServiceManager) createOrUpdate(capp cappv1alpha1.Capp) error {
-	knativeServiceFromCapp := k.prepareResource(capp, k.Ctx)
+func (k KnativeServiceManager) createOrUpdate(ctx context.Context, capp cappv1alpha1.Capp) error {
+	knativeServiceFromCapp := k.prepareResource(capp, ctx)
 	knativeService := knativev1.Service{}
 
-	if err := k.K8sclient.Get(k.Ctx, types.NamespacedName{Namespace: capp.Namespace, Name: capp.Name}, &knativeService); err != nil {
+	if err := k.K8sclient.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: capp.Name}, &knativeService); err != nil {
 		if errors.IsNotFound(err) {
-			if err := createManagedResource(k.K8sclient, k.CreateResource, k.EventRecorder, &capp, &knativeServiceFromCapp,
+			if err := createManagedResource(ctx, k.K8sclient, k.CreateResource, k.EventRecorder, &capp, &knativeServiceFromCapp,
 				"KnativeService", eventCappKnativeServiceCreated, eventCappKnativeServiceCreationFailed); err != nil {
 				return err
 			}
@@ -180,5 +180,5 @@ func (k KnativeServiceManager) createOrUpdate(capp cappv1alpha1.Capp) error {
 			"resourceVersion", knativeService.ResourceVersion,
 			"generation", knativeService.Generation)
 	}
-	return updateManagedResourceIfNeeded(k.UpdateResource, &knativeService, orig.Spec, knativeService.Spec, orig.OwnerReferences)
+	return updateManagedResourceIfNeeded(ctx, k.UpdateResource, &knativeService, orig.Spec, knativeService.Spec, orig.OwnerReferences)
 }
