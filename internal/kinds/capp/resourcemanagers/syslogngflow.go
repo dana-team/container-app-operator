@@ -1,18 +1,14 @@
 package resourcemanagers
 
 import (
-	"context"
 	"fmt"
 
+	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/resourceclient"
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
-	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/resourceclient"
-	"github.com/go-logr/logr"
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
 	"github.com/kube-logging/logging-operator/pkg/sdk/logging/model/syslogng/filter"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -30,9 +26,7 @@ const (
 )
 
 type SyslogNGFlowManager struct {
-	Ctx           context.Context
-	K8sclient     client.Client
-	Log           logr.Logger
+	rclient.ResourceManagerClient
 	EventRecorder events.EventRecorder
 }
 
@@ -72,8 +66,7 @@ func (f SyslogNGFlowManager) CleanUp(capp cappv1alpha1.Capp) error {
 			return err
 		}
 	}
-	resourceManager := rclient.ResourceManagerClient{Ctx: f.Ctx, K8sclient: f.K8sclient, Log: f.Log}
-	return client.IgnoreNotFound(resourceManager.DeleteResource(&syslogNGFlow))
+	return client.IgnoreNotFound(f.DeleteResource(&syslogNGFlow))
 }
 
 // IsRequired is responsible to determine if resource logging operator SyslogNGFlow is required.
@@ -95,48 +88,19 @@ func (f SyslogNGFlowManager) Manage(capp cappv1alpha1.Capp) error {
 func (f SyslogNGFlowManager) createOrUpdate(capp cappv1alpha1.Capp) error {
 	syslogNGFlowFromCapp := f.prepareResource(capp)
 	syslogNGFlow := loggingv1beta1.SyslogNGFlow{}
-	resourceManager := rclient.ResourceManagerClient{Ctx: f.Ctx, K8sclient: f.K8sclient, Log: f.Log}
 
 	if err := f.K8sclient.Get(f.Ctx, types.NamespacedName{Namespace: capp.Namespace, Name: syslogNGFlowFromCapp.Name}, &syslogNGFlow); err != nil {
 		if errors.IsNotFound(err) {
-			return f.createSyslogNGFlow(syslogNGFlowFromCapp, capp, resourceManager)
-		} else {
-			return fmt.Errorf("failed to get SyslogNGFlow %q: %w", syslogNGFlow.Name, err)
+			return createManagedResource(f.K8sclient, f.CreateResource, f.EventRecorder, &capp, &syslogNGFlowFromCapp,
+				"SyslogNGFlow", eventCappSyslogNGFlowCreated, eventCappSyslogNGFlowCreationFailed)
 		}
+		return fmt.Errorf("failed to get SyslogNGFlow %q: %w", syslogNGFlow.Name, err)
 	}
 
-	return f.updateSyslogNGFlow(&capp, &syslogNGFlow, &syslogNGFlowFromCapp, resourceManager)
-}
-
-// createSyslogNGFlow creates a new SyslogNGFlow and emits an event.
-func (f SyslogNGFlowManager) createSyslogNGFlow(syslogNGFlowFromCapp loggingv1beta1.SyslogNGFlow, capp cappv1alpha1.Capp, resourceManager rclient.ResourceManagerClient) error {
-	if err := controllerutil.SetOwnerReference(&capp, &syslogNGFlowFromCapp, f.K8sclient.Scheme()); err != nil {
-		return fmt.Errorf("set SyslogNGFlow owner reference: %w", err)
-	}
-	if err := resourceManager.CreateResource(&syslogNGFlowFromCapp); err != nil {
-		f.EventRecorder.Eventf(&capp, nil, corev1.EventTypeWarning, eventCappSyslogNGFlowCreationFailed, eventCappSyslogNGFlowCreationFailed,
-			fmt.Sprintf("Failed to create SyslogNGFlow %s", syslogNGFlowFromCapp.Name))
+	orig := syslogNGFlow.DeepCopy()
+	syslogNGFlow.Spec = *syslogNGFlowFromCapp.Spec.DeepCopy()
+	if err := ensureOwnerReference(f.K8sclient, &capp, &syslogNGFlow, "SyslogNGFlow"); err != nil {
 		return err
 	}
-
-	f.EventRecorder.Eventf(&capp, nil, corev1.EventTypeNormal, eventCappSyslogNGFlowCreated, eventCappSyslogNGFlowCreated,
-		fmt.Sprintf("Created SyslogNGFlow %s", syslogNGFlowFromCapp.Name))
-
-	return nil
-}
-
-// updateSyslogNGFlow checks if an update to the SyslogNGFlow is necessary and performs the update to match desired state.
-func (f SyslogNGFlowManager) updateSyslogNGFlow(capp *cappv1alpha1.Capp, syslogNGFlow, syslogNGFlowFromCapp *loggingv1beta1.SyslogNGFlow, resourceManager rclient.ResourceManagerClient) error {
-	orig := syslogNGFlow.DeepCopy()
-	if err := controllerutil.SetOwnerReference(capp, syslogNGFlow, f.K8sclient.Scheme()); err != nil {
-		return fmt.Errorf("set SyslogNGFlow owner reference: %w", err)
-	}
-	syslogNGFlow.Spec = *syslogNGFlowFromCapp.Spec.DeepCopy()
-
-	if equality.Semantic.DeepEqual(orig.Spec, syslogNGFlow.Spec) &&
-		equality.Semantic.DeepEqual(orig.OwnerReferences, syslogNGFlow.OwnerReferences) {
-		return nil
-	}
-
-	return resourceManager.UpdateResource(syslogNGFlow)
+	return updateManagedResourceIfNeeded(f.UpdateResource, &syslogNGFlow, orig.Spec, syslogNGFlow.Spec, orig.OwnerReferences)
 }

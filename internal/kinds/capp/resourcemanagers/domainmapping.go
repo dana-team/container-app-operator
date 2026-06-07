@@ -1,7 +1,6 @@
 package resourcemanagers
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
@@ -9,9 +8,7 @@ import (
 	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/resourceclient"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
-	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -32,9 +29,7 @@ const (
 )
 
 type KnativeDomainMappingManager struct {
-	Ctx           context.Context
-	K8sclient     client.Client
-	Log           logr.Logger
+	rclient.ResourceManagerClient
 	EventRecorder events.EventRecorder
 }
 
@@ -78,9 +73,8 @@ func (k KnativeDomainMappingManager) prepareResource(capp cappv1alpha1.Capp) (kn
 // setHTTPSKnativeDomainMapping sets the DomainMapping TLS based on Capp.
 func (k KnativeDomainMappingManager) setHTTPSKnativeDomainMapping(secretName, secretNamespace string, knativeDomainMapping *knativev1beta1.DomainMapping) error {
 	tlsSecret := corev1.Secret{}
-	resourceManager := rclient.ResourceManagerClient{Ctx: k.Ctx, K8sclient: k.K8sclient, Log: k.Log}
 
-	if err := resourceManager.K8sclient.Get(resourceManager.Ctx, types.NamespacedName{Name: secretName, Namespace: secretNamespace}, &tlsSecret); err != nil {
+	if err := k.K8sclient.Get(k.Ctx, types.NamespacedName{Name: secretName, Namespace: secretNamespace}, &tlsSecret); err != nil {
 		if errors.IsNotFound(err) {
 			k.Log.Info("tlsSecret does not yet exist", "secretName", secretName)
 			return nil
@@ -97,8 +91,6 @@ func (k KnativeDomainMappingManager) setHTTPSKnativeDomainMapping(secretName, se
 
 // CleanUp attempts to delete the associated DomainMappings and tls secrets for a given Capp resource.
 func (k KnativeDomainMappingManager) CleanUp(capp cappv1alpha1.Capp) error {
-	resourceManager := rclient.ResourceManagerClient{Ctx: k.Ctx, K8sclient: k.K8sclient, Log: k.Log}
-
 	domainMappings, err := k.getPreviousDomainMappings(capp)
 	if err != nil {
 		return err
@@ -121,13 +113,13 @@ func (k KnativeDomainMappingManager) CleanUp(capp cappv1alpha1.Capp) error {
 				continue
 			}
 		}
-		if err := resourceManager.DeleteResource(&dm); err != nil {
+		if err := k.DeleteResource(&dm); err != nil {
 			if errors.IsNotFound(err) {
 				continue
 			}
 			return err
 		}
-		if err := deleteTLSSecret(resourceManager, utils.GenerateSecretName(dm.Name), dm.Namespace); err != nil {
+		if err := k.deleteTLSSecret(utils.GenerateSecretName(dm.Name), dm.Namespace); err != nil {
 			return err
 		}
 	}
@@ -158,61 +150,33 @@ func (k KnativeDomainMappingManager) createOrUpdate(capp cappv1alpha1.Capp) erro
 	}
 
 	domainMapping := knativev1beta1.DomainMapping{}
-	resourceManager := rclient.ResourceManagerClient{Ctx: k.Ctx, K8sclient: k.K8sclient, Log: k.Log}
 
 	if err := k.K8sclient.Get(k.Ctx, types.NamespacedName{Namespace: capp.Namespace, Name: domainMappingFromCapp.Name}, &domainMapping); err != nil {
 		if errors.IsNotFound(err) {
-			return k.createDomainMapping(&capp, domainMappingFromCapp, resourceManager)
-		} else {
-			return fmt.Errorf("failed to get DomainMapping %q: %w", domainMappingFromCapp.Name, err)
+			return createManagedResource(k.K8sclient, k.CreateResource, k.EventRecorder, &capp, &domainMappingFromCapp,
+				"DomainMapping", eventCappDomainMappingCreated, eventCappDomainMappingCreationFailed)
 		}
+		return fmt.Errorf("failed to get DomainMapping %q: %w", domainMappingFromCapp.Name, err)
 	}
 
 	if capp.Status.RouteStatus.DomainMappingObjectStatus.URL != nil {
-		if err := k.handlePreviousDomainMappings(capp, resourceManager, domainMappingFromCapp.Name); err != nil {
+		if err := k.handlePreviousDomainMappings(capp, domainMappingFromCapp.Name); err != nil {
 			return fmt.Errorf("failed to delete previous DomainMappings: %w", err)
 		}
 	}
 
-	return k.updateDomainMapping(&domainMapping, domainMappingFromCapp, &capp, resourceManager)
-}
-
-// createDomainMapping creates a new DomainMapping and emits an event.
-func (k KnativeDomainMappingManager) createDomainMapping(capp *cappv1alpha1.Capp, domainMappingFromCapp knativev1beta1.DomainMapping, resourceManager rclient.ResourceManagerClient) error {
-	if err := controllerutil.SetOwnerReference(capp, &domainMappingFromCapp, k.K8sclient.Scheme()); err != nil {
-		return fmt.Errorf("set DomainMapping owner reference: %w", err)
-	}
-	if err := resourceManager.CreateResource(&domainMappingFromCapp); err != nil {
-		k.EventRecorder.Eventf(capp, nil, corev1.EventTypeWarning, eventCappDomainMappingCreationFailed, eventCappDomainMappingCreationFailed,
-			fmt.Sprintf("Failed to create DomainMapping %s", domainMappingFromCapp.Name))
-
+	orig := domainMapping.DeepCopy()
+	domainMapping.Spec = domainMappingFromCapp.Spec
+	if err := ensureOwnerReference(k.K8sclient, &capp, &domainMapping, "DomainMapping"); err != nil {
 		return err
 	}
-
-	k.EventRecorder.Eventf(capp, nil, corev1.EventTypeNormal, eventCappDomainMappingCreated, eventCappDomainMappingCreated,
-		fmt.Sprintf("Created DomainMapping %s", domainMappingFromCapp.Name))
-
-	return nil
-}
-
-// updateDomainMapping checks if an update to the DomainMapping is necessary and performs the update to match desired state.
-func (k KnativeDomainMappingManager) updateDomainMapping(knativeDomainMapping *knativev1beta1.DomainMapping, domainMappingFromCapp knativev1beta1.DomainMapping, capp *cappv1alpha1.Capp, resourceManager rclient.ResourceManagerClient) error {
-	orig := knativeDomainMapping.DeepCopy()
-	if err := controllerutil.SetOwnerReference(capp, knativeDomainMapping, k.K8sclient.Scheme()); err != nil {
-		return fmt.Errorf("set DomainMapping owner reference: %w", err)
-	}
-	knativeDomainMapping.Spec = domainMappingFromCapp.Spec
-	if equality.Semantic.DeepEqual(orig.Spec, knativeDomainMapping.Spec) &&
-		equality.Semantic.DeepEqual(orig.OwnerReferences, knativeDomainMapping.OwnerReferences) {
-		return nil
-	}
-	return resourceManager.UpdateResource(knativeDomainMapping)
+	return updateManagedResourceIfNeeded(k.UpdateResource, &domainMapping, orig.Spec, domainMapping.Spec, orig.OwnerReferences)
 }
 
 // handlePreviousDomainMappings takes care of removing unneeded DomainMapping objects. If the DNSRecord
 // which corresponds to the latest DomainMapping object is not yet available then return early
 // and do not delete the previous DomainMappings.
-func (k KnativeDomainMappingManager) handlePreviousDomainMappings(capp cappv1alpha1.Capp, resourceManager rclient.ResourceManagerClient, name string) error {
+func (k KnativeDomainMappingManager) handlePreviousDomainMappings(capp cappv1alpha1.Capp, name string) error {
 	var available bool
 	var err error
 
@@ -230,7 +194,7 @@ func (k KnativeDomainMappingManager) handlePreviousDomainMappings(capp cappv1alp
 		return err
 	}
 
-	return k.deletePreviousDomainMappings(domainMappings, resourceManager, capp.Spec.RouteSpec.Hostname)
+	return k.deletePreviousDomainMappings(domainMappings, capp.Spec.RouteSpec.Hostname)
 }
 
 // getPreviousDomainMappings returns a list of all DomainMapping objects that are related to the given Capp.
@@ -250,14 +214,14 @@ func (k KnativeDomainMappingManager) getPreviousDomainMappings(capp cappv1alpha1
 }
 
 // deletePreviousDomainMappings deletes all previous DomainMappings associated with a Capp.
-func (k KnativeDomainMappingManager) deletePreviousDomainMappings(knativeDomainMappings knativev1beta1.DomainMappingList, resourceManager rclient.ResourceManagerClient, hostname string) error {
+func (k KnativeDomainMappingManager) deletePreviousDomainMappings(knativeDomainMappings knativev1beta1.DomainMappingList, hostname string) error {
 	for _, domainMapping := range knativeDomainMappings.Items {
 		if domainMapping.Name != hostname {
 			dm := rclient.GetBareDomainMapping(domainMapping.Name, domainMapping.Namespace)
-			if err := resourceManager.DeleteResource(&dm); err != nil {
+			if err := k.DeleteResource(&dm); err != nil {
 				return err
 			}
-			if err := deleteTLSSecret(resourceManager, utils.GenerateSecretName(domainMapping.Name), domainMapping.Namespace); err != nil {
+			if err := k.deleteTLSSecret(utils.GenerateSecretName(domainMapping.Name), domainMapping.Namespace); err != nil {
 				return err
 			}
 		}
@@ -266,13 +230,13 @@ func (k KnativeDomainMappingManager) deletePreviousDomainMappings(knativeDomainM
 }
 
 // deleteTLSSecret deletes the tls secret associated with the DomainMapping.
-func deleteTLSSecret(resourceManager rclient.ResourceManagerClient, secretName, namespace string) error {
+func (k KnativeDomainMappingManager) deleteTLSSecret(secretName, namespace string) error {
 	secret := corev1.Secret{}
-	if err := resourceManager.K8sclient.Get(resourceManager.Ctx, types.NamespacedName{Name: secretName, Namespace: namespace}, &secret); err != nil {
+	if err := k.K8sclient.Get(k.Ctx, types.NamespacedName{Name: secretName, Namespace: namespace}, &secret); err != nil {
 		if errors.IsNotFound(err) {
 			return nil
 		}
 		return err
 	}
-	return resourceManager.DeleteResource(&secret)
+	return k.DeleteResource(&secret)
 }

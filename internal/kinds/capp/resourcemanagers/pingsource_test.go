@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/resourceclient"
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
@@ -45,10 +46,8 @@ func newPingSourceScheme() *runtime.Scheme {
 
 func newPingSourceManager(k8sClient client.Client) PingSourceManager {
 	return PingSourceManager{
-		Ctx:           context.Background(),
-		K8sclient:     k8sClient,
-		Log:           logr.Discard(),
-		EventRecorder: events.NewFakeRecorder(10),
+		ResourceManagerClient: rclient.ResourceManagerClient{Ctx: context.Background(), K8sclient: k8sClient, Log: logr.Discard()},
+		EventRecorder:         events.NewFakeRecorder(10),
 	}
 }
 

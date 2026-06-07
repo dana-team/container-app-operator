@@ -1,7 +1,6 @@
 package resourcemanagers
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
@@ -9,12 +8,10 @@ import (
 	"github.com/cisco-open/operator-tools/pkg/secret"
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/resourceclient"
-	"github.com/go-logr/logr"
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
 	"github.com/kube-logging/logging-operator/pkg/sdk/logging/model/syslogng/output"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -35,9 +32,7 @@ const (
 )
 
 type SyslogNGOutputManager struct {
-	Ctx           context.Context
-	K8sclient     client.Client
-	Log           logr.Logger
+	rclient.ResourceManagerClient
 	EventRecorder events.EventRecorder
 }
 
@@ -150,8 +145,7 @@ func (o SyslogNGOutputManager) CleanUp(capp cappv1alpha1.Capp) error {
 			return err
 		}
 	}
-	resourceManager := rclient.ResourceManagerClient{Ctx: o.Ctx, K8sclient: o.K8sclient, Log: o.Log}
-	return client.IgnoreNotFound(resourceManager.DeleteResource(&syslogNGOutput))
+	return client.IgnoreNotFound(o.DeleteResource(&syslogNGOutput))
 }
 
 // IsRequired is responsible to determine if resource logging operator is required.
@@ -176,48 +170,19 @@ func (o SyslogNGOutputManager) createOrUpdate(capp cappv1alpha1.Capp) error {
 		return fmt.Errorf("unsupported log type %q", capp.Spec.LogSpec.Type)
 	}
 	syslogNGOutput := loggingv1beta1.SyslogNGOutput{}
-	resourceManager := rclient.ResourceManagerClient{Ctx: o.Ctx, K8sclient: o.K8sclient, Log: o.Log}
 
 	if err := o.K8sclient.Get(o.Ctx, types.NamespacedName{Namespace: capp.Namespace, Name: syslogNGOutputFromCapp.Name}, &syslogNGOutput); err != nil {
 		if errors.IsNotFound(err) {
-			return o.createSyslogNGOutput(syslogNGOutputFromCapp, capp, resourceManager)
-		} else {
-			return fmt.Errorf("failed to get SyslogNGOutput %q: %w", syslogNGOutputFromCapp.Name, err)
+			return createManagedResource(o.K8sclient, o.CreateResource, o.EventRecorder, &capp, &syslogNGOutputFromCapp,
+				"SyslogNGOutput", eventCappSyslogNGOutputCreated, eventCappSyslogNGOutputCreationFailed)
 		}
+		return fmt.Errorf("failed to get SyslogNGOutput %q: %w", syslogNGOutputFromCapp.Name, err)
 	}
 
-	return o.updateSyslogNGOutput(&capp, &syslogNGOutput, &syslogNGOutputFromCapp, resourceManager)
-}
-
-// createSyslogNGOutput creates a new SyslogNGOutput and emits an event.
-func (o SyslogNGOutputManager) createSyslogNGOutput(syslogNGOutputFromCapp loggingv1beta1.SyslogNGOutput, capp cappv1alpha1.Capp, resourceManager rclient.ResourceManagerClient) error {
-	if err := controllerutil.SetOwnerReference(&capp, &syslogNGOutputFromCapp, o.K8sclient.Scheme()); err != nil {
-		return fmt.Errorf("set SyslogNGOutput owner reference: %w", err)
-	}
-	if err := resourceManager.CreateResource(&syslogNGOutputFromCapp); err != nil {
-		o.EventRecorder.Eventf(&capp, nil, corev1.EventTypeWarning, eventCappSyslogNGOutputCreationFailed, eventCappSyslogNGOutputCreationFailed,
-			fmt.Sprintf("Failed to create SyslogNGOutput %s", syslogNGOutputFromCapp.Name))
+	orig := syslogNGOutput.DeepCopy()
+	syslogNGOutput.Spec = *syslogNGOutputFromCapp.Spec.DeepCopy()
+	if err := ensureOwnerReference(o.K8sclient, &capp, &syslogNGOutput, "SyslogNGOutput"); err != nil {
 		return err
 	}
-
-	o.EventRecorder.Eventf(&capp, nil, corev1.EventTypeNormal, eventCappSyslogNGOutputCreated, eventCappSyslogNGOutputCreated,
-		fmt.Sprintf("Created SyslogNGOutput %s", syslogNGOutputFromCapp.Name))
-
-	return nil
-}
-
-// updateSyslogNGOutput checks if an update to the SyslogNGOutput is necessary and performs the update to match desired state.
-func (o SyslogNGOutputManager) updateSyslogNGOutput(capp *cappv1alpha1.Capp, syslogNGOutput, syslogNGOutputFromCapp *loggingv1beta1.SyslogNGOutput, resourceManager rclient.ResourceManagerClient) error {
-	orig := syslogNGOutput.DeepCopy()
-	if err := controllerutil.SetOwnerReference(capp, syslogNGOutput, o.K8sclient.Scheme()); err != nil {
-		return fmt.Errorf("set SyslogNGOutput owner reference: %w", err)
-	}
-	syslogNGOutput.Spec = *syslogNGOutputFromCapp.Spec.DeepCopy()
-
-	if equality.Semantic.DeepEqual(orig.Spec, syslogNGOutput.Spec) &&
-		equality.Semantic.DeepEqual(orig.OwnerReferences, syslogNGOutput.OwnerReferences) {
-		return nil
-	}
-
-	return resourceManager.UpdateResource(syslogNGOutput)
+	return updateManagedResourceIfNeeded(o.UpdateResource, &syslogNGOutput, orig.Spec, syslogNGOutput.Spec, orig.OwnerReferences)
 }
