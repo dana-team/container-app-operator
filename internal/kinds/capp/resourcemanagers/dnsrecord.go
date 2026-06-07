@@ -184,17 +184,10 @@ func (r DNSRecordManager) dnsRecordNeedsUpdate(current, desired dnsrecordv1alpha
 // getPreviousDNSRecords returns a list of all DNSRecord objects that are related to the given Capp.
 func (r DNSRecordManager) getPreviousDNSRecords(ctx context.Context, capp cappv1alpha1.Capp) (dnsrecordv1alpha1.CNAMERecordList, error) {
 	dnsRecords := dnsrecordv1alpha1.CNAMERecordList{}
-
-	set := labels.Set{
-		utils.CappResourceKey:  capp.Name,
+	if err := listManagedResources(ctx, r.K8sclient, capp, &dnsRecords, "DNSRecord", labels.Set{
 		utils.CappNamespaceKey: capp.Namespace,
+	}); err != nil {
+		return dnsRecords, err
 	}
-	listOptions := utils.GetListOptions(set)
-	listOptions.Namespace = capp.Namespace
-
-	if err := r.K8sclient.List(ctx, &dnsRecords, &listOptions); err != nil {
-		return dnsRecords, fmt.Errorf("unable to list DNSRecords of Capp %q: %w", capp.Name, err)
-	}
-
 	return dnsRecords, nil
 }
