@@ -13,7 +13,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/events"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -62,16 +61,9 @@ func (n NFSPVCManager) prepareResource(capp cappv1alpha1.Capp) []nfspvcv1alpha1.
 // getPreviousNFSPVCs returns a list of all NFSPVC objects that are related to the given Capp.
 func (n NFSPVCManager) getPreviousNFSPVCs(ctx context.Context, capp cappv1alpha1.Capp) (nfspvcv1alpha1.NfsPvcList, error) {
 	nfsPvcs := nfspvcv1alpha1.NfsPvcList{}
-
-	set := labels.Set{
-		utils.CappResourceKey: capp.Name,
+	if err := listManagedResources(ctx, n.K8sclient, capp, &nfsPvcs, "NFSPVC", nil); err != nil {
+		return nfsPvcs, err
 	}
-	listOptions := utils.GetListOptions(set)
-
-	if err := n.K8sclient.List(ctx, &nfsPvcs, &listOptions); err != nil {
-		return nfsPvcs, fmt.Errorf("unable to list NFSPVCs of Capp %q: %w", capp.Name, err)
-	}
-
 	return nfsPvcs, nil
 }
 

@@ -12,7 +12,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/events"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -164,15 +163,8 @@ func (k KnativeDomainMappingManager) createOrUpdate(ctx context.Context, capp ca
 // getPreviousDomainMappings returns a list of all DomainMapping objects that are related to the given Capp.
 func (k KnativeDomainMappingManager) getPreviousDomainMappings(ctx context.Context, capp cappv1alpha1.Capp) (knativev1beta1.DomainMappingList, error) {
 	knativeDomainMappings := knativev1beta1.DomainMappingList{}
-
-	set := labels.Set{
-		utils.CappResourceKey: capp.Name,
+	if err := listManagedResources(ctx, k.K8sclient, capp, &knativeDomainMappings, "DomainMapping", nil); err != nil {
+		return knativeDomainMappings, err
 	}
-
-	listOptions := utils.GetListOptions(set)
-	if err := k.K8sclient.List(ctx, &knativeDomainMappings, &listOptions); err != nil {
-		return knativeDomainMappings, fmt.Errorf("unable to list DomainMappings of Capp %q: %w", capp.Name, err)
-	}
-
 	return knativeDomainMappings, nil
 }

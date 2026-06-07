@@ -12,7 +12,6 @@ import (
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 
 	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/resourceclient"
@@ -150,15 +149,8 @@ func (c CertificateManager) Manage(ctx context.Context, capp cappv1alpha1.Capp) 
 // getPreviousCertificates returns a list of all Certificate objects that are related to the given Capp.
 func (c CertificateManager) getPreviousCertificates(ctx context.Context, capp cappv1alpha1.Capp) (cmapi.CertificateList, error) {
 	certificates := cmapi.CertificateList{}
-
-	set := labels.Set{
-		utils.CappResourceKey: capp.Name,
+	if err := listManagedResources(ctx, c.K8sclient, capp, &certificates, "Certificate", nil); err != nil {
+		return certificates, err
 	}
-	listOptions := utils.GetListOptions(set)
-
-	if err := c.K8sclient.List(ctx, &certificates, &listOptions); err != nil {
-		return certificates, fmt.Errorf("unable to list Certificates of Capp %q: %w", capp.Name, err)
-	}
-
 	return certificates, nil
 }

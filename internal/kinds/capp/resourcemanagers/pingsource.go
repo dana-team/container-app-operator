@@ -13,7 +13,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/events"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	kapis "knative.dev/pkg/apis"
@@ -170,11 +169,8 @@ func (p PingSourceManager) cleanUpOrphans(ctx context.Context, capp cappv1alpha1
 
 func (p PingSourceManager) getPingSources(ctx context.Context, capp cappv1alpha1.Capp) (sourcesv1.PingSourceList, error) {
 	list := sourcesv1.PingSourceList{}
-	set := labels.Set{utils.CappResourceKey: capp.Name}
-	listOpts := utils.GetListOptions(set)
-	listOpts.Namespace = capp.Namespace
-	if err := p.K8sclient.List(ctx, &list, &listOpts); err != nil {
-		return list, fmt.Errorf("unable to list PingSources of Capp %q: %w", capp.Name, err)
+	if err := listManagedResources(ctx, p.K8sclient, capp, &list, "PingSource", nil); err != nil {
+		return list, err
 	}
 	return list, nil
 }

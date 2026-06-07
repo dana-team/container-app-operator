@@ -5,9 +5,11 @@ import (
 	"fmt"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/events"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -52,4 +54,24 @@ func updateManagedResourceIfNeeded(ctx context.Context, update func(context.Cont
 		return nil
 	}
 	return update(ctx, obj)
+}
+
+func listManagedResources(
+	ctx context.Context,
+	k8s client.Client,
+	capp cappv1alpha1.Capp,
+	list client.ObjectList,
+	kind string,
+	extraLabels labels.Set,
+) error {
+	set := labels.Set{utils.CappResourceKey: capp.Name}
+	for key, value := range extraLabels {
+		set[key] = value
+	}
+	listOptions := utils.GetListOptions(set)
+	listOptions.Namespace = capp.Namespace
+	if err := k8s.List(ctx, list, &listOptions); err != nil {
+		return fmt.Errorf("unable to list %ss of Capp %q: %w", kind, capp.Name, err)
+	}
+	return nil
 }
