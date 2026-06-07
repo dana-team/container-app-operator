@@ -24,7 +24,7 @@ webhooks:
     - UPDATE
     resources:
     - capps
-  sideEffects: NoneOnDryRun
+  sideEffects: None
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
@@ -51,4 +51,4 @@ webhooks:
     - UPDATE
     resources:
     - capps
-  sideEffects: NoneOnDryRun
+  sideEffects: None
