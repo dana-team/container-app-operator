@@ -148,37 +148,7 @@ func (c CertificateManager) reconcileCertificate(capp cappv1alpha1.Capp) error {
 		return fmt.Errorf("update Certificate %q: %w", certificate.Name, err)
 	}
 
-	if capp.Status.RouteStatus.DomainMappingObjectStatus.URL != nil {
-		if err := c.handlePreviousCertificates(capp, certificateFromCapp.Name); err != nil {
-			return fmt.Errorf("failed to handle previous Certificates: %w", err)
-		}
-	}
-
 	return nil
-}
-
-// handlePreviousCertificates takes care of removing unneeded Certificate objects. If the DNSRecord
-// which corresponds to the latest Certificate object is not yet available then return early
-// and do not delete the previous Certificates.
-func (c CertificateManager) handlePreviousCertificates(capp cappv1alpha1.Capp, name string) error {
-	var available bool
-	var err error
-
-	available, err = utils.IsDNSRecordAvailable(c.Ctx, c.K8sclient, name, capp.Namespace)
-	if err != nil {
-		return err
-	}
-
-	if !available {
-		return nil
-	}
-
-	certificates, err := c.getPreviousCertificates(capp)
-	if err != nil {
-		return err
-	}
-
-	return c.deletePreviousCertificates(certificates, capp.Spec.RouteSpec.Hostname)
 }
 
 // getPreviousCertificates returns a list of all Certificate objects that are related to the given Capp.
@@ -195,17 +165,4 @@ func (c CertificateManager) getPreviousCertificates(capp cappv1alpha1.Capp) (cma
 	}
 
 	return certificates, nil
-}
-
-// deletePreviousCertificates deletes all previous Certificates associated with a Capp.
-func (c CertificateManager) deletePreviousCertificates(certificates cmapi.CertificateList, hostname string) error {
-	for _, certificate := range certificates.Items {
-		if certificate.Name != hostname {
-			cert := rclient.GetBareCertificate(certificate.Name, certificate.Namespace)
-			if err := c.DeleteResource(&cert); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
 }
