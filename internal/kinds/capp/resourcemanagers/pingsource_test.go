@@ -23,13 +23,11 @@ import (
 )
 
 const (
-	cappName      = "my-capp"
-	cappNamespace = "my-ns"
-	sourceName    = "ping"
-	schedule      = "* * * * *"
-	sourceA       = "ping-a"
-	sourceB       = "ping-b"
-	sourceC       = "ping-c"
+	sourceName = "ping"
+	schedule   = "* * * * *"
+	sourceA    = "ping-a"
+	sourceB    = "ping-b"
+	sourceC    = "ping-c"
 )
 
 func pingSourceName(source string) string {
@@ -37,8 +35,7 @@ func pingSourceName(source string) string {
 }
 
 func newPingSourceScheme() *runtime.Scheme {
-	s := runtime.NewScheme()
-	utilruntime.Must(cappv1alpha1.AddToScheme(s))
+	s := newScheme()
 	utilruntime.Must(sourcesv1.AddToScheme(s))
 	utilruntime.Must(servingv1.AddToScheme(s))
 	return s
@@ -51,17 +48,10 @@ func newPingSourceManager(k8sClient client.Client) PingSourceManager {
 	}
 }
 
-func newCapp(name, namespace string, sources []cappv1alpha1.SourceConfiguration) cappv1alpha1.Capp {
-	return cappv1alpha1.Capp{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-			UID:       types.UID("test-uid"),
-		},
-		Spec: cappv1alpha1.CappSpec{
-			EventSourcesSpec: cappv1alpha1.EventSourcesSpec{Sources: sources},
-		},
-	}
+func newPingCapp(sources []cappv1alpha1.SourceConfiguration) cappv1alpha1.Capp {
+	capp := newBaseCapp()
+	capp.Spec.EventSourcesSpec.Sources = sources
+	return capp
 }
 
 func newPingSource(source string) *sourcesv1.PingSource {
@@ -114,7 +104,7 @@ func TestPingSourceCleanUpOrphans(t *testing.T) {
 				assert.NoError(t, fakeClient.Create(ctx, ps))
 			}
 			pm := newPingSourceManager(fakeClient)
-			capp := newCapp(cappName, cappNamespace, tt.sources)
+			capp := newPingCapp(tt.sources)
 			assert.NoError(t, pm.cleanUpOrphans(ctx, capp))
 			for _, name := range tt.expectKept {
 				got := &sourcesv1.PingSource{}
@@ -155,7 +145,7 @@ func TestPingSourceCreateOrUpdate(t *testing.T) {
 			ctx := context.Background()
 			fakeClient := fake.NewClientBuilder().WithScheme(newPingSourceScheme()).Build()
 			pm := newPingSourceManager(fakeClient)
-			capp := newCapp(cappName, cappNamespace, nil)
+			capp := newPingCapp(nil)
 
 			if tt.preCreate {
 				src := cappv1alpha1.SourceConfiguration{
@@ -219,7 +209,7 @@ func TestPingSourceGetStatus(t *testing.T) {
 				assert.NoError(t, fakeClient.Create(ctx, ps))
 			}
 			pm := newPingSourceManager(fakeClient)
-			capp := newCapp(cappName, cappNamespace, nil)
+			capp := newPingCapp(nil)
 			result, err := pm.GetStatus(ctx, capp)
 			assert.NoError(t, err)
 			if tt.expectedNames == nil {
