@@ -1,6 +1,7 @@
 package resourcemanagers
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
@@ -59,7 +60,7 @@ func (n NFSPVCManager) prepareResource(capp cappv1alpha1.Capp) []nfspvcv1alpha1.
 }
 
 // getPreviousNFSPVCs returns a list of all NFSPVC objects that are related to the given Capp.
-func (n NFSPVCManager) getPreviousNFSPVCs(capp cappv1alpha1.Capp) (nfspvcv1alpha1.NfsPvcList, error) {
+func (n NFSPVCManager) getPreviousNFSPVCs(ctx context.Context, capp cappv1alpha1.Capp) (nfspvcv1alpha1.NfsPvcList, error) {
 	nfsPvcs := nfspvcv1alpha1.NfsPvcList{}
 
 	set := labels.Set{
@@ -67,7 +68,7 @@ func (n NFSPVCManager) getPreviousNFSPVCs(capp cappv1alpha1.Capp) (nfspvcv1alpha
 	}
 	listOptions := utils.GetListOptions(set)
 
-	if err := n.K8sclient.List(n.Ctx, &nfsPvcs, &listOptions); err != nil {
+	if err := n.K8sclient.List(ctx, &nfsPvcs, &listOptions); err != nil {
 		return nfsPvcs, fmt.Errorf("unable to list NFSPVCs of Capp %q: %w", capp.Name, err)
 	}
 
@@ -75,8 +76,8 @@ func (n NFSPVCManager) getPreviousNFSPVCs(capp cappv1alpha1.Capp) (nfspvcv1alpha
 }
 
 // CleanUp attempts to delete the associated NFSPVCs for a given Capp resource.
-func (n NFSPVCManager) CleanUp(capp cappv1alpha1.Capp) error {
-	nfsPvcs, err := n.getPreviousNFSPVCs(capp)
+func (n NFSPVCManager) CleanUp(ctx context.Context, capp cappv1alpha1.Capp) error {
+	nfsPvcs, err := n.getPreviousNFSPVCs(ctx, capp)
 	if err != nil {
 		return err
 	}
@@ -93,7 +94,7 @@ func (n NFSPVCManager) CleanUp(capp cappv1alpha1.Capp) error {
 		}
 		nfsPvcVolume := rclient.GetBareNFSPVC(nfsPvc.Name, nfsPvc.Namespace)
 
-		if err := n.DeleteResource(&nfsPvcVolume); err != nil {
+		if err := n.DeleteResource(ctx, &nfsPvcVolume); err != nil {
 			if errors.IsNotFound(err) {
 				continue
 			}
@@ -111,24 +112,24 @@ func (n NFSPVCManager) IsRequired(capp cappv1alpha1.Capp) bool {
 
 // Manage creates or updates a NFSPVC resource based on the provided Capp if it's required.
 // If it's not, then it cleans up the resource if it exists.
-func (n NFSPVCManager) Manage(capp cappv1alpha1.Capp) error {
+func (n NFSPVCManager) Manage(ctx context.Context, capp cappv1alpha1.Capp) error {
 	if n.IsRequired(capp) {
-		return n.createOrUpdate(capp)
+		return n.createOrUpdate(ctx, capp)
 	}
 
-	return n.CleanUp(capp)
+	return n.CleanUp(ctx, capp)
 }
 
 // createOrUpdate creates or updates a NFSPVC resource.
-func (n NFSPVCManager) createOrUpdate(capp cappv1alpha1.Capp) error {
+func (n NFSPVCManager) createOrUpdate(ctx context.Context, capp cappv1alpha1.Capp) error {
 	generatedNFSPVCs := n.prepareResource(capp)
 
 	for i := range generatedNFSPVCs {
 		nfspvc := &generatedNFSPVCs[i]
 		existingNFSPVC := nfspvcv1alpha1.NfsPvc{}
-		if err := n.K8sclient.Get(n.Ctx, client.ObjectKey{Namespace: nfspvc.Namespace, Name: nfspvc.Name}, &existingNFSPVC); err != nil {
+		if err := n.K8sclient.Get(ctx, client.ObjectKey{Namespace: nfspvc.Namespace, Name: nfspvc.Name}, &existingNFSPVC); err != nil {
 			if errors.IsNotFound(err) {
-				if err := createManagedResource(n.K8sclient, n.CreateResource, n.EventRecorder, &capp, nfspvc,
+				if err := createManagedResource(ctx, n.K8sclient, n.CreateResource, n.EventRecorder, &capp, nfspvc,
 					"NFSPVC", eventNFSPVCCreated, eventNFSPVCCreationFailed); err != nil {
 					return err
 				}
@@ -141,7 +142,7 @@ func (n NFSPVCManager) createOrUpdate(capp cappv1alpha1.Capp) error {
 			if err := ensureOwnerReference(n.K8sclient, &capp, &existingNFSPVC, "NfsPvc"); err != nil {
 				return err
 			}
-			if err := updateManagedResourceIfNeeded(n.UpdateResource, &existingNFSPVC, orig.Spec, existingNFSPVC.Spec, orig.OwnerReferences); err != nil {
+			if err := updateManagedResourceIfNeeded(ctx, n.UpdateResource, &existingNFSPVC, orig.Spec, existingNFSPVC.Spec, orig.OwnerReferences); err != nil {
 				return err
 			}
 		}

@@ -68,7 +68,7 @@ func SyncStatus(ctx context.Context, capp cappv1alpha1.Capp, log logr.Logger, r 
 	cappObject.Status.VolumesStatus = volumesStatus
 
 	if psm, ok := resourceManagers[rmanagers.PingSource].(rmanagers.PingSourceManager); ok {
-		eventingStatus, err := psm.GetStatus(capp)
+		eventingStatus, err := psm.GetStatus(ctx, capp)
 		if err != nil {
 			return err
 		}

@@ -9,7 +9,6 @@ import (
 )
 
 type ResourceManagerClient struct {
-	Ctx       context.Context
 	K8sclient client.Client
 	Log       logr.Logger
 }
@@ -32,27 +31,27 @@ func ObjectIdentityKeyVals(obj client.Object) []any {
 }
 
 // CreateResource creates a resource.
-func (r ResourceManagerClient) CreateResource(resource client.Object) error {
+func (r ResourceManagerClient) CreateResource(ctx context.Context, resource client.Object) error {
 	r.Log.Info("kubernetes API write create", ObjectIdentityKeyVals(resource)...)
-	if err := r.K8sclient.Create(r.Ctx, resource); err != nil {
+	if err := r.K8sclient.Create(ctx, resource); err != nil {
 		return fmt.Errorf("failed to create resource %s %s: %w", resource.GetObjectKind().GroupVersionKind().Kind, resource.GetName(), err)
 	}
 	return nil
 }
 
 // UpdateResource updates a resource.
-func (r ResourceManagerClient) UpdateResource(resource client.Object) error {
+func (r ResourceManagerClient) UpdateResource(ctx context.Context, resource client.Object) error {
 	r.Log.Info("kubernetes API write update", ObjectIdentityKeyVals(resource)...)
-	if err := r.K8sclient.Update(r.Ctx, resource); err != nil {
+	if err := r.K8sclient.Update(ctx, resource); err != nil {
 		return fmt.Errorf("failed to update %s %s: %w", resource.GetObjectKind().GroupVersionKind().Kind, resource.GetName(), err)
 	}
 	return nil
 }
 
 // DeleteResource deletes a resource.
-func (r ResourceManagerClient) DeleteResource(resource client.Object) error {
+func (r ResourceManagerClient) DeleteResource(ctx context.Context, resource client.Object) error {
 	r.Log.Info("kubernetes API write delete", ObjectIdentityKeyVals(resource)...)
-	if err := r.K8sclient.Delete(r.Ctx, resource); err != nil {
+	if err := r.K8sclient.Delete(ctx, resource); err != nil {
 		return fmt.Errorf("failed to delete %s %s: %w", resource.GetObjectKind().GroupVersionKind().Kind, resource.GetName(), err)
 	}
 	return nil

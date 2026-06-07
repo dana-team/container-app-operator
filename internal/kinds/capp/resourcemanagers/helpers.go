@@ -1,6 +1,7 @@
 package resourcemanagers
 
 import (
+	"context"
 	"fmt"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
@@ -20,8 +21,9 @@ func ensureOwnerReference(k8s client.Client, capp *cappv1alpha1.Capp, obj client
 }
 
 func createManagedResource(
+	ctx context.Context,
 	k8s client.Client,
-	create func(client.Object) error,
+	create func(context.Context, client.Object) error,
 	recorder events.EventRecorder,
 	capp *cappv1alpha1.Capp,
 	obj client.Object,
@@ -30,7 +32,7 @@ func createManagedResource(
 	if err := ensureOwnerReference(k8s, capp, obj, kind); err != nil {
 		return err
 	}
-	if err := create(obj); err != nil {
+	if err := create(ctx, obj); err != nil {
 		recorder.Eventf(capp, nil, corev1.EventTypeWarning, eventFailed, eventFailed,
 			fmt.Sprintf("Failed to create %s %s", kind, obj.GetName()))
 		return err
@@ -45,9 +47,9 @@ func managedResourceNeedsUpdate(origSpec, newSpec any, origOwners, newOwners []m
 		!equality.Semantic.DeepEqual(origOwners, newOwners)
 }
 
-func updateManagedResourceIfNeeded(update func(client.Object) error, obj client.Object, origSpec, newSpec any, origOwners []metav1.OwnerReference) error {
+func updateManagedResourceIfNeeded(ctx context.Context, update func(context.Context, client.Object) error, obj client.Object, origSpec, newSpec any, origOwners []metav1.OwnerReference) error {
 	if !managedResourceNeedsUpdate(origSpec, newSpec, origOwners, obj.GetOwnerReferences()) {
 		return nil
 	}
-	return update(obj)
+	return update(ctx, obj)
 }
