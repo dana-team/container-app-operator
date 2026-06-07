@@ -390,6 +390,79 @@ func TestValidateEventSources(t *testing.T) {
 	}
 }
 
+func TestValidatePasswordSecret(t *testing.T) {
+	scheme := newScheme(t)
+
+	tests := []struct {
+		name            string
+		secretName      string
+		secretData      map[string][]byte
+		createSecret    bool
+		wantErrContains []string
+	}{
+		{
+			name:       "allows empty passwordSecret field",
+			secretName: "",
+		},
+		{
+			name:         "allows secret with required key",
+			secretName:   "my-secret",
+			createSecret: true,
+			secretData:   map[string][]byte{"elastic": []byte("password123")},
+		},
+		{
+			name:            "denies when secret does not exist",
+			secretName:      "missing-secret",
+			createSecret:    false,
+			wantErrContains: []string{"passwordSecret", "missing-secret", "not found"},
+		},
+		{
+			name:            "denies when secret exists but missing required key",
+			secretName:      "bad-secret",
+			createSecret:    true,
+			secretData:      map[string][]byte{"wrong-key": []byte("value")},
+			wantErrContains: []string{"passwordSecret", "bad-secret", "missing required key", "elastic"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			builder := fake.NewClientBuilder().WithScheme(scheme)
+			if tc.createSecret {
+				builder = builder.WithObjects(&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      tc.secretName,
+						Namespace: nsName,
+					},
+					Data: tc.secretData,
+				})
+			}
+			fakeClient := builder.Build()
+
+			validator := &CappValidator{Client: fakeClient}
+			capp := cappv1alpha1.Capp{
+				ObjectMeta: metav1.ObjectMeta{Namespace: nsName},
+				Spec: cappv1alpha1.CappSpec{
+					LogSpec: cappv1alpha1.LogSpec{
+						PasswordSecret: tc.secretName,
+					},
+				},
+			}
+
+			err := validator.validatePasswordSecret(context.Background(), capp)
+			if len(tc.wantErrContains) == 0 {
+				require.NoError(t, err)
+				return
+			}
+
+			require.Error(t, err)
+			for _, s := range tc.wantErrContains {
+				assert.Contains(t, err.Error(), s)
+			}
+		})
+	}
+}
+
 func newScheme(t *testing.T) *runtime.Scheme {
 	t.Helper()
 

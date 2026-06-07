@@ -13,6 +13,9 @@ import (
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/dana-team/container-app-operator/internal/webhook/rcs/common"
 	admissionv1 "k8s.io/api/admission/v1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	servingv1 "knative.dev/serving/pkg/apis/serving/v1"
@@ -24,7 +27,8 @@ import (
 )
 
 const (
-	eventSourcePath = "spec.eventSourcesSpec.sources"
+	eventSourcePath  = "spec.eventSourcesSpec.sources"
+	elasticSecretKey = "elastic"
 )
 
 type CappValidator struct {
@@ -90,6 +94,10 @@ func (c *CappValidator) handle(ctx context.Context, operation admissionv1.Operat
 		return admission.Denied(err.Error())
 	}
 
+	if err := c.validatePasswordSecret(ctx, capp); err != nil {
+		return admission.Denied(err.Error())
+	}
+
 	if err := validateEventSources(ctx, capp); err != nil {
 		return admission.Denied(err.Error())
 	}
@@ -149,6 +157,27 @@ func validateNFSVolumeMounts(capp cappv1alpha1.Capp) error {
 	slices.Sort(missingVolumeNames)
 
 	return fmt.Errorf("invalid nfsVolumes: volumes [%s] must be mounted by at least one container", strings.Join(missingVolumeNames, ", "))
+}
+
+func (c *CappValidator) validatePasswordSecret(ctx context.Context, capp cappv1alpha1.Capp) error {
+	if capp.Spec.LogSpec.PasswordSecret == "" {
+		return nil
+	}
+
+	secret := &corev1.Secret{}
+	key := types.NamespacedName{Namespace: capp.Namespace, Name: capp.Spec.LogSpec.PasswordSecret}
+	if err := c.Client.Get(ctx, key, secret); err != nil {
+		if errors.IsNotFound(err) {
+			return fmt.Errorf("passwordSecret %q not found in namespace %q", capp.Spec.LogSpec.PasswordSecret, capp.Namespace)
+		}
+		return fmt.Errorf("failed to look up passwordSecret %q: %w", capp.Spec.LogSpec.PasswordSecret, err)
+	}
+
+	if _, ok := secret.Data[elasticSecretKey]; !ok {
+		return fmt.Errorf("passwordSecret %q is missing required key %q", capp.Spec.LogSpec.PasswordSecret, elasticSecretKey)
+	}
+
+	return nil
 }
 
 func validateEventSources(ctx context.Context, capp cappv1alpha1.Capp) error {
