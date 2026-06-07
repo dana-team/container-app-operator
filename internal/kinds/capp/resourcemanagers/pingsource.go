@@ -39,7 +39,15 @@ func (p PingSourceManager) IsRequired(capp cappv1alpha1.Capp) bool {
 
 func (p PingSourceManager) Manage(ctx context.Context, capp cappv1alpha1.Capp) error {
 	if p.IsRequired(capp) {
-		return p.reconcilePingSources(ctx, capp)
+		for _, source := range capp.Spec.EventSourcesSpec.Sources {
+			if source.PingSourceConfiguration == nil {
+				continue
+			}
+			if err := p.createOrUpdate(ctx, capp, source); err != nil {
+				return fmt.Errorf("failed to create or update PingSource %q: %w", source.Name, err)
+			}
+		}
+		return p.cleanUpOrphans(ctx, capp)
 	}
 
 	return p.CleanUp(ctx, capp)
@@ -92,20 +100,31 @@ func (p PingSourceManager) GetStatus(ctx context.Context, capp cappv1alpha1.Capp
 	return cappv1alpha1.EventingStatus{EventSources: statuses}, nil
 }
 
-func (p PingSourceManager) reconcilePingSources(ctx context.Context, capp cappv1alpha1.Capp) error {
-	for _, source := range capp.Spec.EventSourcesSpec.Sources {
-		if source.PingSourceConfiguration == nil {
-			continue
-		}
-		if err := p.createOrUpdate(ctx, capp, source); err != nil {
-			return fmt.Errorf("failed to create or update PingSource %q: %w", source.Name, err)
-		}
-	}
-	return p.cleanUpOrphans(ctx, capp)
-}
-
 func (p PingSourceManager) createOrUpdate(ctx context.Context, capp cappv1alpha1.Capp, source cappv1alpha1.SourceConfiguration) error {
-	desired := p.preparePingSource(capp, source)
+	cfg := source.PingSourceConfiguration
+	desired := &sourcesv1.PingSource{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("%s-%s", capp.Name, source.Name),
+			Namespace: capp.Namespace,
+			Labels:    utils.ManagedResourceLabels(capp.Name),
+		},
+		Spec: sourcesv1.PingSourceSpec{
+			Schedule:    cfg.Schedule,
+			Data:        cfg.Data,
+			ContentType: event.ApplicationJSON,
+			SourceSpec: duckv1.SourceSpec{
+				Sink: duckv1.Destination{
+					Ref: &duckv1.KReference{
+						Name:       capp.Name,
+						Namespace:  capp.Namespace,
+						Kind:       knativeServiceKind,
+						APIVersion: servingv1.SchemeGroupVersion.String(),
+					},
+					URI: source.URI,
+				},
+			},
+		},
+	}
 	existing := &sourcesv1.PingSource{}
 	err := p.K8sclient.Get(ctx, client.ObjectKey{Name: desired.Name, Namespace: desired.Namespace}, existing)
 	if err != nil {
@@ -147,33 +166,6 @@ func (p PingSourceManager) cleanUpOrphans(ctx context.Context, capp cappv1alpha1
 		}
 	}
 	return nil
-}
-
-func (p PingSourceManager) preparePingSource(capp cappv1alpha1.Capp, source cappv1alpha1.SourceConfiguration) *sourcesv1.PingSource {
-	cfg := source.PingSourceConfiguration
-	return &sourcesv1.PingSource{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-%s", capp.Name, source.Name),
-			Namespace: capp.Namespace,
-			Labels:    utils.ManagedResourceLabels(capp.Name),
-		},
-		Spec: sourcesv1.PingSourceSpec{
-			Schedule:    cfg.Schedule,
-			Data:        cfg.Data,
-			ContentType: event.ApplicationJSON,
-			SourceSpec: duckv1.SourceSpec{
-				Sink: duckv1.Destination{
-					Ref: &duckv1.KReference{
-						Name:       capp.Name,
-						Namespace:  capp.Namespace,
-						Kind:       knativeServiceKind,
-						APIVersion: servingv1.SchemeGroupVersion.String(),
-					},
-					URI: source.URI,
-				},
-			},
-		},
-	}
 }
 
 func (p PingSourceManager) getPingSources(ctx context.Context, capp cappv1alpha1.Capp) (sourcesv1.PingSourceList, error) {

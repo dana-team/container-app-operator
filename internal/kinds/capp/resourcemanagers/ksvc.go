@@ -73,8 +73,16 @@ func (k KnativeServiceManager) prepareResource(capp cappv1alpha1.Capp, ctx conte
 	knativeService.Spec.Template.Spec.SetDefaults(ctx)
 	knativeService.Spec.Template.Spec.TimeoutSeconds = capp.Spec.RouteSpec.RouteTimeoutSeconds
 
-	volumes := k.prepareVolumes(capp)
-	knativeService.Spec.Template.Spec.Volumes = append(knativeService.Spec.Template.Spec.Volumes, volumes...)
+	for _, nfsVolume := range capp.Spec.VolumesSpec.NFSVolumes {
+		knativeService.Spec.Template.Spec.Volumes = append(knativeService.Spec.Template.Spec.Volumes, corev1.Volume{
+			Name: nfsVolume.Name,
+			VolumeSource: corev1.VolumeSource{
+				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+					ClaimName: nfsVolume.Name,
+				},
+			},
+		})
+	}
 
 	cappConfig, err := utils.GetCappConfig(ctx, k.K8sclient)
 	if err != nil {
@@ -85,23 +93,6 @@ func (k KnativeServiceManager) prepareResource(capp cappv1alpha1.Capp, ctx conte
 	knativeService.Spec.Template.Labels = knativeServiceLabels
 
 	return knativeService
-}
-
-// prepareVolumes generates a list of volumes to be used in a Knative Service definition from a given Capp resource.
-func (k KnativeServiceManager) prepareVolumes(capp cappv1alpha1.Capp) []corev1.Volume {
-	//nolint:prealloc
-	var volumes []corev1.Volume
-	for _, nfsVolume := range capp.Spec.VolumesSpec.NFSVolumes {
-		volumes = append(volumes, corev1.Volume{
-			Name: nfsVolume.Name,
-			VolumeSource: corev1.VolumeSource{
-				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-					ClaimName: nfsVolume.Name,
-				},
-			},
-		})
-	}
-	return volumes
 }
 
 // CleanUp ensures the Knative Service is not left behind when it is no longer required for this Capp.
@@ -121,12 +112,6 @@ func (k KnativeServiceManager) CleanUp(ctx context.Context, capp cappv1alpha1.Ca
 // IsRequired determines if a Knative service (ksvc) is required based on the Capp's spec.
 func (k KnativeServiceManager) IsRequired(capp cappv1alpha1.Capp) bool {
 	return capp.Spec.State == cappEnabledState
-}
-
-// isResumed checks whether the state changed from disabled to enabled.
-func (k KnativeServiceManager) isResumed(capp cappv1alpha1.Capp) bool {
-	return capp.Status.StateStatus.State == cappDisabledState && k.IsRequired(capp) &&
-		!capp.Status.StateStatus.LastChange.IsZero()
 }
 
 // Manage creates or updates a KnativeService resource based on the provided Capp if it's required.
@@ -159,7 +144,8 @@ func (k KnativeServiceManager) createOrUpdate(ctx context.Context, capp cappv1al
 				return err
 			}
 
-			if k.isResumed(capp) {
+			if capp.Status.StateStatus.State == cappDisabledState && k.IsRequired(capp) &&
+				!capp.Status.StateStatus.LastChange.IsZero() {
 				k.Log.Info("Capp resumed to enabled state")
 				k.EventRecorder.Eventf(&capp, nil, corev1.EventTypeNormal, eventCappEnabled, eventCappEnabled, fmt.Sprintf("Capp %q state changed to enabled", capp.Name))
 			}

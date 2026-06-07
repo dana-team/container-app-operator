@@ -129,12 +129,7 @@ func (r DNSRecordManager) createOrUpdate(ctx context.Context, capp cappv1alpha1.
 		return fmt.Errorf("failed to get DNSRecord %q: %w", dnsRecordFromCapp.Name, err)
 	}
 
-	return r.updateDNSRecord(ctx, dnsRecord, dnsRecordFromCapp, &capp)
-}
-
-// updateDNSRecord checks if an update to the DNSRecord is necessary and performs the update to match desired state.
-func (r DNSRecordManager) updateDNSRecord(ctx context.Context, dnsRecord, dnsRecordFromCapp dnsrecordv1alpha1.CNAMERecord, capp *cappv1alpha1.Capp) error {
-	needs, err := r.dnsRecordNeedsUpdate(dnsRecord, dnsRecordFromCapp, capp)
+	needs, err := r.dnsRecordNeedsUpdate(dnsRecord, dnsRecordFromCapp, &capp)
 	if err != nil {
 		return err
 	}
@@ -147,7 +142,7 @@ func (r DNSRecordManager) updateDNSRecord(ctx context.Context, dnsRecord, dnsRec
 			return err
 		}
 
-		needs, err := r.dnsRecordNeedsUpdate(latestRecord, dnsRecordFromCapp, capp)
+		needs, err := r.dnsRecordNeedsUpdate(latestRecord, dnsRecordFromCapp, &capp)
 		if err != nil {
 			return err
 		}
@@ -156,7 +151,7 @@ func (r DNSRecordManager) updateDNSRecord(ctx context.Context, dnsRecord, dnsRec
 		}
 
 		orig := latestRecord.DeepCopy()
-		if err := ensureOwnerReference(r.K8sclient, capp, &latestRecord, "DNSRecord"); err != nil {
+		if err := ensureOwnerReference(r.K8sclient, &capp, &latestRecord, "DNSRecord"); err != nil {
 			return err
 		}
 		latestRecord.Spec.ForProvider = *dnsRecordFromCapp.Spec.ForProvider.DeepCopy()
