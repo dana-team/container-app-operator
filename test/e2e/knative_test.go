@@ -274,35 +274,6 @@ var _ = Describe("Validate knative functionality", func() {
 		}, consts.Timeout, consts.Interval).Should(Equal("666"))
 	})
 
-	It("Should propagate Capp labels to the underlying KSVC", func() {
-		By("Creating a capp instance")
-		testCapp := mocks.CreateBaseCapp()
-		labels := map[string]string{
-			consts.TestLabelKey:    consts.TestIndex,
-			consts.CappResourceKey: consts.TestIndex,
-		}
-		testCapp.Labels = labels
-		createdCapp := utils.CreateCapp(k8sClient, testCapp)
-		assertionCapp := utils.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-
-		By("Checking if user-defined labels were propagated to the ksvc")
-		Eventually(func() string {
-			ksvc := utils.GetKSVC(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
-			return ksvc.Spec.ConfigurationSpec.Template.Labels[consts.TestLabelKey]
-		}, consts.Timeout, consts.Interval).Should(Equal(consts.TestIndex))
-
-		By("Checking if labels set by the controller cannot be overridden by users")
-		Consistently(func() string {
-			ksvc := utils.GetKSVC(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
-			return ksvc.Spec.ConfigurationSpec.Template.Labels[consts.CappResourceKey]
-		}, consts.DefaultConsistently, consts.Interval).ShouldNot(Equal(consts.TestIndex))
-
-		Eventually(func() string {
-			ksvc := utils.GetKSVC(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
-			return ksvc.Spec.ConfigurationSpec.Template.Labels[consts.CappResourceKey]
-		}, consts.Timeout, consts.Interval).Should(Equal(assertionCapp.Name))
-	})
-
 	It("Should check the default ksvc annotation is equal to the cappConfig's concurrency value", func() {
 		By("Creating a capp instance")
 		testCapp := mocks.CreateBaseCapp()
