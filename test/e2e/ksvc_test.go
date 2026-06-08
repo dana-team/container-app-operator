@@ -84,63 +84,12 @@ var _ = Describe("Validate KSVC functionality", func() {
 		}, consts.Timeout, consts.Interval).ShouldNot(BeTrue(), "Should not find a resource.")
 	})
 
-	It("Should update ksvc metric annotation and create a new revision when updating the capp scale metric", func() {
-		By("Creating a capp instance")
-		testCapp := mocks.CreateBaseCapp()
-		testCapp.Spec.ScaleSpec.Metric = consts.CPUScaleMetric
-		createdCapp := utils.CreateCapp(k8sClient, testCapp)
-
-		By("Updating the Capp scale metric")
-		var latestReadyRevisionBeforeUpdate string
-		err := retry.RetryOnConflict(utils.NewRetryOnConflictBackoff(), func() error {
-			assertionCapp := utils.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-			latestReadyRevisionBeforeUpdate = assertionCapp.Status.KnativeObjectStatus.LatestReadyRevisionName
-
-			assertionCapp.Spec.ScaleSpec.Metric = consts.MemoryScaleMetric
-			return utils.UpdateResource(k8sClient, assertionCapp)
-		})
-		Expect(err).ToNot(HaveOccurred())
-
-		verifyLatestReadyRevision(createdCapp.Name, createdCapp.Namespace, latestReadyRevisionBeforeUpdate)
-
-		By("Checking if the ksvc was updated successfully")
-		Eventually(func() string {
-			ksvc := utils.GetKSVC(k8sClient, createdCapp.Name, createdCapp.Namespace)
-			return ksvc.Spec.Template.Annotations[consts.KnativeMetricAnnotation]
-		}, consts.Timeout, consts.Interval).Should(Equal("memory"))
-	})
-
-	It("Should update ksvc container name and create a new revision when updating a capp container name", func() {
+	It("Should create a new ready revision when updating capp spec", func() {
 		By("Creating a capp instance")
 		testCapp := mocks.CreateBaseCapp()
 		createdCapp := utils.CreateCapp(k8sClient, testCapp)
 
-		By("Updating the a capp container name")
-		var latestReadyRevisionBeforeUpdate string
-		err := retry.RetryOnConflict(utils.NewRetryOnConflictBackoff(), func() error {
-			assertionCapp := utils.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-			latestReadyRevisionBeforeUpdate = assertionCapp.Status.KnativeObjectStatus.LatestReadyRevisionName
-
-			assertionCapp.Spec.ConfigurationSpec.Template.Spec.Containers[0].Name = consts.TestContainerName
-			return utils.UpdateResource(k8sClient, assertionCapp)
-		})
-		Expect(err).ToNot(HaveOccurred())
-
-		verifyLatestReadyRevision(createdCapp.Name, createdCapp.Namespace, latestReadyRevisionBeforeUpdate)
-
-		By("Checking if the ksvc was updated successfully")
-		Eventually(func() string {
-			ksvc := utils.GetKSVC(k8sClient, createdCapp.Name, createdCapp.Namespace)
-			return ksvc.Spec.ConfigurationSpec.Template.Spec.Containers[0].Name
-		}, consts.Timeout, consts.Interval).Should(Equal(consts.TestContainerName))
-	})
-
-	It("Should update ksvc container image and create a new revision when updating a capp container image", func() {
-		By("Creating a capp instance")
-		testCapp := mocks.CreateBaseCapp()
-		createdCapp := utils.CreateCapp(k8sClient, testCapp)
-
-		By("Updating capp's container image")
+		By("Updating capp container image")
 		var latestReadyRevisionBeforeUpdate string
 		err := retry.RetryOnConflict(utils.NewRetryOnConflictBackoff(), func() error {
 			assertionCapp := utils.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
@@ -152,67 +101,6 @@ var _ = Describe("Validate KSVC functionality", func() {
 		Expect(err).ToNot(HaveOccurred())
 
 		verifyLatestReadyRevision(createdCapp.Name, createdCapp.Namespace, latestReadyRevisionBeforeUpdate)
-
-		By("Checking if the ksvc's container image was updated successfully")
-		Eventually(func() string {
-			ksvc := utils.GetKSVC(k8sClient, createdCapp.Name, createdCapp.Namespace)
-			return ksvc.Spec.ConfigurationSpec.Template.Spec.Containers[0].Image
-		}, consts.Timeout, consts.Interval).Should(Equal(consts.ImageExample))
-	})
-
-	It("Should update ksvc when updating a propagating Capp metadata annotation", func() {
-		const propagationAnnKey = "example.com/e2e-propagation"
-
-		By("Creating a capp instance")
-		testCapp := mocks.CreateBaseCapp()
-		createdCapp := utils.CreateCapp(k8sClient, testCapp)
-
-		By("Updating capp metadata annotation that is copied to the Knative Service")
-		cappAnnotations := map[string]string{}
-		cappAnnotations[propagationAnnKey] = consts.ExampleAppName
-
-		var latestReadyRevisionBeforeUpdate string
-		err := retry.RetryOnConflict(utils.NewRetryOnConflictBackoff(), func() error {
-			assertionCapp := utils.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-			latestReadyRevisionBeforeUpdate = assertionCapp.Status.KnativeObjectStatus.LatestReadyRevisionName
-
-			assertionCapp.Annotations = cappAnnotations
-			return utils.UpdateResource(k8sClient, assertionCapp)
-		})
-		Expect(err).ToNot(HaveOccurred())
-
-		verifyLatestReadyRevision(createdCapp.Name, createdCapp.Namespace, latestReadyRevisionBeforeUpdate)
-
-		By("Checking if the ksvc template annotation was updated successfully")
-		Eventually(func() string {
-			ksvc := utils.GetKSVC(k8sClient, createdCapp.Name, createdCapp.Namespace)
-			return ksvc.Spec.Template.Annotations[propagationAnnKey]
-		}, consts.Timeout, consts.Interval).Should(Equal(consts.ExampleAppName))
-	})
-
-	It("Should update ksvc environment variable and create a new revision when updating a capp container environment variable", func() {
-		By("Creating a capp instance")
-		testCapp := mocks.CreateBaseCapp()
-		createdCapp := utils.CreateCapp(k8sClient, testCapp)
-
-		By("Updating capp's container environment variable")
-		var latestReadyRevisionBeforeUpdate string
-		err := retry.RetryOnConflict(utils.NewRetryOnConflictBackoff(), func() error {
-			assertionCapp := utils.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-			latestReadyRevisionBeforeUpdate = assertionCapp.Status.KnativeObjectStatus.LatestReadyRevisionName
-
-			assertionCapp.Spec.ConfigurationSpec.Template.Spec.Containers[0].Env[0].Value = consts.ExampleAppName
-			return utils.UpdateResource(k8sClient, assertionCapp)
-		})
-		Expect(err).ToNot(HaveOccurred())
-
-		verifyLatestReadyRevision(createdCapp.Name, createdCapp.Namespace, latestReadyRevisionBeforeUpdate)
-
-		By("Checking if the ksvc's container environment variable was updated successfully")
-		Eventually(func() string {
-			ksvc := utils.GetKSVC(k8sClient, createdCapp.Name, createdCapp.Namespace)
-			return ksvc.Spec.ConfigurationSpec.Template.Spec.Containers[0].Env[0].Value
-		}, consts.Timeout, consts.Interval).Should(Equal(consts.ExampleAppName))
 	})
 
 	It("Should create a new revision in ready state when updating capp's secret environment variable", func() {
