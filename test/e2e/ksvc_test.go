@@ -38,7 +38,7 @@ func checkRevisionReadiness(revisionName string) {
 	}, consts.Timeout, consts.Interval).Should(BeTrue())
 }
 
-var _ = Describe("Validate knative functionality", func() {
+var _ = Describe("Validate KSVC functionality", func() {
 	It("Should create a ksvc with memory metric annotation when creating a capp with memory scale metric", func() {
 		By("Creating a capp instance with memory scale metric")
 		testCapp := mocks.CreateBaseCapp()
