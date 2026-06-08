@@ -117,7 +117,31 @@ type PingSourceConfiguration struct {
 	Data string `json:"data,omitempty"`
 }
 
+// KafkaSourceConfiguration defines the configuration for a Capp Kafka event source.
+// +kubebuilder:validation:XValidation:rule="size(self.secretRef.name) > 0",message="secretRef.name is required"
+type KafkaSourceConfiguration struct {
+	// BootstrapServers is the list of Kafka broker addresses.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinItems=1
+	BootstrapServers []string `json:"bootstrapServers"`
+
+	// Topics is the list of Kafka topics to consume.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinItems=1
+	Topics []string `json:"topics"`
+
+	// ConsumerGroup is the Kafka consumer group ID.
+	// Optional; when unset the operator assigns a dedicated group for this source.
+	// +optional
+	ConsumerGroup string `json:"consumerGroup,omitempty"`
+
+	// SecretRef references a Secret in the Capp namespace with credentials for the Kafka cluster.
+	// +kubebuilder:validation:Required
+	SecretRef corev1.LocalObjectReference `json:"secretRef"`
+}
+
 // SourceConfiguration defines a single Knative Eventing source connected to the Capp.
+// +kubebuilder:validation:XValidation:rule="(has(self.pingSourceConfiguration) && !has(self.kafkaSourceConfiguration)) || (!has(self.pingSourceConfiguration) && has(self.kafkaSourceConfiguration))",message="exactly one of pingSourceConfiguration or kafkaSourceConfiguration must be set"
 type SourceConfiguration struct {
 	// Name is a unique logical identifier for this source within the Capp.
 	// +kubebuilder:validation:Required
@@ -132,6 +156,10 @@ type SourceConfiguration struct {
 	// Configuration for a PingSource.
 	// +optional
 	PingSourceConfiguration *PingSourceConfiguration `json:"pingSourceConfiguration,omitempty"`
+
+	// Configuration for a KafkaSource.
+	// +optional
+	KafkaSourceConfiguration *KafkaSourceConfiguration `json:"kafkaSourceConfiguration,omitempty"`
 }
 
 // VolumesSpec defines the volumes specification for the Capp.

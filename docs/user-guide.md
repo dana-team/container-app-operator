@@ -47,11 +47,23 @@ Defines NFS persistent storage volumes with:
 ### `eventSourcesSpec`
 Attaches Knative Eventing sources to the Capp. Each source in `sources` requires:
 - `name`: Unique identifier for this source within the Capp
-- `pingSourceConfiguration` (optional): Trigger on a cron schedule
-  - `schedule`: Cron expression (e.g., `"*/5 * * * *"`)
-  - `data`: JSON payload sent with each trigger (e.g., `'{"key":"value"}'`)
+- **Exactly one** of `pingSourceConfiguration` or `kafkaSourceConfiguration`
 
-The operator creates a `PingSource` named `{capp-name}-{source-name}` in the same namespace, with the Capp's Knative Service as the sink. Source readiness is reported in `status.eventingStatus.eventSources`.
+**`pingSourceConfiguration`** — trigger on a cron schedule:
+- `schedule` (optional, default `"* * * * *"`): Cron expression (e.g., `"*/5 * * * *"`)
+- `data` (optional): JSON payload sent with each trigger (e.g., `'{"key":"value"}'`)
+- `uri` (optional, on the source entry): Relative HTTP path on the Capp Knative Service (e.g. `"/events/ping"`)
+
+**`kafkaSourceConfiguration`** — consume from Kafka topics (SASL authentication with `SCRAM-SHA-256`; TLS not supported):
+- `bootstrapServers` (required): Kafka broker addresses
+- `topics` (required): Topic names to consume
+- `secretRef` (required): Secret in the same namespace with Kafka cluster credentials
+- `consumerGroup` (optional): Consumer group ID; defaults to `{capp-name}-{source-name}` when omitted
+- `uri` (optional, on the source entry): Relative HTTP path on the Capp Knative Service (e.g. `"/events/orders"`)
+
+Required Secret keys: `user`, `password`, `sasl.mechanism` (same namespace as the Capp).
+
+Source readiness is reported in `status.eventingStatus.eventSources`.
 
 ## How to Use Capp
 
@@ -135,7 +147,7 @@ spec:
 
 ### Step 6: Attach an Event Source
 
-To trigger your Capp on a schedule, add a `PingSource` under `eventSourcesSpec`:
+**Ping:**
 
 ```yaml
 spec:
@@ -147,10 +159,34 @@ spec:
           data: '{"trigger":"hourly"}'
 ```
 
-The operator creates a `PingSource` named `{capp-name}-hourly` that sends the payload to the Capp's endpoint every hour. Check its status:
+**Kafka:**
+
+Create a credentials Secret first:
 
 ```bash
-kubectl get pingsource {capp-name}-hourly -n my-namespace
+kubectl create secret generic kafka-creds -n my-namespace \
+  --from-literal=user=my-user \
+  --from-literal=password=my-password \
+  --from-literal=sasl.mechanism=SCRAM-SHA-256
+```
+
+```yaml
+spec:
+  eventSourcesSpec:
+    sources:
+      - name: orders
+        uri: /events/orders
+        kafkaSourceConfiguration:
+          bootstrapServers:
+            - kafka.example:9092
+          topics:
+            - orders
+            - payments
+          secretRef:
+            name: kafka-creds
+```
+
+```bash
 kubectl get capp my-app -n my-namespace -o jsonpath='{.status.eventingStatus}'
 ```
 
