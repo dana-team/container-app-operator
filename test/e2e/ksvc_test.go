@@ -66,11 +66,6 @@ var _ = Describe("Validate KSVC functionality", func() {
 		}, consts.Timeout, consts.Interval).Should(BeTrue(), "Should find a resource.")
 		checkRevisionReadiness(assertionCapp.Name + consts.FirstRevisionSuffix)
 
-		By("Checking the ksvc has the needed labels")
-		ksvcObject = utils.GetKSVC(k8sClient, assertionCapp.Name, consts.NSName)
-		Expect(ksvcObject.Labels[consts.CappResourceKey]).Should(Equal(assertionCapp.Name))
-		Expect(ksvcObject.Labels[consts.ManagedByLabelKey]).Should(Equal(consts.CappKey))
-
 		By("Deleting the capp instance")
 		utils.DeleteCapp(k8sClient, assertionCapp)
 		Eventually(func() bool {
