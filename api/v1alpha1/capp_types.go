@@ -28,6 +28,24 @@ import (
 	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
 )
 
+const (
+	// CappStateDisabled is the disabled state value for a Capp.
+	CappStateDisabled = "disabled"
+
+	// CappConditionReady indicates that all Capp child resources are healthy
+	// and the workload is serving traffic.
+	CappConditionReady = "Ready"
+
+	// Reasons for the Ready condition.
+	CappReadyReasonReady                 = "Ready"
+	CappReadyReasonKnativeNotReady       = "KnativeServiceNotReady"
+	CappReadyReasonLoggingNotReady       = "LoggingNotReady"
+	CappReadyReasonDomainMappingNotReady = "DomainMappingNotReady"
+	CappReadyReasonCertificateNotReady   = "CertificateNotReady"
+	CappReadyReasonVolumesNotReady       = "VolumesNotReady"
+	CappReadyReasonEventingNotReady      = "EventingNotReady"
+)
+
 // CappSpec defines the desired state of Capp.
 type CappSpec struct {
 	// State defines the state of capp
