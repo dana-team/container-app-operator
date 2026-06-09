@@ -16,6 +16,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	knativeautoscaling "knative.dev/serving/pkg/apis/autoscaling"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
@@ -31,6 +32,7 @@ const (
 	newHostname            = "new.example.com"
 	elasticHost            = "https://elastic.example.com"
 	elasticIndex           = "my-index"
+	missingSecretName      = "missing-secret"
 )
 
 func TestCappValidatorHandle(t *testing.T) {
@@ -116,7 +118,7 @@ func TestCappValidatorHandle(t *testing.T) {
 			expectMsg:   "spec.routeSpec.hostname is immutable once set",
 		},
 		{
-			name:      "Deny Capp when PasswordSecret does not exist",
+			name:      "denies capp when password secret does not exist",
 			operation: admissionv1.Create,
 			capp: &cappv1alpha1.Capp{
 				ObjectMeta: metav1.ObjectMeta{
@@ -132,59 +134,12 @@ func TestCappValidatorHandle(t *testing.T) {
 						Host:           elasticHost,
 						Index:          elasticIndex,
 						User:           elasticSecretKey,
-						PasswordSecret: "missing-secret",
+						PasswordSecret: missingSecretName,
 					},
 				},
 			},
 			expectAllow: false,
-			expectMsg:   "secret \"missing-secret\" not found",
-		},
-		{
-			name:      "Allow Capp when PasswordSecret exists",
-			operation: admissionv1.Create,
-			capp: &cappv1alpha1.Capp{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      cappName,
-					Namespace: nsName,
-				},
-				Spec: cappv1alpha1.CappSpec{
-					ScaleSpec: cappv1alpha1.ScaleSpec{
-						Metric: knativeautoscaling.CPU,
-					},
-					LogSpec: cappv1alpha1.LogSpec{
-						Type:           cappv1alpha1.LogTypeElastic,
-						Host:           elasticHost,
-						Index:          elasticIndex,
-						User:           elasticSecretKey,
-						PasswordSecret: "existing-secret",
-					},
-				},
-			},
-			expectAllow: true,
-		},
-		{
-			name:      "Deny Capp when PasswordSecret exists but missing required key",
-			operation: admissionv1.Create,
-			capp: &cappv1alpha1.Capp{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      cappName,
-					Namespace: nsName,
-				},
-				Spec: cappv1alpha1.CappSpec{
-					ScaleSpec: cappv1alpha1.ScaleSpec{
-						Metric: knativeautoscaling.CPU,
-					},
-					LogSpec: cappv1alpha1.LogSpec{
-						Type:           cappv1alpha1.LogTypeElastic,
-						Host:           elasticHost,
-						Index:          elasticIndex,
-						User:           elasticSecretKey,
-						PasswordSecret: "bad-key-secret",
-					},
-				},
-			},
-			expectAllow: false,
-			expectMsg:   "missing required key",
+			expectMsg:   "secret \"" + missingSecretName + "\" not found",
 		},
 	}
 
@@ -221,6 +176,94 @@ func TestCappValidatorHandle(t *testing.T) {
 		})
 	}
 
+}
+
+func TestValidateSecretHasKeys(t *testing.T) {
+	const (
+		secretName     = "existing-secret"
+		secretPassword = "password"
+	)
+
+	ctx := context.Background()
+	scheme := newScheme(t)
+
+	tests := []struct {
+		name            string
+		secretName      string
+		data            map[string]string
+		stringData      map[string]string
+		requiredKeys    []string
+		wantErrContains []string
+	}{
+		{
+			name:         "allows secret with required key in data",
+			secretName:   secretName,
+			data:         map[string]string{elasticSecretKey: secretPassword},
+			requiredKeys: []string{elasticSecretKey},
+		},
+		{
+			name:         "allows secret with required key in stringData",
+			secretName:   secretName,
+			stringData:   map[string]string{elasticSecretKey: secretPassword},
+			requiredKeys: []string{elasticSecretKey},
+		},
+		{
+			name:            "rejects when secret not found",
+			secretName:      missingSecretName,
+			requiredKeys:    []string{elasticSecretKey},
+			wantErrContains: []string{"not found", missingSecretName},
+		},
+		{
+			name:            "rejects when required key is missing",
+			secretName:      secretName,
+			data:            map[string]string{"wrong-key": "value"},
+			requiredKeys:    []string{elasticSecretKey},
+			wantErrContains: []string{"missing required key", elasticSecretKey},
+		},
+		{
+			name:            "rejects when required key is empty",
+			secretName:      secretName,
+			data:            map[string]string{elasticSecretKey: ""},
+			requiredKeys:    []string{elasticSecretKey},
+			wantErrContains: []string{"missing required key", elasticSecretKey},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			var objects []client.Object
+			if tc.data != nil || tc.stringData != nil {
+				secretData := make(map[string][]byte, len(tc.data))
+				for key, value := range tc.data {
+					secretData[key] = []byte(value)
+				}
+				objects = []client.Object{&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      tc.secretName,
+						Namespace: nsName,
+					},
+					Data:       secretData,
+					StringData: tc.stringData,
+				}}
+			}
+
+			fakeClient := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(objects...).
+				Build()
+
+			err := validateSecretHasKeys(ctx, fakeClient, nsName, tc.secretName, tc.requiredKeys)
+			if len(tc.wantErrContains) == 0 {
+				require.NoError(t, err)
+				return
+			}
+
+			require.Error(t, err)
+			for _, s := range tc.wantErrContains {
+				require.Contains(t, err.Error(), s)
+			}
+		})
+	}
 }
 
 func TestValidateHostnameImmutability(t *testing.T) {
@@ -476,25 +519,9 @@ func newScheme(t *testing.T) *runtime.Scheme {
 func newCappValidator(t *testing.T, scheme *runtime.Scheme, decoder admission.Decoder) *CappValidator {
 	t.Helper()
 
-	existingSecret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "existing-secret",
-			Namespace: nsName,
-		},
-		Data: map[string][]byte{elasticSecretKey: []byte("password")},
-	}
-
-	badKeySecret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "bad-key-secret",
-			Namespace: nsName,
-		},
-		Data: map[string][]byte{"wrong-key": []byte("value")},
-	}
-
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(newCappConfig(), existingSecret, badKeySecret).
+		WithObjects(newCappConfig()).
 		Build()
 
 	return &CappValidator{
