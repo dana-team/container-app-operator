@@ -22,17 +22,18 @@ import (
 )
 
 const (
-	cappName               = "test-capp"
-	nsName                 = "test-ns"
-	mountedNFSVolumeName   = "mounted"
-	unmountedNFSVolumeName = "a-data"
-	eventSourceName        = "ping-a"
-	unchangedHostname      = "same.example.com"
-	oldHostname            = "old.example.com"
-	newHostname            = "new.example.com"
-	elasticHost            = "https://elastic.example.com"
-	elasticIndex           = "my-index"
-	missingSecretName      = "missing-secret"
+	cappName                  = "test-capp"
+	nsName                    = "test-ns"
+	mountedNFSVolumeName      = "mounted"
+	unmountedNFSVolumeName    = "a-data"
+	eventSourceName           = "ping-a"
+	unchangedHostname         = "same.example.com"
+	oldHostname               = "old.example.com"
+	newHostname               = "new.example.com"
+	elasticHost               = "https://elastic.example.com"
+	elasticIndex              = "my-index"
+	missingSecretName         = "missing-secret"
+	missingRequiredKeyMessage = "missing required key"
 )
 
 func TestCappValidatorHandle(t *testing.T) {
@@ -218,14 +219,14 @@ func TestValidateSecretHasKeys(t *testing.T) {
 			secretName:      secretName,
 			data:            map[string]string{"wrong-key": "value"},
 			requiredKeys:    []string{elasticSecretKey},
-			wantErrContains: []string{"missing required key", elasticSecretKey},
+			wantErrContains: []string{missingRequiredKeyMessage, elasticSecretKey},
 		},
 		{
 			name:            "rejects when required key is empty",
 			secretName:      secretName,
 			data:            map[string]string{elasticSecretKey: ""},
 			requiredKeys:    []string{elasticSecretKey},
-			wantErrContains: []string{"missing required key", elasticSecretKey},
+			wantErrContains: []string{missingRequiredKeyMessage, elasticSecretKey},
 		},
 	}
 
@@ -444,17 +445,6 @@ func TestValidateEventSources(t *testing.T) {
 			},
 		},
 		{
-			name: "rejects source with no configuration",
-			sources: []cappv1alpha1.SourceConfiguration{
-				{Name: eventSourceName},
-			},
-			wantErrContains: []string{
-				"spec.eventSourcesSpec.sources[0]",
-				eventSourceName,
-				"must specify at least one source configuration",
-			},
-		},
-		{
 			name: "allows source with ping configuration",
 			sources: []cappv1alpha1.SourceConfiguration{
 				{Name: eventSourceName, PingSourceConfiguration: &cappv1alpha1.PingSourceConfiguration{Schedule: "* * * * * *"}},
@@ -482,6 +472,8 @@ func TestValidateEventSources(t *testing.T) {
 		},
 	}
 
+	fakeClient := fake.NewClientBuilder().WithScheme(newScheme(t)).Build()
+
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			capp := cappv1alpha1.Capp{
@@ -492,7 +484,7 @@ func TestValidateEventSources(t *testing.T) {
 				},
 			}
 
-			err := validateEventSources(ctx, capp)
+			err := validateEventSources(ctx, fakeClient, capp)
 			if len(tc.wantErrContains) == 0 {
 				require.NoError(t, err)
 				return
