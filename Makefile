@@ -157,12 +157,11 @@ undeploy: kustomize ## Undeploy controller from the K8s cluster specified in ~/.
 	$(KUSTOMIZE) build config/default | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
 
 ##@ Capp prerequisites
-KNATIVE_VERSION ?= v1.17.0
-KNATIVE_URL ?= https://github.com/knative-extensions/kn-plugin-quickstart/releases/download/knative-$(KNATIVE_VERSION)/kn-quickstart-linux-amd64
-KNATIVE_HPA_URL ?= https://github.com/knative/serving/releases/download/knative-$(KNATIVE_VERSION)/serving-hpa.yaml
-KNATIVE_EVENTING_CRDS_URL ?= https://github.com/knative/eventing/releases/download/knative-v1.22.0/eventing-crds.yaml
-KNATIVE_EVENTING_CORE_URL ?= https://github.com/knative/eventing/releases/download/knative-v1.22.0/eventing-core.yaml
-KNATIVE_KAFKA_CONTROLLER_URL ?= https://github.com/knative-extensions/eventing-kafka-broker/releases/download/knative-v1.22.0/eventing-kafka-controller.yaml
+KNATIVE_VERSION ?= v1.22.0
+KNATIVE_RELEASE ?= knative-$(KNATIVE_VERSION)
+KNATIVE_URL ?= https://github.com/knative-extensions/kn-plugin-quickstart/releases/download/$(KNATIVE_RELEASE)/kn-quickstart-linux-amd64
+KNATIVE_HPA_URL ?= https://github.com/knative/serving/releases/download/$(KNATIVE_RELEASE)/serving-hpa.yaml
+KNATIVE_KAFKA_CONTROLLER_URL ?= https://github.com/knative-extensions/eventing-kafka-broker/releases/download/$(KNATIVE_RELEASE)/eventing-kafka-controller.yaml
 CROSSPLANE_SCC_CRB ?= hack/crossplane-scc-clusterrolebinding.yaml
 PREREQ_HELMFILE ?= charts/capp-prereq-helmfile.gotmpl
 
@@ -187,10 +186,8 @@ install-knative: ## Install knative controller on the kind cluster
 	wget -O $(LOCALBIN)/kn-quickstart $(KNATIVE_URL)
 	chmod +x $(LOCALBIN)/kn-quickstart
 	@CLUSTER_NAME=$$(kubectl config current-context | awk -F '-' '{ print $$2}'); \
-	(yes no || true) | $(LOCALBIN)/kn-quickstart kind -n $$CLUSTER_NAME --install-serving 
+	(yes no || true) | $(LOCALBIN)/kn-quickstart kind -n $$CLUSTER_NAME --install-serving --install-eventing
 	$(KUBECTL) apply -f $(KNATIVE_HPA_URL)
-	$(KUBECTL) apply -f $(KNATIVE_EVENTING_CRDS_URL)
-	$(KUBECTL) apply -f $(KNATIVE_EVENTING_CORE_URL)
 	$(KUBECTL) apply -f $(KNATIVE_KAFKA_CONTROLLER_URL)
 
 

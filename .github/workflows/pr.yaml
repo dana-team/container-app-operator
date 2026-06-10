@@ -47,7 +47,7 @@ jobs:
       E2E_SKIP_CLEANUP: "true"
       IMAGE_REGISTRY: kind-registry:5000
       KIND_VERSION: v0.31.0
-      K8S_VERSION: v1.33.4
+      K8S_VERSION: v1.34.0
       IMAGE_TAG: test-${{ github.sha }}
     steps:
       - name: Checkout

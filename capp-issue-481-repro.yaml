@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: capp-issue-481
+---
+apiVersion: rcs.dana.io/v1alpha1
+kind: Capp
+metadata:
+  name: capp-issue-481
+  namespace: capp-issue-481
+spec:
+  state: enabled
+  scaleMetric: concurrency
+  configurationSpec:
+    template:
+      spec:
+        containerConcurrency: 1
+        containers:
+          - name: app
+            image: ghcr.io/dana-team/capp-gin-app:v0.2.0
+            # Intentionally no volumeMounts to reproduce issue #481
+  routeSpec:
+    tlsEnabled: false
+    trafficTarget:
+      latestRevision: true
+      percent: 100
+  volumesSpec:
+    nfsVolumes:
+      - name: churn-data
+        server: debug-capp-ci
+        path: /srv/nfs/nfspvc-storage
+        capacity:
+          storage: 256Mi
