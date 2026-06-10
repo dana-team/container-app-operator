@@ -3,6 +3,7 @@ package resourcemanagers
 import (
 	"context"
 	"fmt"
+
 	"sort"
 
 	"github.com/cloudevents/sdk-go/v2/event"
@@ -10,7 +11,6 @@ import (
 	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/resourceclient"
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/events"
@@ -33,7 +33,12 @@ type PingSourceManager struct {
 }
 
 func (p PingSourceManager) IsRequired(capp cappv1alpha1.Capp) bool {
-	return len(capp.Spec.EventSourcesSpec.Sources) > 0
+	for _, source := range capp.Spec.EventSourcesSpec.Sources {
+		if source.PingSourceConfiguration != nil {
+			return true
+		}
+	}
+	return false
 }
 
 func (p PingSourceManager) Manage(ctx context.Context, capp cappv1alpha1.Capp) error {
@@ -76,24 +81,7 @@ func (p PingSourceManager) GetStatus(ctx context.Context, capp cappv1alpha1.Capp
 	}
 	statuses := make([]cappv1alpha1.EventSourceStatus, 0, len(pingSources.Items))
 	for _, ps := range pingSources.Items {
-		condition := kapis.Condition{
-			Type:               kapis.ConditionReady,
-			Status:             corev1.ConditionUnknown,
-			Message:            "Source readiness not known",
-			LastTransitionTime: kapis.VolatileTime{Inner: metav1.Now()},
-		}
-		if sourceCondition := ps.Status.GetCondition(kapis.ConditionReady); sourceCondition != nil {
-			condition.Status = sourceCondition.Status
-			condition.Message = sourceCondition.Message
-			if sourceCondition.Reason != "" {
-				condition.Reason = sourceCondition.Reason
-			}
-			condition.LastTransitionTime = sourceCondition.LastTransitionTime
-		}
-		statuses = append(statuses, cappv1alpha1.EventSourceStatus{
-			Name:      ps.Name,
-			Condition: condition,
-		})
+		statuses = append(statuses, newEventSourceStatus(ps.Name, ps.Status.GetCondition(kapis.ConditionReady)))
 	}
 	sort.Slice(statuses, func(i, j int) bool { return statuses[i].Name < statuses[j].Name })
 	return cappv1alpha1.EventingStatus{EventSources: statuses}, nil

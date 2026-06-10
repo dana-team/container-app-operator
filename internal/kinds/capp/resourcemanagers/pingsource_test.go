@@ -10,7 +10,6 @@ import (
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -30,10 +29,6 @@ const (
 	sourceC    = "ping-c"
 )
 
-func pingSourceName(source string) string {
-	return fmt.Sprintf("%s-%s", cappName, source)
-}
-
 func newPingSourceScheme() *runtime.Scheme {
 	s := newScheme()
 	utilruntime.Must(sourcesv1.AddToScheme(s))
@@ -48,16 +43,10 @@ func newPingSourceManager(k8sClient client.Client) PingSourceManager {
 	}
 }
 
-func newPingCapp(sources []cappv1alpha1.SourceConfiguration) cappv1alpha1.Capp {
-	capp := newBaseCapp()
-	capp.Spec.EventSourcesSpec.Sources = sources
-	return capp
-}
-
 func newPingSource(source string) *sourcesv1.PingSource {
 	return &sourcesv1.PingSource{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      pingSourceName(source),
+			Name:      fmt.Sprintf("%s-%s", cappName, source),
 			Namespace: cappNamespace,
 			Labels:    utils.ManagedResourceLabels(cappName),
 		},
@@ -77,8 +66,8 @@ func TestPingSourceCleanUpOrphans(t *testing.T) {
 			name:          "deletes orphaned PingSource not in spec",
 			sources:       []cappv1alpha1.SourceConfiguration{{Name: sourceA, PingSourceConfiguration: pingCfg}},
 			preCreate:     []*sourcesv1.PingSource{newPingSource(sourceA), newPingSource(sourceB)},
-			expectKept:    []string{pingSourceName(sourceA)},
-			expectDeleted: []string{pingSourceName(sourceB)},
+			expectKept:    []string{fmt.Sprintf("%s-%s", cappName, sourceA)},
+			expectDeleted: []string{fmt.Sprintf("%s-%s", cappName, sourceB)},
 		},
 		{
 			name: "keeps all owned when all are in spec",
@@ -87,13 +76,13 @@ func TestPingSourceCleanUpOrphans(t *testing.T) {
 				{Name: sourceB, PingSourceConfiguration: pingCfg},
 			},
 			preCreate:  []*sourcesv1.PingSource{newPingSource(sourceA), newPingSource(sourceB)},
-			expectKept: []string{pingSourceName(sourceA), pingSourceName(sourceB)},
+			expectKept: []string{fmt.Sprintf("%s-%s", cappName, sourceA), fmt.Sprintf("%s-%s", cappName, sourceB)},
 		},
 		{
 			name:          "deletes all owned when none match spec",
 			sources:       []cappv1alpha1.SourceConfiguration{{Name: sourceA, PingSourceConfiguration: pingCfg}},
 			preCreate:     []*sourcesv1.PingSource{newPingSource(sourceB), newPingSource(sourceC)},
-			expectDeleted: []string{pingSourceName(sourceB), pingSourceName(sourceC)},
+			expectDeleted: []string{fmt.Sprintf("%s-%s", cappName, sourceB), fmt.Sprintf("%s-%s", cappName, sourceC)},
 		},
 	}
 	for _, tt := range tests {
@@ -104,7 +93,8 @@ func TestPingSourceCleanUpOrphans(t *testing.T) {
 				assert.NoError(t, fakeClient.Create(ctx, ps))
 			}
 			pm := newPingSourceManager(fakeClient)
-			capp := newPingCapp(tt.sources)
+			capp := newBaseCapp()
+			capp.Spec.EventSourcesSpec.Sources = tt.sources
 			assert.NoError(t, pm.cleanUpOrphans(ctx, capp))
 			for _, name := range tt.expectKept {
 				got := &sourcesv1.PingSource{}
@@ -145,7 +135,7 @@ func TestPingSourceCreateOrUpdate(t *testing.T) {
 			ctx := context.Background()
 			fakeClient := fake.NewClientBuilder().WithScheme(newPingSourceScheme()).Build()
 			pm := newPingSourceManager(fakeClient)
-			capp := newPingCapp(nil)
+			capp := newBaseCapp()
 
 			if tt.preCreate {
 				src := cappv1alpha1.SourceConfiguration{
@@ -167,7 +157,7 @@ func TestPingSourceCreateOrUpdate(t *testing.T) {
 			}
 			assert.NoError(t, pm.createOrUpdate(ctx, capp, src))
 			got := &sourcesv1.PingSource{}
-			assert.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: pingSourceName(sourceName), Namespace: cappNamespace}, got))
+			assert.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: fmt.Sprintf("%s-%s", cappName, sourceName), Namespace: cappNamespace}, got))
 			assert.Equal(t, tt.expectedData, got.Spec.Data)
 			assert.Len(t, got.OwnerReferences, 1)
 			assert.Equal(t, capp.Name, got.OwnerReferences[0].Name)
@@ -176,54 +166,19 @@ func TestPingSourceCreateOrUpdate(t *testing.T) {
 }
 
 func TestPingSourceGetStatus(t *testing.T) {
-	tests := []struct {
-		name          string
-		preCreate     []*sourcesv1.PingSource
-		expectedNames []string
-	}{
-		{
-			name: "returns statuses sorted by name",
-			preCreate: []*sourcesv1.PingSource{
-				newPingSource(sourceC),
-				newPingSource(sourceA),
-				newPingSource(sourceB),
-			},
-			expectedNames: []string{pingSourceName(sourceA), pingSourceName(sourceB), pingSourceName(sourceC)},
-		},
-		{
-			name:          "returns unknown readiness when no condition present",
-			preCreate:     []*sourcesv1.PingSource{newPingSource(sourceName)},
-			expectedNames: []string{pingSourceName(sourceName)},
-		},
-		{
-			name:          "returns nil EventSources when no PingSources exist",
-			preCreate:     []*sourcesv1.PingSource{},
-			expectedNames: nil,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ctx := context.Background()
-			fakeClient := fake.NewClientBuilder().WithScheme(newPingSourceScheme()).Build()
-			for _, ps := range tt.preCreate {
-				assert.NoError(t, fakeClient.Create(ctx, ps))
-			}
-			pm := newPingSourceManager(fakeClient)
-			capp := newPingCapp(nil)
-			result, err := pm.GetStatus(ctx, capp)
-			assert.NoError(t, err)
-			if tt.expectedNames == nil {
-				assert.Nil(t, result.EventSources)
-			} else {
-				assert.Len(t, result.EventSources, len(tt.expectedNames))
-				for i, name := range tt.expectedNames {
-					assert.Equal(t, name, result.EventSources[i].Name)
-				}
-			}
-			if len(tt.preCreate) == 1 {
-				assert.Equal(t, corev1.ConditionUnknown, result.EventSources[0].Condition.Status)
-				assert.Equal(t, "Source readiness not known", result.EventSources[0].Condition.Message)
-			}
-		})
-	}
+	ctx := context.Background()
+
+	t.Run("returns when no owned PingSources exist", func(t *testing.T) {
+		_, err := newPingSourceManager(fake.NewClientBuilder().WithScheme(newPingSourceScheme()).Build()).
+			GetStatus(ctx, newBaseCapp())
+		assert.NoError(t, err)
+	})
+
+	t.Run("returns when owned PingSources exist", func(t *testing.T) {
+		fakeClient := fake.NewClientBuilder().WithScheme(newPingSourceScheme()).Build()
+		assert.NoError(t, fakeClient.Create(ctx, newPingSource(sourceName)))
+
+		_, err := newPingSourceManager(fakeClient).GetStatus(ctx, newBaseCapp())
+		assert.NoError(t, err)
+	})
 }

@@ -11,6 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/events"
+	kapis "knative.dev/pkg/apis"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -74,4 +75,25 @@ func listManagedResources(
 		return fmt.Errorf("unable to list %ss of Capp %q: %w", kind, capp.Name, err)
 	}
 	return nil
+}
+
+func newEventSourceStatus(name string, ready *kapis.Condition) cappv1alpha1.EventSourceStatus {
+	condition := kapis.Condition{
+		Type:               kapis.ConditionReady,
+		Status:             corev1.ConditionUnknown,
+		Message:            "Source readiness not known",
+		LastTransitionTime: kapis.VolatileTime{Inner: metav1.Now()},
+	}
+	if ready != nil {
+		condition.Status = ready.Status
+		condition.Message = ready.Message
+		if ready.Reason != "" {
+			condition.Reason = ready.Reason
+		}
+		condition.LastTransitionTime = ready.LastTransitionTime
+	}
+	return cappv1alpha1.EventSourceStatus{
+		Name:      name,
+		Condition: condition,
+	}
 }
