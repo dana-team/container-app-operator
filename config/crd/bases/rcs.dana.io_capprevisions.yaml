@@ -8808,6 +8808,58 @@ spec:
                               description: SourceConfiguration defines a single Knative
                                 Eventing source connected to the Capp.
                               properties:
+                                kafkaSourceConfiguration:
+                                  description: Configuration for a KafkaSource.
+                                  properties:
+                                    bootstrapServers:
+                                      description: BootstrapServers is the list of
+                                        Kafka broker addresses.
+                                      items:
+                                        type: string
+                                      minItems: 1
+                                      type: array
+                                    consumerGroup:
+                                      description: |-
+                                        ConsumerGroup is the Kafka consumer group ID.
+                                        Optional; when unset the operator assigns a dedicated group for this source.
+                                      type: string
+                                    consumers:
+                                      description: Consumers is the number of parallel
+                                        KafkaSource consumers for this source.
+                                      format: int32
+                                      minimum: 1
+                                      type: integer
+                                    secretRef:
+                                      description: SecretRef references a Secret in
+                                        the Capp namespace with credentials for the
+                                        Kafka cluster.
+                                      properties:
+                                        name:
+                                          default: ""
+                                          description: |-
+                                            Name of the referent.
+                                            This field is effectively required, but due to backwards compatibility is
+                                            allowed to be empty. Instances of this type with an empty value here are
+                                            almost certainly wrong.
+                                            More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                          type: string
+                                      type: object
+                                      x-kubernetes-map-type: atomic
+                                    topics:
+                                      description: Topics is the list of Kafka topics
+                                        to consume.
+                                      items:
+                                        type: string
+                                      minItems: 1
+                                      type: array
+                                  required:
+                                  - bootstrapServers
+                                  - secretRef
+                                  - topics
+                                  type: object
+                                  x-kubernetes-validations:
+                                  - message: secretRef.name is required
+                                    rule: size(self.secretRef.name) > 0
                                 name:
                                   description: Name is a unique logical identifier
                                     for this source within the Capp.
@@ -8837,6 +8889,11 @@ spec:
                               required:
                               - name
                               type: object
+                              x-kubernetes-validations:
+                              - message: exactly one of pingSourceConfiguration or
+                                  kafkaSourceConfiguration must be set
+                                rule: (has(self.pingSourceConfiguration) && !has(self.kafkaSourceConfiguration))
+                                  || (!has(self.pingSourceConfiguration) && has(self.kafkaSourceConfiguration))
                             type: array
                         type: object
                       logSpec:

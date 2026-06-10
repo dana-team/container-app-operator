@@ -22,17 +22,18 @@ import (
 )
 
 const (
-	cappName               = "test-capp"
-	nsName                 = "test-ns"
-	mountedNFSVolumeName   = "mounted"
-	unmountedNFSVolumeName = "a-data"
-	eventSourceName        = "ping-a"
-	unchangedHostname      = "same.example.com"
-	oldHostname            = "old.example.com"
-	newHostname            = "new.example.com"
-	elasticHost            = "https://elastic.example.com"
-	elasticIndex           = "my-index"
-	missingSecretName      = "missing-secret"
+	cappName                  = "test-capp"
+	nsName                    = "test-ns"
+	mountedNFSVolumeName      = "mounted"
+	unmountedNFSVolumeName    = "a-data"
+	eventSourceName           = "ping-a"
+	unchangedHostname         = "same.example.com"
+	oldHostname               = "old.example.com"
+	newHostname               = "new.example.com"
+	elasticHost               = "https://elastic.example.com"
+	elasticIndex              = "my-index"
+	missingSecretName         = "missing-secret"
+	missingRequiredKeyMessage = "missing required key"
 )
 
 func TestCappValidatorHandle(t *testing.T) {
@@ -218,14 +219,14 @@ func TestValidateSecretHasKeys(t *testing.T) {
 			secretName:      secretName,
 			data:            map[string]string{"wrong-key": "value"},
 			requiredKeys:    []string{elasticSecretKey},
-			wantErrContains: []string{"missing required key", elasticSecretKey},
+			wantErrContains: []string{missingRequiredKeyMessage, elasticSecretKey},
 		},
 		{
 			name:            "rejects when required key is empty",
 			secretName:      secretName,
 			data:            map[string]string{elasticSecretKey: ""},
 			requiredKeys:    []string{elasticSecretKey},
-			wantErrContains: []string{"missing required key", elasticSecretKey},
+			wantErrContains: []string{missingRequiredKeyMessage, elasticSecretKey},
 		},
 	}
 
@@ -444,17 +445,6 @@ func TestValidateEventSources(t *testing.T) {
 			},
 		},
 		{
-			name: "rejects source with no configuration",
-			sources: []cappv1alpha1.SourceConfiguration{
-				{Name: eventSourceName},
-			},
-			wantErrContains: []string{
-				"spec.eventSourcesSpec.sources[0]",
-				eventSourceName,
-				"must specify at least one source configuration",
-			},
-		},
-		{
 			name: "allows source with ping configuration",
 			sources: []cappv1alpha1.SourceConfiguration{
 				{Name: eventSourceName, PingSourceConfiguration: &cappv1alpha1.PingSourceConfiguration{Schedule: "* * * * * *"}},
@@ -482,6 +472,8 @@ func TestValidateEventSources(t *testing.T) {
 		},
 	}
 
+	fakeClient := fake.NewClientBuilder().WithScheme(newScheme(t)).Build()
+
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			capp := cappv1alpha1.Capp{
@@ -492,7 +484,46 @@ func TestValidateEventSources(t *testing.T) {
 				},
 			}
 
-			err := validateEventSources(ctx, capp)
+			err := validateEventSources(ctx, fakeClient, capp, 5)
+			if len(tc.wantErrContains) == 0 {
+				require.NoError(t, err)
+				return
+			}
+
+			require.Error(t, err)
+			for _, s := range tc.wantErrContains {
+				assert.Contains(t, err.Error(), s)
+			}
+		})
+	}
+}
+
+func TestValidateKafkaSourceConsumers(t *testing.T) {
+	tests := []struct {
+		name            string
+		cfg             *cappv1alpha1.KafkaSourceConfiguration
+		maxConsumers    int32
+		wantErrContains []string
+	}{
+		{
+			name:         "allows consumers within capacity",
+			cfg:          &cappv1alpha1.KafkaSourceConfiguration{Consumers: ptrInt32(3)},
+			maxConsumers: 5,
+		},
+		{
+			name:         "rejects consumers above capacity",
+			cfg:          &cappv1alpha1.KafkaSourceConfiguration{Consumers: ptrInt32(6)},
+			maxConsumers: 5,
+			wantErrContains: []string{
+				"consumers",
+				"max kafka consumers",
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			err := validateKafkaSourceConsumers(tc.cfg, tc.maxConsumers)
 			if len(tc.wantErrContains) == 0 {
 				require.NoError(t, err)
 				return
@@ -538,12 +569,17 @@ func newCappConfig() *cappv1alpha1.CappConfig {
 		},
 		Spec: cappv1alpha1.CappConfigSpec{
 			AllowedHostnamePatterns: []cappv1alpha1.HostnamePattern{{Match: ".*"}},
+			MaxKafkaConsumers:       5,
 			AutoscaleConfig: cappv1alpha1.AutoscaleConfig{
 				MinReplicasLimit: 10,
 				MaxScaleDelay:    100,
 			},
 		},
 	}
+}
+
+func ptrInt32(v int32) *int32 {
+	return &v
 }
 
 func newCapp(hostname string) *cappv1alpha1.Capp {

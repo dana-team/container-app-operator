@@ -162,6 +162,7 @@ KNATIVE_RELEASE ?= knative-$(KNATIVE_VERSION)
 KNATIVE_SERVING_BASE ?= https://github.com/knative/serving/releases/download/$(KNATIVE_RELEASE)
 KNATIVE_EVENTING_BASE ?= https://github.com/knative/eventing/releases/download/$(KNATIVE_RELEASE)
 KNATIVE_KOURIER_URL ?= https://github.com/knative-sandbox/net-kourier/releases/download/$(KNATIVE_RELEASE)/kourier.yaml
+KNATIVE_KAFKA_URL ?= https://github.com/knative-extensions/eventing-kafka-broker/releases/download/$(KNATIVE_RELEASE)/eventing-kafka-controller.yaml
 CROSSPLANE_SCC_CRB ?= hack/crossplane-scc-clusterrolebinding.yaml
 PREREQ_HELMFILE ?= charts/capp-prereq-helmfile.gotmpl
 
@@ -200,10 +201,12 @@ install-knative-eventing: ## Install Knative Eventing (CRDs and core)
 	$(KUBECTL) apply -f $(KNATIVE_EVENTING_BASE)/eventing-crds.yaml
 	$(KUBECTL) apply -f $(KNATIVE_EVENTING_BASE)/eventing-core.yaml
 
+.PHONY: install-knative-kafka
+install-knative-kafka: ## Install Knative Kafka controller (KafkaSource)
+	$(KUBECTL) apply -f $(KNATIVE_KAFKA_URL)
+
 .PHONY: install-knative
-install-knative: install-knative-serving install-knative-eventing ## Install Knative prerequisites for Capp
-
-
+install-knative: install-knative-serving install-knative-eventing install-knative-kafka ## Install Knative prerequisites for Capp
 
 .PHONY: install-crossplane-scc
 install-crossplane-scc: ## Install crossplane rbac on the cluster

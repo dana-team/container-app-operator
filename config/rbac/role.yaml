@@ -142,6 +142,7 @@ rules:
 - apiGroups:
   - sources.knative.dev
   resources:
+  - kafkasources
   - pingsources
   verbs:
   - create

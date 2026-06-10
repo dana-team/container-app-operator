@@ -128,6 +128,9 @@ config:
     # -- The global maximum scale delay in seconds (maximum allowed value for scaleDelaySeconds).
     maxScaleDelay: 600
 
+  # -- The maximum allowed KafkaSource consumers per kafka source entry.
+  maxKafkaConsumers: 5
+
   defaultResources:
     # -- Default compute resource limits applied to all Capp workloads.
     limits:
