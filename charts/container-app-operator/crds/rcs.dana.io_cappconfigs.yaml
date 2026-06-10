@@ -65,8 +65,9 @@ spec:
               autoscaleConfig:
                 properties:
                   activationScale:
-                    description: ActivationScale is the default scale.
-                    minimum: 1
+                    description: ActivationScale is the default number of replicas
+                      used when a scale-to-zero Capp scales up from idle.
+                    minimum: 2
                     type: integer
                   concurrency:
                     description: Concurrency is the maximum concurrency of a Capp.
@@ -174,10 +175,29 @@ spec:
                       for Capp Hostnames.
                     minLength: 1
                     type: string
-                  issuer:
-                    description: Issuer defines the certificate issuer.
-                    minLength: 1
-                    type: string
+                  issuerRef:
+                    description: IssuerRef identifies the cert-manager issuer used
+                      to issue certificates.
+                    properties:
+                      group:
+                        description: Group is the API group of the certificate issuer
+                          (e.g. cert-manager.io).
+                        minLength: 1
+                        type: string
+                      kind:
+                        description: Kind is the kind of the certificate issuer (e.g.
+                          ClusterIssuer).
+                        minLength: 1
+                        type: string
+                      name:
+                        description: Name is the name of the certificate issuer.
+                        minLength: 1
+                        type: string
+                    required:
+                    - group
+                    - kind
+                    - name
+                    type: object
                   provider:
                     description: Provider defines the DNS provider.
                     minLength: 1
@@ -191,7 +211,7 @@ spec:
                       rule: self.endsWith('.')
                 required:
                 - cname
-                - issuer
+                - issuerRef
                 - provider
                 - zone
                 type: object

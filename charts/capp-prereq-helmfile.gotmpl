@@ -63,13 +63,3 @@ releases:
     disableValidationOnInstall: true
     needs:
       - cert-manager/cert-manager
-
-  - name: cert-external-issuer
-    namespace: cert-external-issuer-system
-    createNamespace: true
-    chart: oci://ghcr.io/dana-team/helm-charts/cert-external-issuer
-    version: v0.2.1
-    wait: true
-    disableValidationOnInstall: true
-    needs:
-      - cert-manager/cert-manager

@@ -40,6 +40,19 @@ type CappConfigSpec struct {
 	RevisionHistoryLimit int `json:"revisionHistoryLimit,omitempty"`
 }
 
+// IssuerRef identifies a cert-manager issuer by name, kind, and API group.
+type IssuerRef struct {
+	// Name is the name of the certificate issuer.
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name"`
+	// Kind is the kind of the certificate issuer (e.g. ClusterIssuer).
+	// +kubebuilder:validation:MinLength=1
+	Kind string `json:"kind"`
+	// Group is the API group of the certificate issuer (e.g. cert-manager.io).
+	// +kubebuilder:validation:MinLength=1
+	Group string `json:"group"`
+}
+
 type DNSConfig struct {
 	// Zone defines the DNS zone for Capp Hostnames.
 	// +kubebuilder:validation:MinLength=1
@@ -51,9 +64,8 @@ type DNSConfig struct {
 	// Provider defines the DNS provider.
 	// +kubebuilder:validation:MinLength=1
 	Provider string `json:"provider"`
-	// Issuer defines the certificate issuer.
-	// +kubebuilder:validation:MinLength=1
-	Issuer string `json:"issuer"`
+	// IssuerRef identifies the cert-manager issuer used to issue certificates.
+	IssuerRef IssuerRef `json:"issuerRef"`
 }
 
 type AutoscaleConfig struct {

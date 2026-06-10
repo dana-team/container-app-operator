@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	certv1alpha1 "github.com/dana-team/cert-external-issuer/api/v1alpha1"
-
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
@@ -24,7 +22,6 @@ const (
 	eventCappCertificateCreationFailed = "CertificateCreationFailed"
 	eventCappCertificateCreated        = "CertificateCreated"
 	PrivateKeySize                     = 4096
-	clusterIssuerKind                  = "ClusterIssuer"
 	certificateUIDSecretLabelKey       = "networking.internal.knative.dev/certificate-uid"
 )
 
@@ -60,9 +57,9 @@ func (c CertificateManager) prepareResource(ctx context.Context, capp cappv1alph
 			},
 			IsCA: false,
 			IssuerRef: cmmeta.IssuerReference{
-				Name:  dnsConfig.Issuer,
-				Kind:  clusterIssuerKind,
-				Group: certv1alpha1.GroupVersion.Group,
+				Name:  dnsConfig.IssuerRef.Name,
+				Kind:  dnsConfig.IssuerRef.Kind,
+				Group: dnsConfig.IssuerRef.Group,
 			},
 			SecretName: secretName,
 			SecretTemplate: &cmapi.CertificateSecretTemplate{

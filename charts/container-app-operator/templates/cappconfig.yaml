@@ -18,7 +18,10 @@ spec:
     zone: "{{ .Values.config.dnsConfig.zone }}"
     cname: "{{ .Values.config.dnsConfig.cname }}"
     provider: "{{ .Values.config.dnsConfig.provider }}"
-    issuer: "{{ .Values.config.dnsConfig.issuer }}"
+    issuerRef:
+      name: "{{ .Values.config.dnsConfig.issuerRef.name }}"
+      kind: "{{ .Values.config.dnsConfig.issuerRef.kind }}"
+      group: "{{ .Values.config.dnsConfig.issuerRef.group }}"
   defaultResources:
     requests:
       cpu: "{{ .Values.config.defaultResources.requests.cpu }}"
