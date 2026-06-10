@@ -164,21 +164,3 @@ func TestPingSourceCreateOrUpdate(t *testing.T) {
 		})
 	}
 }
-
-func TestPingSourceGetStatus(t *testing.T) {
-	ctx := context.Background()
-
-	t.Run("returns when no owned PingSources exist", func(t *testing.T) {
-		_, err := newPingSourceManager(fake.NewClientBuilder().WithScheme(newPingSourceScheme()).Build()).
-			GetStatus(ctx, newBaseCapp())
-		assert.NoError(t, err)
-	})
-
-	t.Run("returns when owned PingSources exist", func(t *testing.T) {
-		fakeClient := fake.NewClientBuilder().WithScheme(newPingSourceScheme()).Build()
-		assert.NoError(t, fakeClient.Create(ctx, newPingSource(sourceName)))
-
-		_, err := newPingSourceManager(fakeClient).GetStatus(ctx, newBaseCapp())
-		assert.NoError(t, err)
-	})
-}

@@ -162,6 +162,7 @@ KNATIVE_URL ?= https://github.com/knative-extensions/kn-plugin-quickstart/releas
 KNATIVE_HPA_URL ?= https://github.com/knative/serving/releases/download/knative-$(KNATIVE_VERSION)/serving-hpa.yaml
 KNATIVE_EVENTING_CRDS_URL ?= https://github.com/knative/eventing/releases/download/knative-v1.22.0/eventing-crds.yaml
 KNATIVE_EVENTING_CORE_URL ?= https://github.com/knative/eventing/releases/download/knative-v1.22.0/eventing-core.yaml
+KNATIVE_KAFKA_CONTROLLER_URL ?= https://github.com/knative-extensions/eventing-kafka-broker/releases/download/knative-v1.22.0/eventing-kafka-controller.yaml
 CROSSPLANE_SCC_CRB ?= hack/crossplane-scc-clusterrolebinding.yaml
 PREREQ_HELMFILE ?= charts/capp-prereq-helmfile.gotmpl
 
@@ -190,6 +191,7 @@ install-knative: ## Install knative controller on the kind cluster
 	$(KUBECTL) apply -f $(KNATIVE_HPA_URL)
 	$(KUBECTL) apply -f $(KNATIVE_EVENTING_CRDS_URL)
 	$(KUBECTL) apply -f $(KNATIVE_EVENTING_CORE_URL)
+	$(KUBECTL) apply -f $(KNATIVE_KAFKA_CONTROLLER_URL)
 
 
 

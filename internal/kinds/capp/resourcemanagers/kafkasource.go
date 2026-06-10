@@ -4,7 +4,6 @@ import (
 	"cmp"
 	"context"
 	"fmt"
-	"sort"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/resourceclient"
@@ -17,13 +16,13 @@ import (
 	bindingsv1 "knative.dev/eventing-kafka-broker/control-plane/pkg/apis/bindings/v1"
 	kafkasourcev1 "knative.dev/eventing-kafka-broker/control-plane/pkg/apis/sources/v1"
 	kafkasecurity "knative.dev/eventing-kafka-broker/control-plane/pkg/security"
-	kapis "knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	servingv1 "knative.dev/serving/pkg/apis/serving/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
+	KafkaSource                    = "kafkaSource"
 	eventKafkaSourceCreationFailed = "KafkaSourceCreationFailed"
 	eventKafkaSourceCreated        = "KafkaSourceCreated"
 )
@@ -70,22 +69,6 @@ func (k KafkaSourceManager) CleanUp(ctx context.Context, capp cappv1alpha1.Capp)
 		}
 	}
 	return nil
-}
-
-func (k KafkaSourceManager) GetStatus(ctx context.Context, capp cappv1alpha1.Capp) (cappv1alpha1.EventingStatus, error) {
-	kafkaSources, err := k.getKafkaSources(ctx, capp)
-	if err != nil {
-		return cappv1alpha1.EventingStatus{}, err
-	}
-	if len(kafkaSources.Items) == 0 {
-		return cappv1alpha1.EventingStatus{}, nil
-	}
-	statuses := make([]cappv1alpha1.EventSourceStatus, 0, len(kafkaSources.Items))
-	for _, ks := range kafkaSources.Items {
-		statuses = append(statuses, newEventSourceStatus(ks.Name, ks.Status.GetCondition(kapis.ConditionReady)))
-	}
-	sort.Slice(statuses, func(i, j int) bool { return statuses[i].Name < statuses[j].Name })
-	return cappv1alpha1.EventingStatus{EventSources: statuses}, nil
 }
 
 func (k KafkaSourceManager) createOrUpdate(ctx context.Context, capp cappv1alpha1.Capp, source cappv1alpha1.SourceConfiguration) error {

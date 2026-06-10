@@ -214,25 +214,3 @@ func TestKafkaSourceCleanUp(t *testing.T) {
 		}
 	})
 }
-
-func TestKafkaSourceGetStatus(t *testing.T) {
-	ctx := context.Background()
-	tests := []struct {
-		name      string
-		preCreate bool
-	}{
-		{name: "returns when no owned KafkaSources exist"},
-		{name: "returns when owned KafkaSources exist", preCreate: true},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			fakeClient := fake.NewClientBuilder().WithScheme(newKafkaSourceScheme()).Build()
-			if tt.preCreate {
-				require.NoError(t, fakeClient.Create(ctx, newKafkaSource(ordersSource)))
-			}
-			_, err := newKafkaSourceManager(fakeClient).GetStatus(ctx, newBaseCapp())
-			require.NoError(t, err)
-		})
-	}
-}
