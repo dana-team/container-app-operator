@@ -90,8 +90,10 @@ func (c *CappValidator) handle(ctx context.Context, operation admissionv1.Operat
 		}
 	}
 
-	if err := validatePasswordSecret(ctx, c.Client, capp); err != nil {
-		return admission.Denied(err.Error())
+	if capp.Spec.LogSpec.PasswordSecret != "" {
+		if err := validateSecretHasKeys(ctx, c.Client, capp.Namespace, capp.Spec.LogSpec.PasswordSecret, []string{elasticSecretKey}); err != nil {
+			return admission.Denied(err.Error())
+		}
 	}
 
 	if err := validateNFSVolumeMounts(capp); err != nil {
@@ -159,13 +161,6 @@ func validateNFSVolumeMounts(capp cappv1alpha1.Capp) error {
 	return fmt.Errorf("invalid nfsVolumes: volumes [%s] must be mounted by at least one container", strings.Join(missingVolumeNames, ", "))
 }
 
-func validatePasswordSecret(ctx context.Context, r client.Reader, capp cappv1alpha1.Capp) error {
-	if capp.Spec.LogSpec.PasswordSecret == "" {
-		return nil
-	}
-	return validateSecretHasKeys(ctx, r, capp.Namespace, capp.Spec.LogSpec.PasswordSecret, []string{elasticSecretKey})
-}
-
 func validateSecretHasKeys(ctx context.Context, r client.Reader, namespace, name string, requiredKeys []string) error {
 	secret := &corev1.Secret{}
 	key := types.NamespacedName{Namespace: namespace, Name: name}
@@ -177,9 +172,13 @@ func validateSecretHasKeys(ctx context.Context, r client.Reader, namespace, name
 	}
 
 	for _, k := range requiredKeys {
-		if _, ok := secret.Data[k]; !ok {
-			return fmt.Errorf("secret %q is missing required key %q", name, k)
+		if value, ok := secret.Data[k]; ok && len(value) > 0 {
+			continue
 		}
+		if value, ok := secret.StringData[k]; ok && value != "" {
+			continue
+		}
+		return fmt.Errorf("secret %q is missing required key %q", name, k)
 	}
 
 	return nil
