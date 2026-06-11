@@ -157,16 +157,16 @@ undeploy: kustomize ## Undeploy controller from the K8s cluster specified in ~/.
 	$(KUSTOMIZE) build config/default | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
 
 ##@ Capp prerequisites
-KNATIVE_VERSION ?= v1.17.0
-KNATIVE_URL ?= https://github.com/knative-extensions/kn-plugin-quickstart/releases/download/knative-$(KNATIVE_VERSION)/kn-quickstart-linux-amd64
-KNATIVE_HPA_URL ?= https://github.com/knative/serving/releases/download/knative-$(KNATIVE_VERSION)/serving-hpa.yaml
-KNATIVE_EVENTING_CRDS_URL ?= https://github.com/knative/eventing/releases/download/knative-v1.22.0/eventing-crds.yaml
-KNATIVE_EVENTING_CORE_URL ?= https://github.com/knative/eventing/releases/download/knative-v1.22.0/eventing-core.yaml
+KNATIVE_VERSION ?= v1.22.0
+KNATIVE_RELEASE ?= knative-$(KNATIVE_VERSION)
+KNATIVE_SERVING_BASE ?= https://github.com/knative/serving/releases/download/$(KNATIVE_RELEASE)
+KNATIVE_EVENTING_BASE ?= https://github.com/knative/eventing/releases/download/$(KNATIVE_RELEASE)
+KNATIVE_KOURIER_URL ?= https://github.com/knative-sandbox/net-kourier/releases/download/$(KNATIVE_RELEASE)/kourier.yaml
 CROSSPLANE_SCC_CRB ?= hack/crossplane-scc-clusterrolebinding.yaml
 PREREQ_HELMFILE ?= charts/capp-prereq-helmfile.gotmpl
 
 .PHONY: prereq
-prereq: install install-knative enable-nfs-knative install-prereq-helmfile ## Install prerequisites for dev (CRDs, Knative, helmfile).
+prereq: install install-knative install-prereq-helmfile configure-knative ## Install prerequisites for dev (CRDs, Knative, helmfile).
 
 .PHONY: prereq-openshift
 prereq-openshift: enable-nfs-knative install-crossplane-scc install-prereq-helmfile ## Install prerequisites on OpenShift (Serverless already installed).
@@ -179,17 +179,29 @@ uninstall-prereq-openshift: uninstall-prereq-helmfile uninstall-crossplane-scc #
 
 .PHONY: enable-nfs-knative
 enable-nfs-knative: ## Enable NFS for Knative
-	kubectl patch configmap config-features -n knative-serving -p '{"data":{"kubernetes.podspec-persistent-volume-claim":"enabled", "kubernetes.podspec-persistent-volume-write":"enabled"}}'
+	$(KUBECTL) patch configmap config-features -n knative-serving --type merge \
+		-p '{"data":{"kubernetes.podspec-persistent-volume-claim":"enabled", "kubernetes.podspec-persistent-volume-write":"enabled"}}'
+
+.PHONY: configure-knative
+configure-knative: ## Patch Knative config after install (run once webhooks are up)
+	$(KUBECTL) patch configmap/config-network -n knative-serving --type merge \
+		--patch '{"data":{"ingress.class":"kourier.ingress.networking.knative.dev"}}'
+	$(MAKE) enable-nfs-knative
+
+.PHONY: install-knative-serving
+install-knative-serving: ## Install Knative Serving (CRDs, core, Kourier, HPA)
+	$(KUBECTL) apply -f $(KNATIVE_SERVING_BASE)/serving-crds.yaml
+	$(KUBECTL) apply -f $(KNATIVE_SERVING_BASE)/serving-core.yaml
+	$(KUBECTL) apply -f $(KNATIVE_KOURIER_URL)
+	$(KUBECTL) apply -f $(KNATIVE_SERVING_BASE)/serving-hpa.yaml
+
+.PHONY: install-knative-eventing
+install-knative-eventing: ## Install Knative Eventing (CRDs and core)
+	$(KUBECTL) apply -f $(KNATIVE_EVENTING_BASE)/eventing-crds.yaml
+	$(KUBECTL) apply -f $(KNATIVE_EVENTING_BASE)/eventing-core.yaml
 
 .PHONY: install-knative
-install-knative: ## Install knative controller on the kind cluster
-	wget -O $(LOCALBIN)/kn-quickstart $(KNATIVE_URL)
-	chmod +x $(LOCALBIN)/kn-quickstart
-	@CLUSTER_NAME=$$(kubectl config current-context | awk -F '-' '{ print $$2}'); \
-	(yes no || true) | $(LOCALBIN)/kn-quickstart kind -n $$CLUSTER_NAME --install-serving 
-	$(KUBECTL) apply -f $(KNATIVE_HPA_URL)
-	$(KUBECTL) apply -f $(KNATIVE_EVENTING_CRDS_URL)
-	$(KUBECTL) apply -f $(KNATIVE_EVENTING_CORE_URL)
+install-knative: install-knative-serving install-knative-eventing ## Install Knative prerequisites for Capp
 
 
 
