@@ -3,19 +3,16 @@ package resourcemanagers
 import (
 	"context"
 	"fmt"
-	"sort"
 
 	"github.com/cloudevents/sdk-go/v2/event"
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/resourceclient"
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/events"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
-	kapis "knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	servingv1 "knative.dev/serving/pkg/apis/serving/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -33,7 +30,12 @@ type PingSourceManager struct {
 }
 
 func (p PingSourceManager) IsRequired(capp cappv1alpha1.Capp) bool {
-	return len(capp.Spec.EventSourcesSpec.Sources) > 0
+	for _, source := range capp.Spec.EventSourcesSpec.Sources {
+		if source.PingSourceConfiguration != nil {
+			return true
+		}
+	}
+	return false
 }
 
 func (p PingSourceManager) Manage(ctx context.Context, capp cappv1alpha1.Capp) error {
@@ -64,39 +66,6 @@ func (p PingSourceManager) CleanUp(ctx context.Context, capp cappv1alpha1.Capp) 
 		}
 	}
 	return nil
-}
-
-func (p PingSourceManager) GetStatus(ctx context.Context, capp cappv1alpha1.Capp) (cappv1alpha1.EventingStatus, error) {
-	pingSources, err := p.getPingSources(ctx, capp)
-	if err != nil {
-		return cappv1alpha1.EventingStatus{}, err
-	}
-	if len(pingSources.Items) == 0 {
-		return cappv1alpha1.EventingStatus{}, nil
-	}
-	statuses := make([]cappv1alpha1.EventSourceStatus, 0, len(pingSources.Items))
-	for _, ps := range pingSources.Items {
-		condition := kapis.Condition{
-			Type:               kapis.ConditionReady,
-			Status:             corev1.ConditionUnknown,
-			Message:            "Source readiness not known",
-			LastTransitionTime: kapis.VolatileTime{Inner: metav1.Now()},
-		}
-		if sourceCondition := ps.Status.GetCondition(kapis.ConditionReady); sourceCondition != nil {
-			condition.Status = sourceCondition.Status
-			condition.Message = sourceCondition.Message
-			if sourceCondition.Reason != "" {
-				condition.Reason = sourceCondition.Reason
-			}
-			condition.LastTransitionTime = sourceCondition.LastTransitionTime
-		}
-		statuses = append(statuses, cappv1alpha1.EventSourceStatus{
-			Name:      ps.Name,
-			Condition: condition,
-		})
-	}
-	sort.Slice(statuses, func(i, j int) bool { return statuses[i].Name < statuses[j].Name })
-	return cappv1alpha1.EventingStatus{EventSources: statuses}, nil
 }
 
 func (p PingSourceManager) createOrUpdate(ctx context.Context, capp cappv1alpha1.Capp, source cappv1alpha1.SourceConfiguration) error {

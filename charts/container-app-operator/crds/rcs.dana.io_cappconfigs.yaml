@@ -215,6 +215,13 @@ spec:
                 - provider
                 - zone
                 type: object
+              maxKafkaConsumers:
+                default: 5
+                description: MaxKafkaConsumers is the maximum allowed KafkaSource
+                  consumers per kafka source entry.
+                format: int32
+                minimum: 1
+                type: integer
               revisionHistoryLimit:
                 default: 10
                 description: RevisionHistoryLimit defines how many CappRevisions will

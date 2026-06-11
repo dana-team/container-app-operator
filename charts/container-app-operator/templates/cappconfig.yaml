@@ -14,6 +14,7 @@ spec:
     activationScale: {{ .Values.config.autoscaleConfig.activationScale }}
     minReplicasLimit: {{ .Values.config.autoscaleConfig.minReplicasLimit }}
     maxScaleDelay: {{ .Values.config.autoscaleConfig.maxScaleDelay }}
+  maxKafkaConsumers: {{ .Values.config.maxKafkaConsumers }}
   dnsConfig:
     zone: "{{ .Values.config.dnsConfig.zone }}"
     cname: "{{ .Values.config.dnsConfig.cname }}"

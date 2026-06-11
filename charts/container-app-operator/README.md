@@ -8,7 +8,7 @@ A Helm chart for Kubernetes
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| config | object | `{"allowedHostnamePatterns":[{"explanation":"any hostname","match":".*"}],"autoscaleConfig":{"activationScale":3,"concurrency":10,"cpu":80,"maxScaleDelay":600,"memory":70,"minReplicasLimit":10,"rps":200},"defaultResources":{"limits":{"cpu":"200m","memory":"200Mi"},"requests":{"cpu":"100m","memory":"100Mi"}},"dnsConfig":{"cname":"ingress.capp-zone.com.","issuerRef":{"group":"cert-manager.io","kind":"ClusterIssuer","name":"cert-issuer"},"provider":"dns-default","zone":"capp-zone.com."},"enabled":true,"revisionHistoryLimit":10}` | Configuration for CappConfig CRD |
+| config | object | `{"allowedHostnamePatterns":[{"explanation":"any hostname","match":".*"}],"autoscaleConfig":{"activationScale":3,"concurrency":10,"cpu":80,"maxScaleDelay":600,"memory":70,"minReplicasLimit":10,"rps":200},"defaultResources":{"limits":{"cpu":"200m","memory":"200Mi"},"requests":{"cpu":"100m","memory":"100Mi"}},"dnsConfig":{"cname":"ingress.capp-zone.com.","issuerRef":{"group":"cert-manager.io","kind":"ClusterIssuer","name":"cert-issuer"},"provider":"dns-default","zone":"capp-zone.com."},"enabled":true,"maxKafkaConsumers":5,"revisionHistoryLimit":10}` | Configuration for CappConfig CRD |
 | config.allowedHostnamePatterns[0] | object | `{"explanation":"any hostname","match":".*"}` | A list of hostname patterns that Capp workload hostnames must match. Each entry has a required `pattern` (regex) and an optional `explanation` shown in webhook error messages. |
 | config.autoscaleConfig.activationScale | int | `3` | The default activation scale (minimum replicas before scaling starts). |
 | config.autoscaleConfig.concurrency | int | `10` | The default concurrency limit for autoscaling. |
@@ -29,6 +29,7 @@ A Helm chart for Kubernetes
 | config.dnsConfig.provider | string | `"dns-default"` | The name of the Crossplane DNS provider config. |
 | config.dnsConfig.zone | string | `"capp-zone.com."` | The DNS zone for the application. |
 | config.enabled | bool | `true` | Enable or disable creation of the CappConfig resource by Helm. |
+| config.maxKafkaConsumers | int | `5` | The maximum allowed KafkaSource consumers per kafka source entry. |
 | controllerManager.manager.args | list | `["--metrics-bind-address=:8443","--leader-elect"]` | Arguments passed to the controller manager container. |
 | controllerManager.manager.containerSecurityContext.allowPrivilegeEscalation | bool | `false` | Whether a process can gain more privileges than its parent process. |
 | controllerManager.manager.containerSecurityContext.capabilities | object | `{"drop":["ALL"]}` | Linux capabilities to drop from the container for improved security. |
