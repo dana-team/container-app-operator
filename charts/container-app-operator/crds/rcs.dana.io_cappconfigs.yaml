@@ -65,8 +65,9 @@ spec:
               autoscaleConfig:
                 properties:
                   activationScale:
-                    description: ActivationScale is the default scale.
-                    minimum: 1
+                    description: ActivationScale is the default number of replicas
+                      used when a scale-to-zero Capp scales up from idle.
+                    minimum: 2
                     type: integer
                   concurrency:
                     description: Concurrency is the maximum concurrency of a Capp.
