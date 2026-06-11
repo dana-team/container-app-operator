@@ -22,9 +22,7 @@ The `container-app-operator` project can work as a standalone solution, but is m
 
 4. The `provider-dns` is a `Crossplane Provider` which reconciles the DNS Record CRs in the cluster and creates DNS Records in the pre-configured DNS provider (bring your own DNS provider).
 
-5. The `cert-external-issuer` reconciles `Certificate` CRs in the cluster and creates certificates using the Cert API.
-
-6. The `logging-operator controller` reconciles the `Flow` and `Output` CRs in the cluster and collects logs from the pods' `stdout` and sends them to a pre-existing `Elasticsearch` index (bring your own indexes).
+5. The `logging-operator controller` reconciles the `Flow` and `Output` CRs in the cluster and collects logs from the pods' `stdout` and sends them to a pre-existing `Elasticsearch` index (bring your own indexes).
 
 
 ## Feature Highlights
@@ -53,13 +51,11 @@ The `container-app-operator` project can work as a standalone solution, but is m
 
 4. `provider-dns` and `Crossplane` installed on the cluster (you can [follow the instructions](https://github.com/dana-team/provider-dns) for the provider and [for Crossplane](https://docs.crossplane.io/latest/software/install/)).
 
-5. `certificate-external-issuer` installed on the cluster (you can [use the `install.yaml`](https://github.com/dana-team/cert-external-issuer/releases)).
+5. `logging-operator` installed on the cluster (you can [use the Helm Chart](https://kube-logging.dev/docs/install/#deploy-logging-operator-with-helm)).
 
-6. `logging-operator` installed on the cluster (you can [use the Helm Chart](https://kube-logging.dev/docs/install/#deploy-logging-operator-with-helm)).
+6. `knative-eventing` installed on the cluster (required for event sources; you can [use the quickstart](https://knative.dev/docs/getting-started/quickstart-install/)).
 
-7. `knative-eventing` installed on the cluster (required for event sources; you can [use the quickstart](https://knative.dev/docs/getting-started/quickstart-install/)).
-
-8. `prometheus-operator` installed on the cluster (optional, for metrics).
+7. `prometheus-operator` installed on the cluster (optional, for metrics).
 
 Everything can also be installed by running:
 
@@ -165,7 +161,10 @@ spec:
     zone: "capp-zone.com."
     cname: "ingress.capp-zone.com."
     provider: "dns-default"
-    issuer: "cert-issuer"
+    issuerRef:
+      name: "cert-issuer"
+      kind: "ClusterIssuer"
+      group: "cert-manager.io"
   defaultResources:
     requests:
       cpu: "250m"

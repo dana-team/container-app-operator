@@ -104,8 +104,13 @@ config:
     cname: ingress.capp-zone.com.
     # -- The name of the Crossplane DNS provider config.
     provider: dns-default
-    # -- The name of the Certificate External Issuer name.
-    issuer: cert-issuer
+    issuerRef:
+      # -- The name of the certificate issuer.
+      name: cert-issuer
+      # -- The kind of the certificate issuer (e.g. ClusterIssuer).
+      kind: ClusterIssuer
+      # -- The API group of the certificate issuer (e.g. cert-manager.io).
+      group: cert-manager.io
 
   autoscaleConfig:
     # -- The default Requests Per Second (RPS) threshold for autoscaling.
