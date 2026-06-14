@@ -38,6 +38,11 @@ type CappConfigSpec struct {
 	// +kubebuilder:default:=10
 	// +kubebuilder:validation:Minimum=1
 	RevisionHistoryLimit int `json:"revisionHistoryLimit,omitempty"`
+
+	// MaxKafkaConsumers is the maximum allowed KafkaSource consumers per kafka source entry.
+	// +kubebuilder:default:=5
+	// +kubebuilder:validation:Minimum=1
+	MaxKafkaConsumers int32 `json:"maxKafkaConsumers,omitempty"`
 }
 
 // IssuerRef identifies a cert-manager issuer by name, kind, and API group.

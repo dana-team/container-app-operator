@@ -69,13 +69,11 @@ func SyncStatus(ctx context.Context, capp cappv1alpha1.Capp, log logr.Logger, r 
 	}
 	cappObject.Status.VolumesStatus = volumesStatus
 
-	if psm, ok := resourceManagers[rmanagers.PingSource].(rmanagers.PingSourceManager); ok {
-		eventingStatus, err := psm.GetStatus(ctx, capp)
-		if err != nil {
-			return err
-		}
-		cappObject.Status.EventingStatus = eventingStatus
+	eventingStatus, err := buildEventingStatus(ctx, r, capp)
+	if err != nil {
+		return err
 	}
+	cappObject.Status.EventingStatus = eventingStatus
 
 	CreateStateStatus(&cappObject.Status.StateStatus, capp.Spec.State)
 
@@ -130,7 +128,8 @@ func computeReadyCondition(status *cappv1alpha1.CappStatus, capp cappv1alpha1.Ca
 		}
 	}
 
-	if resourceManagers[rmanagers.PingSource].IsRequired(capp) {
+	if resourceManagers[rmanagers.PingSource].IsRequired(capp) ||
+		resourceManagers[rmanagers.KafkaSource].IsRequired(capp) {
 		if reason, msg, ok := eventingNotReady(status.EventingStatus); !ok {
 			return readyFalse(reason, msg)
 		}

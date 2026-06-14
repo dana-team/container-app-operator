@@ -16,6 +16,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
+	kafkasecurity "knative.dev/eventing-kafka-broker/control-plane/pkg/security"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	servingv1 "knative.dev/serving/pkg/apis/serving/v1"
@@ -37,7 +38,7 @@ type CappValidator struct {
 	Log     logr.Logger
 }
 
-// +kubebuilder:webhook:path=/validate-capp,mutating=false,sideEffects=None,failurePolicy=fail,groups="rcs.dana.io",resources=capps,verbs=create;update,versions=v1alpha1,name=capp.validate.rcs.dana.io,admissionReviewVersions=v1;v1beta1
+// +kubebuilder:webhook:path=/validate-capp,mutating=false,sideEffects=None,failurePolicy=fail,groups=rcs.dana.io,resources=capps,verbs=create;update,versions=v1alpha1,name=capp.validate.rcs.dana.io,admissionReviewVersions=v1;v1beta1
 
 func (c *CappValidator) Handle(ctx context.Context, req admission.Request) admission.Response {
 	logger := log.FromContext(ctx).WithValues("webhook", "capp Webhook", "Name", req.Name)
@@ -100,7 +101,7 @@ func (c *CappValidator) handle(ctx context.Context, operation admissionv1.Operat
 		return admission.Denied(err.Error())
 	}
 
-	if err := validateEventSources(ctx, capp); err != nil {
+	if err := validateEventSources(ctx, c.Client, capp, config.Spec.MaxKafkaConsumers); err != nil {
 		return admission.Denied(err.Error())
 	}
 
@@ -184,7 +185,7 @@ func validateSecretHasKeys(ctx context.Context, r client.Reader, namespace, name
 	return nil
 }
 
-func validateEventSources(ctx context.Context, capp cappv1alpha1.Capp) error {
+func validateEventSources(ctx context.Context, r client.Reader, capp cappv1alpha1.Capp, maxKafkaConsumers int32) error {
 	seen := make(map[string]struct{})
 	for i, src := range capp.Spec.EventSourcesSpec.Sources {
 		if _, dup := seen[src.Name]; dup {
@@ -192,12 +193,19 @@ func validateEventSources(ctx context.Context, capp cappv1alpha1.Capp) error {
 		}
 		seen[src.Name] = struct{}{}
 
-		if src.PingSourceConfiguration != nil {
+		switch {
+		case src.PingSourceConfiguration != nil:
 			if err := validatePingSourceConfiguration(ctx, src.PingSourceConfiguration); err != nil {
 				return fmt.Errorf("%s[%d]: %w", eventSourcePath, i, err)
 			}
-		} else {
-			return fmt.Errorf("%s[%d]: source %q must specify at least one source configuration (e.g. pingSourceConfiguration)", eventSourcePath, i, src.Name)
+		case src.KafkaSourceConfiguration != nil:
+			requiredKeys := []string{kafkasecurity.SaslUserKey, kafkasecurity.SaslPasswordKey, kafkasecurity.SaslMechanismKey}
+			if err := validateSecretHasKeys(ctx, r, capp.Namespace, src.KafkaSourceConfiguration.SecretRef.Name, requiredKeys); err != nil {
+				return fmt.Errorf("%s[%d]: %w", eventSourcePath, i, err)
+			}
+			if err := validateKafkaSourceConsumers(src.KafkaSourceConfiguration, maxKafkaConsumers); err != nil {
+				return fmt.Errorf("%s[%d]: %w", eventSourcePath, i, err)
+			}
 		}
 
 		if src.URI != nil {
@@ -205,6 +213,16 @@ func validateEventSources(ctx context.Context, capp cappv1alpha1.Capp) error {
 				return fmt.Errorf("%s[%d].uri: %w", eventSourcePath, i, err)
 			}
 		}
+	}
+	return nil
+}
+
+func validateKafkaSourceConsumers(cfg *cappv1alpha1.KafkaSourceConfiguration, maxKafkaConsumers int32) error {
+	if cfg.Consumers == nil {
+		return nil
+	}
+	if *cfg.Consumers > maxKafkaConsumers {
+		return fmt.Errorf("invalid consumers %d: must be less than or equal to global max kafka consumers %d", *cfg.Consumers, maxKafkaConsumers)
 	}
 	return nil
 }
