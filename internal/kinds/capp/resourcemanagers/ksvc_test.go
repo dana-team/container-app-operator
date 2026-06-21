@@ -65,7 +65,7 @@ func newKsvcClient(objects ...client.Object) client.Client {
 		Build()
 }
 
-func TestKnativeServiceManagerPrepareResource(t *testing.T) {
+func TestKnativeServicePrepareResource(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("filters internal annotations and propagates allowed metadata", func(t *testing.T) {
@@ -159,7 +159,7 @@ func TestKnativeServiceManagerPrepareResource(t *testing.T) {
 	})
 }
 
-func TestKnativeServiceManagerManage(t *testing.T) {
+func TestKnativeServiceManage(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("creates ksvc with owner reference when enabled", func(t *testing.T) {
@@ -243,7 +243,7 @@ func TestKnativeServiceManagerManage(t *testing.T) {
 	})
 }
 
-func TestKnativeServiceManagerCleanUp(t *testing.T) {
+func TestKnativeServiceCleanUp(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("succeeds when ksvc does not exist", func(t *testing.T) {
