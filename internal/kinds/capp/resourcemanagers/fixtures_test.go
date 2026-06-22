@@ -14,6 +14,14 @@ const (
 	cappName      = "my-capp"
 	cappNamespace = "my-ns"
 	testCappUID   = types.UID("test-uid")
+
+	testHostname    = "myapp"
+	testZone        = "example.com."
+	testCNAME       = "ingress.example.com"
+	testProvider    = "test-provider"
+	testIssuerName  = "test-issuer"
+	testIssuerKind  = "ClusterIssuer"
+	testIssuerGroup = "cert-manager.io"
 )
 
 func newScheme() *runtime.Scheme {
@@ -49,4 +57,25 @@ func newCappConfig() *cappv1alpha1.CappConfig {
 			},
 		},
 	}
+}
+
+func newCappConfigWithDNS() *cappv1alpha1.CappConfig {
+	cfg := newCappConfig()
+	cfg.Spec.DNSConfig = cappv1alpha1.DNSConfig{
+		Zone:     testZone,
+		CNAME:    testCNAME,
+		Provider: testProvider,
+		IssuerRef: cappv1alpha1.IssuerRef{
+			Name:  testIssuerName,
+			Kind:  testIssuerKind,
+			Group: testIssuerGroup,
+		},
+	}
+	return cfg
+}
+
+func newCappWithHostname() cappv1alpha1.Capp {
+	capp := newBaseCapp()
+	capp.Spec.RouteSpec.Hostname = testHostname
+	return capp
 }
