@@ -3,6 +3,7 @@ package resourcemanagers
 import (
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
+	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -13,7 +14,10 @@ import (
 const (
 	cappName      = "my-capp"
 	cappNamespace = "my-ns"
-	testCappUID   = types.UID("test-uid")
+
+	elasticHost        = "https://elastic.example:9200/_bulk"
+	elasticIndex       = "my-index"
+	unsupportedLogType = "splunk"
 )
 
 func newScheme() *runtime.Scheme {
@@ -28,7 +32,7 @@ func newBaseCapp() cappv1alpha1.Capp {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cappName,
 			Namespace: cappNamespace,
-			UID:       testCappUID,
+			UID:       types.UID("test-uid"),
 		},
 	}
 }
@@ -49,4 +53,23 @@ func newCappConfig() *cappv1alpha1.CappConfig {
 			},
 		},
 	}
+}
+
+func newSyslogNGScheme() *runtime.Scheme {
+	s := newScheme()
+	utilruntime.Must(loggingv1beta1.AddToScheme(s))
+	return s
+}
+
+func newLogSpec(logType cappv1alpha1.LogType) cappv1alpha1.LogSpec {
+	spec := cappv1alpha1.LogSpec{
+		Type:           logType,
+		Host:           elasticHost,
+		User:           "elastic-user",
+		PasswordSecret: "elastic-creds",
+	}
+	if logType == cappv1alpha1.LogTypeElastic {
+		spec.Index = elasticIndex
+	}
+	return spec
 }
