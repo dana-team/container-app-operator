@@ -337,7 +337,7 @@ func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		rmanagers.KnativeServing: rmanagers.KnativeServiceManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},
 		rmanagers.DNSRecord:      rmanagers.DNSRecordManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},
 		rmanagers.Certificate:    rmanagers.CertificateManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},
-		rmanagers.DomainMapping:  rmanagers.KnativeDomainMappingManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},
+		rmanagers.DomainMapping:  rmanagers.DomainMappingManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},
 		rmanagers.SyslogNGFlow:   rmanagers.SyslogNGFlowManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},
 		rmanagers.SyslogNGOutput: rmanagers.SyslogNGOutputManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},
 		rmanagers.NfsPVC:         rmanagers.NFSPVCManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},

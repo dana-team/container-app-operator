@@ -28,13 +28,13 @@ const (
 	eventCappDomainMappingCreated        = "DomainMappingCreated"
 )
 
-type KnativeDomainMappingManager struct {
+type DomainMappingManager struct {
 	rclient.ResourceManagerClient
 	EventRecorder events.EventRecorder
 }
 
-// PrepareKnativeDomainMapping creates a new DomainMapping for a Knative service.
-func (k KnativeDomainMappingManager) prepareResource(ctx context.Context, capp cappv1alpha1.Capp) (knativev1beta1.DomainMapping, error) {
+// prepareResource creates a new DomainMapping for a Knative service.
+func (k DomainMappingManager) prepareResource(ctx context.Context, capp cappv1alpha1.Capp) (knativev1beta1.DomainMapping, error) {
 	dnsConfig, err := utils.GetDNSConfig(ctx, k.K8sclient)
 	if err != nil {
 		return knativev1beta1.DomainMapping{}, err
@@ -77,7 +77,7 @@ func (k KnativeDomainMappingManager) prepareResource(ctx context.Context, capp c
 }
 
 // CleanUp attempts to delete the associated DomainMappings and tls secrets for a given Capp resource.
-func (k KnativeDomainMappingManager) CleanUp(ctx context.Context, capp cappv1alpha1.Capp) error {
+func (k DomainMappingManager) CleanUp(ctx context.Context, capp cappv1alpha1.Capp) error {
 	domainMappings, err := k.getPreviousDomainMappings(ctx, capp)
 	if err != nil {
 		return err
@@ -121,13 +121,13 @@ func (k KnativeDomainMappingManager) CleanUp(ctx context.Context, capp cappv1alp
 }
 
 // IsRequired is responsible to determine if resource DomainMapping is required.
-func (k KnativeDomainMappingManager) IsRequired(capp cappv1alpha1.Capp) bool {
+func (k DomainMappingManager) IsRequired(capp cappv1alpha1.Capp) bool {
 	return capp.Spec.RouteSpec.Hostname != ""
 }
 
 // Manage creates or updates a DomainMapping resource based on the provided Capp if it's required.
 // If it's not, then it cleans up the resource if it exists.
-func (k KnativeDomainMappingManager) Manage(ctx context.Context, capp cappv1alpha1.Capp) error {
+func (k DomainMappingManager) Manage(ctx context.Context, capp cappv1alpha1.Capp) error {
 	if k.IsRequired(capp) {
 		return k.createOrUpdate(ctx, capp)
 	}
@@ -136,7 +136,7 @@ func (k KnativeDomainMappingManager) Manage(ctx context.Context, capp cappv1alph
 }
 
 // createOrUpdate creates or updates a DomainMapping resource.
-func (k KnativeDomainMappingManager) createOrUpdate(ctx context.Context, capp cappv1alpha1.Capp) error {
+func (k DomainMappingManager) createOrUpdate(ctx context.Context, capp cappv1alpha1.Capp) error {
 	domainMappingFromCapp, err := k.prepareResource(ctx, capp)
 	if err != nil {
 		return fmt.Errorf("failed to prepare DomainMapping: %w", err)
@@ -161,7 +161,7 @@ func (k KnativeDomainMappingManager) createOrUpdate(ctx context.Context, capp ca
 }
 
 // getPreviousDomainMappings returns a list of all DomainMapping objects that are related to the given Capp.
-func (k KnativeDomainMappingManager) getPreviousDomainMappings(ctx context.Context, capp cappv1alpha1.Capp) (knativev1beta1.DomainMappingList, error) {
+func (k DomainMappingManager) getPreviousDomainMappings(ctx context.Context, capp cappv1alpha1.Capp) (knativev1beta1.DomainMappingList, error) {
 	knativeDomainMappings := knativev1beta1.DomainMappingList{}
 	if err := listManagedResources(ctx, k.K8sclient, capp, &knativeDomainMappings, "DomainMapping", nil); err != nil {
 		return knativeDomainMappings, err
