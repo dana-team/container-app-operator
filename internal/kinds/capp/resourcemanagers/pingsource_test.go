@@ -10,6 +10,7 @@ import (
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -163,4 +164,56 @@ func TestPingSourceCreateOrUpdate(t *testing.T) {
 			assert.Equal(t, capp.Name, got.OwnerReferences[0].Name)
 		})
 	}
+}
+
+func TestPingSourceManage(t *testing.T) {
+	ctx := context.Background()
+	pingCfg := &cappv1alpha1.PingSourceConfiguration{Schedule: schedule}
+
+	t.Run("reconciles when ping is required", func(t *testing.T) {
+		pm := newPingSourceManager(fake.NewClientBuilder().WithScheme(newPingSourceScheme()).Build())
+		capp := newBaseCapp()
+		capp.Spec.EventSourcesSpec.Sources = []cappv1alpha1.SourceConfiguration{
+			{Name: sourceA, PingSourceConfiguration: pingCfg},
+		}
+		require.NoError(t, pm.Manage(ctx, capp))
+	})
+
+	t.Run("cleans up when ping is not required", func(t *testing.T) {
+		fakeClient := fake.NewClientBuilder().WithScheme(newPingSourceScheme()).Build()
+		require.NoError(t, fakeClient.Create(ctx, newPingSource(ordersA)))
+
+		pm := newPingSourceManager(fakeClient)
+		capp := newBaseCapp()
+		capp.Spec.EventSourcesSpec.Sources = []cappv1alpha1.SourceConfiguration{
+			newKafkaSourceEntry(ordersA, newKafkaSourceConfiguration()),
+		}
+		require.NoError(t, pm.Manage(ctx, capp))
+
+		got := &sourcesv1.PingSource{}
+		getErr := fakeClient.Get(ctx, types.NamespacedName{
+			Name: fmt.Sprintf("%s-%s", cappName, ordersA), Namespace: cappNamespace,
+		}, got)
+		require.True(t, client.IgnoreNotFound(getErr) == nil && getErr != nil, "expected %q to not exist", fmt.Sprintf("%s-%s", cappName, ordersA))
+	})
+}
+
+func TestPingSourceCleanUp(t *testing.T) {
+	t.Run("deletes all owned PingSources", func(t *testing.T) {
+		ctx := context.Background()
+		fakeClient := fake.NewClientBuilder().WithScheme(newPingSourceScheme()).Build()
+		for _, source := range []string{sourceA, sourceB} {
+			require.NoError(t, fakeClient.Create(ctx, newPingSource(source)))
+		}
+
+		require.NoError(t, newPingSourceManager(fakeClient).CleanUp(ctx, newBaseCapp()))
+
+		for _, source := range []string{sourceA, sourceB} {
+			got := &sourcesv1.PingSource{}
+			getErr := fakeClient.Get(ctx, types.NamespacedName{
+				Name: fmt.Sprintf("%s-%s", cappName, source), Namespace: cappNamespace,
+			}, got)
+			require.True(t, client.IgnoreNotFound(getErr) == nil && getErr != nil, "expected %q to not exist", fmt.Sprintf("%s-%s", cappName, source))
+		}
+	})
 }
