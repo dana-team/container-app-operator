@@ -88,6 +88,14 @@ lint: golangci-lint ## Run golangci-lint linter
 lint-fix: golangci-lint ## Run golangci-lint linter and perform fixes
 	$(GOLANGCI_LINT) run --fix
 
+.PHONY: deadcode
+deadcode: deadcode-tool ## Run deadcode analysis (fails on unreachable code)
+	@output=$$($(DEADCODE) -test ./... 2>&1); \
+	if [ -n "$$output" ]; then \
+		echo "$$output"; \
+		exit 1; \
+	fi
+
 ##@ Build
 
 .PHONY: build
@@ -259,6 +267,7 @@ KUSTOMIZE ?= $(LOCALBIN)/kustomize-$(KUSTOMIZE_VERSION)
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen-$(CONTROLLER_TOOLS_VERSION)
 ENVTEST ?= $(LOCALBIN)/setup-envtest-$(ENVTEST_VERSION)
 GOLANGCI_LINT = $(LOCALBIN)/golangci-lint-$(GOLANGCI_LINT_VERSION)
+DEADCODE ?= $(LOCALBIN)/deadcode-$(DEADCODE_VERSION)
 HELMFILE ?= $(LOCALBIN)/helmfile-$(HELMFILE_VERSION)
 HELM_DOCS ?= $(LOCALBIN)/helm-docs-$(HELM_DOCS_VERSION)
 
@@ -270,6 +279,7 @@ KUSTOMIZE_VERSION ?= v5.5.0
 CONTROLLER_TOOLS_VERSION ?= v0.16.4
 ENVTEST_VERSION ?= release-0.19
 GOLANGCI_LINT_VERSION ?= v2.12.2
+DEADCODE_VERSION ?= v0.44.0
 HELMFILE_VERSION ?= 1.4.3
 HELM_DOCS_VERSION ?= v1.14.2
 
@@ -292,6 +302,11 @@ $(ENVTEST): $(LOCALBIN)
 golangci-lint: $(GOLANGCI_LINT) ## Download golangci-lint locally if necessary.
 $(GOLANGCI_LINT): $(LOCALBIN)
 	$(call go-install-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/v2/cmd/golangci-lint,${GOLANGCI_LINT_VERSION})
+
+.PHONY: deadcode-tool
+deadcode-tool: $(DEADCODE) ## Download deadcode locally if necessary.
+$(DEADCODE): $(LOCALBIN)
+	$(call go-install-tool,$(DEADCODE),golang.org/x/tools/cmd/deadcode,$(DEADCODE_VERSION))
 
 .PHONY: helm
 helm: ## Install helm on the local machine
