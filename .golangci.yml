@@ -30,6 +30,8 @@ linters:
   settings:
     errcheck:
       check-blank: true
+    unused:
+      check-exported: true
     revive:
       rules:
         - name: comment-spacings
