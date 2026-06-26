@@ -18,6 +18,15 @@ const (
 	elasticHost        = "https://elastic.example:9200/_bulk"
 	elasticIndex       = "my-index"
 	unsupportedLogType = "splunk"
+
+	dnsZone      = "capp-zone.com."
+	dnsCNAME     = "ingress.capp-zone.com."
+	dnsProvider  = "dns-default"
+	issuerName   = "letsencrypt-prod"
+	issuerKind   = "ClusterIssuer"
+	issuerGroup  = "cert-manager.io"
+	hostnameBare = "my-app"
+	hostnameFQDN = "my-app.capp-zone.com"
 )
 
 func newScheme() *runtime.Scheme {
@@ -72,4 +81,44 @@ func newLogSpec(logType cappv1alpha1.LogType) cappv1alpha1.LogSpec {
 		spec.Index = elasticIndex
 	}
 	return spec
+}
+
+func newCappConfigWithDNS() *cappv1alpha1.CappConfig {
+	cfg := newCappConfig()
+	cfg.Spec.DNSConfig = cappv1alpha1.DNSConfig{
+		Zone:     dnsZone,
+		CNAME:    dnsCNAME,
+		Provider: dnsProvider,
+		IssuerRef: cappv1alpha1.IssuerRef{
+			Name:  issuerName,
+			Kind:  issuerKind,
+			Group: issuerGroup,
+		},
+	}
+	return cfg
+}
+
+func newCappWithHostname(hostname string) cappv1alpha1.Capp {
+	capp := newBaseCapp()
+	capp.Spec.RouteSpec.Hostname = hostname
+	return capp
+}
+
+func newCappWithTLS(hostname string, tls bool) cappv1alpha1.Capp {
+	capp := newCappWithHostname(hostname)
+	capp.Spec.RouteSpec.TlsEnabled = tls
+	return capp
+}
+
+func newSecret(name string, mutate func(*corev1.Secret)) *corev1.Secret {
+	sec := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: cappNamespace,
+		},
+	}
+	if mutate != nil {
+		mutate(sec)
+	}
+	return sec
 }
