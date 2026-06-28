@@ -11,6 +11,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -138,8 +139,7 @@ func TestNFSPVCManagerManage(t *testing.T) {
 
 		got := &nfspvcv1alpha1.NfsPvc{}
 		getErr := fakeClient.Get(ctx, types.NamespacedName{Name: nfsVolA, Namespace: cappNamespace}, got)
-		require.True(t, client.IgnoreNotFound(getErr) == nil && getErr != nil,
-			"expected %q to not exist", nfsVolA)
+		require.True(t, errors.IsNotFound(getErr), "expected %q to not exist", nfsVolA)
 	})
 }
 
@@ -157,8 +157,7 @@ func TestNFSPVCManagerCleanUp(t *testing.T) {
 		for _, vol := range []string{nfsVolA, nfsVolB} {
 			got := &nfspvcv1alpha1.NfsPvc{}
 			getErr := fakeClient.Get(ctx, types.NamespacedName{Name: vol, Namespace: cappNamespace}, got)
-			require.True(t, client.IgnoreNotFound(getErr) == nil && getErr != nil,
-				"expected %q to not exist", vol)
+			require.True(t, errors.IsNotFound(getErr), "expected %q to not exist", vol)
 		}
 	})
 
