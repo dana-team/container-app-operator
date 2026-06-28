@@ -244,9 +244,7 @@ func TestKnativeServiceManagerCleanUp(t *testing.T) {
 	})
 
 	t.Run("skips delete when deleting and has owner reference", func(t *testing.T) {
-		capp := newKsvcCapp()
-		now := metav1.Now()
-		capp.DeletionTimestamp = &now
+		capp := cappWithDeletionTimestamp(newKsvcCapp())
 
 		ksvc := &knativev1.Service{
 			ObjectMeta: metav1.ObjectMeta{

@@ -162,9 +162,7 @@ func TestNFSPVCManagerCleanUp(t *testing.T) {
 	})
 
 	t.Run("skips delete when deleting and has owner reference", func(t *testing.T) {
-		capp := newBaseCapp()
-		now := metav1.Now()
-		capp.DeletionTimestamp = &now
+		capp := cappWithDeletionTimestamp(newBaseCapp())
 
 		nfspvc := newNFSPVC(nfsVolA)
 		require.NoError(t, controllerutil.SetOwnerReference(&capp, nfspvc, newNFSPVCScheme()))
