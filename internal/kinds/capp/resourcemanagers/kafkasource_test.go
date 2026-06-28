@@ -10,7 +10,6 @@ import (
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -19,15 +18,6 @@ import (
 	kafkasourcev1 "knative.dev/eventing-kafka-broker/control-plane/pkg/apis/sources/v1"
 	servingv1 "knative.dev/serving/pkg/apis/serving/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-)
-
-const (
-	ordersSource    = "orders"
-	ordersA         = "orders-a"
-	ordersB         = "orders-b"
-	bootstrapServer = "kafka.example:9092"
-	topicOrders     = "orders"
-	topicPayments   = "payments"
 )
 
 func newKafkaSourceScheme() *runtime.Scheme {
@@ -41,21 +31,6 @@ func newKafkaSourceManager(k8sClient client.Client) KafkaSourceManager {
 	return KafkaSourceManager{
 		ResourceManagerClient: rclient.ResourceManagerClient{K8sclient: k8sClient, Log: logr.Discard()},
 		EventRecorder:         events.NewFakeRecorder(10),
-	}
-}
-
-func newKafkaSourceConfiguration() cappv1alpha1.KafkaSourceConfiguration {
-	return cappv1alpha1.KafkaSourceConfiguration{
-		BootstrapServers: []string{bootstrapServer},
-		Topics:           []string{topicOrders, topicPayments},
-		SecretRef:        corev1.LocalObjectReference{Name: "kafka-creds"},
-	}
-}
-
-func newKafkaSourceEntry(name string, cfg cappv1alpha1.KafkaSourceConfiguration) cappv1alpha1.SourceConfiguration {
-	return cappv1alpha1.SourceConfiguration{
-		Name:                     name,
-		KafkaSourceConfiguration: &cfg,
 	}
 }
 
@@ -181,7 +156,7 @@ func TestKafkaSourceManagerManage(t *testing.T) {
 		km := newKafkaSourceManager(fakeClient)
 		capp := newBaseCapp()
 		capp.Spec.EventSourcesSpec.Sources = []cappv1alpha1.SourceConfiguration{
-			{Name: ordersA, PingSourceConfiguration: &cappv1alpha1.PingSourceConfiguration{Schedule: "* * * * *"}},
+			newPingSourceEntry(ordersA, cappv1alpha1.PingSourceConfiguration{Schedule: schedule}),
 		}
 		require.NoError(t, km.Manage(ctx, capp))
 
