@@ -17,7 +17,6 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/tools/events"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
@@ -36,10 +35,7 @@ func newDNSRecordManager(k8sClient client.Client) DNSRecordManager {
 
 func newDNSRecordClient(objects ...client.Object) client.Client {
 	objs := append([]client.Object{newCappConfigWithDNS()}, objects...)
-	return fake.NewClientBuilder().
-		WithScheme(newDNSRecordScheme()).
-		WithObjects(objs...).
-		Build()
+	return newFakeClient(newDNSRecordScheme(), objs...)
 }
 
 func newCNAMERecord(resourceName string, mutate func(*dnsrecordv1alpha1.CNAMERecord)) *dnsrecordv1alpha1.CNAMERecord {
@@ -160,7 +156,7 @@ func TestDNSRecordCreateOrUpdate(t *testing.T) {
 	})
 
 	t.Run("returns error when CappConfig missing", func(t *testing.T) {
-		dm := newDNSRecordManager(fake.NewClientBuilder().WithScheme(newDNSRecordScheme()).Build())
+		dm := newDNSRecordManager(newFakeClient(newDNSRecordScheme()))
 		capp := newCappWithHostname(hostnameBare)
 
 		err := dm.createOrUpdate(ctx, capp)
@@ -196,13 +192,10 @@ func TestDNSRecordCleanUp(t *testing.T) {
 
 	t.Run("deletes all owned DNS records", func(t *testing.T) {
 		const otherRecordName = "other.capp-zone.com"
-		fakeClient := fake.NewClientBuilder().
-			WithScheme(newDNSRecordScheme()).
-			WithObjects(
-				newCNAMERecord(hostnameFQDN, nil),
-				newCNAMERecord(otherRecordName, nil),
-			).
-			Build()
+		fakeClient := newFakeClient(newDNSRecordScheme(),
+			newCNAMERecord(hostnameFQDN, nil),
+			newCNAMERecord(otherRecordName, nil),
+		)
 		dm := newDNSRecordManager(fakeClient)
 
 		require.NoError(t, dm.CleanUp(ctx, newBaseCapp()))
@@ -215,7 +208,7 @@ func TestDNSRecordCleanUp(t *testing.T) {
 	})
 
 	t.Run("succeeds when no records exist", func(t *testing.T) {
-		dm := newDNSRecordManager(fake.NewClientBuilder().WithScheme(newDNSRecordScheme()).Build())
+		dm := newDNSRecordManager(newFakeClient(newDNSRecordScheme()))
 		require.NoError(t, dm.CleanUp(ctx, newBaseCapp()))
 	})
 
@@ -227,7 +220,7 @@ func TestDNSRecordCleanUp(t *testing.T) {
 		record := newCNAMERecord(hostnameFQDN, nil)
 		require.NoError(t, controllerutil.SetOwnerReference(&capp, record, newDNSRecordScheme()))
 
-		dm := newDNSRecordManager(fake.NewClientBuilder().WithScheme(newDNSRecordScheme()).WithObjects(record).Build())
+		dm := newDNSRecordManager(newFakeClient(newDNSRecordScheme(), record))
 		require.NoError(t, dm.CleanUp(ctx, capp))
 
 		got := &dnsrecordv1alpha1.CNAMERecord{}
@@ -240,7 +233,7 @@ func TestDNSRecordCleanUp(t *testing.T) {
 		capp.DeletionTimestamp = &now
 
 		record := newCNAMERecord(hostnameFQDN, nil)
-		dm := newDNSRecordManager(fake.NewClientBuilder().WithScheme(newDNSRecordScheme()).WithObjects(record).Build())
+		dm := newDNSRecordManager(newFakeClient(newDNSRecordScheme(), record))
 		require.NoError(t, dm.CleanUp(ctx, capp))
 
 		got := &dnsrecordv1alpha1.CNAMERecord{}
