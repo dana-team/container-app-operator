@@ -69,7 +69,7 @@ func newKafkaSource(source string) *kafkasourcev1.KafkaSource {
 	}
 }
 
-func TestKafkaSourceCreateOrUpdate(t *testing.T) {
+func TestKafkaSourceManagerCreateOrUpdate(t *testing.T) {
 	ctx := context.Background()
 	key := types.NamespacedName{Name: fmt.Sprintf("%s-%s", cappName, ordersSource), Namespace: cappNamespace}
 
@@ -136,7 +136,7 @@ func TestKafkaSourceCreateOrUpdate(t *testing.T) {
 	})
 }
 
-func TestKafkaSourceCleanUpOrphans(t *testing.T) {
+func TestKafkaSourceManagerCleanUpOrphans(t *testing.T) {
 	t.Run("deletes orphan not in spec", func(t *testing.T) {
 		ctx := context.Background()
 		fakeClient := newFakeClient(newKafkaSourceScheme())
@@ -163,18 +163,18 @@ func TestKafkaSourceCleanUpOrphans(t *testing.T) {
 	})
 }
 
-func TestKafkaSourceManage(t *testing.T) {
+func TestKafkaSourceManagerManage(t *testing.T) {
 	ctx := context.Background()
 	kafkaCfg := newKafkaSourceConfiguration()
 
-	t.Run("reconciles when kafka is required", func(t *testing.T) {
+	t.Run("reconciles when required", func(t *testing.T) {
 		km := newKafkaSourceManager(newFakeClient(newKafkaSourceScheme()))
 		capp := newBaseCapp()
 		capp.Spec.EventSourcesSpec.Sources = []cappv1alpha1.SourceConfiguration{newKafkaSourceEntry(ordersA, kafkaCfg)}
 		require.NoError(t, km.Manage(ctx, capp))
 	})
 
-	t.Run("cleans up when kafka is not required", func(t *testing.T) {
+	t.Run("cleans up when not required", func(t *testing.T) {
 		fakeClient := newFakeClient(newKafkaSourceScheme())
 		require.NoError(t, fakeClient.Create(ctx, newKafkaSource(ordersA)))
 
@@ -193,8 +193,8 @@ func TestKafkaSourceManage(t *testing.T) {
 	})
 }
 
-func TestKafkaSourceCleanUp(t *testing.T) {
-	t.Run("deletes all owned KafkaSources", func(t *testing.T) {
+func TestKafkaSourceManagerCleanUp(t *testing.T) {
+	t.Run("deletes all owned resources", func(t *testing.T) {
 		ctx := context.Background()
 		fakeClient := newFakeClient(newKafkaSourceScheme())
 		for _, source := range []string{ordersA, ordersB} {

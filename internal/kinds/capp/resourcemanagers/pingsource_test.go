@@ -53,7 +53,7 @@ func newPingSource(source string) *sourcesv1.PingSource {
 	}
 }
 
-func TestPingSourceCleanUpOrphans(t *testing.T) {
+func TestPingSourceManagerCleanUpOrphans(t *testing.T) {
 	pingCfg := &cappv1alpha1.PingSourceConfiguration{Schedule: schedule}
 	tests := []struct {
 		name          string
@@ -109,7 +109,7 @@ func TestPingSourceCleanUpOrphans(t *testing.T) {
 	}
 }
 
-func TestPingSourceCreateOrUpdate(t *testing.T) {
+func TestPingSourceManagerCreateOrUpdate(t *testing.T) {
 	tests := []struct {
 		name         string
 		preCreate    bool
@@ -118,12 +118,12 @@ func TestPingSourceCreateOrUpdate(t *testing.T) {
 		expectedData string
 	}{
 		{
-			name:         "creates PingSource when not found",
+			name:         "creates when not found",
 			data:         "data",
 			expectedData: "data",
 		},
 		{
-			name:         "updates PingSource when spec differs",
+			name:         "updates when spec differs",
 			preCreate:    true,
 			preData:      "old-data",
 			data:         "new-data",
@@ -165,11 +165,11 @@ func TestPingSourceCreateOrUpdate(t *testing.T) {
 	}
 }
 
-func TestPingSourceManage(t *testing.T) {
+func TestPingSourceManagerManage(t *testing.T) {
 	ctx := context.Background()
 	pingCfg := &cappv1alpha1.PingSourceConfiguration{Schedule: schedule}
 
-	t.Run("reconciles when ping is required", func(t *testing.T) {
+	t.Run("reconciles when required", func(t *testing.T) {
 		pm := newPingSourceManager(newFakeClient(newPingSourceScheme()))
 		capp := newBaseCapp()
 		capp.Spec.EventSourcesSpec.Sources = []cappv1alpha1.SourceConfiguration{
@@ -178,7 +178,7 @@ func TestPingSourceManage(t *testing.T) {
 		require.NoError(t, pm.Manage(ctx, capp))
 	})
 
-	t.Run("cleans up when ping is not required", func(t *testing.T) {
+	t.Run("cleans up when not required", func(t *testing.T) {
 		fakeClient := newFakeClient(newPingSourceScheme())
 		require.NoError(t, fakeClient.Create(ctx, newPingSource(ordersA)))
 
@@ -197,8 +197,8 @@ func TestPingSourceManage(t *testing.T) {
 	})
 }
 
-func TestPingSourceCleanUp(t *testing.T) {
-	t.Run("deletes all owned PingSources", func(t *testing.T) {
+func TestPingSourceManagerCleanUp(t *testing.T) {
+	t.Run("deletes all owned resources", func(t *testing.T) {
 		ctx := context.Background()
 		fakeClient := newFakeClient(newPingSourceScheme())
 		for _, source := range []string{sourceA, sourceB} {

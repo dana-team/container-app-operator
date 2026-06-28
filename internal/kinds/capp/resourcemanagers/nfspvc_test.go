@@ -75,7 +75,7 @@ func newNFSPVC(name string) *nfspvcv1alpha1.NfsPvc {
 	}
 }
 
-func TestNFSPVCCreateOrUpdate(t *testing.T) {
+func TestNFSPVCManagerCreateOrUpdate(t *testing.T) {
 	ctx := context.Background()
 	keyA := types.NamespacedName{Name: nfsVolA, Namespace: cappNamespace}
 
@@ -119,17 +119,17 @@ func TestNFSPVCCreateOrUpdate(t *testing.T) {
 	})
 }
 
-func TestNFSPVCManage(t *testing.T) {
+func TestNFSPVCManagerManage(t *testing.T) {
 	ctx := context.Background()
 
-	t.Run("reconciles when nfs is required", func(t *testing.T) {
+	t.Run("reconciles when required", func(t *testing.T) {
 		nm := newNFSPVCManager(newFakeClient(newNFSPVCScheme()))
 		capp := cappWithVolumes(newNFSVolume(nfsVolA, nfsPath))
 
 		require.NoError(t, nm.Manage(ctx, capp))
 	})
 
-	t.Run("cleans up when nfs is not required", func(t *testing.T) {
+	t.Run("cleans up when not required", func(t *testing.T) {
 		fakeClient := newFakeClient(newNFSPVCScheme())
 		require.NoError(t, fakeClient.Create(ctx, newNFSPVC(nfsVolA)))
 
@@ -143,10 +143,10 @@ func TestNFSPVCManage(t *testing.T) {
 	})
 }
 
-func TestNFSPVCCleanUp(t *testing.T) {
+func TestNFSPVCManagerCleanUp(t *testing.T) {
 	ctx := context.Background()
 
-	t.Run("deletes all owned NFSPVCs", func(t *testing.T) {
+	t.Run("deletes all owned resources", func(t *testing.T) {
 		fakeClient := newFakeClient(newNFSPVCScheme())
 		for _, vol := range []string{nfsVolA, nfsVolB} {
 			require.NoError(t, fakeClient.Create(ctx, newNFSPVC(vol)))
@@ -162,7 +162,7 @@ func TestNFSPVCCleanUp(t *testing.T) {
 		}
 	})
 
-	t.Run("skips delete when capp is deleting and NFSPVC has owner reference", func(t *testing.T) {
+	t.Run("skips delete when deleting and has owner reference", func(t *testing.T) {
 		capp := newBaseCapp()
 		now := metav1.Now()
 		capp.DeletionTimestamp = &now
