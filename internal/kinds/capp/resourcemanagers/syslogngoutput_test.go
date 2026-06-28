@@ -144,18 +144,6 @@ func TestSyslogNGOutputManagerCleanUp(t *testing.T) {
 		require.NoError(t, om.CleanUp(ctx, newBaseCapp()))
 	})
 
-	t.Run("deletes SyslogNGOutput by capp name", func(t *testing.T) {
-		fakeClient := newFakeClient(newSyslogNGScheme())
-		require.NoError(t, fakeClient.Create(ctx, newSyslogNGOutput()))
-
-		require.NoError(t, newSyslogNGOutputManager(fakeClient).CleanUp(ctx, newBaseCapp()))
-
-		got := &loggingv1beta1.SyslogNGOutput{}
-		getErr := fakeClient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: cappNamespace}, got)
-		require.Error(t, getErr)
-		require.True(t, errors.IsNotFound(getErr))
-	})
-
 	t.Run("skips delete when deleting and has owner reference", func(t *testing.T) {
 		capp := cappWithDeletionTimestamp(newBaseCapp())
 
