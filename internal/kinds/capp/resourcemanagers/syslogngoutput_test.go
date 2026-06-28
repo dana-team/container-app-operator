@@ -44,7 +44,7 @@ func newSyslogNGOutput() *loggingv1beta1.SyslogNGOutput {
 	}
 }
 
-func TestSyslogNGOutputCreateOrUpdate(t *testing.T) {
+func TestSyslogNGOutputManagerCreateOrUpdate(t *testing.T) {
 	ctx := context.Background()
 	key := types.NamespacedName{Name: cappName, Namespace: cappNamespace}
 
@@ -94,17 +94,17 @@ func TestSyslogNGOutputCreateOrUpdate(t *testing.T) {
 	})
 }
 
-func TestSyslogNGOutputManage(t *testing.T) {
+func TestSyslogNGOutputManagerManage(t *testing.T) {
 	ctx := context.Background()
 
-	t.Run("reconciles when log is required", func(t *testing.T) {
+	t.Run("reconciles when required", func(t *testing.T) {
 		om := newSyslogNGOutputManager(newFakeClient(newSyslogNGScheme()))
 		capp := newBaseCapp()
 		capp.Spec.LogSpec = newLogSpec(cappv1alpha1.LogTypeElastic)
 		require.NoError(t, om.Manage(ctx, capp))
 	})
 
-	t.Run("cleans up when log is not required", func(t *testing.T) {
+	t.Run("cleans up when not required", func(t *testing.T) {
 		fakeClient := newFakeClient(newSyslogNGScheme())
 		require.NoError(t, fakeClient.Create(ctx, newSyslogNGOutput()))
 
@@ -136,10 +136,10 @@ func TestSyslogNGOutputManage(t *testing.T) {
 	})
 }
 
-func TestSyslogNGOutputCleanUp(t *testing.T) {
+func TestSyslogNGOutputManagerCleanUp(t *testing.T) {
 	ctx := context.Background()
 
-	t.Run("succeeds when SyslogNGOutput does not exist", func(t *testing.T) {
+	t.Run("succeeds when none exist", func(t *testing.T) {
 		om := newSyslogNGOutputManager(newFakeClient(newSyslogNGScheme()))
 		require.NoError(t, om.CleanUp(ctx, newBaseCapp()))
 	})
@@ -156,7 +156,7 @@ func TestSyslogNGOutputCleanUp(t *testing.T) {
 		require.True(t, errors.IsNotFound(getErr))
 	})
 
-	t.Run("skips delete when capp is deleting and output has owner reference", func(t *testing.T) {
+	t.Run("skips delete when deleting and has owner reference", func(t *testing.T) {
 		capp := newBaseCapp()
 		now := metav1.Now()
 		capp.DeletionTimestamp = &now

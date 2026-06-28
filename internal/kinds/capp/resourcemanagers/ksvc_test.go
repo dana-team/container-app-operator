@@ -57,7 +57,7 @@ func newKsvcCapp() cappv1alpha1.Capp {
 	return capp
 }
 
-func TestKnativeServicePrepareResource(t *testing.T) {
+func TestKnativeServiceManagerPrepareResource(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("filters internal annotations and propagates allowed metadata", func(t *testing.T) {
@@ -151,7 +151,7 @@ func TestKnativeServicePrepareResource(t *testing.T) {
 	})
 }
 
-func TestKnativeServiceManage(t *testing.T) {
+func TestKnativeServiceManagerManage(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("creates ksvc with owner reference when enabled", func(t *testing.T) {
@@ -182,7 +182,7 @@ func TestKnativeServiceManage(t *testing.T) {
 		require.Equal(t, updatedContainerImage, got.Spec.Template.Spec.Containers[0].Image)
 	})
 
-	t.Run("skips update when spec is unchanged", func(t *testing.T) {
+	t.Run("skips update when unchanged", func(t *testing.T) {
 		km, _ := newKsvcManager(newFakeClient(newKsvcScheme(), newCappConfig()))
 		capp := newKsvcCapp()
 		require.NoError(t, km.Manage(ctx, capp))
@@ -235,15 +235,15 @@ func TestKnativeServiceManage(t *testing.T) {
 	})
 }
 
-func TestKnativeServiceCleanUp(t *testing.T) {
+func TestKnativeServiceManagerCleanUp(t *testing.T) {
 	ctx := context.Background()
 
-	t.Run("succeeds when ksvc does not exist", func(t *testing.T) {
+	t.Run("succeeds when none exist", func(t *testing.T) {
 		km, _ := newKsvcManager(newFakeClient(newKsvcScheme()))
 		require.NoError(t, km.CleanUp(ctx, newKsvcCapp()))
 	})
 
-	t.Run("skips delete when capp is deleting and ksvc has owner reference", func(t *testing.T) {
+	t.Run("skips delete when deleting and has owner reference", func(t *testing.T) {
 		capp := newKsvcCapp()
 		now := metav1.Now()
 		capp.DeletionTimestamp = &now
