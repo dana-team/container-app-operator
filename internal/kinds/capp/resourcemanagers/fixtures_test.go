@@ -57,6 +57,12 @@ func newBaseCapp() cappv1alpha1.Capp {
 	}
 }
 
+func cappWithDeletionTimestamp(capp cappv1alpha1.Capp) cappv1alpha1.Capp {
+	now := metav1.Now()
+	capp.DeletionTimestamp = &now
+	return capp
+}
+
 func newCappConfig() *cappv1alpha1.CappConfig {
 	return &cappv1alpha1.CappConfig{
 		ObjectMeta: metav1.ObjectMeta{
