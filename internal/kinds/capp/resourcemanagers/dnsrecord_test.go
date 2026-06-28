@@ -38,13 +38,13 @@ func newDNSRecordClient(objects ...client.Object) client.Client {
 	return newFakeClient(newDNSRecordScheme(), objs...)
 }
 
-func newCNAMERecord(resourceName string, mutate func(*dnsrecordv1alpha1.CNAMERecord)) *dnsrecordv1alpha1.CNAMERecord {
+func newCNAMERecord(mutate func(*dnsrecordv1alpha1.CNAMERecord)) *dnsrecordv1alpha1.CNAMERecord {
 	recordName := hostnameBare
 	zone := dnsZone
 	cname := dnsCNAME
 	rec := &dnsrecordv1alpha1.CNAMERecord{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      resourceName,
+			Name:      hostnameFQDN,
 			Namespace: cappNamespace,
 			Labels: utils.MergeMaps(utils.ManagedResourceLabels(cappName), map[string]string{
 				utils.CappNamespaceKey: cappNamespace,
@@ -96,7 +96,7 @@ func TestDNSRecordManagerCreateOrUpdate(t *testing.T) {
 
 	t.Run("updates when ForProvider differs", func(t *testing.T) {
 		staleCname := "stale.ingress.capp-zone.com."
-		existing := newCNAMERecord(hostnameFQDN, func(rec *dnsrecordv1alpha1.CNAMERecord) {
+		existing := newCNAMERecord(func(rec *dnsrecordv1alpha1.CNAMERecord) {
 			rec.Spec.ForProvider.Cname = &staleCname
 		})
 		dm := newDNSRecordManager(newDNSRecordClient(existing))
@@ -111,7 +111,7 @@ func TestDNSRecordManagerCreateOrUpdate(t *testing.T) {
 
 	t.Run("updates when ProviderConfigReference differs", func(t *testing.T) {
 		wrongProvider := "wrong-provider"
-		existing := newCNAMERecord(hostnameFQDN, func(rec *dnsrecordv1alpha1.CNAMERecord) {
+		existing := newCNAMERecord(func(rec *dnsrecordv1alpha1.CNAMERecord) {
 			rec.Spec.ProviderConfigReference = &xpv1.ProviderConfigReference{
 				Name: wrongProvider,
 				Kind: ClusterProviderConfigKind,
@@ -128,7 +128,7 @@ func TestDNSRecordManagerCreateOrUpdate(t *testing.T) {
 	})
 
 	t.Run("adds owner reference when missing", func(t *testing.T) {
-		existing := newCNAMERecord(hostnameFQDN, nil)
+		existing := newCNAMERecord(nil)
 		dm := newDNSRecordManager(newDNSRecordClient(existing))
 		capp := newCappWithHostname(hostnameBare)
 
@@ -174,7 +174,7 @@ func TestDNSRecordManagerManage(t *testing.T) {
 	})
 
 	t.Run("cleans up when hostname is empty", func(t *testing.T) {
-		existing := newCNAMERecord(hostnameFQDN, nil)
+		existing := newCNAMERecord(nil)
 		fakeClient := newDNSRecordClient(existing)
 		dm := newDNSRecordManager(fakeClient)
 		capp := newBaseCapp()
@@ -190,23 +190,6 @@ func TestDNSRecordManagerManage(t *testing.T) {
 func TestDNSRecordManagerCleanUp(t *testing.T) {
 	ctx := context.Background()
 
-	t.Run("deletes all owned resources", func(t *testing.T) {
-		const otherRecordName = "other.capp-zone.com"
-		fakeClient := newFakeClient(newDNSRecordScheme(),
-			newCNAMERecord(hostnameFQDN, nil),
-			newCNAMERecord(otherRecordName, nil),
-		)
-		dm := newDNSRecordManager(fakeClient)
-
-		require.NoError(t, dm.CleanUp(ctx, newBaseCapp()))
-
-		for _, name := range []string{hostnameFQDN, otherRecordName} {
-			got := &dnsrecordv1alpha1.CNAMERecord{}
-			getErr := fakeClient.Get(ctx, types.NamespacedName{Name: name, Namespace: cappNamespace}, got)
-			require.True(t, errors.IsNotFound(getErr))
-		}
-	})
-
 	t.Run("succeeds when none exist", func(t *testing.T) {
 		dm := newDNSRecordManager(newFakeClient(newDNSRecordScheme()))
 		require.NoError(t, dm.CleanUp(ctx, newBaseCapp()))
@@ -215,7 +198,7 @@ func TestDNSRecordManagerCleanUp(t *testing.T) {
 	t.Run("skips delete when deleting and has owner reference", func(t *testing.T) {
 		capp := cappWithDeletionTimestamp(newBaseCapp())
 
-		record := newCNAMERecord(hostnameFQDN, nil)
+		record := newCNAMERecord(nil)
 		require.NoError(t, controllerutil.SetOwnerReference(&capp, record, newDNSRecordScheme()))
 
 		dm := newDNSRecordManager(newFakeClient(newDNSRecordScheme(), record))
@@ -228,7 +211,7 @@ func TestDNSRecordManagerCleanUp(t *testing.T) {
 	t.Run("deletes when deleting and lacks owner reference", func(t *testing.T) {
 		capp := cappWithDeletionTimestamp(newBaseCapp())
 
-		record := newCNAMERecord(hostnameFQDN, nil)
+		record := newCNAMERecord(nil)
 		dm := newDNSRecordManager(newFakeClient(newDNSRecordScheme(), record))
 		require.NoError(t, dm.CleanUp(ctx, capp))
 

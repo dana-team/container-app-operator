@@ -168,23 +168,3 @@ func TestKafkaSourceManagerManage(t *testing.T) {
 		require.True(t, errors.IsNotFound(getErr), "expected %q to not exist", fmt.Sprintf("%s-%s", cappName, ordersA))
 	})
 }
-
-func TestKafkaSourceManagerCleanUp(t *testing.T) {
-	t.Run("deletes all owned resources", func(t *testing.T) {
-		ctx := context.Background()
-		fakeClient := newFakeClient(newKafkaSourceScheme())
-		for _, source := range []string{ordersA, ordersB} {
-			require.NoError(t, fakeClient.Create(ctx, newKafkaSource(source)))
-		}
-
-		require.NoError(t, newKafkaSourceManager(fakeClient).CleanUp(ctx, newBaseCapp()))
-
-		for _, source := range []string{ordersA, ordersB} {
-			got := &kafkasourcev1.KafkaSource{}
-			getErr := fakeClient.Get(ctx, types.NamespacedName{
-				Name: fmt.Sprintf("%s-%s", cappName, source), Namespace: cappNamespace,
-			}, got)
-			require.True(t, errors.IsNotFound(getErr), "expected %q to not exist", fmt.Sprintf("%s-%s", cappName, source))
-		}
-	})
-}

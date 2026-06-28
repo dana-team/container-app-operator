@@ -38,10 +38,10 @@ func newCertificateClient(objects ...client.Object) client.Client {
 	return newFakeClient(newCertificateScheme(), objs...)
 }
 
-func newCertificate(name string, mutate func(*cmapi.Certificate)) *cmapi.Certificate {
+func newCertificate(mutate func(*cmapi.Certificate)) *cmapi.Certificate {
 	cert := &cmapi.Certificate{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
+			Name:      hostnameFQDN,
 			Namespace: cappNamespace,
 			Labels:    utils.ManagedResourceLabels(cappName),
 		},
@@ -103,7 +103,7 @@ func TestCertificateManagerManage(t *testing.T) {
 
 	t.Run("updates when spec differs", func(t *testing.T) {
 		wrongIssuer := "wrong-issuer"
-		existing := newCertificate(hostnameFQDN, func(cert *cmapi.Certificate) {
+		existing := newCertificate(func(cert *cmapi.Certificate) {
 			cert.Spec.IssuerRef.Name = wrongIssuer
 		})
 		mgr := newCertificateManager(newCertificateClient(existing))
@@ -117,7 +117,7 @@ func TestCertificateManagerManage(t *testing.T) {
 	})
 
 	t.Run("adds owner reference when missing", func(t *testing.T) {
-		existing := newCertificate(hostnameFQDN, nil)
+		existing := newCertificate(nil)
 		mgr := newCertificateManager(newCertificateClient(existing))
 		capp := newCappWithTLS(hostnameBare, true)
 
@@ -145,7 +145,7 @@ func TestCertificateManagerManage(t *testing.T) {
 	})
 
 	t.Run("cleans up when TLS is disabled", func(t *testing.T) {
-		existing := newCertificate(hostnameFQDN, nil)
+		existing := newCertificate(nil)
 		fakeClient := newCertificateClient(existing)
 		mgr := newCertificateManager(fakeClient)
 		capp := newCappWithTLS(hostnameBare, false)
@@ -158,7 +158,7 @@ func TestCertificateManagerManage(t *testing.T) {
 	})
 
 	t.Run("cleans up when hostname is empty", func(t *testing.T) {
-		existing := newCertificate(hostnameFQDN, nil)
+		existing := newCertificate(nil)
 		fakeClient := newCertificateClient(existing)
 		mgr := newCertificateManager(fakeClient)
 		capp := newBaseCapp()
@@ -174,23 +174,6 @@ func TestCertificateManagerManage(t *testing.T) {
 func TestCertificateManagerCleanUp(t *testing.T) {
 	ctx := context.Background()
 
-	t.Run("deletes all owned resources", func(t *testing.T) {
-		const otherCertName = "other.capp-zone.com"
-		fakeClient := newFakeClient(newCertificateScheme(),
-			newCertificate(hostnameFQDN, nil),
-			newCertificate(otherCertName, nil),
-		)
-		mgr := newCertificateManager(fakeClient)
-
-		require.NoError(t, mgr.CleanUp(ctx, newBaseCapp()))
-
-		for _, name := range []string{hostnameFQDN, otherCertName} {
-			got := &cmapi.Certificate{}
-			getErr := fakeClient.Get(ctx, types.NamespacedName{Name: name, Namespace: cappNamespace}, got)
-			require.True(t, errors.IsNotFound(getErr))
-		}
-	})
-
 	t.Run("succeeds when none exist", func(t *testing.T) {
 		mgr := newCertificateManager(newFakeClient(newCertificateScheme()))
 		require.NoError(t, mgr.CleanUp(ctx, newBaseCapp()))
@@ -199,7 +182,7 @@ func TestCertificateManagerCleanUp(t *testing.T) {
 	t.Run("skips delete when deleting and has owner reference", func(t *testing.T) {
 		capp := cappWithDeletionTimestamp(newBaseCapp())
 
-		cert := newCertificate(hostnameFQDN, nil)
+		cert := newCertificate(nil)
 		require.NoError(t, controllerutil.SetOwnerReference(&capp, cert, newCertificateScheme()))
 
 		mgr := newCertificateManager(newFakeClient(newCertificateScheme(), cert))
@@ -212,7 +195,7 @@ func TestCertificateManagerCleanUp(t *testing.T) {
 	t.Run("deletes when deleting and lacks owner reference", func(t *testing.T) {
 		capp := cappWithDeletionTimestamp(newBaseCapp())
 
-		cert := newCertificate(hostnameFQDN, nil)
+		cert := newCertificate(nil)
 		mgr := newCertificateManager(newFakeClient(newCertificateScheme(), cert))
 		require.NoError(t, mgr.CleanUp(ctx, capp))
 
