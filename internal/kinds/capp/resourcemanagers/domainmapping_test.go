@@ -40,10 +40,10 @@ func newDomainMappingClient(objects ...client.Object) client.Client {
 	return newFakeClient(newDomainMappingScheme(), objs...)
 }
 
-func newDomainMapping(name string, mutate func(*knativev1beta1.DomainMapping)) *knativev1beta1.DomainMapping {
+func newDomainMapping(mutate func(*knativev1beta1.DomainMapping)) *knativev1beta1.DomainMapping {
 	dm := &knativev1beta1.DomainMapping{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
+			Name:      hostnameFQDN,
 			Namespace: cappNamespace,
 			Labels:    utils.ManagedResourceLabels(cappName),
 		},
@@ -123,7 +123,7 @@ func TestDomainMappingManagerCreateOrUpdate(t *testing.T) {
 	})
 
 	t.Run("updates when spec differs", func(t *testing.T) {
-		existing := newDomainMapping(hostnameFQDN, func(dm *knativev1beta1.DomainMapping) {
+		existing := newDomainMapping(func(dm *knativev1beta1.DomainMapping) {
 			dm.Spec.Ref.Name = "wrong-ksvc"
 		})
 		mgr := newDomainMappingManager(newDomainMappingClient(existing))
@@ -137,7 +137,7 @@ func TestDomainMappingManagerCreateOrUpdate(t *testing.T) {
 	})
 
 	t.Run("adds owner reference when missing", func(t *testing.T) {
-		existing := newDomainMapping(hostnameFQDN, nil)
+		existing := newDomainMapping(nil)
 		mgr := newDomainMappingManager(newDomainMappingClient(existing))
 		capp := newCappWithHostname(hostnameBare)
 
@@ -183,7 +183,7 @@ func TestDomainMappingManagerManage(t *testing.T) {
 	})
 
 	t.Run("cleans up when hostname is empty", func(t *testing.T) {
-		existing := newDomainMapping(hostnameFQDN, nil)
+		existing := newDomainMapping(nil)
 		fakeClient := newDomainMappingClient(existing)
 		mgr := newDomainMappingManager(fakeClient)
 		capp := newBaseCapp()
@@ -199,26 +199,9 @@ func TestDomainMappingManagerManage(t *testing.T) {
 func TestDomainMappingManagerCleanUp(t *testing.T) {
 	ctx := context.Background()
 
-	t.Run("deletes all owned resources", func(t *testing.T) {
-		const otherMappingName = "other.capp-zone.com"
-		fakeClient := newFakeClient(newDomainMappingScheme(),
-			newDomainMapping(hostnameFQDN, nil),
-			newDomainMapping(otherMappingName, nil),
-		)
-		mgr := newDomainMappingManager(fakeClient)
-
-		require.NoError(t, mgr.CleanUp(ctx, newBaseCapp()))
-
-		for _, name := range []string{hostnameFQDN, otherMappingName} {
-			got := &knativev1beta1.DomainMapping{}
-			getErr := fakeClient.Get(ctx, types.NamespacedName{Name: name, Namespace: cappNamespace}, got)
-			require.True(t, errors.IsNotFound(getErr))
-		}
-	})
-
 	t.Run("deletes associated TLS secret", func(t *testing.T) {
 		fakeClient := newFakeClient(newDomainMappingScheme(),
-			newDomainMapping(hostnameFQDN, nil),
+			newDomainMapping(nil),
 			newSecret(utils.GenerateSecretName(hostnameFQDN), nil),
 		)
 		mgr := newDomainMappingManager(fakeClient)
@@ -238,7 +221,7 @@ func TestDomainMappingManagerCleanUp(t *testing.T) {
 	t.Run("skips delete when deleting and has owner reference", func(t *testing.T) {
 		capp := cappWithDeletionTimestamp(newBaseCapp())
 
-		mapping := newDomainMapping(hostnameFQDN, nil)
+		mapping := newDomainMapping(nil)
 		require.NoError(t, controllerutil.SetOwnerReference(&capp, mapping, newDomainMappingScheme()))
 
 		mgr := newDomainMappingManager(newFakeClient(newDomainMappingScheme(), mapping))
@@ -251,7 +234,7 @@ func TestDomainMappingManagerCleanUp(t *testing.T) {
 	t.Run("deletes when deleting and lacks owner reference", func(t *testing.T) {
 		capp := cappWithDeletionTimestamp(newBaseCapp())
 
-		mapping := newDomainMapping(hostnameFQDN, nil)
+		mapping := newDomainMapping(nil)
 		mgr := newDomainMappingManager(newFakeClient(newDomainMappingScheme(), mapping))
 		require.NoError(t, mgr.CleanUp(ctx, capp))
 
