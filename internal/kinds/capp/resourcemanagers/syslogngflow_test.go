@@ -50,7 +50,7 @@ func newSyslogNGFlow(outputRefs ...string) *loggingv1beta1.SyslogNGFlow {
 	}
 }
 
-func TestSyslogNGFlowCreateOrUpdate(t *testing.T) {
+func TestSyslogNGFlowManagerCreateOrUpdate(t *testing.T) {
 	ctx := context.Background()
 	key := types.NamespacedName{Name: cappName, Namespace: cappNamespace}
 
@@ -82,17 +82,17 @@ func TestSyslogNGFlowCreateOrUpdate(t *testing.T) {
 	})
 }
 
-func TestSyslogNGFlowManage(t *testing.T) {
+func TestSyslogNGFlowManagerManage(t *testing.T) {
 	ctx := context.Background()
 
-	t.Run("reconciles when log is required", func(t *testing.T) {
+	t.Run("reconciles when required", func(t *testing.T) {
 		fm := newSyslogNGFlowManager(newFakeClient(newSyslogNGScheme()))
 		capp := newBaseCapp()
 		capp.Spec.LogSpec = newLogSpec(cappv1alpha1.LogTypeElastic)
 		require.NoError(t, fm.Manage(ctx, capp))
 	})
 
-	t.Run("cleans up when log is not required", func(t *testing.T) {
+	t.Run("cleans up when not required", func(t *testing.T) {
 		fakeClient := newFakeClient(newSyslogNGScheme())
 		require.NoError(t, fakeClient.Create(ctx, newSyslogNGFlow()))
 
@@ -124,10 +124,10 @@ func TestSyslogNGFlowManage(t *testing.T) {
 	})
 }
 
-func TestSyslogNGFlowCleanUp(t *testing.T) {
+func TestSyslogNGFlowManagerCleanUp(t *testing.T) {
 	ctx := context.Background()
 
-	t.Run("succeeds when SyslogNGFlow does not exist", func(t *testing.T) {
+	t.Run("succeeds when none exist", func(t *testing.T) {
 		fm := newSyslogNGFlowManager(newFakeClient(newSyslogNGScheme()))
 		require.NoError(t, fm.CleanUp(ctx, newBaseCapp()))
 	})
@@ -144,7 +144,7 @@ func TestSyslogNGFlowCleanUp(t *testing.T) {
 		require.True(t, errors.IsNotFound(getErr))
 	})
 
-	t.Run("skips delete when capp is deleting and flow has owner reference", func(t *testing.T) {
+	t.Run("skips delete when deleting and has owner reference", func(t *testing.T) {
 		capp := newBaseCapp()
 		now := metav1.Now()
 		capp.DeletionTimestamp = &now
