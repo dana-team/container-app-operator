@@ -10,6 +10,7 @@ import (
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -134,7 +135,7 @@ func TestKafkaSourceManagerCleanUpOrphans(t *testing.T) {
 		getErr := fakeClient.Get(ctx, types.NamespacedName{
 			Name: fmt.Sprintf("%s-%s", cappName, ordersB), Namespace: cappNamespace,
 		}, deleted)
-		require.True(t, client.IgnoreNotFound(getErr) == nil && getErr != nil, "expected orphan to not exist")
+		require.True(t, errors.IsNotFound(getErr), "expected orphan to not exist")
 	})
 }
 
@@ -164,7 +165,7 @@ func TestKafkaSourceManagerManage(t *testing.T) {
 		getErr := fakeClient.Get(ctx, types.NamespacedName{
 			Name: fmt.Sprintf("%s-%s", cappName, ordersA), Namespace: cappNamespace,
 		}, got)
-		require.True(t, client.IgnoreNotFound(getErr) == nil && getErr != nil, "expected %q to not exist", fmt.Sprintf("%s-%s", cappName, ordersA))
+		require.True(t, errors.IsNotFound(getErr), "expected %q to not exist", fmt.Sprintf("%s-%s", cappName, ordersA))
 	})
 }
 
@@ -183,7 +184,7 @@ func TestKafkaSourceManagerCleanUp(t *testing.T) {
 			getErr := fakeClient.Get(ctx, types.NamespacedName{
 				Name: fmt.Sprintf("%s-%s", cappName, source), Namespace: cappNamespace,
 			}, got)
-			require.True(t, client.IgnoreNotFound(getErr) == nil && getErr != nil, "expected %q to not exist", fmt.Sprintf("%s-%s", cappName, source))
+			require.True(t, errors.IsNotFound(getErr), "expected %q to not exist", fmt.Sprintf("%s-%s", cappName, source))
 		}
 	})
 }

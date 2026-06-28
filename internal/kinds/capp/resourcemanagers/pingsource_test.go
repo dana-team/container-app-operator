@@ -9,8 +9,8 @@ import (
 	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/resourceclient"
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 	"github.com/go-logr/logr"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -89,20 +89,20 @@ func TestPingSourceManagerCleanUpOrphans(t *testing.T) {
 			ctx := context.Background()
 			fakeClient := newFakeClient(newPingSourceScheme())
 			for _, ps := range tt.preCreate {
-				assert.NoError(t, fakeClient.Create(ctx, ps))
+				require.NoError(t, fakeClient.Create(ctx, ps))
 			}
 			pm := newPingSourceManager(fakeClient)
 			capp := newBaseCapp()
 			capp.Spec.EventSourcesSpec.Sources = tt.sources
-			assert.NoError(t, pm.cleanUpOrphans(ctx, capp))
+			require.NoError(t, pm.cleanUpOrphans(ctx, capp))
 			for _, name := range tt.expectKept {
 				got := &sourcesv1.PingSource{}
-				assert.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: name, Namespace: cappNamespace}, got))
+				require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: name, Namespace: cappNamespace}, got))
 			}
 			for _, name := range tt.expectDeleted {
 				got := &sourcesv1.PingSource{}
 				getErr := fakeClient.Get(ctx, types.NamespacedName{Name: name, Namespace: cappNamespace}, got)
-				assert.True(t, client.IgnoreNotFound(getErr) == nil && getErr != nil, "expected %q to be deleted", name)
+				require.True(t, errors.IsNotFound(getErr), "expected %q to be deleted", name)
 			}
 		})
 	}
@@ -139,18 +139,18 @@ func TestPingSourceManagerCreateOrUpdate(t *testing.T) {
 			if tt.preCreate {
 				cfg := cappv1alpha1.PingSourceConfiguration{Schedule: schedule}
 				cfg.Data = tt.preData
-				assert.NoError(t, pm.createOrUpdate(ctx, capp, newPingSourceEntry(sourceName, cfg)))
+				require.NoError(t, pm.createOrUpdate(ctx, capp, newPingSourceEntry(sourceName, cfg)))
 			}
 
 			cfg := cappv1alpha1.PingSourceConfiguration{Schedule: schedule}
 			cfg.Data = tt.data
 			src := newPingSourceEntry(sourceName, cfg)
-			assert.NoError(t, pm.createOrUpdate(ctx, capp, src))
+			require.NoError(t, pm.createOrUpdate(ctx, capp, src))
 			got := &sourcesv1.PingSource{}
-			assert.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: fmt.Sprintf("%s-%s", cappName, sourceName), Namespace: cappNamespace}, got))
-			assert.Equal(t, tt.expectedData, got.Spec.Data)
-			assert.Len(t, got.OwnerReferences, 1)
-			assert.Equal(t, capp.Name, got.OwnerReferences[0].Name)
+			require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: fmt.Sprintf("%s-%s", cappName, sourceName), Namespace: cappNamespace}, got))
+			require.Equal(t, tt.expectedData, got.Spec.Data)
+			require.Len(t, got.OwnerReferences, 1)
+			require.Equal(t, capp.Name, got.OwnerReferences[0].Name)
 		})
 	}
 }
@@ -182,7 +182,7 @@ func TestPingSourceManagerManage(t *testing.T) {
 		getErr := fakeClient.Get(ctx, types.NamespacedName{
 			Name: fmt.Sprintf("%s-%s", cappName, ordersA), Namespace: cappNamespace,
 		}, got)
-		require.True(t, client.IgnoreNotFound(getErr) == nil && getErr != nil, "expected %q to not exist", fmt.Sprintf("%s-%s", cappName, ordersA))
+		require.True(t, errors.IsNotFound(getErr), "expected %q to not exist", fmt.Sprintf("%s-%s", cappName, ordersA))
 	})
 }
 
@@ -201,7 +201,7 @@ func TestPingSourceManagerCleanUp(t *testing.T) {
 			getErr := fakeClient.Get(ctx, types.NamespacedName{
 				Name: fmt.Sprintf("%s-%s", cappName, source), Namespace: cappNamespace,
 			}, got)
-			require.True(t, client.IgnoreNotFound(getErr) == nil && getErr != nil, "expected %q to not exist", fmt.Sprintf("%s-%s", cappName, source))
+			require.True(t, errors.IsNotFound(getErr), "expected %q to not exist", fmt.Sprintf("%s-%s", cappName, source))
 		}
 	})
 }
