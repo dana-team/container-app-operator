@@ -236,9 +236,7 @@ func TestDomainMappingManagerCleanUp(t *testing.T) {
 	})
 
 	t.Run("skips delete when deleting and has owner reference", func(t *testing.T) {
-		capp := newBaseCapp()
-		now := metav1.Now()
-		capp.DeletionTimestamp = &now
+		capp := cappWithDeletionTimestamp(newBaseCapp())
 
 		mapping := newDomainMapping(hostnameFQDN, nil)
 		require.NoError(t, controllerutil.SetOwnerReference(&capp, mapping, newDomainMappingScheme()))
@@ -251,9 +249,7 @@ func TestDomainMappingManagerCleanUp(t *testing.T) {
 	})
 
 	t.Run("deletes when deleting and lacks owner reference", func(t *testing.T) {
-		capp := newBaseCapp()
-		now := metav1.Now()
-		capp.DeletionTimestamp = &now
+		capp := cappWithDeletionTimestamp(newBaseCapp())
 
 		mapping := newDomainMapping(hostnameFQDN, nil)
 		mgr := newDomainMappingManager(newFakeClient(newDomainMappingScheme(), mapping))
