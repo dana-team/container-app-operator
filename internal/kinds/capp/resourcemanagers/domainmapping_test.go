@@ -19,7 +19,6 @@ import (
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
@@ -38,10 +37,7 @@ func newDomainMappingManager(k8sClient client.Client) DomainMappingManager {
 
 func newDomainMappingClient(objects ...client.Object) client.Client {
 	objs := append([]client.Object{newCappConfigWithDNS()}, objects...)
-	return fake.NewClientBuilder().
-		WithScheme(newDomainMappingScheme()).
-		WithObjects(objs...).
-		Build()
+	return newFakeClient(newDomainMappingScheme(), objs...)
 }
 
 func newDomainMapping(name string, mutate func(*knativev1beta1.DomainMapping)) *knativev1beta1.DomainMapping {
@@ -169,7 +165,7 @@ func TestDomainMappingManagerCreateOrUpdate(t *testing.T) {
 	})
 
 	t.Run("returns error when CappConfig missing", func(t *testing.T) {
-		mgr := newDomainMappingManager(fake.NewClientBuilder().WithScheme(newDomainMappingScheme()).Build())
+		mgr := newDomainMappingManager(newFakeClient(newDomainMappingScheme()))
 		capp := newCappWithHostname(hostnameBare)
 
 		err := mgr.createOrUpdate(ctx, capp)
@@ -205,13 +201,10 @@ func TestDomainMappingManagerCleanUp(t *testing.T) {
 
 	t.Run("deletes all owned domain mappings", func(t *testing.T) {
 		const otherMappingName = "other.capp-zone.com"
-		fakeClient := fake.NewClientBuilder().
-			WithScheme(newDomainMappingScheme()).
-			WithObjects(
-				newDomainMapping(hostnameFQDN, nil),
-				newDomainMapping(otherMappingName, nil),
-			).
-			Build()
+		fakeClient := newFakeClient(newDomainMappingScheme(),
+			newDomainMapping(hostnameFQDN, nil),
+			newDomainMapping(otherMappingName, nil),
+		)
 		mgr := newDomainMappingManager(fakeClient)
 
 		require.NoError(t, mgr.CleanUp(ctx, newBaseCapp()))
@@ -224,13 +217,10 @@ func TestDomainMappingManagerCleanUp(t *testing.T) {
 	})
 
 	t.Run("deletes associated TLS secret", func(t *testing.T) {
-		fakeClient := fake.NewClientBuilder().
-			WithScheme(newDomainMappingScheme()).
-			WithObjects(
-				newDomainMapping(hostnameFQDN, nil),
-				newSecret(utils.GenerateSecretName(hostnameFQDN), nil),
-			).
-			Build()
+		fakeClient := newFakeClient(newDomainMappingScheme(),
+			newDomainMapping(hostnameFQDN, nil),
+			newSecret(utils.GenerateSecretName(hostnameFQDN), nil),
+		)
 		mgr := newDomainMappingManager(fakeClient)
 
 		require.NoError(t, mgr.CleanUp(ctx, newBaseCapp()))
@@ -241,7 +231,7 @@ func TestDomainMappingManagerCleanUp(t *testing.T) {
 	})
 
 	t.Run("succeeds when no domain mappings exist", func(t *testing.T) {
-		mgr := newDomainMappingManager(fake.NewClientBuilder().WithScheme(newDomainMappingScheme()).Build())
+		mgr := newDomainMappingManager(newFakeClient(newDomainMappingScheme()))
 		require.NoError(t, mgr.CleanUp(ctx, newBaseCapp()))
 	})
 
@@ -253,7 +243,7 @@ func TestDomainMappingManagerCleanUp(t *testing.T) {
 		mapping := newDomainMapping(hostnameFQDN, nil)
 		require.NoError(t, controllerutil.SetOwnerReference(&capp, mapping, newDomainMappingScheme()))
 
-		mgr := newDomainMappingManager(fake.NewClientBuilder().WithScheme(newDomainMappingScheme()).WithObjects(mapping).Build())
+		mgr := newDomainMappingManager(newFakeClient(newDomainMappingScheme(), mapping))
 		require.NoError(t, mgr.CleanUp(ctx, capp))
 
 		got := &knativev1beta1.DomainMapping{}
@@ -266,7 +256,7 @@ func TestDomainMappingManagerCleanUp(t *testing.T) {
 		capp.DeletionTimestamp = &now
 
 		mapping := newDomainMapping(hostnameFQDN, nil)
-		mgr := newDomainMappingManager(fake.NewClientBuilder().WithScheme(newDomainMappingScheme()).WithObjects(mapping).Build())
+		mgr := newDomainMappingManager(newFakeClient(newDomainMappingScheme(), mapping))
 		require.NoError(t, mgr.CleanUp(ctx, capp))
 
 		got := &knativev1beta1.DomainMapping{}
