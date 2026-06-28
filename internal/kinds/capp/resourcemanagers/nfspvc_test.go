@@ -18,7 +18,6 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/tools/events"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
@@ -81,7 +80,7 @@ func TestNFSPVCCreateOrUpdate(t *testing.T) {
 	keyA := types.NamespacedName{Name: nfsVolA, Namespace: cappNamespace}
 
 	t.Run("creates when not found", func(t *testing.T) {
-		nm := newNFSPVCManager(fake.NewClientBuilder().WithScheme(newNFSPVCScheme()).Build())
+		nm := newNFSPVCManager(newFakeClient(newNFSPVCScheme()))
 		capp := cappWithVolumes(newNFSVolume(nfsVolA, nfsPath))
 
 		require.NoError(t, nm.createOrUpdate(ctx, capp))
@@ -94,7 +93,7 @@ func TestNFSPVCCreateOrUpdate(t *testing.T) {
 	})
 
 	t.Run("updates when spec differs", func(t *testing.T) {
-		nm := newNFSPVCManager(fake.NewClientBuilder().WithScheme(newNFSPVCScheme()).Build())
+		nm := newNFSPVCManager(newFakeClient(newNFSPVCScheme()))
 		existing := newNFSPVC(nfsVolA)
 		require.NoError(t, nm.K8sclient.Create(ctx, existing))
 
@@ -107,7 +106,7 @@ func TestNFSPVCCreateOrUpdate(t *testing.T) {
 	})
 
 	t.Run("creates multiple NFSPVCs from spec", func(t *testing.T) {
-		nm := newNFSPVCManager(fake.NewClientBuilder().WithScheme(newNFSPVCScheme()).Build())
+		nm := newNFSPVCManager(newFakeClient(newNFSPVCScheme()))
 		capp := cappWithVolumes(newNFSVolume(nfsVolA, nfsPath), newNFSVolume(nfsVolB, nfsPath))
 
 		require.NoError(t, nm.createOrUpdate(ctx, capp))
@@ -124,14 +123,14 @@ func TestNFSPVCManage(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("reconciles when nfs is required", func(t *testing.T) {
-		nm := newNFSPVCManager(fake.NewClientBuilder().WithScheme(newNFSPVCScheme()).Build())
+		nm := newNFSPVCManager(newFakeClient(newNFSPVCScheme()))
 		capp := cappWithVolumes(newNFSVolume(nfsVolA, nfsPath))
 
 		require.NoError(t, nm.Manage(ctx, capp))
 	})
 
 	t.Run("cleans up when nfs is not required", func(t *testing.T) {
-		fakeClient := fake.NewClientBuilder().WithScheme(newNFSPVCScheme()).Build()
+		fakeClient := newFakeClient(newNFSPVCScheme())
 		require.NoError(t, fakeClient.Create(ctx, newNFSPVC(nfsVolA)))
 
 		nm := newNFSPVCManager(fakeClient)
@@ -148,7 +147,7 @@ func TestNFSPVCCleanUp(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("deletes all owned NFSPVCs", func(t *testing.T) {
-		fakeClient := fake.NewClientBuilder().WithScheme(newNFSPVCScheme()).Build()
+		fakeClient := newFakeClient(newNFSPVCScheme())
 		for _, vol := range []string{nfsVolA, nfsVolB} {
 			require.NoError(t, fakeClient.Create(ctx, newNFSPVC(vol)))
 		}
@@ -171,7 +170,7 @@ func TestNFSPVCCleanUp(t *testing.T) {
 		nfspvc := newNFSPVC(nfsVolA)
 		require.NoError(t, controllerutil.SetOwnerReference(&capp, nfspvc, newNFSPVCScheme()))
 
-		nm := newNFSPVCManager(fake.NewClientBuilder().WithScheme(newNFSPVCScheme()).WithObjects(nfspvc).Build())
+		nm := newNFSPVCManager(newFakeClient(newNFSPVCScheme(), nfspvc))
 		require.NoError(t, nm.CleanUp(ctx, capp))
 
 		got := &nfspvcv1alpha1.NfsPvc{}

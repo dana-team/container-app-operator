@@ -17,7 +17,6 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/tools/events"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
@@ -36,10 +35,7 @@ func newCertificateManager(k8sClient client.Client) CertificateManager {
 
 func newCertificateClient(objects ...client.Object) client.Client {
 	objs := append([]client.Object{newCappConfigWithDNS()}, objects...)
-	return fake.NewClientBuilder().
-		WithScheme(newCertificateScheme()).
-		WithObjects(objs...).
-		Build()
+	return newFakeClient(newCertificateScheme(), objs...)
 }
 
 func newCertificate(name string, mutate func(*cmapi.Certificate)) *cmapi.Certificate {
@@ -74,7 +70,7 @@ func TestCertificateManagerPrepareResource(t *testing.T) {
 	})
 
 	t.Run("returns error when CappConfig missing", func(t *testing.T) {
-		mgr := newCertificateManager(fake.NewClientBuilder().WithScheme(newCertificateScheme()).Build())
+		mgr := newCertificateManager(newFakeClient(newCertificateScheme()))
 		capp := newCappWithTLS(hostnameBare, true)
 
 		_, err := mgr.prepareResource(ctx, capp)
@@ -180,13 +176,10 @@ func TestCertificateManagerCleanUp(t *testing.T) {
 
 	t.Run("deletes all owned certificates", func(t *testing.T) {
 		const otherCertName = "other.capp-zone.com"
-		fakeClient := fake.NewClientBuilder().
-			WithScheme(newCertificateScheme()).
-			WithObjects(
-				newCertificate(hostnameFQDN, nil),
-				newCertificate(otherCertName, nil),
-			).
-			Build()
+		fakeClient := newFakeClient(newCertificateScheme(),
+			newCertificate(hostnameFQDN, nil),
+			newCertificate(otherCertName, nil),
+		)
 		mgr := newCertificateManager(fakeClient)
 
 		require.NoError(t, mgr.CleanUp(ctx, newBaseCapp()))
@@ -199,7 +192,7 @@ func TestCertificateManagerCleanUp(t *testing.T) {
 	})
 
 	t.Run("succeeds when no certificates exist", func(t *testing.T) {
-		mgr := newCertificateManager(fake.NewClientBuilder().WithScheme(newCertificateScheme()).Build())
+		mgr := newCertificateManager(newFakeClient(newCertificateScheme()))
 		require.NoError(t, mgr.CleanUp(ctx, newBaseCapp()))
 	})
 
@@ -211,7 +204,7 @@ func TestCertificateManagerCleanUp(t *testing.T) {
 		cert := newCertificate(hostnameFQDN, nil)
 		require.NoError(t, controllerutil.SetOwnerReference(&capp, cert, newCertificateScheme()))
 
-		mgr := newCertificateManager(fake.NewClientBuilder().WithScheme(newCertificateScheme()).WithObjects(cert).Build())
+		mgr := newCertificateManager(newFakeClient(newCertificateScheme(), cert))
 		require.NoError(t, mgr.CleanUp(ctx, capp))
 
 		got := &cmapi.Certificate{}
@@ -224,7 +217,7 @@ func TestCertificateManagerCleanUp(t *testing.T) {
 		capp.DeletionTimestamp = &now
 
 		cert := newCertificate(hostnameFQDN, nil)
-		mgr := newCertificateManager(fake.NewClientBuilder().WithScheme(newCertificateScheme()).WithObjects(cert).Build())
+		mgr := newCertificateManager(newFakeClient(newCertificateScheme(), cert))
 		require.NoError(t, mgr.CleanUp(ctx, capp))
 
 		got := &cmapi.Certificate{}

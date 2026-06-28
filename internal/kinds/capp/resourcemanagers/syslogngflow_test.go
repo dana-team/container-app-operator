@@ -17,7 +17,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/events"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
@@ -56,7 +55,7 @@ func TestSyslogNGFlowCreateOrUpdate(t *testing.T) {
 	key := types.NamespacedName{Name: cappName, Namespace: cappNamespace}
 
 	t.Run("creates when not found", func(t *testing.T) {
-		fm := newSyslogNGFlowManager(fake.NewClientBuilder().WithScheme(newSyslogNGScheme()).Build())
+		fm := newSyslogNGFlowManager(newFakeClient(newSyslogNGScheme()))
 		capp := newBaseCapp()
 		capp.Spec.LogSpec = newLogSpec(cappv1alpha1.LogTypeElastic)
 
@@ -70,7 +69,7 @@ func TestSyslogNGFlowCreateOrUpdate(t *testing.T) {
 	})
 
 	t.Run("updates when spec differs", func(t *testing.T) {
-		fm := newSyslogNGFlowManager(fake.NewClientBuilder().WithScheme(newSyslogNGScheme()).Build())
+		fm := newSyslogNGFlowManager(newFakeClient(newSyslogNGScheme()))
 		require.NoError(t, fm.K8sclient.Create(ctx, newSyslogNGFlow("stale-output")))
 
 		capp := newBaseCapp()
@@ -87,14 +86,14 @@ func TestSyslogNGFlowManage(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("reconciles when log is required", func(t *testing.T) {
-		fm := newSyslogNGFlowManager(fake.NewClientBuilder().WithScheme(newSyslogNGScheme()).Build())
+		fm := newSyslogNGFlowManager(newFakeClient(newSyslogNGScheme()))
 		capp := newBaseCapp()
 		capp.Spec.LogSpec = newLogSpec(cappv1alpha1.LogTypeElastic)
 		require.NoError(t, fm.Manage(ctx, capp))
 	})
 
 	t.Run("cleans up when log is not required", func(t *testing.T) {
-		fakeClient := fake.NewClientBuilder().WithScheme(newSyslogNGScheme()).Build()
+		fakeClient := newFakeClient(newSyslogNGScheme())
 		require.NoError(t, fakeClient.Create(ctx, newSyslogNGFlow()))
 
 		fm := newSyslogNGFlowManager(fakeClient)
@@ -107,7 +106,7 @@ func TestSyslogNGFlowManage(t *testing.T) {
 	})
 
 	t.Run("cleans up when log type is unsupported", func(t *testing.T) {
-		fakeClient := fake.NewClientBuilder().WithScheme(newSyslogNGScheme()).Build()
+		fakeClient := newFakeClient(newSyslogNGScheme())
 		require.NoError(t, fakeClient.Create(ctx, newSyslogNGFlow()))
 
 		fm := newSyslogNGFlowManager(fakeClient)
@@ -129,12 +128,12 @@ func TestSyslogNGFlowCleanUp(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("succeeds when SyslogNGFlow does not exist", func(t *testing.T) {
-		fm := newSyslogNGFlowManager(fake.NewClientBuilder().WithScheme(newSyslogNGScheme()).Build())
+		fm := newSyslogNGFlowManager(newFakeClient(newSyslogNGScheme()))
 		require.NoError(t, fm.CleanUp(ctx, newBaseCapp()))
 	})
 
 	t.Run("deletes SyslogNGFlow by capp name", func(t *testing.T) {
-		fakeClient := fake.NewClientBuilder().WithScheme(newSyslogNGScheme()).Build()
+		fakeClient := newFakeClient(newSyslogNGScheme())
 		require.NoError(t, fakeClient.Create(ctx, newSyslogNGFlow()))
 
 		require.NoError(t, newSyslogNGFlowManager(fakeClient).CleanUp(ctx, newBaseCapp()))
@@ -153,7 +152,7 @@ func TestSyslogNGFlowCleanUp(t *testing.T) {
 		flow := newSyslogNGFlow()
 		require.NoError(t, controllerutil.SetOwnerReference(&capp, flow, newSyslogNGScheme()))
 
-		fm := newSyslogNGFlowManager(fake.NewClientBuilder().WithScheme(newSyslogNGScheme()).WithObjects(flow).Build())
+		fm := newSyslogNGFlowManager(newFakeClient(newSyslogNGScheme(), flow))
 		require.NoError(t, fm.CleanUp(ctx, capp))
 
 		got := &loggingv1beta1.SyslogNGFlow{}

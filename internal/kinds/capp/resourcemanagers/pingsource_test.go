@@ -19,7 +19,6 @@ import (
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	servingv1 "knative.dev/serving/pkg/apis/serving/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 const (
@@ -89,7 +88,7 @@ func TestPingSourceCleanUpOrphans(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
-			fakeClient := fake.NewClientBuilder().WithScheme(newPingSourceScheme()).Build()
+			fakeClient := newFakeClient(newPingSourceScheme())
 			for _, ps := range tt.preCreate {
 				assert.NoError(t, fakeClient.Create(ctx, ps))
 			}
@@ -134,7 +133,7 @@ func TestPingSourceCreateOrUpdate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
-			fakeClient := fake.NewClientBuilder().WithScheme(newPingSourceScheme()).Build()
+			fakeClient := newFakeClient(newPingSourceScheme())
 			pm := newPingSourceManager(fakeClient)
 			capp := newBaseCapp()
 
@@ -171,7 +170,7 @@ func TestPingSourceManage(t *testing.T) {
 	pingCfg := &cappv1alpha1.PingSourceConfiguration{Schedule: schedule}
 
 	t.Run("reconciles when ping is required", func(t *testing.T) {
-		pm := newPingSourceManager(fake.NewClientBuilder().WithScheme(newPingSourceScheme()).Build())
+		pm := newPingSourceManager(newFakeClient(newPingSourceScheme()))
 		capp := newBaseCapp()
 		capp.Spec.EventSourcesSpec.Sources = []cappv1alpha1.SourceConfiguration{
 			{Name: sourceA, PingSourceConfiguration: pingCfg},
@@ -180,7 +179,7 @@ func TestPingSourceManage(t *testing.T) {
 	})
 
 	t.Run("cleans up when ping is not required", func(t *testing.T) {
-		fakeClient := fake.NewClientBuilder().WithScheme(newPingSourceScheme()).Build()
+		fakeClient := newFakeClient(newPingSourceScheme())
 		require.NoError(t, fakeClient.Create(ctx, newPingSource(ordersA)))
 
 		pm := newPingSourceManager(fakeClient)
@@ -201,7 +200,7 @@ func TestPingSourceManage(t *testing.T) {
 func TestPingSourceCleanUp(t *testing.T) {
 	t.Run("deletes all owned PingSources", func(t *testing.T) {
 		ctx := context.Background()
-		fakeClient := fake.NewClientBuilder().WithScheme(newPingSourceScheme()).Build()
+		fakeClient := newFakeClient(newPingSourceScheme())
 		for _, source := range []string{sourceA, sourceB} {
 			require.NoError(t, fakeClient.Create(ctx, newPingSource(source)))
 		}
