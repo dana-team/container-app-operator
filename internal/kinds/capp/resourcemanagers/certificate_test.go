@@ -128,7 +128,7 @@ func TestCertificateManagerManage(t *testing.T) {
 		require.Equal(t, cappName, got.OwnerReferences[0].Name)
 	})
 
-	t.Run("skips update when spec and owner match", func(t *testing.T) {
+	t.Run("skips update when unchanged", func(t *testing.T) {
 		mgr := newCertificateManager(newCertificateClient())
 		capp := newCappWithTLS(hostnameBare, true)
 		require.NoError(t, mgr.Manage(ctx, capp))
@@ -174,7 +174,7 @@ func TestCertificateManagerManage(t *testing.T) {
 func TestCertificateManagerCleanUp(t *testing.T) {
 	ctx := context.Background()
 
-	t.Run("deletes all owned certificates", func(t *testing.T) {
+	t.Run("deletes all owned resources", func(t *testing.T) {
 		const otherCertName = "other.capp-zone.com"
 		fakeClient := newFakeClient(newCertificateScheme(),
 			newCertificate(hostnameFQDN, nil),
@@ -191,12 +191,12 @@ func TestCertificateManagerCleanUp(t *testing.T) {
 		}
 	})
 
-	t.Run("succeeds when no certificates exist", func(t *testing.T) {
+	t.Run("succeeds when none exist", func(t *testing.T) {
 		mgr := newCertificateManager(newFakeClient(newCertificateScheme()))
 		require.NoError(t, mgr.CleanUp(ctx, newBaseCapp()))
 	})
 
-	t.Run("skips delete when capp deleting and certificate has owner reference", func(t *testing.T) {
+	t.Run("skips delete when deleting and has owner reference", func(t *testing.T) {
 		capp := newBaseCapp()
 		now := metav1.Now()
 		capp.DeletionTimestamp = &now
@@ -211,7 +211,7 @@ func TestCertificateManagerCleanUp(t *testing.T) {
 		require.NoError(t, mgr.K8sclient.Get(ctx, types.NamespacedName{Name: hostnameFQDN, Namespace: cappNamespace}, got))
 	})
 
-	t.Run("deletes when capp is deleting and certificate lacks owner reference", func(t *testing.T) {
+	t.Run("deletes when deleting and lacks owner reference", func(t *testing.T) {
 		capp := newBaseCapp()
 		now := metav1.Now()
 		capp.DeletionTimestamp = &now

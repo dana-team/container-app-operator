@@ -148,7 +148,7 @@ func TestDomainMappingManagerCreateOrUpdate(t *testing.T) {
 		require.Equal(t, cappName, got.OwnerReferences[0].Name)
 	})
 
-	t.Run("skips update when spec and owner match", func(t *testing.T) {
+	t.Run("skips update when unchanged", func(t *testing.T) {
 		mgr := newDomainMappingManager(newDomainMappingClient())
 		capp := newCappWithHostname(hostnameBare)
 		require.NoError(t, mgr.createOrUpdate(ctx, capp))
@@ -199,7 +199,7 @@ func TestDomainMappingManagerManage(t *testing.T) {
 func TestDomainMappingManagerCleanUp(t *testing.T) {
 	ctx := context.Background()
 
-	t.Run("deletes all owned domain mappings", func(t *testing.T) {
+	t.Run("deletes all owned resources", func(t *testing.T) {
 		const otherMappingName = "other.capp-zone.com"
 		fakeClient := newFakeClient(newDomainMappingScheme(),
 			newDomainMapping(hostnameFQDN, nil),
@@ -230,12 +230,12 @@ func TestDomainMappingManagerCleanUp(t *testing.T) {
 		require.True(t, errors.IsNotFound(getErr))
 	})
 
-	t.Run("succeeds when no domain mappings exist", func(t *testing.T) {
+	t.Run("succeeds when none exist", func(t *testing.T) {
 		mgr := newDomainMappingManager(newFakeClient(newDomainMappingScheme()))
 		require.NoError(t, mgr.CleanUp(ctx, newBaseCapp()))
 	})
 
-	t.Run("skips delete when capp deleting and mapping has owner reference", func(t *testing.T) {
+	t.Run("skips delete when deleting and has owner reference", func(t *testing.T) {
 		capp := newBaseCapp()
 		now := metav1.Now()
 		capp.DeletionTimestamp = &now
@@ -250,7 +250,7 @@ func TestDomainMappingManagerCleanUp(t *testing.T) {
 		require.NoError(t, mgr.K8sclient.Get(ctx, types.NamespacedName{Name: hostnameFQDN, Namespace: cappNamespace}, got))
 	})
 
-	t.Run("deletes when capp is deleting and mapping lacks owner reference", func(t *testing.T) {
+	t.Run("deletes when deleting and lacks owner reference", func(t *testing.T) {
 		capp := newBaseCapp()
 		now := metav1.Now()
 		capp.DeletionTimestamp = &now
