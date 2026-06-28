@@ -23,7 +23,6 @@ import (
 
 const (
 	sourceName = "ping"
-	schedule   = "* * * * *"
 	sourceA    = "ping-a"
 	sourceB    = "ping-b"
 	sourceC    = "ping-c"
@@ -54,7 +53,7 @@ func newPingSource(source string) *sourcesv1.PingSource {
 }
 
 func TestPingSourceManagerCleanUpOrphans(t *testing.T) {
-	pingCfg := &cappv1alpha1.PingSourceConfiguration{Schedule: schedule}
+	pingCfg := cappv1alpha1.PingSourceConfiguration{Schedule: schedule}
 	tests := []struct {
 		name          string
 		sources       []cappv1alpha1.SourceConfiguration
@@ -64,7 +63,7 @@ func TestPingSourceManagerCleanUpOrphans(t *testing.T) {
 	}{
 		{
 			name:          "deletes orphaned PingSource not in spec",
-			sources:       []cappv1alpha1.SourceConfiguration{{Name: sourceA, PingSourceConfiguration: pingCfg}},
+			sources:       []cappv1alpha1.SourceConfiguration{newPingSourceEntry(sourceA, pingCfg)},
 			preCreate:     []*sourcesv1.PingSource{newPingSource(sourceA), newPingSource(sourceB)},
 			expectKept:    []string{fmt.Sprintf("%s-%s", cappName, sourceA)},
 			expectDeleted: []string{fmt.Sprintf("%s-%s", cappName, sourceB)},
@@ -72,15 +71,15 @@ func TestPingSourceManagerCleanUpOrphans(t *testing.T) {
 		{
 			name: "keeps all owned when all are in spec",
 			sources: []cappv1alpha1.SourceConfiguration{
-				{Name: sourceA, PingSourceConfiguration: pingCfg},
-				{Name: sourceB, PingSourceConfiguration: pingCfg},
+				newPingSourceEntry(sourceA, pingCfg),
+				newPingSourceEntry(sourceB, pingCfg),
 			},
 			preCreate:  []*sourcesv1.PingSource{newPingSource(sourceA), newPingSource(sourceB)},
 			expectKept: []string{fmt.Sprintf("%s-%s", cappName, sourceA), fmt.Sprintf("%s-%s", cappName, sourceB)},
 		},
 		{
 			name:          "deletes all owned when none match spec",
-			sources:       []cappv1alpha1.SourceConfiguration{{Name: sourceA, PingSourceConfiguration: pingCfg}},
+			sources:       []cappv1alpha1.SourceConfiguration{newPingSourceEntry(sourceA, pingCfg)},
 			preCreate:     []*sourcesv1.PingSource{newPingSource(sourceB), newPingSource(sourceC)},
 			expectDeleted: []string{fmt.Sprintf("%s-%s", cappName, sourceB), fmt.Sprintf("%s-%s", cappName, sourceC)},
 		},
@@ -138,23 +137,14 @@ func TestPingSourceManagerCreateOrUpdate(t *testing.T) {
 			capp := newBaseCapp()
 
 			if tt.preCreate {
-				src := cappv1alpha1.SourceConfiguration{
-					Name: sourceName,
-					PingSourceConfiguration: &cappv1alpha1.PingSourceConfiguration{
-						Schedule: schedule,
-						Data:     tt.preData,
-					},
-				}
-				assert.NoError(t, pm.createOrUpdate(ctx, capp, src))
+				cfg := cappv1alpha1.PingSourceConfiguration{Schedule: schedule}
+				cfg.Data = tt.preData
+				assert.NoError(t, pm.createOrUpdate(ctx, capp, newPingSourceEntry(sourceName, cfg)))
 			}
 
-			src := cappv1alpha1.SourceConfiguration{
-				Name: sourceName,
-				PingSourceConfiguration: &cappv1alpha1.PingSourceConfiguration{
-					Schedule: schedule,
-					Data:     tt.data,
-				},
-			}
+			cfg := cappv1alpha1.PingSourceConfiguration{Schedule: schedule}
+			cfg.Data = tt.data
+			src := newPingSourceEntry(sourceName, cfg)
 			assert.NoError(t, pm.createOrUpdate(ctx, capp, src))
 			got := &sourcesv1.PingSource{}
 			assert.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: fmt.Sprintf("%s-%s", cappName, sourceName), Namespace: cappNamespace}, got))
@@ -167,13 +157,12 @@ func TestPingSourceManagerCreateOrUpdate(t *testing.T) {
 
 func TestPingSourceManagerManage(t *testing.T) {
 	ctx := context.Background()
-	pingCfg := &cappv1alpha1.PingSourceConfiguration{Schedule: schedule}
 
 	t.Run("reconciles when required", func(t *testing.T) {
 		pm := newPingSourceManager(newFakeClient(newPingSourceScheme()))
 		capp := newBaseCapp()
 		capp.Spec.EventSourcesSpec.Sources = []cappv1alpha1.SourceConfiguration{
-			{Name: sourceA, PingSourceConfiguration: pingCfg},
+			newPingSourceEntry(sourceA, cappv1alpha1.PingSourceConfiguration{Schedule: schedule}),
 		}
 		require.NoError(t, pm.Manage(ctx, capp))
 	})
