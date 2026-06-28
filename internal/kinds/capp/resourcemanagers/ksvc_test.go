@@ -260,4 +260,21 @@ func TestKnativeServiceManagerCleanUp(t *testing.T) {
 		got := &knativev1.Service{}
 		require.NoError(t, km.K8sclient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: cappNamespace}, got))
 	})
+
+	t.Run("deletes when deleting and lacks owner reference", func(t *testing.T) {
+		capp := cappWithDeletionTimestamp(newKsvcCapp())
+
+		ksvc := &knativev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      cappName,
+				Namespace: cappNamespace,
+			},
+		}
+		km, _ := newKsvcManager(newFakeClient(newKsvcScheme(), ksvc))
+		require.NoError(t, km.CleanUp(ctx, capp))
+
+		got := &knativev1.Service{}
+		getErr := km.K8sclient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: cappNamespace}, got)
+		require.True(t, errors.IsNotFound(getErr))
+	})
 }

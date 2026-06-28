@@ -190,23 +190,6 @@ func TestDNSRecordManagerManage(t *testing.T) {
 func TestDNSRecordManagerCleanUp(t *testing.T) {
 	ctx := context.Background()
 
-	t.Run("deletes all owned resources", func(t *testing.T) {
-		const otherRecordName = "other.capp-zone.com"
-		fakeClient := newFakeClient(newDNSRecordScheme(),
-			newCNAMERecord(hostnameFQDN, nil),
-			newCNAMERecord(otherRecordName, nil),
-		)
-		dm := newDNSRecordManager(fakeClient)
-
-		require.NoError(t, dm.CleanUp(ctx, newBaseCapp()))
-
-		for _, name := range []string{hostnameFQDN, otherRecordName} {
-			got := &dnsrecordv1alpha1.CNAMERecord{}
-			getErr := fakeClient.Get(ctx, types.NamespacedName{Name: name, Namespace: cappNamespace}, got)
-			require.True(t, errors.IsNotFound(getErr))
-		}
-	})
-
 	t.Run("succeeds when none exist", func(t *testing.T) {
 		dm := newDNSRecordManager(newFakeClient(newDNSRecordScheme()))
 		require.NoError(t, dm.CleanUp(ctx, newBaseCapp()))

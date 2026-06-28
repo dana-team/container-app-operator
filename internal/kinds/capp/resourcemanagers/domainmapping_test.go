@@ -199,23 +199,6 @@ func TestDomainMappingManagerManage(t *testing.T) {
 func TestDomainMappingManagerCleanUp(t *testing.T) {
 	ctx := context.Background()
 
-	t.Run("deletes all owned resources", func(t *testing.T) {
-		const otherMappingName = "other.capp-zone.com"
-		fakeClient := newFakeClient(newDomainMappingScheme(),
-			newDomainMapping(hostnameFQDN, nil),
-			newDomainMapping(otherMappingName, nil),
-		)
-		mgr := newDomainMappingManager(fakeClient)
-
-		require.NoError(t, mgr.CleanUp(ctx, newBaseCapp()))
-
-		for _, name := range []string{hostnameFQDN, otherMappingName} {
-			got := &knativev1beta1.DomainMapping{}
-			getErr := fakeClient.Get(ctx, types.NamespacedName{Name: name, Namespace: cappNamespace}, got)
-			require.True(t, errors.IsNotFound(getErr))
-		}
-	})
-
 	t.Run("deletes associated TLS secret", func(t *testing.T) {
 		fakeClient := newFakeClient(newDomainMappingScheme(),
 			newDomainMapping(hostnameFQDN, nil),

@@ -113,30 +113,58 @@ func TestKafkaSourceManagerCreateOrUpdate(t *testing.T) {
 }
 
 func TestKafkaSourceManagerCleanUpOrphans(t *testing.T) {
-	t.Run("deletes orphan not in spec", func(t *testing.T) {
-		ctx := context.Background()
-		fakeClient := newFakeClient(newKafkaSourceScheme())
-		for _, source := range []string{ordersA, ordersB} {
-			require.NoError(t, fakeClient.Create(ctx, newKafkaSource(source)))
-		}
-
-		capp := newBaseCapp()
-		capp.Spec.EventSourcesSpec.Sources = []cappv1alpha1.SourceConfiguration{
-			newKafkaSourceEntry(ordersA, newKafkaSourceConfiguration()),
-		}
-		require.NoError(t, newKafkaSourceManager(fakeClient).cleanUpOrphans(ctx, capp))
-
-		got := &kafkasourcev1.KafkaSource{}
-		require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{
-			Name: fmt.Sprintf("%s-%s", cappName, ordersA), Namespace: cappNamespace,
-		}, got))
-
-		deleted := &kafkasourcev1.KafkaSource{}
-		getErr := fakeClient.Get(ctx, types.NamespacedName{
-			Name: fmt.Sprintf("%s-%s", cappName, ordersB), Namespace: cappNamespace,
-		}, deleted)
-		require.True(t, errors.IsNotFound(getErr), "expected orphan to not exist")
-	})
+	kafkaCfg := newKafkaSourceConfiguration()
+	tests := []struct {
+		name          string
+		sources       []cappv1alpha1.SourceConfiguration
+		preCreate     []string
+		expectKept    []string
+		expectDeleted []string
+	}{
+		{
+			name:          "deletes orphaned KafkaSource not in spec",
+			sources:       []cappv1alpha1.SourceConfiguration{newKafkaSourceEntry(ordersA, kafkaCfg)},
+			preCreate:     []string{ordersA, ordersB},
+			expectKept:    []string{fmt.Sprintf("%s-%s", cappName, ordersA)},
+			expectDeleted: []string{fmt.Sprintf("%s-%s", cappName, ordersB)},
+		},
+		{
+			name: "keeps all owned when all are in spec",
+			sources: []cappv1alpha1.SourceConfiguration{
+				newKafkaSourceEntry(ordersA, kafkaCfg),
+				newKafkaSourceEntry(ordersB, kafkaCfg),
+			},
+			preCreate:  []string{ordersA, ordersB},
+			expectKept: []string{fmt.Sprintf("%s-%s", cappName, ordersA), fmt.Sprintf("%s-%s", cappName, ordersB)},
+		},
+		{
+			name:          "deletes all owned when none match spec",
+			sources:       []cappv1alpha1.SourceConfiguration{newKafkaSourceEntry(ordersA, kafkaCfg)},
+			preCreate:     []string{ordersB, ordersSource},
+			expectDeleted: []string{fmt.Sprintf("%s-%s", cappName, ordersB), fmt.Sprintf("%s-%s", cappName, ordersSource)},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			fakeClient := newFakeClient(newKafkaSourceScheme())
+			for _, source := range tt.preCreate {
+				require.NoError(t, fakeClient.Create(ctx, newKafkaSource(source)))
+			}
+			capp := newBaseCapp()
+			capp.Spec.EventSourcesSpec.Sources = tt.sources
+			require.NoError(t, newKafkaSourceManager(fakeClient).cleanUpOrphans(ctx, capp))
+			for _, name := range tt.expectKept {
+				got := &kafkasourcev1.KafkaSource{}
+				require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: name, Namespace: cappNamespace}, got))
+			}
+			for _, name := range tt.expectDeleted {
+				got := &kafkasourcev1.KafkaSource{}
+				getErr := fakeClient.Get(ctx, types.NamespacedName{Name: name, Namespace: cappNamespace}, got)
+				require.True(t, errors.IsNotFound(getErr), "expected %q to be deleted", name)
+			}
+		})
+	}
 }
 
 func TestKafkaSourceManagerManage(t *testing.T) {
@@ -147,6 +175,16 @@ func TestKafkaSourceManagerManage(t *testing.T) {
 		km := newKafkaSourceManager(newFakeClient(newKafkaSourceScheme()))
 		capp := newBaseCapp()
 		capp.Spec.EventSourcesSpec.Sources = []cappv1alpha1.SourceConfiguration{newKafkaSourceEntry(ordersA, kafkaCfg)}
+		require.NoError(t, km.Manage(ctx, capp))
+	})
+
+	t.Run("skips non-kafka sources when reconciling", func(t *testing.T) {
+		km := newKafkaSourceManager(newFakeClient(newKafkaSourceScheme()))
+		capp := newBaseCapp()
+		capp.Spec.EventSourcesSpec.Sources = []cappv1alpha1.SourceConfiguration{
+			newKafkaSourceEntry(ordersA, kafkaCfg),
+			newPingSourceEntry(ordersB, cappv1alpha1.PingSourceConfiguration{Schedule: schedule}),
+		}
 		require.NoError(t, km.Manage(ctx, capp))
 	})
 
@@ -169,22 +207,3 @@ func TestKafkaSourceManagerManage(t *testing.T) {
 	})
 }
 
-func TestKafkaSourceManagerCleanUp(t *testing.T) {
-	t.Run("deletes all owned resources", func(t *testing.T) {
-		ctx := context.Background()
-		fakeClient := newFakeClient(newKafkaSourceScheme())
-		for _, source := range []string{ordersA, ordersB} {
-			require.NoError(t, fakeClient.Create(ctx, newKafkaSource(source)))
-		}
-
-		require.NoError(t, newKafkaSourceManager(fakeClient).CleanUp(ctx, newBaseCapp()))
-
-		for _, source := range []string{ordersA, ordersB} {
-			got := &kafkasourcev1.KafkaSource{}
-			getErr := fakeClient.Get(ctx, types.NamespacedName{
-				Name: fmt.Sprintf("%s-%s", cappName, source), Namespace: cappNamespace,
-			}, got)
-			require.True(t, errors.IsNotFound(getErr), "expected %q to not exist", fmt.Sprintf("%s-%s", cappName, source))
-		}
-	})
-}

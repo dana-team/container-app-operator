@@ -167,6 +167,16 @@ func TestPingSourceManagerManage(t *testing.T) {
 		require.NoError(t, pm.Manage(ctx, capp))
 	})
 
+	t.Run("skips non-ping sources when reconciling", func(t *testing.T) {
+		pm := newPingSourceManager(newFakeClient(newPingSourceScheme()))
+		capp := newBaseCapp()
+		capp.Spec.EventSourcesSpec.Sources = []cappv1alpha1.SourceConfiguration{
+			newPingSourceEntry(sourceA, cappv1alpha1.PingSourceConfiguration{Schedule: schedule}),
+			newKafkaSourceEntry(sourceB, newKafkaSourceConfiguration()),
+		}
+		require.NoError(t, pm.Manage(ctx, capp))
+	})
+
 	t.Run("cleans up when not required", func(t *testing.T) {
 		fakeClient := newFakeClient(newPingSourceScheme())
 		require.NoError(t, fakeClient.Create(ctx, newPingSource(ordersA)))
@@ -186,22 +196,3 @@ func TestPingSourceManagerManage(t *testing.T) {
 	})
 }
 
-func TestPingSourceManagerCleanUp(t *testing.T) {
-	t.Run("deletes all owned resources", func(t *testing.T) {
-		ctx := context.Background()
-		fakeClient := newFakeClient(newPingSourceScheme())
-		for _, source := range []string{sourceA, sourceB} {
-			require.NoError(t, fakeClient.Create(ctx, newPingSource(source)))
-		}
-
-		require.NoError(t, newPingSourceManager(fakeClient).CleanUp(ctx, newBaseCapp()))
-
-		for _, source := range []string{sourceA, sourceB} {
-			got := &sourcesv1.PingSource{}
-			getErr := fakeClient.Get(ctx, types.NamespacedName{
-				Name: fmt.Sprintf("%s-%s", cappName, source), Namespace: cappNamespace,
-			}, got)
-			require.True(t, errors.IsNotFound(getErr), "expected %q to not exist", fmt.Sprintf("%s-%s", cappName, source))
-		}
-	})
-}

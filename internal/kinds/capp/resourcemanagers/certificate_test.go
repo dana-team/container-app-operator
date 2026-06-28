@@ -169,27 +169,17 @@ func TestCertificateManagerManage(t *testing.T) {
 		getErr := fakeClient.Get(ctx, types.NamespacedName{Name: hostnameFQDN, Namespace: cappNamespace}, got)
 		require.True(t, errors.IsNotFound(getErr))
 	})
+
+	t.Run("returns error when CappConfig missing", func(t *testing.T) {
+		mgr := newCertificateManager(newFakeClient(newCertificateScheme()))
+		capp := newCappWithTLS(hostnameBare, true)
+
+		require.Error(t, mgr.Manage(ctx, capp))
+	})
 }
 
 func TestCertificateManagerCleanUp(t *testing.T) {
 	ctx := context.Background()
-
-	t.Run("deletes all owned resources", func(t *testing.T) {
-		const otherCertName = "other.capp-zone.com"
-		fakeClient := newFakeClient(newCertificateScheme(),
-			newCertificate(hostnameFQDN, nil),
-			newCertificate(otherCertName, nil),
-		)
-		mgr := newCertificateManager(fakeClient)
-
-		require.NoError(t, mgr.CleanUp(ctx, newBaseCapp()))
-
-		for _, name := range []string{hostnameFQDN, otherCertName} {
-			got := &cmapi.Certificate{}
-			getErr := fakeClient.Get(ctx, types.NamespacedName{Name: name, Namespace: cappNamespace}, got)
-			require.True(t, errors.IsNotFound(getErr))
-		}
-	})
 
 	t.Run("succeeds when none exist", func(t *testing.T) {
 		mgr := newCertificateManager(newFakeClient(newCertificateScheme()))

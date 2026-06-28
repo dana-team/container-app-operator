@@ -132,18 +132,6 @@ func TestSyslogNGFlowManagerCleanUp(t *testing.T) {
 		require.NoError(t, fm.CleanUp(ctx, newBaseCapp()))
 	})
 
-	t.Run("deletes SyslogNGFlow by capp name", func(t *testing.T) {
-		fakeClient := newFakeClient(newSyslogNGScheme())
-		require.NoError(t, fakeClient.Create(ctx, newSyslogNGFlow()))
-
-		require.NoError(t, newSyslogNGFlowManager(fakeClient).CleanUp(ctx, newBaseCapp()))
-
-		got := &loggingv1beta1.SyslogNGFlow{}
-		getErr := fakeClient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: cappNamespace}, got)
-		require.Error(t, getErr)
-		require.True(t, errors.IsNotFound(getErr))
-	})
-
 	t.Run("skips delete when deleting and has owner reference", func(t *testing.T) {
 		capp := cappWithDeletionTimestamp(newBaseCapp())
 
@@ -155,5 +143,16 @@ func TestSyslogNGFlowManagerCleanUp(t *testing.T) {
 
 		got := &loggingv1beta1.SyslogNGFlow{}
 		require.NoError(t, fm.K8sclient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: cappNamespace}, got))
+	})
+
+	t.Run("deletes when deleting and lacks owner reference", func(t *testing.T) {
+		capp := cappWithDeletionTimestamp(newBaseCapp())
+
+		fm := newSyslogNGFlowManager(newFakeClient(newSyslogNGScheme(), newSyslogNGFlow()))
+		require.NoError(t, fm.CleanUp(ctx, capp))
+
+		got := &loggingv1beta1.SyslogNGFlow{}
+		getErr := fm.K8sclient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: cappNamespace}, got)
+		require.True(t, errors.IsNotFound(getErr))
 	})
 }
