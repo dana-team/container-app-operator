@@ -167,4 +167,20 @@ func TestKafkaSourceManagerManage(t *testing.T) {
 		}, got)
 		require.True(t, errors.IsNotFound(getErr), "expected %q to not exist", fmt.Sprintf("%s-%s", cappName, ordersA))
 	})
+
+	t.Run("skips non-kafka sources when reconciling", func(t *testing.T) {
+		fakeClient := newFakeClient(newKafkaSourceScheme())
+		km := newKafkaSourceManager(fakeClient)
+		capp := newBaseCapp()
+		capp.Spec.EventSourcesSpec.Sources = []cappv1alpha1.SourceConfiguration{
+			newKafkaSourceEntry(ordersA, kafkaCfg),
+			newPingSourceEntry(ordersB, cappv1alpha1.PingSourceConfiguration{Schedule: schedule}),
+		}
+		require.NoError(t, km.Manage(ctx, capp))
+
+		got := &kafkasourcev1.KafkaSource{}
+		require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{
+			Name: fmt.Sprintf("%s-%s", cappName, ordersA), Namespace: cappNamespace,
+		}, got))
+	})
 }
