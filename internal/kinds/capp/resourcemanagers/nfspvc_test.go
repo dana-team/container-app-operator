@@ -58,10 +58,10 @@ func cappWithVolumes(vols ...cappv1alpha1.NFSVolume) cappv1alpha1.Capp {
 	return capp
 }
 
-func newNFSPVC(name string) *nfspvcv1alpha1.NfsPvc {
+func newNFSPVC() *nfspvcv1alpha1.NfsPvc {
 	return &nfspvcv1alpha1.NfsPvc{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
+			Name:      nfsVolA,
 			Namespace: cappNamespace,
 			Labels:    utils.ManagedResourceLabels(cappName),
 		},
@@ -95,7 +95,7 @@ func TestNFSPVCManagerCreateOrUpdate(t *testing.T) {
 
 	t.Run("updates when spec differs", func(t *testing.T) {
 		nm := newNFSPVCManager(newFakeClient(newNFSPVCScheme()))
-		existing := newNFSPVC(nfsVolA)
+		existing := newNFSPVC()
 		require.NoError(t, nm.K8sclient.Create(ctx, existing))
 
 		capp := cappWithVolumes(newNFSVolume(nfsVolA, nfsPathV2))
@@ -132,7 +132,7 @@ func TestNFSPVCManagerManage(t *testing.T) {
 
 	t.Run("cleans up when not required", func(t *testing.T) {
 		fakeClient := newFakeClient(newNFSPVCScheme())
-		require.NoError(t, fakeClient.Create(ctx, newNFSPVC(nfsVolA)))
+		require.NoError(t, fakeClient.Create(ctx, newNFSPVC()))
 
 		nm := newNFSPVCManager(fakeClient)
 		require.NoError(t, nm.Manage(ctx, newBaseCapp()))
@@ -146,10 +146,15 @@ func TestNFSPVCManagerManage(t *testing.T) {
 func TestNFSPVCManagerCleanUp(t *testing.T) {
 	ctx := context.Background()
 
+	t.Run("succeeds when none exist", func(t *testing.T) {
+		nm := newNFSPVCManager(newFakeClient(newNFSPVCScheme()))
+		require.NoError(t, nm.CleanUp(ctx, newBaseCapp()))
+	})
+
 	t.Run("skips delete when deleting and has owner reference", func(t *testing.T) {
 		capp := cappWithDeletionTimestamp(newBaseCapp())
 
-		nfspvc := newNFSPVC(nfsVolA)
+		nfspvc := newNFSPVC()
 		require.NoError(t, controllerutil.SetOwnerReference(&capp, nfspvc, newNFSPVCScheme()))
 
 		nm := newNFSPVCManager(newFakeClient(newNFSPVCScheme(), nfspvc))
@@ -157,5 +162,17 @@ func TestNFSPVCManagerCleanUp(t *testing.T) {
 
 		got := &nfspvcv1alpha1.NfsPvc{}
 		require.NoError(t, nm.K8sclient.Get(ctx, types.NamespacedName{Name: nfsVolA, Namespace: cappNamespace}, got))
+	})
+
+	t.Run("deletes when deleting and lacks owner reference", func(t *testing.T) {
+		capp := cappWithDeletionTimestamp(newBaseCapp())
+
+		nfspvc := newNFSPVC()
+		nm := newNFSPVCManager(newFakeClient(newNFSPVCScheme(), nfspvc))
+		require.NoError(t, nm.CleanUp(ctx, capp))
+
+		got := &nfspvcv1alpha1.NfsPvc{}
+		getErr := nm.K8sclient.Get(ctx, types.NamespacedName{Name: nfsVolA, Namespace: cappNamespace}, got)
+		require.True(t, errors.IsNotFound(getErr))
 	})
 }
