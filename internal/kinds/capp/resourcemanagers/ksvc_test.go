@@ -21,7 +21,6 @@ import (
 	kautoscaling "knative.dev/serving/pkg/apis/autoscaling"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
@@ -58,14 +57,7 @@ func newKsvcCapp() cappv1alpha1.Capp {
 	return capp
 }
 
-func newKsvcClient(objects ...client.Object) client.Client {
-	return fake.NewClientBuilder().
-		WithScheme(newKsvcScheme()).
-		WithObjects(objects...).
-		Build()
-}
-
-func TestKnativeServicePrepareResource(t *testing.T) {
+func TestKnativeServiceManagerPrepareResource(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("filters internal annotations and propagates allowed metadata", func(t *testing.T) {
@@ -76,7 +68,7 @@ func TestKnativeServicePrepareResource(t *testing.T) {
 		)
 		internalAnnotationKey := utils.CappAPIGroup + "/internal"
 
-		km, _ := newKsvcManager(newKsvcClient(newCappConfig()))
+		km, _ := newKsvcManager(newFakeClient(newKsvcScheme(), newCappConfig()))
 		capp := newKsvcCapp()
 		capp.Annotations = map[string]string{
 			allowedAnnotationKey:  allowedAnnotationValue,
@@ -98,7 +90,7 @@ func TestKnativeServicePrepareResource(t *testing.T) {
 			userLabelValue = "platform"
 		)
 
-		km, _ := newKsvcManager(newKsvcClient(newCappConfig()))
+		km, _ := newKsvcManager(newFakeClient(newKsvcScheme(), newCappConfig()))
 		capp := newKsvcCapp()
 		capp.Labels = map[string]string{
 			userLabelKey:          userLabelValue,
@@ -114,7 +106,7 @@ func TestKnativeServicePrepareResource(t *testing.T) {
 	})
 
 	t.Run("sets route timeout on template", func(t *testing.T) {
-		km, _ := newKsvcManager(newKsvcClient(newCappConfig()))
+		km, _ := newKsvcManager(newFakeClient(newKsvcScheme(), newCappConfig()))
 		capp := newKsvcCapp()
 		routeTimeout := int64(30)
 		capp.Spec.RouteSpec.RouteTimeoutSeconds = &routeTimeout
@@ -128,7 +120,7 @@ func TestKnativeServicePrepareResource(t *testing.T) {
 	t.Run("appends nfs volumes as pvc volume sources", func(t *testing.T) {
 		const nfsVolumeName = "data-vol"
 
-		km, _ := newKsvcManager(newKsvcClient(newCappConfig()))
+		km, _ := newKsvcManager(newFakeClient(newKsvcScheme(), newCappConfig()))
 		capp := newKsvcCapp()
 		capp.Spec.VolumesSpec.NFSVolumes = []cappv1alpha1.NFSVolume{{
 			Name:     nfsVolumeName,
@@ -147,7 +139,7 @@ func TestKnativeServicePrepareResource(t *testing.T) {
 	t.Run("merges autoscale annotations from capp and cappConfig", func(t *testing.T) {
 		cappConfig := newCappConfig()
 
-		km, _ := newKsvcManager(newKsvcClient(cappConfig))
+		km, _ := newKsvcManager(newFakeClient(newKsvcScheme(), cappConfig))
 		capp := newKsvcCapp()
 
 		got := km.prepareResource(capp, ctx)
@@ -159,11 +151,11 @@ func TestKnativeServicePrepareResource(t *testing.T) {
 	})
 }
 
-func TestKnativeServiceManage(t *testing.T) {
+func TestKnativeServiceManagerManage(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("creates ksvc with owner reference when enabled", func(t *testing.T) {
-		km, _ := newKsvcManager(newKsvcClient(newCappConfig()))
+		km, _ := newKsvcManager(newFakeClient(newKsvcScheme(), newCappConfig()))
 		capp := newKsvcCapp()
 
 		require.NoError(t, km.Manage(ctx, capp))
@@ -178,7 +170,7 @@ func TestKnativeServiceManage(t *testing.T) {
 	t.Run("updates ksvc when spec changes", func(t *testing.T) {
 		const updatedContainerImage = "example.com/app:v2"
 
-		km, _ := newKsvcManager(newKsvcClient(newCappConfig()))
+		km, _ := newKsvcManager(newFakeClient(newKsvcScheme(), newCappConfig()))
 		capp := newKsvcCapp()
 		require.NoError(t, km.Manage(ctx, capp))
 
@@ -190,8 +182,8 @@ func TestKnativeServiceManage(t *testing.T) {
 		require.Equal(t, updatedContainerImage, got.Spec.Template.Spec.Containers[0].Image)
 	})
 
-	t.Run("skips update when spec is unchanged", func(t *testing.T) {
-		km, _ := newKsvcManager(newKsvcClient(newCappConfig()))
+	t.Run("skips update when unchanged", func(t *testing.T) {
+		km, _ := newKsvcManager(newFakeClient(newKsvcScheme(), newCappConfig()))
 		capp := newKsvcCapp()
 		require.NoError(t, km.Manage(ctx, capp))
 
@@ -207,7 +199,7 @@ func TestKnativeServiceManage(t *testing.T) {
 	})
 
 	t.Run("deletes ksvc and emits disabled event when state is disabled", func(t *testing.T) {
-		km, recorder := newKsvcManager(newKsvcClient(newCappConfig()))
+		km, recorder := newKsvcManager(newFakeClient(newKsvcScheme(), newCappConfig()))
 		capp := newKsvcCapp()
 		require.NoError(t, km.Manage(ctx, capp))
 		require.Contains(t, <-recorder.Events, eventCappKnativeServiceCreated)
@@ -224,7 +216,7 @@ func TestKnativeServiceManage(t *testing.T) {
 	})
 
 	t.Run("recreates ksvc and emits enabled event when resuming from disabled", func(t *testing.T) {
-		km, recorder := newKsvcManager(newKsvcClient(newCappConfig()))
+		km, recorder := newKsvcManager(newFakeClient(newKsvcScheme(), newCappConfig()))
 		capp := newKsvcCapp()
 		capp.Status.StateStatus = cappv1alpha1.StateStatus{
 			State:      cappDisabledState,
@@ -243,18 +235,16 @@ func TestKnativeServiceManage(t *testing.T) {
 	})
 }
 
-func TestKnativeServiceCleanUp(t *testing.T) {
+func TestKnativeServiceManagerCleanUp(t *testing.T) {
 	ctx := context.Background()
 
-	t.Run("succeeds when ksvc does not exist", func(t *testing.T) {
-		km, _ := newKsvcManager(newKsvcClient())
+	t.Run("succeeds when none exist", func(t *testing.T) {
+		km, _ := newKsvcManager(newFakeClient(newKsvcScheme()))
 		require.NoError(t, km.CleanUp(ctx, newKsvcCapp()))
 	})
 
-	t.Run("skips delete when capp is deleting and ksvc has owner reference", func(t *testing.T) {
-		capp := newKsvcCapp()
-		now := metav1.Now()
-		capp.DeletionTimestamp = &now
+	t.Run("skips delete when deleting and has owner reference", func(t *testing.T) {
+		capp := cappWithDeletionTimestamp(newKsvcCapp())
 
 		ksvc := &knativev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
@@ -264,7 +254,7 @@ func TestKnativeServiceCleanUp(t *testing.T) {
 		}
 		require.NoError(t, controllerutil.SetOwnerReference(&capp, ksvc, newKsvcScheme()))
 
-		km, _ := newKsvcManager(newKsvcClient(ksvc))
+		km, _ := newKsvcManager(newFakeClient(newKsvcScheme(), ksvc))
 		require.NoError(t, km.CleanUp(ctx, capp))
 
 		got := &knativev1.Service{}
