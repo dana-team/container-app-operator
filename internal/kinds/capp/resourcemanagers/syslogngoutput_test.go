@@ -156,4 +156,16 @@ func TestSyslogNGOutputManagerCleanUp(t *testing.T) {
 		got := &loggingv1beta1.SyslogNGOutput{}
 		require.NoError(t, om.K8sclient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: cappNamespace}, got))
 	})
+
+	t.Run("deletes when deleting and lacks owner reference", func(t *testing.T) {
+		capp := cappWithDeletionTimestamp(newBaseCapp())
+
+		syslogOutput := newSyslogNGOutput()
+		om := newSyslogNGOutputManager(newFakeClient(newSyslogNGScheme(), syslogOutput))
+		require.NoError(t, om.CleanUp(ctx, capp))
+
+		got := &loggingv1beta1.SyslogNGOutput{}
+		getErr := om.K8sclient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: cappNamespace}, got)
+		require.True(t, errors.IsNotFound(getErr))
+	})
 }
