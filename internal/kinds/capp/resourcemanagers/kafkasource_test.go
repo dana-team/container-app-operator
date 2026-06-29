@@ -113,7 +113,7 @@ func TestKafkaSourceManagerCreateOrUpdate(t *testing.T) {
 }
 
 func TestKafkaSourceManagerCleanUpOrphans(t *testing.T) {
-	t.Run("deletes orphan not in spec", func(t *testing.T) {
+	t.Run("deletes orphaned KafkaSource not in spec", func(t *testing.T) {
 		ctx := context.Background()
 		fakeClient := newFakeClient(newKafkaSourceScheme())
 		for _, source := range []string{ordersA, ordersB} {
