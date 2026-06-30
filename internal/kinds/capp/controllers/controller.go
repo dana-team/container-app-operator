@@ -345,7 +345,7 @@ func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		rmanagers.KafkaSource:    rmanagers.KafkaSourceManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},
 	}
 
-	err, deleted := finalizer.HandleResourceDeletion(ctx, capp, r.Client, resourceManagers)
+	err, deleted := finalizer.HandleResourceDeletion(ctx, capp, rmClient, resourceManagers)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to handle Capp deletion: %s", err.Error())
 	}
@@ -354,7 +354,7 @@ func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, nil
 	}
 
-	if err := finalizer.EnsureFinalizer(ctx, capp, r.Client); err != nil {
+	if err := finalizer.EnsureFinalizer(ctx, capp, rmClient); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to ensure finalizer in Capp: %s", err.Error())
 	}
 
