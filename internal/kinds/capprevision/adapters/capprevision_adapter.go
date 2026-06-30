@@ -6,7 +6,7 @@ import (
 	"maps"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
-	utils "github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
+	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/resourceclient"
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -69,20 +69,10 @@ func CreateCappRevision(ctx context.Context, k8sClient client.Client, logger log
 		return err
 	}
 
-	logger.Info("kubernetes API write create", utils.ObjectIdentityKeyVals(&cappRevision)...)
-	if err := k8sClient.Create(ctx, &cappRevision); err != nil {
-		logger.Error(err, "failed to create CappRevision", utils.ObjectIdentityKeyVals(&cappRevision)...)
-		return err
-	}
-	return nil
+	return rclient.ResourceManagerClient{K8sClient: k8sClient, Log: logger}.CreateResource(ctx, &cappRevision)
 }
 
 // DeleteCappRevision deletes a specified CappRevision and returning an error on failure.
 func DeleteCappRevision(ctx context.Context, k8sClient client.Client, logger logr.Logger, cappRevision *cappv1alpha1.CappRevision) error {
-	logger.Info("kubernetes API write delete", utils.ObjectIdentityKeyVals(cappRevision)...)
-	if err := k8sClient.Delete(ctx, cappRevision); err != nil {
-		logger.Error(err, "failed to delete CappRevision", utils.ObjectIdentityKeyVals(cappRevision)...)
-		return err
-	}
-	return nil
+	return rclient.ResourceManagerClient{K8sClient: k8sClient, Log: logger}.DeleteResource(ctx, cappRevision)
 }
