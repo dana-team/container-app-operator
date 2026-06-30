@@ -92,7 +92,7 @@ func (c CertificateManager) CleanUp(ctx context.Context, capp cappv1alpha1.Capp)
 				continue
 			}
 		}
-		cert := rclient.GetBareCertificate(certificate.Name, certificate.Namespace)
+		cert := cmapi.Certificate{ObjectMeta: metav1.ObjectMeta{Name: certificate.Name, Namespace: certificate.Namespace}}
 		if err := c.DeleteResource(ctx, &cert); err != nil {
 			if errors.IsNotFound(err) {
 				continue
