@@ -69,7 +69,7 @@ func TestCappValidatorHandle(t *testing.T) {
 			expectAllow: true,
 		},
 		{
-			name:      "Allow Capp with valid scaleDelaySeconds",
+			name:      "denies capp with scaleDelaySeconds exceeding global limit",
 			operation: admissionv1.Create,
 			capp: &cappv1alpha1.Capp{
 				ObjectMeta: metav1.ObjectMeta{
@@ -78,24 +78,6 @@ func TestCappValidatorHandle(t *testing.T) {
 				},
 				Spec: cappv1alpha1.CappSpec{
 					ScaleSpec: cappv1alpha1.ScaleSpec{
-						Metric:            knativeautoscaling.CPU,
-						ScaleDelaySeconds: 50,
-					},
-				},
-			},
-			expectAllow: true,
-		},
-		{
-			name:      "Deny Capp with invalid scaleDelaySeconds",
-			operation: admissionv1.Create,
-			capp: &cappv1alpha1.Capp{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      cappName,
-					Namespace: nsName,
-				},
-				Spec: cappv1alpha1.CappSpec{
-					ScaleSpec: cappv1alpha1.ScaleSpec{
-						Metric:            knativeautoscaling.CPU,
 						ScaleDelaySeconds: 150,
 					},
 				},
@@ -524,6 +506,75 @@ func TestValidateKafkaSourceConsumers(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			err := validateKafkaSourceConsumers(tc.cfg, tc.maxConsumers)
+			if len(tc.wantErrContains) == 0 {
+				require.NoError(t, err)
+				return
+			}
+
+			require.Error(t, err)
+			for _, s := range tc.wantErrContains {
+				assert.Contains(t, err.Error(), s)
+			}
+		})
+	}
+}
+
+func TestValidateScaleSpec(t *testing.T) {
+	tests := []struct {
+		name              string
+		minReplicas       int
+		scaleDelaySeconds int
+		autoscaleConfig   cappv1alpha1.AutoscaleConfig
+		wantErrContains   []string
+	}{
+		{
+			name:        "allows when minReplicas is at the limit",
+			minReplicas: 10,
+			autoscaleConfig: cappv1alpha1.AutoscaleConfig{
+				MinReplicasLimit: 10,
+				MaxScaleDelay:    100,
+			},
+		},
+		{
+			name:              "allows when scaleDelaySeconds is at the limit",
+			scaleDelaySeconds: 100,
+			autoscaleConfig: cappv1alpha1.AutoscaleConfig{
+				MinReplicasLimit: 10,
+				MaxScaleDelay:    100,
+			},
+		},
+		{
+			name:        "rejects when minReplicas exceeds the limit",
+			minReplicas: 11,
+			autoscaleConfig: cappv1alpha1.AutoscaleConfig{
+				MinReplicasLimit: 10,
+				MaxScaleDelay:    100,
+			},
+			wantErrContains: []string{"minReplicas"},
+		},
+		{
+			name:              "rejects when scaleDelaySeconds exceeds the limit",
+			scaleDelaySeconds: 101,
+			autoscaleConfig: cappv1alpha1.AutoscaleConfig{
+				MinReplicasLimit: 10,
+				MaxScaleDelay:    100,
+			},
+			wantErrContains: []string{"scaleDelaySeconds"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			capp := cappv1alpha1.Capp{
+				Spec: cappv1alpha1.CappSpec{
+					ScaleSpec: cappv1alpha1.ScaleSpec{
+						MinReplicas:       tc.minReplicas,
+						ScaleDelaySeconds: tc.scaleDelaySeconds,
+					},
+				},
+			}
+
+			err := validateScaleSpec(capp, tc.autoscaleConfig)
 			if len(tc.wantErrContains) == 0 {
 				require.NoError(t, err)
 				return
