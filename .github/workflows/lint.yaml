@@ -49,3 +49,6 @@ jobs:
         with:
           version: v2.12.2
           args: --timeout=2m
+
+      - name: Run deadcode
+        run: make deadcode

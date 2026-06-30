@@ -18,7 +18,6 @@ import (
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
 
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
@@ -84,15 +83,8 @@ func (k DomainMappingManager) CleanUp(ctx context.Context, capp cappv1alpha1.Cap
 	}
 
 	for _, item := range domainMappings.Items {
-		var dm knativev1beta1.DomainMapping
-		if err := k.K8sclient.Get(ctx, client.ObjectKeyFromObject(&item), &dm); err != nil {
-			if err := client.IgnoreNotFound(err); err != nil {
-				return err
-			}
-			continue
-		}
 		if capp.DeletionTimestamp != nil {
-			ok, err := controllerutil.HasOwnerReference(dm.OwnerReferences, &capp, k.K8sclient.Scheme())
+			ok, err := controllerutil.HasOwnerReference(item.OwnerReferences, &capp, k.K8sclient.Scheme())
 			if err != nil {
 				return err
 			}
@@ -100,13 +92,14 @@ func (k DomainMappingManager) CleanUp(ctx context.Context, capp cappv1alpha1.Cap
 				continue
 			}
 		}
+		dm := rclient.GetBareDomainMapping(item.Name, item.Namespace)
 		if err := k.DeleteResource(ctx, &dm); err != nil {
 			if errors.IsNotFound(err) {
 				continue
 			}
 			return err
 		}
-		secretName := utils.GenerateSecretName(dm.Name)
+		secretName := utils.GenerateSecretName(item.Name)
 		secret := corev1.Secret{}
 		if err := k.K8sclient.Get(ctx, types.NamespacedName{Name: secretName, Namespace: dm.Namespace}, &secret); err != nil {
 			if !errors.IsNotFound(err) {
