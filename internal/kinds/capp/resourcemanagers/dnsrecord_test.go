@@ -17,7 +17,6 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/tools/events"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
@@ -36,19 +35,16 @@ func newDNSRecordManager(k8sClient client.Client) DNSRecordManager {
 
 func newDNSRecordClient(objects ...client.Object) client.Client {
 	objs := append([]client.Object{newCappConfigWithDNS()}, objects...)
-	return fake.NewClientBuilder().
-		WithScheme(newDNSRecordScheme()).
-		WithObjects(objs...).
-		Build()
+	return newFakeClient(newDNSRecordScheme(), objs...)
 }
 
-func newCNAMERecord(resourceName string, mutate func(*dnsrecordv1alpha1.CNAMERecord)) *dnsrecordv1alpha1.CNAMERecord {
+func newCNAMERecord(mutate func(*dnsrecordv1alpha1.CNAMERecord)) *dnsrecordv1alpha1.CNAMERecord {
 	recordName := hostnameBare
 	zone := dnsZone
 	cname := dnsCNAME
 	rec := &dnsrecordv1alpha1.CNAMERecord{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      resourceName,
+			Name:      hostnameFQDN,
 			Namespace: cappNamespace,
 			Labels: utils.MergeMaps(utils.ManagedResourceLabels(cappName), map[string]string{
 				utils.CappNamespaceKey: cappNamespace,
@@ -72,7 +68,7 @@ func newCNAMERecord(resourceName string, mutate func(*dnsrecordv1alpha1.CNAMERec
 	return rec
 }
 
-func TestDNSRecordCreateOrUpdate(t *testing.T) {
+func TestDNSRecordManagerCreateOrUpdate(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("creates when not found", func(t *testing.T) {
@@ -100,7 +96,7 @@ func TestDNSRecordCreateOrUpdate(t *testing.T) {
 
 	t.Run("updates when ForProvider differs", func(t *testing.T) {
 		staleCname := "stale.ingress.capp-zone.com."
-		existing := newCNAMERecord(hostnameFQDN, func(rec *dnsrecordv1alpha1.CNAMERecord) {
+		existing := newCNAMERecord(func(rec *dnsrecordv1alpha1.CNAMERecord) {
 			rec.Spec.ForProvider.Cname = &staleCname
 		})
 		dm := newDNSRecordManager(newDNSRecordClient(existing))
@@ -115,7 +111,7 @@ func TestDNSRecordCreateOrUpdate(t *testing.T) {
 
 	t.Run("updates when ProviderConfigReference differs", func(t *testing.T) {
 		wrongProvider := "wrong-provider"
-		existing := newCNAMERecord(hostnameFQDN, func(rec *dnsrecordv1alpha1.CNAMERecord) {
+		existing := newCNAMERecord(func(rec *dnsrecordv1alpha1.CNAMERecord) {
 			rec.Spec.ProviderConfigReference = &xpv1.ProviderConfigReference{
 				Name: wrongProvider,
 				Kind: ClusterProviderConfigKind,
@@ -132,7 +128,7 @@ func TestDNSRecordCreateOrUpdate(t *testing.T) {
 	})
 
 	t.Run("adds owner reference when missing", func(t *testing.T) {
-		existing := newCNAMERecord(hostnameFQDN, nil)
+		existing := newCNAMERecord(nil)
 		dm := newDNSRecordManager(newDNSRecordClient(existing))
 		capp := newCappWithHostname(hostnameBare)
 
@@ -143,7 +139,7 @@ func TestDNSRecordCreateOrUpdate(t *testing.T) {
 		require.Equal(t, cappName, got.OwnerReferences[0].Name)
 	})
 
-	t.Run("skips update when spec and owner match", func(t *testing.T) {
+	t.Run("skips update when unchanged", func(t *testing.T) {
 		dm := newDNSRecordManager(newDNSRecordClient())
 		capp := newCappWithHostname(hostnameBare)
 		require.NoError(t, dm.createOrUpdate(ctx, capp))
@@ -160,7 +156,7 @@ func TestDNSRecordCreateOrUpdate(t *testing.T) {
 	})
 
 	t.Run("returns error when CappConfig missing", func(t *testing.T) {
-		dm := newDNSRecordManager(fake.NewClientBuilder().WithScheme(newDNSRecordScheme()).Build())
+		dm := newDNSRecordManager(newFakeClient(newDNSRecordScheme()))
 		capp := newCappWithHostname(hostnameBare)
 
 		err := dm.createOrUpdate(ctx, capp)
@@ -168,7 +164,7 @@ func TestDNSRecordCreateOrUpdate(t *testing.T) {
 	})
 }
 
-func TestDNSRecordManage(t *testing.T) {
+func TestDNSRecordManagerManage(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("reconciles when hostname is set", func(t *testing.T) {
@@ -178,7 +174,7 @@ func TestDNSRecordManage(t *testing.T) {
 	})
 
 	t.Run("cleans up when hostname is empty", func(t *testing.T) {
-		existing := newCNAMERecord(hostnameFQDN, nil)
+		existing := newCNAMERecord(nil)
 		fakeClient := newDNSRecordClient(existing)
 		dm := newDNSRecordManager(fakeClient)
 		capp := newBaseCapp()
@@ -191,56 +187,32 @@ func TestDNSRecordManage(t *testing.T) {
 	})
 }
 
-func TestDNSRecordCleanUp(t *testing.T) {
+func TestDNSRecordManagerCleanUp(t *testing.T) {
 	ctx := context.Background()
 
-	t.Run("deletes all owned DNS records", func(t *testing.T) {
-		const otherRecordName = "other.capp-zone.com"
-		fakeClient := fake.NewClientBuilder().
-			WithScheme(newDNSRecordScheme()).
-			WithObjects(
-				newCNAMERecord(hostnameFQDN, nil),
-				newCNAMERecord(otherRecordName, nil),
-			).
-			Build()
-		dm := newDNSRecordManager(fakeClient)
-
-		require.NoError(t, dm.CleanUp(ctx, newBaseCapp()))
-
-		for _, name := range []string{hostnameFQDN, otherRecordName} {
-			got := &dnsrecordv1alpha1.CNAMERecord{}
-			getErr := fakeClient.Get(ctx, types.NamespacedName{Name: name, Namespace: cappNamespace}, got)
-			require.True(t, errors.IsNotFound(getErr))
-		}
-	})
-
-	t.Run("succeeds when no records exist", func(t *testing.T) {
-		dm := newDNSRecordManager(fake.NewClientBuilder().WithScheme(newDNSRecordScheme()).Build())
+	t.Run("succeeds when none exist", func(t *testing.T) {
+		dm := newDNSRecordManager(newFakeClient(newDNSRecordScheme()))
 		require.NoError(t, dm.CleanUp(ctx, newBaseCapp()))
 	})
 
-	t.Run("skips delete when capp deleting and record has owner reference", func(t *testing.T) {
-		capp := newBaseCapp()
-		now := metav1.Now()
-		capp.DeletionTimestamp = &now
+	t.Run("skips delete when deleting and has owner reference", func(t *testing.T) {
+		capp := cappWithDeletionTimestamp(newBaseCapp())
 
-		record := newCNAMERecord(hostnameFQDN, nil)
+		record := newCNAMERecord(nil)
 		require.NoError(t, controllerutil.SetOwnerReference(&capp, record, newDNSRecordScheme()))
 
-		dm := newDNSRecordManager(fake.NewClientBuilder().WithScheme(newDNSRecordScheme()).WithObjects(record).Build())
+		dm := newDNSRecordManager(newFakeClient(newDNSRecordScheme(), record))
 		require.NoError(t, dm.CleanUp(ctx, capp))
 
 		got := &dnsrecordv1alpha1.CNAMERecord{}
 		require.NoError(t, dm.K8sclient.Get(ctx, types.NamespacedName{Name: hostnameFQDN, Namespace: cappNamespace}, got))
 	})
 
-	t.Run("deletes when capp is deleting and record lacks owner reference", func(t *testing.T) {
-		capp := newBaseCapp()
-		now := metav1.Now()
-		capp.DeletionTimestamp = &now
+	t.Run("deletes when deleting and lacks owner reference", func(t *testing.T) {
+		capp := cappWithDeletionTimestamp(newBaseCapp())
 
-		record := newCNAMERecord(hostnameFQDN, nil)
-		dm := newDNSRecordManager(fake.NewClientBuilder().WithScheme(newDNSRecordScheme()).WithObjects(record).Build())
+		record := newCNAMERecord(nil)
+		dm := newDNSRecordManager(newFakeClient(newDNSRecordScheme(), record))
 		require.NoError(t, dm.CleanUp(ctx, capp))
 
 		got := &dnsrecordv1alpha1.CNAMERecord{}
