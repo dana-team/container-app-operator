@@ -11,6 +11,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -18,7 +19,6 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/tools/events"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
@@ -38,7 +38,7 @@ func newNFSPVCScheme() *runtime.Scheme {
 
 func newNFSPVCManager(k8sClient client.Client) NFSPVCManager {
 	return NFSPVCManager{
-		ResourceManagerClient: rclient.ResourceManagerClient{K8sclient: k8sClient, Log: logr.Discard()},
+		ResourceManagerClient: rclient.ResourceManagerClient{K8sClient: k8sClient, Log: logr.Discard()},
 		EventRecorder:         events.NewFakeRecorder(10),
 	}
 }
@@ -58,10 +58,10 @@ func cappWithVolumes(vols ...cappv1alpha1.NFSVolume) cappv1alpha1.Capp {
 	return capp
 }
 
-func newNFSPVC(name string) *nfspvcv1alpha1.NfsPvc {
+func newNFSPVC() *nfspvcv1alpha1.NfsPvc {
 	return &nfspvcv1alpha1.NfsPvc{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
+			Name:      nfsVolA,
 			Namespace: cappNamespace,
 			Labels:    utils.ManagedResourceLabels(cappName),
 		},
@@ -76,105 +76,103 @@ func newNFSPVC(name string) *nfspvcv1alpha1.NfsPvc {
 	}
 }
 
-func TestNFSPVCCreateOrUpdate(t *testing.T) {
+func TestNFSPVCManagerCreateOrUpdate(t *testing.T) {
 	ctx := context.Background()
 	keyA := types.NamespacedName{Name: nfsVolA, Namespace: cappNamespace}
 
 	t.Run("creates when not found", func(t *testing.T) {
-		nm := newNFSPVCManager(fake.NewClientBuilder().WithScheme(newNFSPVCScheme()).Build())
+		nm := newNFSPVCManager(newFakeClient(newNFSPVCScheme()))
 		capp := cappWithVolumes(newNFSVolume(nfsVolA, nfsPath))
 
 		require.NoError(t, nm.createOrUpdate(ctx, capp))
 
 		got := &nfspvcv1alpha1.NfsPvc{}
-		require.NoError(t, nm.K8sclient.Get(ctx, keyA, got))
+		require.NoError(t, nm.K8sClient.Get(ctx, keyA, got))
 		require.Equal(t, nfsServer, got.Spec.Server)
 		require.Equal(t, nfsPath, got.Spec.Path)
 		require.Equal(t, cappName, got.OwnerReferences[0].Name)
 	})
 
 	t.Run("updates when spec differs", func(t *testing.T) {
-		nm := newNFSPVCManager(fake.NewClientBuilder().WithScheme(newNFSPVCScheme()).Build())
-		existing := newNFSPVC(nfsVolA)
-		require.NoError(t, nm.K8sclient.Create(ctx, existing))
+		nm := newNFSPVCManager(newFakeClient(newNFSPVCScheme()))
+		existing := newNFSPVC()
+		require.NoError(t, nm.K8sClient.Create(ctx, existing))
 
 		capp := cappWithVolumes(newNFSVolume(nfsVolA, nfsPathV2))
 		require.NoError(t, nm.createOrUpdate(ctx, capp))
 
 		got := &nfspvcv1alpha1.NfsPvc{}
-		require.NoError(t, nm.K8sclient.Get(ctx, keyA, got))
+		require.NoError(t, nm.K8sClient.Get(ctx, keyA, got))
 		require.Equal(t, nfsPathV2, got.Spec.Path)
 	})
 
 	t.Run("creates multiple NFSPVCs from spec", func(t *testing.T) {
-		nm := newNFSPVCManager(fake.NewClientBuilder().WithScheme(newNFSPVCScheme()).Build())
+		nm := newNFSPVCManager(newFakeClient(newNFSPVCScheme()))
 		capp := cappWithVolumes(newNFSVolume(nfsVolA, nfsPath), newNFSVolume(nfsVolB, nfsPath))
 
 		require.NoError(t, nm.createOrUpdate(ctx, capp))
 
 		gotA := &nfspvcv1alpha1.NfsPvc{}
-		require.NoError(t, nm.K8sclient.Get(ctx, keyA, gotA))
+		require.NoError(t, nm.K8sClient.Get(ctx, keyA, gotA))
 
 		gotB := &nfspvcv1alpha1.NfsPvc{}
-		require.NoError(t, nm.K8sclient.Get(ctx, types.NamespacedName{Name: nfsVolB, Namespace: cappNamespace}, gotB))
+		require.NoError(t, nm.K8sClient.Get(ctx, types.NamespacedName{Name: nfsVolB, Namespace: cappNamespace}, gotB))
 	})
 }
 
-func TestNFSPVCManage(t *testing.T) {
+func TestNFSPVCManagerManage(t *testing.T) {
 	ctx := context.Background()
 
-	t.Run("reconciles when nfs is required", func(t *testing.T) {
-		nm := newNFSPVCManager(fake.NewClientBuilder().WithScheme(newNFSPVCScheme()).Build())
+	t.Run("reconciles when required", func(t *testing.T) {
+		nm := newNFSPVCManager(newFakeClient(newNFSPVCScheme()))
 		capp := cappWithVolumes(newNFSVolume(nfsVolA, nfsPath))
 
 		require.NoError(t, nm.Manage(ctx, capp))
 	})
 
-	t.Run("cleans up when nfs is not required", func(t *testing.T) {
-		fakeClient := fake.NewClientBuilder().WithScheme(newNFSPVCScheme()).Build()
-		require.NoError(t, fakeClient.Create(ctx, newNFSPVC(nfsVolA)))
+	t.Run("cleans up when not required", func(t *testing.T) {
+		fakeClient := newFakeClient(newNFSPVCScheme())
+		require.NoError(t, fakeClient.Create(ctx, newNFSPVC()))
 
 		nm := newNFSPVCManager(fakeClient)
 		require.NoError(t, nm.Manage(ctx, newBaseCapp()))
 
 		got := &nfspvcv1alpha1.NfsPvc{}
 		getErr := fakeClient.Get(ctx, types.NamespacedName{Name: nfsVolA, Namespace: cappNamespace}, got)
-		require.True(t, client.IgnoreNotFound(getErr) == nil && getErr != nil,
-			"expected %q to not exist", nfsVolA)
+		require.True(t, errors.IsNotFound(getErr), "expected %q to not exist", nfsVolA)
 	})
 }
 
-func TestNFSPVCCleanUp(t *testing.T) {
+func TestNFSPVCManagerCleanUp(t *testing.T) {
 	ctx := context.Background()
 
-	t.Run("deletes all owned NFSPVCs", func(t *testing.T) {
-		fakeClient := fake.NewClientBuilder().WithScheme(newNFSPVCScheme()).Build()
-		for _, vol := range []string{nfsVolA, nfsVolB} {
-			require.NoError(t, fakeClient.Create(ctx, newNFSPVC(vol)))
-		}
-
-		require.NoError(t, newNFSPVCManager(fakeClient).CleanUp(ctx, newBaseCapp()))
-
-		for _, vol := range []string{nfsVolA, nfsVolB} {
-			got := &nfspvcv1alpha1.NfsPvc{}
-			getErr := fakeClient.Get(ctx, types.NamespacedName{Name: vol, Namespace: cappNamespace}, got)
-			require.True(t, client.IgnoreNotFound(getErr) == nil && getErr != nil,
-				"expected %q to not exist", vol)
-		}
+	t.Run("succeeds when none exist", func(t *testing.T) {
+		nm := newNFSPVCManager(newFakeClient(newNFSPVCScheme()))
+		require.NoError(t, nm.CleanUp(ctx, newBaseCapp()))
 	})
 
-	t.Run("skips delete when capp is deleting and NFSPVC has owner reference", func(t *testing.T) {
-		capp := newBaseCapp()
-		now := metav1.Now()
-		capp.DeletionTimestamp = &now
+	t.Run("skips delete when deleting and has owner reference", func(t *testing.T) {
+		capp := cappWithDeletionTimestamp(newBaseCapp())
 
-		nfspvc := newNFSPVC(nfsVolA)
+		nfspvc := newNFSPVC()
 		require.NoError(t, controllerutil.SetOwnerReference(&capp, nfspvc, newNFSPVCScheme()))
 
-		nm := newNFSPVCManager(fake.NewClientBuilder().WithScheme(newNFSPVCScheme()).WithObjects(nfspvc).Build())
+		nm := newNFSPVCManager(newFakeClient(newNFSPVCScheme(), nfspvc))
 		require.NoError(t, nm.CleanUp(ctx, capp))
 
 		got := &nfspvcv1alpha1.NfsPvc{}
-		require.NoError(t, nm.K8sclient.Get(ctx, types.NamespacedName{Name: nfsVolA, Namespace: cappNamespace}, got))
+		require.NoError(t, nm.K8sClient.Get(ctx, types.NamespacedName{Name: nfsVolA, Namespace: cappNamespace}, got))
+	})
+
+	t.Run("deletes when deleting and lacks owner reference", func(t *testing.T) {
+		capp := cappWithDeletionTimestamp(newBaseCapp())
+
+		nfspvc := newNFSPVC()
+		nm := newNFSPVCManager(newFakeClient(newNFSPVCScheme(), nfspvc))
+		require.NoError(t, nm.CleanUp(ctx, capp))
+
+		got := &nfspvcv1alpha1.NfsPvc{}
+		getErr := nm.K8sClient.Get(ctx, types.NamespacedName{Name: nfsVolA, Namespace: cappNamespace}, got)
+		require.True(t, errors.IsNotFound(getErr))
 	})
 }

@@ -9,7 +9,7 @@ import (
 )
 
 type ResourceManagerClient struct {
-	K8sclient client.Client
+	K8sClient client.Client
 	Log       logr.Logger
 }
 
@@ -33,7 +33,7 @@ func ObjectIdentityKeyVals(obj client.Object) []any {
 // CreateResource creates a resource.
 func (r ResourceManagerClient) CreateResource(ctx context.Context, resource client.Object) error {
 	r.Log.Info("kubernetes API write create", ObjectIdentityKeyVals(resource)...)
-	if err := r.K8sclient.Create(ctx, resource); err != nil {
+	if err := r.K8sClient.Create(ctx, resource); err != nil {
 		return fmt.Errorf("failed to create resource %s %s: %w", resource.GetObjectKind().GroupVersionKind().Kind, resource.GetName(), err)
 	}
 	return nil
@@ -42,7 +42,7 @@ func (r ResourceManagerClient) CreateResource(ctx context.Context, resource clie
 // UpdateResource updates a resource.
 func (r ResourceManagerClient) UpdateResource(ctx context.Context, resource client.Object) error {
 	r.Log.Info("kubernetes API write update", ObjectIdentityKeyVals(resource)...)
-	if err := r.K8sclient.Update(ctx, resource); err != nil {
+	if err := r.K8sClient.Update(ctx, resource); err != nil {
 		return fmt.Errorf("failed to update %s %s: %w", resource.GetObjectKind().GroupVersionKind().Kind, resource.GetName(), err)
 	}
 	return nil
@@ -51,7 +51,7 @@ func (r ResourceManagerClient) UpdateResource(ctx context.Context, resource clie
 // DeleteResource deletes a resource.
 func (r ResourceManagerClient) DeleteResource(ctx context.Context, resource client.Object) error {
 	r.Log.Info("kubernetes API write delete", ObjectIdentityKeyVals(resource)...)
-	if err := r.K8sclient.Delete(ctx, resource); err != nil {
+	if err := r.K8sClient.Delete(ctx, resource); err != nil {
 		return fmt.Errorf("failed to delete %s %s: %w", resource.GetObjectKind().GroupVersionKind().Kind, resource.GetName(), err)
 	}
 	return nil
