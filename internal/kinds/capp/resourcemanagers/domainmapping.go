@@ -92,7 +92,7 @@ func (k DomainMappingManager) CleanUp(ctx context.Context, capp cappv1alpha1.Cap
 				continue
 			}
 		}
-		dm := rclient.GetBareDomainMapping(item.Name, item.Namespace)
+		dm := knativev1beta1.DomainMapping{ObjectMeta: metav1.ObjectMeta{Name: item.Name, Namespace: item.Namespace}}
 		if err := k.DeleteResource(ctx, &dm); err != nil {
 			if errors.IsNotFound(err) {
 				continue
