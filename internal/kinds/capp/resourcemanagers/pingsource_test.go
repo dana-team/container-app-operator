@@ -19,12 +19,10 @@ import (
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	servingv1 "knative.dev/serving/pkg/apis/serving/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 const (
 	sourceName = "ping"
-	schedule   = "* * * * *"
 	sourceA    = "ping-a"
 	sourceB    = "ping-b"
 	sourceC    = "ping-c"
@@ -54,8 +52,8 @@ func newPingSource(source string) *sourcesv1.PingSource {
 	}
 }
 
-func TestPingSourceCleanUpOrphans(t *testing.T) {
-	pingCfg := &cappv1alpha1.PingSourceConfiguration{Schedule: schedule}
+func TestPingSourceManagerCleanUpOrphans(t *testing.T) {
+	pingCfg := cappv1alpha1.PingSourceConfiguration{Schedule: schedule}
 	tests := []struct {
 		name          string
 		sources       []cappv1alpha1.SourceConfiguration
@@ -65,7 +63,7 @@ func TestPingSourceCleanUpOrphans(t *testing.T) {
 	}{
 		{
 			name:          "deletes orphaned PingSource not in spec",
-			sources:       []cappv1alpha1.SourceConfiguration{{Name: sourceA, PingSourceConfiguration: pingCfg}},
+			sources:       []cappv1alpha1.SourceConfiguration{newPingSourceEntry(sourceA, pingCfg)},
 			preCreate:     []*sourcesv1.PingSource{newPingSource(sourceA), newPingSource(sourceB)},
 			expectKept:    []string{fmt.Sprintf("%s-%s", cappName, sourceA)},
 			expectDeleted: []string{fmt.Sprintf("%s-%s", cappName, sourceB)},
@@ -73,15 +71,15 @@ func TestPingSourceCleanUpOrphans(t *testing.T) {
 		{
 			name: "keeps all owned when all are in spec",
 			sources: []cappv1alpha1.SourceConfiguration{
-				{Name: sourceA, PingSourceConfiguration: pingCfg},
-				{Name: sourceB, PingSourceConfiguration: pingCfg},
+				newPingSourceEntry(sourceA, pingCfg),
+				newPingSourceEntry(sourceB, pingCfg),
 			},
 			preCreate:  []*sourcesv1.PingSource{newPingSource(sourceA), newPingSource(sourceB)},
 			expectKept: []string{fmt.Sprintf("%s-%s", cappName, sourceA), fmt.Sprintf("%s-%s", cappName, sourceB)},
 		},
 		{
 			name:          "deletes all owned when none match spec",
-			sources:       []cappv1alpha1.SourceConfiguration{{Name: sourceA, PingSourceConfiguration: pingCfg}},
+			sources:       []cappv1alpha1.SourceConfiguration{newPingSourceEntry(sourceA, pingCfg)},
 			preCreate:     []*sourcesv1.PingSource{newPingSource(sourceB), newPingSource(sourceC)},
 			expectDeleted: []string{fmt.Sprintf("%s-%s", cappName, sourceB), fmt.Sprintf("%s-%s", cappName, sourceC)},
 		},
@@ -89,7 +87,7 @@ func TestPingSourceCleanUpOrphans(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
-			fakeClient := fake.NewClientBuilder().WithScheme(newPingSourceScheme()).Build()
+			fakeClient := newFakeClient(newPingSourceScheme())
 			for _, ps := range tt.preCreate {
 				assert.NoError(t, fakeClient.Create(ctx, ps))
 			}
@@ -110,7 +108,7 @@ func TestPingSourceCleanUpOrphans(t *testing.T) {
 	}
 }
 
-func TestPingSourceCreateOrUpdate(t *testing.T) {
+func TestPingSourceManagerCreateOrUpdate(t *testing.T) {
 	tests := []struct {
 		name         string
 		preCreate    bool
@@ -119,12 +117,12 @@ func TestPingSourceCreateOrUpdate(t *testing.T) {
 		expectedData string
 	}{
 		{
-			name:         "creates PingSource when not found",
+			name:         "creates when not found",
 			data:         "data",
 			expectedData: "data",
 		},
 		{
-			name:         "updates PingSource when spec differs",
+			name:         "updates when spec differs",
 			preCreate:    true,
 			preData:      "old-data",
 			data:         "new-data",
@@ -134,28 +132,19 @@ func TestPingSourceCreateOrUpdate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
-			fakeClient := fake.NewClientBuilder().WithScheme(newPingSourceScheme()).Build()
+			fakeClient := newFakeClient(newPingSourceScheme())
 			pm := newPingSourceManager(fakeClient)
 			capp := newBaseCapp()
 
 			if tt.preCreate {
-				src := cappv1alpha1.SourceConfiguration{
-					Name: sourceName,
-					PingSourceConfiguration: &cappv1alpha1.PingSourceConfiguration{
-						Schedule: schedule,
-						Data:     tt.preData,
-					},
-				}
-				assert.NoError(t, pm.createOrUpdate(ctx, capp, src))
+				cfg := cappv1alpha1.PingSourceConfiguration{Schedule: schedule}
+				cfg.Data = tt.preData
+				assert.NoError(t, pm.createOrUpdate(ctx, capp, newPingSourceEntry(sourceName, cfg)))
 			}
 
-			src := cappv1alpha1.SourceConfiguration{
-				Name: sourceName,
-				PingSourceConfiguration: &cappv1alpha1.PingSourceConfiguration{
-					Schedule: schedule,
-					Data:     tt.data,
-				},
-			}
+			cfg := cappv1alpha1.PingSourceConfiguration{Schedule: schedule}
+			cfg.Data = tt.data
+			src := newPingSourceEntry(sourceName, cfg)
 			assert.NoError(t, pm.createOrUpdate(ctx, capp, src))
 			got := &sourcesv1.PingSource{}
 			assert.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: fmt.Sprintf("%s-%s", cappName, sourceName), Namespace: cappNamespace}, got))
@@ -166,21 +155,20 @@ func TestPingSourceCreateOrUpdate(t *testing.T) {
 	}
 }
 
-func TestPingSourceManage(t *testing.T) {
+func TestPingSourceManagerManage(t *testing.T) {
 	ctx := context.Background()
-	pingCfg := &cappv1alpha1.PingSourceConfiguration{Schedule: schedule}
 
-	t.Run("reconciles when ping is required", func(t *testing.T) {
-		pm := newPingSourceManager(fake.NewClientBuilder().WithScheme(newPingSourceScheme()).Build())
+	t.Run("reconciles when required", func(t *testing.T) {
+		pm := newPingSourceManager(newFakeClient(newPingSourceScheme()))
 		capp := newBaseCapp()
 		capp.Spec.EventSourcesSpec.Sources = []cappv1alpha1.SourceConfiguration{
-			{Name: sourceA, PingSourceConfiguration: pingCfg},
+			newPingSourceEntry(sourceA, cappv1alpha1.PingSourceConfiguration{Schedule: schedule}),
 		}
 		require.NoError(t, pm.Manage(ctx, capp))
 	})
 
-	t.Run("cleans up when ping is not required", func(t *testing.T) {
-		fakeClient := fake.NewClientBuilder().WithScheme(newPingSourceScheme()).Build()
+	t.Run("cleans up when not required", func(t *testing.T) {
+		fakeClient := newFakeClient(newPingSourceScheme())
 		require.NoError(t, fakeClient.Create(ctx, newPingSource(ordersA)))
 
 		pm := newPingSourceManager(fakeClient)
@@ -198,10 +186,10 @@ func TestPingSourceManage(t *testing.T) {
 	})
 }
 
-func TestPingSourceCleanUp(t *testing.T) {
-	t.Run("deletes all owned PingSources", func(t *testing.T) {
+func TestPingSourceManagerCleanUp(t *testing.T) {
+	t.Run("deletes all owned resources", func(t *testing.T) {
 		ctx := context.Background()
-		fakeClient := fake.NewClientBuilder().WithScheme(newPingSourceScheme()).Build()
+		fakeClient := newFakeClient(newPingSourceScheme())
 		for _, source := range []string{sourceA, sourceB} {
 			require.NoError(t, fakeClient.Create(ctx, newPingSource(source)))
 		}
