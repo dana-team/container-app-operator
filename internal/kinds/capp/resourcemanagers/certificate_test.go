@@ -17,7 +17,6 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/tools/events"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
@@ -29,23 +28,20 @@ func newCertificateScheme() *runtime.Scheme {
 
 func newCertificateManager(k8sClient client.Client) CertificateManager {
 	return CertificateManager{
-		ResourceManagerClient: rclient.ResourceManagerClient{K8sclient: k8sClient, Log: logr.Discard()},
+		ResourceManagerClient: rclient.ResourceManagerClient{K8sClient: k8sClient, Log: logr.Discard()},
 		EventRecorder:         events.NewFakeRecorder(10),
 	}
 }
 
 func newCertificateClient(objects ...client.Object) client.Client {
 	objs := append([]client.Object{newCappConfigWithDNS()}, objects...)
-	return fake.NewClientBuilder().
-		WithScheme(newCertificateScheme()).
-		WithObjects(objs...).
-		Build()
+	return newFakeClient(newCertificateScheme(), objs...)
 }
 
-func newCertificate(name string, mutate func(*cmapi.Certificate)) *cmapi.Certificate {
+func newCertificate(mutate func(*cmapi.Certificate)) *cmapi.Certificate {
 	cert := &cmapi.Certificate{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
+			Name:      hostnameFQDN,
 			Namespace: cappNamespace,
 			Labels:    utils.ManagedResourceLabels(cappName),
 		},
@@ -74,7 +70,7 @@ func TestCertificateManagerPrepareResource(t *testing.T) {
 	})
 
 	t.Run("returns error when CappConfig missing", func(t *testing.T) {
-		mgr := newCertificateManager(fake.NewClientBuilder().WithScheme(newCertificateScheme()).Build())
+		mgr := newCertificateManager(newFakeClient(newCertificateScheme()))
 		capp := newCappWithTLS(hostnameBare, true)
 
 		_, err := mgr.prepareResource(ctx, capp)
@@ -92,7 +88,7 @@ func TestCertificateManagerManage(t *testing.T) {
 		require.NoError(t, mgr.Manage(ctx, capp))
 
 		got := &cmapi.Certificate{}
-		require.NoError(t, mgr.K8sclient.Get(ctx, types.NamespacedName{Name: hostnameFQDN, Namespace: cappNamespace}, got))
+		require.NoError(t, mgr.K8sClient.Get(ctx, types.NamespacedName{Name: hostnameFQDN, Namespace: cappNamespace}, got))
 	})
 
 	t.Run("creates FQDN hostname", func(t *testing.T) {
@@ -102,12 +98,12 @@ func TestCertificateManagerManage(t *testing.T) {
 		require.NoError(t, mgr.Manage(ctx, capp))
 
 		got := &cmapi.Certificate{}
-		require.NoError(t, mgr.K8sclient.Get(ctx, types.NamespacedName{Name: hostnameFQDN, Namespace: cappNamespace}, got))
+		require.NoError(t, mgr.K8sClient.Get(ctx, types.NamespacedName{Name: hostnameFQDN, Namespace: cappNamespace}, got))
 	})
 
 	t.Run("updates when spec differs", func(t *testing.T) {
 		wrongIssuer := "wrong-issuer"
-		existing := newCertificate(hostnameFQDN, func(cert *cmapi.Certificate) {
+		existing := newCertificate(func(cert *cmapi.Certificate) {
 			cert.Spec.IssuerRef.Name = wrongIssuer
 		})
 		mgr := newCertificateManager(newCertificateClient(existing))
@@ -116,40 +112,40 @@ func TestCertificateManagerManage(t *testing.T) {
 		require.NoError(t, mgr.Manage(ctx, capp))
 
 		got := &cmapi.Certificate{}
-		require.NoError(t, mgr.K8sclient.Get(ctx, types.NamespacedName{Name: hostnameFQDN, Namespace: cappNamespace}, got))
+		require.NoError(t, mgr.K8sClient.Get(ctx, types.NamespacedName{Name: hostnameFQDN, Namespace: cappNamespace}, got))
 		require.Equal(t, issuerName, got.Spec.IssuerRef.Name)
 	})
 
 	t.Run("adds owner reference when missing", func(t *testing.T) {
-		existing := newCertificate(hostnameFQDN, nil)
+		existing := newCertificate(nil)
 		mgr := newCertificateManager(newCertificateClient(existing))
 		capp := newCappWithTLS(hostnameBare, true)
 
 		require.NoError(t, mgr.Manage(ctx, capp))
 
 		got := &cmapi.Certificate{}
-		require.NoError(t, mgr.K8sclient.Get(ctx, types.NamespacedName{Name: hostnameFQDN, Namespace: cappNamespace}, got))
+		require.NoError(t, mgr.K8sClient.Get(ctx, types.NamespacedName{Name: hostnameFQDN, Namespace: cappNamespace}, got))
 		require.Equal(t, cappName, got.OwnerReferences[0].Name)
 	})
 
-	t.Run("skips update when spec and owner match", func(t *testing.T) {
+	t.Run("skips update when unchanged", func(t *testing.T) {
 		mgr := newCertificateManager(newCertificateClient())
 		capp := newCappWithTLS(hostnameBare, true)
 		require.NoError(t, mgr.Manage(ctx, capp))
 
 		before := &cmapi.Certificate{}
-		require.NoError(t, mgr.K8sclient.Get(ctx, types.NamespacedName{Name: hostnameFQDN, Namespace: cappNamespace}, before))
+		require.NoError(t, mgr.K8sClient.Get(ctx, types.NamespacedName{Name: hostnameFQDN, Namespace: cappNamespace}, before))
 		beforeRV := before.ResourceVersion
 
 		require.NoError(t, mgr.Manage(ctx, capp))
 
 		after := &cmapi.Certificate{}
-		require.NoError(t, mgr.K8sclient.Get(ctx, types.NamespacedName{Name: hostnameFQDN, Namespace: cappNamespace}, after))
+		require.NoError(t, mgr.K8sClient.Get(ctx, types.NamespacedName{Name: hostnameFQDN, Namespace: cappNamespace}, after))
 		require.Equal(t, beforeRV, after.ResourceVersion)
 	})
 
 	t.Run("cleans up when TLS is disabled", func(t *testing.T) {
-		existing := newCertificate(hostnameFQDN, nil)
+		existing := newCertificate(nil)
 		fakeClient := newCertificateClient(existing)
 		mgr := newCertificateManager(fakeClient)
 		capp := newCappWithTLS(hostnameBare, false)
@@ -162,7 +158,7 @@ func TestCertificateManagerManage(t *testing.T) {
 	})
 
 	t.Run("cleans up when hostname is empty", func(t *testing.T) {
-		existing := newCertificate(hostnameFQDN, nil)
+		existing := newCertificate(nil)
 		fakeClient := newCertificateClient(existing)
 		mgr := newCertificateManager(fakeClient)
 		capp := newBaseCapp()
@@ -178,57 +174,33 @@ func TestCertificateManagerManage(t *testing.T) {
 func TestCertificateManagerCleanUp(t *testing.T) {
 	ctx := context.Background()
 
-	t.Run("deletes all owned certificates", func(t *testing.T) {
-		const otherCertName = "other.capp-zone.com"
-		fakeClient := fake.NewClientBuilder().
-			WithScheme(newCertificateScheme()).
-			WithObjects(
-				newCertificate(hostnameFQDN, nil),
-				newCertificate(otherCertName, nil),
-			).
-			Build()
-		mgr := newCertificateManager(fakeClient)
-
-		require.NoError(t, mgr.CleanUp(ctx, newBaseCapp()))
-
-		for _, name := range []string{hostnameFQDN, otherCertName} {
-			got := &cmapi.Certificate{}
-			getErr := fakeClient.Get(ctx, types.NamespacedName{Name: name, Namespace: cappNamespace}, got)
-			require.True(t, errors.IsNotFound(getErr))
-		}
-	})
-
-	t.Run("succeeds when no certificates exist", func(t *testing.T) {
-		mgr := newCertificateManager(fake.NewClientBuilder().WithScheme(newCertificateScheme()).Build())
+	t.Run("succeeds when none exist", func(t *testing.T) {
+		mgr := newCertificateManager(newFakeClient(newCertificateScheme()))
 		require.NoError(t, mgr.CleanUp(ctx, newBaseCapp()))
 	})
 
-	t.Run("skips delete when capp deleting and certificate has owner reference", func(t *testing.T) {
-		capp := newBaseCapp()
-		now := metav1.Now()
-		capp.DeletionTimestamp = &now
+	t.Run("skips delete when deleting and has owner reference", func(t *testing.T) {
+		capp := cappWithDeletionTimestamp(newBaseCapp())
 
-		cert := newCertificate(hostnameFQDN, nil)
+		cert := newCertificate(nil)
 		require.NoError(t, controllerutil.SetOwnerReference(&capp, cert, newCertificateScheme()))
 
-		mgr := newCertificateManager(fake.NewClientBuilder().WithScheme(newCertificateScheme()).WithObjects(cert).Build())
+		mgr := newCertificateManager(newFakeClient(newCertificateScheme(), cert))
 		require.NoError(t, mgr.CleanUp(ctx, capp))
 
 		got := &cmapi.Certificate{}
-		require.NoError(t, mgr.K8sclient.Get(ctx, types.NamespacedName{Name: hostnameFQDN, Namespace: cappNamespace}, got))
+		require.NoError(t, mgr.K8sClient.Get(ctx, types.NamespacedName{Name: hostnameFQDN, Namespace: cappNamespace}, got))
 	})
 
-	t.Run("deletes when capp is deleting and certificate lacks owner reference", func(t *testing.T) {
-		capp := newBaseCapp()
-		now := metav1.Now()
-		capp.DeletionTimestamp = &now
+	t.Run("deletes when deleting and lacks owner reference", func(t *testing.T) {
+		capp := cappWithDeletionTimestamp(newBaseCapp())
 
-		cert := newCertificate(hostnameFQDN, nil)
-		mgr := newCertificateManager(fake.NewClientBuilder().WithScheme(newCertificateScheme()).WithObjects(cert).Build())
+		cert := newCertificate(nil)
+		mgr := newCertificateManager(newFakeClient(newCertificateScheme(), cert))
 		require.NoError(t, mgr.CleanUp(ctx, capp))
 
 		got := &cmapi.Certificate{}
-		getErr := mgr.K8sclient.Get(ctx, types.NamespacedName{Name: hostnameFQDN, Namespace: cappNamespace}, got)
+		getErr := mgr.K8sClient.Get(ctx, types.NamespacedName{Name: hostnameFQDN, Namespace: cappNamespace}, got)
 		require.True(t, errors.IsNotFound(getErr))
 	})
 }

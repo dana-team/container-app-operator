@@ -10,7 +10,7 @@ import (
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
-	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -19,16 +19,6 @@ import (
 	kafkasourcev1 "knative.dev/eventing-kafka-broker/control-plane/pkg/apis/sources/v1"
 	servingv1 "knative.dev/serving/pkg/apis/serving/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-)
-
-const (
-	ordersSource    = "orders"
-	ordersA         = "orders-a"
-	ordersB         = "orders-b"
-	bootstrapServer = "kafka.example:9092"
-	topicOrders     = "orders"
-	topicPayments   = "payments"
 )
 
 func newKafkaSourceScheme() *runtime.Scheme {
@@ -40,23 +30,8 @@ func newKafkaSourceScheme() *runtime.Scheme {
 
 func newKafkaSourceManager(k8sClient client.Client) KafkaSourceManager {
 	return KafkaSourceManager{
-		ResourceManagerClient: rclient.ResourceManagerClient{K8sclient: k8sClient, Log: logr.Discard()},
+		ResourceManagerClient: rclient.ResourceManagerClient{K8sClient: k8sClient, Log: logr.Discard()},
 		EventRecorder:         events.NewFakeRecorder(10),
-	}
-}
-
-func newKafkaSourceConfiguration() cappv1alpha1.KafkaSourceConfiguration {
-	return cappv1alpha1.KafkaSourceConfiguration{
-		BootstrapServers: []string{bootstrapServer},
-		Topics:           []string{topicOrders, topicPayments},
-		SecretRef:        corev1.LocalObjectReference{Name: "kafka-creds"},
-	}
-}
-
-func newKafkaSourceEntry(name string, cfg cappv1alpha1.KafkaSourceConfiguration) cappv1alpha1.SourceConfiguration {
-	return cappv1alpha1.SourceConfiguration{
-		Name:                     name,
-		KafkaSourceConfiguration: &cfg,
 	}
 }
 
@@ -70,41 +45,41 @@ func newKafkaSource(source string) *kafkasourcev1.KafkaSource {
 	}
 }
 
-func TestKafkaSourceCreateOrUpdate(t *testing.T) {
+func TestKafkaSourceManagerCreateOrUpdate(t *testing.T) {
 	ctx := context.Background()
 	key := types.NamespacedName{Name: fmt.Sprintf("%s-%s", cappName, ordersSource), Namespace: cappNamespace}
 
 	t.Run("creates when not found", func(t *testing.T) {
-		km := newKafkaSourceManager(fake.NewClientBuilder().WithScheme(newKafkaSourceScheme()).Build())
+		km := newKafkaSourceManager(newFakeClient(newKafkaSourceScheme()))
 		capp := newBaseCapp()
 		cfg := newKafkaSourceConfiguration()
 
 		require.NoError(t, km.createOrUpdate(ctx, capp, newKafkaSourceEntry(ordersSource, cfg)))
 
 		got := &kafkasourcev1.KafkaSource{}
-		require.NoError(t, km.K8sclient.Get(ctx, key, got))
+		require.NoError(t, km.K8sClient.Get(ctx, key, got))
 		require.Equal(t, []string{topicOrders, topicPayments}, got.Spec.Topics)
 		require.Equal(t, fmt.Sprintf("%s-%s", cappName, ordersSource), got.Spec.ConsumerGroup)
 		require.Equal(t, cappName, got.OwnerReferences[0].Name)
 	})
 
 	t.Run("updates when spec differs", func(t *testing.T) {
-		km := newKafkaSourceManager(fake.NewClientBuilder().WithScheme(newKafkaSourceScheme()).Build())
+		km := newKafkaSourceManager(newFakeClient(newKafkaSourceScheme()))
 		capp := newBaseCapp()
 		existing := newKafkaSource(ordersSource)
 		existing.Spec.Topics = []string{topicOrders}
-		require.NoError(t, km.K8sclient.Create(ctx, existing))
+		require.NoError(t, km.K8sClient.Create(ctx, existing))
 
 		cfg := newKafkaSourceConfiguration()
 		require.NoError(t, km.createOrUpdate(ctx, capp, newKafkaSourceEntry(ordersSource, cfg)))
 
 		got := &kafkasourcev1.KafkaSource{}
-		require.NoError(t, km.K8sclient.Get(ctx, key, got))
+		require.NoError(t, km.K8sClient.Get(ctx, key, got))
 		require.Equal(t, []string{topicOrders, topicPayments}, got.Spec.Topics)
 	})
 
 	t.Run("pauses consumption when Capp is disabled", func(t *testing.T) {
-		km := newKafkaSourceManager(fake.NewClientBuilder().WithScheme(newKafkaSourceScheme()).Build())
+		km := newKafkaSourceManager(newFakeClient(newKafkaSourceScheme()))
 		capp := newBaseCapp()
 		capp.Spec.State = cappv1alpha1.CappStateDisabled
 		cfg := newKafkaSourceConfiguration()
@@ -113,17 +88,17 @@ func TestKafkaSourceCreateOrUpdate(t *testing.T) {
 		require.NoError(t, km.createOrUpdate(ctx, capp, newKafkaSourceEntry(ordersSource, cfg)))
 
 		got := &kafkasourcev1.KafkaSource{}
-		require.NoError(t, km.K8sclient.Get(ctx, key, got))
+		require.NoError(t, km.K8sClient.Get(ctx, key, got))
 		require.NotNil(t, got.Spec.Consumers)
 		require.Equal(t, int32(0), *got.Spec.Consumers)
 	})
 
 	t.Run("preserves consumer group on update", func(t *testing.T) {
-		km := newKafkaSourceManager(fake.NewClientBuilder().WithScheme(newKafkaSourceScheme()).Build())
+		km := newKafkaSourceManager(newFakeClient(newKafkaSourceScheme()))
 		capp := newBaseCapp()
 		existing := newKafkaSource(ordersSource)
 		existing.Spec.ConsumerGroup = "immutable-group"
-		require.NoError(t, km.K8sclient.Create(ctx, existing))
+		require.NoError(t, km.K8sClient.Create(ctx, existing))
 
 		cfg := newKafkaSourceConfiguration()
 		cfg.Topics = []string{topicOrders}
@@ -131,16 +106,16 @@ func TestKafkaSourceCreateOrUpdate(t *testing.T) {
 		require.NoError(t, km.createOrUpdate(ctx, capp, newKafkaSourceEntry(ordersSource, cfg)))
 
 		got := &kafkasourcev1.KafkaSource{}
-		require.NoError(t, km.K8sclient.Get(ctx, key, got))
+		require.NoError(t, km.K8sClient.Get(ctx, key, got))
 		require.Equal(t, []string{topicOrders}, got.Spec.Topics)
 		require.Equal(t, "immutable-group", got.Spec.ConsumerGroup)
 	})
 }
 
-func TestKafkaSourceCleanUpOrphans(t *testing.T) {
-	t.Run("deletes orphan not in spec", func(t *testing.T) {
+func TestKafkaSourceManagerCleanUpOrphans(t *testing.T) {
+	t.Run("deletes orphaned KafkaSource not in spec", func(t *testing.T) {
 		ctx := context.Background()
-		fakeClient := fake.NewClientBuilder().WithScheme(newKafkaSourceScheme()).Build()
+		fakeClient := newFakeClient(newKafkaSourceScheme())
 		for _, source := range []string{ordersA, ordersB} {
 			require.NoError(t, fakeClient.Create(ctx, newKafkaSource(source)))
 		}
@@ -160,29 +135,29 @@ func TestKafkaSourceCleanUpOrphans(t *testing.T) {
 		getErr := fakeClient.Get(ctx, types.NamespacedName{
 			Name: fmt.Sprintf("%s-%s", cappName, ordersB), Namespace: cappNamespace,
 		}, deleted)
-		require.True(t, client.IgnoreNotFound(getErr) == nil && getErr != nil, "expected orphan to not exist")
+		require.True(t, errors.IsNotFound(getErr), "expected orphan to not exist")
 	})
 }
 
-func TestKafkaSourceManage(t *testing.T) {
+func TestKafkaSourceManagerManage(t *testing.T) {
 	ctx := context.Background()
 	kafkaCfg := newKafkaSourceConfiguration()
 
-	t.Run("reconciles when kafka is required", func(t *testing.T) {
-		km := newKafkaSourceManager(fake.NewClientBuilder().WithScheme(newKafkaSourceScheme()).Build())
+	t.Run("reconciles when required", func(t *testing.T) {
+		km := newKafkaSourceManager(newFakeClient(newKafkaSourceScheme()))
 		capp := newBaseCapp()
 		capp.Spec.EventSourcesSpec.Sources = []cappv1alpha1.SourceConfiguration{newKafkaSourceEntry(ordersA, kafkaCfg)}
 		require.NoError(t, km.Manage(ctx, capp))
 	})
 
-	t.Run("cleans up when kafka is not required", func(t *testing.T) {
-		fakeClient := fake.NewClientBuilder().WithScheme(newKafkaSourceScheme()).Build()
+	t.Run("cleans up when not required", func(t *testing.T) {
+		fakeClient := newFakeClient(newKafkaSourceScheme())
 		require.NoError(t, fakeClient.Create(ctx, newKafkaSource(ordersA)))
 
 		km := newKafkaSourceManager(fakeClient)
 		capp := newBaseCapp()
 		capp.Spec.EventSourcesSpec.Sources = []cappv1alpha1.SourceConfiguration{
-			{Name: ordersA, PingSourceConfiguration: &cappv1alpha1.PingSourceConfiguration{Schedule: "* * * * *"}},
+			newPingSourceEntry(ordersA, cappv1alpha1.PingSourceConfiguration{Schedule: schedule}),
 		}
 		require.NoError(t, km.Manage(ctx, capp))
 
@@ -190,26 +165,22 @@ func TestKafkaSourceManage(t *testing.T) {
 		getErr := fakeClient.Get(ctx, types.NamespacedName{
 			Name: fmt.Sprintf("%s-%s", cappName, ordersA), Namespace: cappNamespace,
 		}, got)
-		require.True(t, client.IgnoreNotFound(getErr) == nil && getErr != nil, "expected %q to not exist", fmt.Sprintf("%s-%s", cappName, ordersA))
+		require.True(t, errors.IsNotFound(getErr), "expected %q to not exist", fmt.Sprintf("%s-%s", cappName, ordersA))
 	})
-}
 
-func TestKafkaSourceCleanUp(t *testing.T) {
-	t.Run("deletes all owned KafkaSources", func(t *testing.T) {
-		ctx := context.Background()
-		fakeClient := fake.NewClientBuilder().WithScheme(newKafkaSourceScheme()).Build()
-		for _, source := range []string{ordersA, ordersB} {
-			require.NoError(t, fakeClient.Create(ctx, newKafkaSource(source)))
+	t.Run("skips non-kafka sources when reconciling", func(t *testing.T) {
+		fakeClient := newFakeClient(newKafkaSourceScheme())
+		km := newKafkaSourceManager(fakeClient)
+		capp := newBaseCapp()
+		capp.Spec.EventSourcesSpec.Sources = []cappv1alpha1.SourceConfiguration{
+			newKafkaSourceEntry(ordersA, kafkaCfg),
+			newPingSourceEntry(ordersB, cappv1alpha1.PingSourceConfiguration{Schedule: schedule}),
 		}
+		require.NoError(t, km.Manage(ctx, capp))
 
-		require.NoError(t, newKafkaSourceManager(fakeClient).CleanUp(ctx, newBaseCapp()))
-
-		for _, source := range []string{ordersA, ordersB} {
-			got := &kafkasourcev1.KafkaSource{}
-			getErr := fakeClient.Get(ctx, types.NamespacedName{
-				Name: fmt.Sprintf("%s-%s", cappName, source), Namespace: cappNamespace,
-			}, got)
-			require.True(t, client.IgnoreNotFound(getErr) == nil && getErr != nil, "expected %q to not exist", fmt.Sprintf("%s-%s", cappName, source))
-		}
+		got := &kafkasourcev1.KafkaSource{}
+		require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{
+			Name: fmt.Sprintf("%s-%s", cappName, ordersA), Namespace: cappNamespace,
+		}, got))
 	})
 }
