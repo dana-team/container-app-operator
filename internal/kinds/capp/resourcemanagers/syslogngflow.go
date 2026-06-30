@@ -59,11 +59,11 @@ func (f SyslogNGFlowManager) prepareResource(capp cappv1alpha1.Capp) loggingv1be
 // CleanUp attempts to delete the associated SyslogNGFlow for a given Capp resource.
 func (f SyslogNGFlowManager) CleanUp(ctx context.Context, capp cappv1alpha1.Capp) error {
 	var syslogNGFlow loggingv1beta1.SyslogNGFlow
-	if err := f.K8sclient.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: capp.Name}, &syslogNGFlow); err != nil {
+	if err := f.K8sClient.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: capp.Name}, &syslogNGFlow); err != nil {
 		return client.IgnoreNotFound(err)
 	}
 	if capp.DeletionTimestamp != nil {
-		if ok, err := controllerutil.HasOwnerReference(syslogNGFlow.OwnerReferences, &capp, f.K8sclient.Scheme()); err != nil || ok {
+		if ok, err := controllerutil.HasOwnerReference(syslogNGFlow.OwnerReferences, &capp, f.K8sClient.Scheme()); err != nil || ok {
 			return err
 		}
 	}
@@ -90,9 +90,9 @@ func (f SyslogNGFlowManager) createOrUpdate(ctx context.Context, capp cappv1alph
 	syslogNGFlowFromCapp := f.prepareResource(capp)
 	syslogNGFlow := loggingv1beta1.SyslogNGFlow{}
 
-	if err := f.K8sclient.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: syslogNGFlowFromCapp.Name}, &syslogNGFlow); err != nil {
+	if err := f.K8sClient.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: syslogNGFlowFromCapp.Name}, &syslogNGFlow); err != nil {
 		if errors.IsNotFound(err) {
-			return createManagedResource(ctx, f.K8sclient, f.CreateResource, f.EventRecorder, &capp, &syslogNGFlowFromCapp,
+			return createManagedResource(ctx, f.K8sClient, f.CreateResource, f.EventRecorder, &capp, &syslogNGFlowFromCapp,
 				"SyslogNGFlow", eventCappSyslogNGFlowCreated, eventCappSyslogNGFlowCreationFailed)
 		}
 		return fmt.Errorf("failed to get SyslogNGFlow %q: %w", syslogNGFlow.Name, err)
@@ -100,7 +100,7 @@ func (f SyslogNGFlowManager) createOrUpdate(ctx context.Context, capp cappv1alph
 
 	orig := syslogNGFlow.DeepCopy()
 	syslogNGFlow.Spec = *syslogNGFlowFromCapp.Spec.DeepCopy()
-	if err := ensureOwnerReference(f.K8sclient, &capp, &syslogNGFlow, "SyslogNGFlow"); err != nil {
+	if err := ensureOwnerReference(f.K8sClient, &capp, &syslogNGFlow, "SyslogNGFlow"); err != nil {
 		return err
 	}
 	return updateManagedResourceIfNeeded(ctx, f.UpdateResource, &syslogNGFlow, orig.Spec, syslogNGFlow.Spec, orig.OwnerReferences)

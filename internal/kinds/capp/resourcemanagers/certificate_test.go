@@ -28,7 +28,7 @@ func newCertificateScheme() *runtime.Scheme {
 
 func newCertificateManager(k8sClient client.Client) CertificateManager {
 	return CertificateManager{
-		ResourceManagerClient: rclient.ResourceManagerClient{K8sclient: k8sClient, Log: logr.Discard()},
+		ResourceManagerClient: rclient.ResourceManagerClient{K8sClient: k8sClient, Log: logr.Discard()},
 		EventRecorder:         events.NewFakeRecorder(10),
 	}
 }
@@ -88,7 +88,7 @@ func TestCertificateManagerManage(t *testing.T) {
 		require.NoError(t, mgr.Manage(ctx, capp))
 
 		got := &cmapi.Certificate{}
-		require.NoError(t, mgr.K8sclient.Get(ctx, types.NamespacedName{Name: hostnameFQDN, Namespace: cappNamespace}, got))
+		require.NoError(t, mgr.K8sClient.Get(ctx, types.NamespacedName{Name: hostnameFQDN, Namespace: cappNamespace}, got))
 	})
 
 	t.Run("creates FQDN hostname", func(t *testing.T) {
@@ -98,7 +98,7 @@ func TestCertificateManagerManage(t *testing.T) {
 		require.NoError(t, mgr.Manage(ctx, capp))
 
 		got := &cmapi.Certificate{}
-		require.NoError(t, mgr.K8sclient.Get(ctx, types.NamespacedName{Name: hostnameFQDN, Namespace: cappNamespace}, got))
+		require.NoError(t, mgr.K8sClient.Get(ctx, types.NamespacedName{Name: hostnameFQDN, Namespace: cappNamespace}, got))
 	})
 
 	t.Run("updates when spec differs", func(t *testing.T) {
@@ -112,7 +112,7 @@ func TestCertificateManagerManage(t *testing.T) {
 		require.NoError(t, mgr.Manage(ctx, capp))
 
 		got := &cmapi.Certificate{}
-		require.NoError(t, mgr.K8sclient.Get(ctx, types.NamespacedName{Name: hostnameFQDN, Namespace: cappNamespace}, got))
+		require.NoError(t, mgr.K8sClient.Get(ctx, types.NamespacedName{Name: hostnameFQDN, Namespace: cappNamespace}, got))
 		require.Equal(t, issuerName, got.Spec.IssuerRef.Name)
 	})
 
@@ -124,7 +124,7 @@ func TestCertificateManagerManage(t *testing.T) {
 		require.NoError(t, mgr.Manage(ctx, capp))
 
 		got := &cmapi.Certificate{}
-		require.NoError(t, mgr.K8sclient.Get(ctx, types.NamespacedName{Name: hostnameFQDN, Namespace: cappNamespace}, got))
+		require.NoError(t, mgr.K8sClient.Get(ctx, types.NamespacedName{Name: hostnameFQDN, Namespace: cappNamespace}, got))
 		require.Equal(t, cappName, got.OwnerReferences[0].Name)
 	})
 
@@ -134,13 +134,13 @@ func TestCertificateManagerManage(t *testing.T) {
 		require.NoError(t, mgr.Manage(ctx, capp))
 
 		before := &cmapi.Certificate{}
-		require.NoError(t, mgr.K8sclient.Get(ctx, types.NamespacedName{Name: hostnameFQDN, Namespace: cappNamespace}, before))
+		require.NoError(t, mgr.K8sClient.Get(ctx, types.NamespacedName{Name: hostnameFQDN, Namespace: cappNamespace}, before))
 		beforeRV := before.ResourceVersion
 
 		require.NoError(t, mgr.Manage(ctx, capp))
 
 		after := &cmapi.Certificate{}
-		require.NoError(t, mgr.K8sclient.Get(ctx, types.NamespacedName{Name: hostnameFQDN, Namespace: cappNamespace}, after))
+		require.NoError(t, mgr.K8sClient.Get(ctx, types.NamespacedName{Name: hostnameFQDN, Namespace: cappNamespace}, after))
 		require.Equal(t, beforeRV, after.ResourceVersion)
 	})
 
@@ -189,7 +189,7 @@ func TestCertificateManagerCleanUp(t *testing.T) {
 		require.NoError(t, mgr.CleanUp(ctx, capp))
 
 		got := &cmapi.Certificate{}
-		require.NoError(t, mgr.K8sclient.Get(ctx, types.NamespacedName{Name: hostnameFQDN, Namespace: cappNamespace}, got))
+		require.NoError(t, mgr.K8sClient.Get(ctx, types.NamespacedName{Name: hostnameFQDN, Namespace: cappNamespace}, got))
 	})
 
 	t.Run("deletes when deleting and lacks owner reference", func(t *testing.T) {
@@ -200,7 +200,7 @@ func TestCertificateManagerCleanUp(t *testing.T) {
 		require.NoError(t, mgr.CleanUp(ctx, capp))
 
 		got := &cmapi.Certificate{}
-		getErr := mgr.K8sclient.Get(ctx, types.NamespacedName{Name: hostnameFQDN, Namespace: cappNamespace}, got)
+		getErr := mgr.K8sClient.Get(ctx, types.NamespacedName{Name: hostnameFQDN, Namespace: cappNamespace}, got)
 		require.True(t, errors.IsNotFound(getErr))
 	})
 }
