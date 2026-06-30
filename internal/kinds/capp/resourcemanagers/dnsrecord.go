@@ -85,7 +85,7 @@ func (r DNSRecordManager) CleanUp(ctx context.Context, capp cappv1alpha1.Capp) e
 				continue
 			}
 		}
-		bareRecord := rclient.GetBareDNSRecord(dnsRecord.Name, dnsRecord.Namespace)
+		bareRecord := dnsrecordv1alpha1.CNAMERecord{ObjectMeta: metav1.ObjectMeta{Name: dnsRecord.Name, Namespace: dnsRecord.Namespace}}
 		if err := r.DeleteResource(ctx, &bareRecord); err != nil {
 			if errors.IsNotFound(err) {
 				continue

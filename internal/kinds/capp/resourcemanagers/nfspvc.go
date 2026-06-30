@@ -84,7 +84,7 @@ func (n NFSPVCManager) CleanUp(ctx context.Context, capp cappv1alpha1.Capp) erro
 				continue
 			}
 		}
-		nfsPvcVolume := rclient.GetBareNFSPVC(nfsPvc.Name, nfsPvc.Namespace)
+		nfsPvcVolume := nfspvcv1alpha1.NfsPvc{ObjectMeta: metav1.ObjectMeta{Name: nfsPvc.Name, Namespace: nfsPvc.Namespace}}
 
 		if err := n.DeleteResource(ctx, &nfsPvcVolume); err != nil {
 			if errors.IsNotFound(err) {
