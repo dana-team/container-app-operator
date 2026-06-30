@@ -32,7 +32,7 @@ type CertificateManager struct {
 
 // prepareResource prepares a Certificate resource based on the provided Capp.
 func (c CertificateManager) prepareResource(ctx context.Context, capp cappv1alpha1.Capp) (cmapi.Certificate, error) {
-	dnsConfig, err := utils.GetDNSConfig(ctx, c.K8sclient)
+	dnsConfig, err := utils.GetDNSConfig(ctx, c.K8sClient)
 	if err != nil {
 		return cmapi.Certificate{}, err
 	}
@@ -84,7 +84,7 @@ func (c CertificateManager) CleanUp(ctx context.Context, capp cappv1alpha1.Capp)
 
 	for _, certificate := range certificates.Items {
 		if capp.DeletionTimestamp != nil {
-			ok, err := controllerutil.HasOwnerReference(certificate.OwnerReferences, &capp, c.K8sclient.Scheme())
+			ok, err := controllerutil.HasOwnerReference(certificate.OwnerReferences, &capp, c.K8sClient.Scheme())
 			if err != nil {
 				return err
 			}
@@ -120,9 +120,9 @@ func (c CertificateManager) Manage(ctx context.Context, capp cappv1alpha1.Capp) 
 
 		certificate := cmapi.Certificate{}
 
-		if err := c.K8sclient.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: certificateFromCapp.Name}, &certificate); err != nil {
+		if err := c.K8sClient.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: certificateFromCapp.Name}, &certificate); err != nil {
 			if errors.IsNotFound(err) {
-				return createManagedResource(ctx, c.K8sclient, c.CreateResource, c.EventRecorder, &capp, &certificateFromCapp,
+				return createManagedResource(ctx, c.K8sClient, c.CreateResource, c.EventRecorder, &capp, &certificateFromCapp,
 					"Certificate", eventCappCertificateCreated, eventCappCertificateCreationFailed)
 			}
 			return fmt.Errorf("failed to get Certificate %q: %w", certificateFromCapp.Name, err)
@@ -130,7 +130,7 @@ func (c CertificateManager) Manage(ctx context.Context, capp cappv1alpha1.Capp) 
 
 		orig := certificate.DeepCopy()
 		certificate.Spec = *certificateFromCapp.Spec.DeepCopy()
-		if err := ensureOwnerReference(c.K8sclient, &capp, &certificate, "Certificate"); err != nil {
+		if err := ensureOwnerReference(c.K8sClient, &capp, &certificate, "Certificate"); err != nil {
 			return err
 		}
 		if err := updateManagedResourceIfNeeded(ctx, c.UpdateResource, &certificate, orig.Spec, certificate.Spec, orig.OwnerReferences); err != nil {
@@ -146,7 +146,7 @@ func (c CertificateManager) Manage(ctx context.Context, capp cappv1alpha1.Capp) 
 // getPreviousCertificates returns a list of all Certificate objects that are related to the given Capp.
 func (c CertificateManager) getPreviousCertificates(ctx context.Context, capp cappv1alpha1.Capp) (cmapi.CertificateList, error) {
 	certificates := cmapi.CertificateList{}
-	if err := listManagedResources(ctx, c.K8sclient, capp, &certificates, "Certificate", nil); err != nil {
+	if err := listManagedResources(ctx, c.K8sClient, capp, &certificates, "Certificate", nil); err != nil {
 		return certificates, err
 	}
 	return certificates, nil

@@ -33,7 +33,7 @@ func newKsvcScheme() *runtime.Scheme {
 func newKsvcManager(k8sClient client.Client) (KnativeServiceManager, *events.FakeRecorder) {
 	recorder := events.NewFakeRecorder(10)
 	return KnativeServiceManager{
-		ResourceManagerClient: rclient.ResourceManagerClient{K8sclient: k8sClient, Log: logr.Discard()},
+		ResourceManagerClient: rclient.ResourceManagerClient{K8sClient: k8sClient, Log: logr.Discard()},
 		EventRecorder:         recorder,
 	}, recorder
 }
@@ -161,7 +161,7 @@ func TestKnativeServiceManagerManage(t *testing.T) {
 		require.NoError(t, km.Manage(ctx, capp))
 
 		got := &knativev1.Service{}
-		require.NoError(t, km.K8sclient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: cappNamespace}, got))
+		require.NoError(t, km.K8sClient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: cappNamespace}, got))
 		require.Len(t, got.OwnerReferences, 1)
 		require.Equal(t, cappName, got.OwnerReferences[0].Name)
 		require.Equal(t, cappName, got.Labels[utils.CappResourceKey])
@@ -178,7 +178,7 @@ func TestKnativeServiceManagerManage(t *testing.T) {
 		require.NoError(t, km.Manage(ctx, capp))
 
 		got := &knativev1.Service{}
-		require.NoError(t, km.K8sclient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: cappNamespace}, got))
+		require.NoError(t, km.K8sClient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: cappNamespace}, got))
 		require.Equal(t, updatedContainerImage, got.Spec.Template.Spec.Containers[0].Image)
 	})
 
@@ -188,13 +188,13 @@ func TestKnativeServiceManagerManage(t *testing.T) {
 		require.NoError(t, km.Manage(ctx, capp))
 
 		before := &knativev1.Service{}
-		require.NoError(t, km.K8sclient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: cappNamespace}, before))
+		require.NoError(t, km.K8sClient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: cappNamespace}, before))
 		beforeRV := before.ResourceVersion
 
 		require.NoError(t, km.Manage(ctx, capp))
 
 		after := &knativev1.Service{}
-		require.NoError(t, km.K8sclient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: cappNamespace}, after))
+		require.NoError(t, km.K8sClient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: cappNamespace}, after))
 		require.Equal(t, beforeRV, after.ResourceVersion)
 	})
 
@@ -208,7 +208,7 @@ func TestKnativeServiceManagerManage(t *testing.T) {
 		require.NoError(t, km.Manage(ctx, capp))
 
 		got := &knativev1.Service{}
-		getErr := km.K8sclient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: cappNamespace}, got)
+		getErr := km.K8sClient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: cappNamespace}, got)
 		require.Error(t, getErr)
 		require.True(t, errors.IsNotFound(getErr))
 
@@ -226,7 +226,7 @@ func TestKnativeServiceManagerManage(t *testing.T) {
 		require.NoError(t, km.Manage(ctx, capp))
 
 		got := &knativev1.Service{}
-		require.NoError(t, km.K8sclient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: cappNamespace}, got))
+		require.NoError(t, km.K8sClient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: cappNamespace}, got))
 		require.Len(t, got.OwnerReferences, 1)
 		require.Equal(t, cappName, got.OwnerReferences[0].Name)
 
@@ -258,7 +258,7 @@ func TestKnativeServiceManagerCleanUp(t *testing.T) {
 		require.NoError(t, km.CleanUp(ctx, capp))
 
 		got := &knativev1.Service{}
-		require.NoError(t, km.K8sclient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: cappNamespace}, got))
+		require.NoError(t, km.K8sClient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: cappNamespace}, got))
 	})
 
 	t.Run("deletes when deleting and lacks owner reference", func(t *testing.T) {
@@ -274,7 +274,7 @@ func TestKnativeServiceManagerCleanUp(t *testing.T) {
 		require.NoError(t, km.CleanUp(ctx, capp))
 
 		got := &knativev1.Service{}
-		getErr := km.K8sclient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: cappNamespace}, got)
+		getErr := km.K8sClient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: cappNamespace}, got)
 		require.True(t, errors.IsNotFound(getErr))
 	})
 }

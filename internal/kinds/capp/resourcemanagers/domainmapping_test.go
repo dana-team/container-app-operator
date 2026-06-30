@@ -30,7 +30,7 @@ func newDomainMappingScheme() *runtime.Scheme {
 
 func newDomainMappingManager(k8sClient client.Client) DomainMappingManager {
 	return DomainMappingManager{
-		ResourceManagerClient: rclient.ResourceManagerClient{K8sclient: k8sClient, Log: logr.Discard()},
+		ResourceManagerClient: rclient.ResourceManagerClient{K8sClient: k8sClient, Log: logr.Discard()},
 		EventRecorder:         events.NewFakeRecorder(10),
 	}
 }
@@ -103,7 +103,7 @@ func TestDomainMappingManagerCreateOrUpdate(t *testing.T) {
 		require.NoError(t, mgr.createOrUpdate(ctx, capp))
 
 		got := &knativev1beta1.DomainMapping{}
-		require.NoError(t, mgr.K8sclient.Get(ctx, types.NamespacedName{Name: hostnameFQDN, Namespace: cappNamespace}, got))
+		require.NoError(t, mgr.K8sClient.Get(ctx, types.NamespacedName{Name: hostnameFQDN, Namespace: cappNamespace}, got))
 		require.Equal(t, hostnameFQDN, got.Name)
 		require.Equal(t, cappName, got.Spec.Ref.Name)
 		require.Equal(t, knativeServiceKind, got.Spec.Ref.Kind)
@@ -118,7 +118,7 @@ func TestDomainMappingManagerCreateOrUpdate(t *testing.T) {
 		require.NoError(t, mgr.createOrUpdate(ctx, capp))
 
 		got := &knativev1beta1.DomainMapping{}
-		require.NoError(t, mgr.K8sclient.Get(ctx, types.NamespacedName{Name: hostnameFQDN, Namespace: cappNamespace}, got))
+		require.NoError(t, mgr.K8sClient.Get(ctx, types.NamespacedName{Name: hostnameFQDN, Namespace: cappNamespace}, got))
 		require.Equal(t, hostnameFQDN, got.Name)
 	})
 
@@ -132,7 +132,7 @@ func TestDomainMappingManagerCreateOrUpdate(t *testing.T) {
 		require.NoError(t, mgr.createOrUpdate(ctx, capp))
 
 		got := &knativev1beta1.DomainMapping{}
-		require.NoError(t, mgr.K8sclient.Get(ctx, types.NamespacedName{Name: hostnameFQDN, Namespace: cappNamespace}, got))
+		require.NoError(t, mgr.K8sClient.Get(ctx, types.NamespacedName{Name: hostnameFQDN, Namespace: cappNamespace}, got))
 		require.Equal(t, cappName, got.Spec.Ref.Name)
 	})
 
@@ -144,7 +144,7 @@ func TestDomainMappingManagerCreateOrUpdate(t *testing.T) {
 		require.NoError(t, mgr.createOrUpdate(ctx, capp))
 
 		got := &knativev1beta1.DomainMapping{}
-		require.NoError(t, mgr.K8sclient.Get(ctx, types.NamespacedName{Name: hostnameFQDN, Namespace: cappNamespace}, got))
+		require.NoError(t, mgr.K8sClient.Get(ctx, types.NamespacedName{Name: hostnameFQDN, Namespace: cappNamespace}, got))
 		require.Equal(t, cappName, got.OwnerReferences[0].Name)
 	})
 
@@ -154,13 +154,13 @@ func TestDomainMappingManagerCreateOrUpdate(t *testing.T) {
 		require.NoError(t, mgr.createOrUpdate(ctx, capp))
 
 		before := &knativev1beta1.DomainMapping{}
-		require.NoError(t, mgr.K8sclient.Get(ctx, types.NamespacedName{Name: hostnameFQDN, Namespace: cappNamespace}, before))
+		require.NoError(t, mgr.K8sClient.Get(ctx, types.NamespacedName{Name: hostnameFQDN, Namespace: cappNamespace}, before))
 		beforeRV := before.ResourceVersion
 
 		require.NoError(t, mgr.createOrUpdate(ctx, capp))
 
 		after := &knativev1beta1.DomainMapping{}
-		require.NoError(t, mgr.K8sclient.Get(ctx, types.NamespacedName{Name: hostnameFQDN, Namespace: cappNamespace}, after))
+		require.NoError(t, mgr.K8sClient.Get(ctx, types.NamespacedName{Name: hostnameFQDN, Namespace: cappNamespace}, after))
 		require.Equal(t, beforeRV, after.ResourceVersion)
 	})
 
@@ -228,7 +228,7 @@ func TestDomainMappingManagerCleanUp(t *testing.T) {
 		require.NoError(t, mgr.CleanUp(ctx, capp))
 
 		got := &knativev1beta1.DomainMapping{}
-		require.NoError(t, mgr.K8sclient.Get(ctx, types.NamespacedName{Name: hostnameFQDN, Namespace: cappNamespace}, got))
+		require.NoError(t, mgr.K8sClient.Get(ctx, types.NamespacedName{Name: hostnameFQDN, Namespace: cappNamespace}, got))
 	})
 
 	t.Run("deletes when deleting and lacks owner reference", func(t *testing.T) {
@@ -239,7 +239,7 @@ func TestDomainMappingManagerCleanUp(t *testing.T) {
 		require.NoError(t, mgr.CleanUp(ctx, capp))
 
 		got := &knativev1beta1.DomainMapping{}
-		getErr := mgr.K8sclient.Get(ctx, types.NamespacedName{Name: hostnameFQDN, Namespace: cappNamespace}, got)
+		getErr := mgr.K8sClient.Get(ctx, types.NamespacedName{Name: hostnameFQDN, Namespace: cappNamespace}, got)
 		require.True(t, errors.IsNotFound(getErr))
 	})
 }

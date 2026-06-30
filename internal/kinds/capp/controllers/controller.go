@@ -332,7 +332,7 @@ func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, fmt.Errorf("failed to get Capp: %s", err.Error())
 	}
 
-	rmClient := rclient.ResourceManagerClient{K8sclient: r.Client, Log: logger}
+	rmClient := rclient.ResourceManagerClient{K8sClient: r.Client, Log: logger}
 	resourceManagers := map[string]rmanagers.ResourceManager{
 		rmanagers.KnativeServing: rmanagers.KnativeServiceManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},
 		rmanagers.DNSRecord:      rmanagers.DNSRecordManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},

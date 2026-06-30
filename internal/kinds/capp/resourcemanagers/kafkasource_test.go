@@ -30,7 +30,7 @@ func newKafkaSourceScheme() *runtime.Scheme {
 
 func newKafkaSourceManager(k8sClient client.Client) KafkaSourceManager {
 	return KafkaSourceManager{
-		ResourceManagerClient: rclient.ResourceManagerClient{K8sclient: k8sClient, Log: logr.Discard()},
+		ResourceManagerClient: rclient.ResourceManagerClient{K8sClient: k8sClient, Log: logr.Discard()},
 		EventRecorder:         events.NewFakeRecorder(10),
 	}
 }
@@ -57,7 +57,7 @@ func TestKafkaSourceManagerCreateOrUpdate(t *testing.T) {
 		require.NoError(t, km.createOrUpdate(ctx, capp, newKafkaSourceEntry(ordersSource, cfg)))
 
 		got := &kafkasourcev1.KafkaSource{}
-		require.NoError(t, km.K8sclient.Get(ctx, key, got))
+		require.NoError(t, km.K8sClient.Get(ctx, key, got))
 		require.Equal(t, []string{topicOrders, topicPayments}, got.Spec.Topics)
 		require.Equal(t, fmt.Sprintf("%s-%s", cappName, ordersSource), got.Spec.ConsumerGroup)
 		require.Equal(t, cappName, got.OwnerReferences[0].Name)
@@ -68,13 +68,13 @@ func TestKafkaSourceManagerCreateOrUpdate(t *testing.T) {
 		capp := newBaseCapp()
 		existing := newKafkaSource(ordersSource)
 		existing.Spec.Topics = []string{topicOrders}
-		require.NoError(t, km.K8sclient.Create(ctx, existing))
+		require.NoError(t, km.K8sClient.Create(ctx, existing))
 
 		cfg := newKafkaSourceConfiguration()
 		require.NoError(t, km.createOrUpdate(ctx, capp, newKafkaSourceEntry(ordersSource, cfg)))
 
 		got := &kafkasourcev1.KafkaSource{}
-		require.NoError(t, km.K8sclient.Get(ctx, key, got))
+		require.NoError(t, km.K8sClient.Get(ctx, key, got))
 		require.Equal(t, []string{topicOrders, topicPayments}, got.Spec.Topics)
 	})
 
@@ -88,7 +88,7 @@ func TestKafkaSourceManagerCreateOrUpdate(t *testing.T) {
 		require.NoError(t, km.createOrUpdate(ctx, capp, newKafkaSourceEntry(ordersSource, cfg)))
 
 		got := &kafkasourcev1.KafkaSource{}
-		require.NoError(t, km.K8sclient.Get(ctx, key, got))
+		require.NoError(t, km.K8sClient.Get(ctx, key, got))
 		require.NotNil(t, got.Spec.Consumers)
 		require.Equal(t, int32(0), *got.Spec.Consumers)
 	})
@@ -98,7 +98,7 @@ func TestKafkaSourceManagerCreateOrUpdate(t *testing.T) {
 		capp := newBaseCapp()
 		existing := newKafkaSource(ordersSource)
 		existing.Spec.ConsumerGroup = "immutable-group"
-		require.NoError(t, km.K8sclient.Create(ctx, existing))
+		require.NoError(t, km.K8sClient.Create(ctx, existing))
 
 		cfg := newKafkaSourceConfiguration()
 		cfg.Topics = []string{topicOrders}
@@ -106,7 +106,7 @@ func TestKafkaSourceManagerCreateOrUpdate(t *testing.T) {
 		require.NoError(t, km.createOrUpdate(ctx, capp, newKafkaSourceEntry(ordersSource, cfg)))
 
 		got := &kafkasourcev1.KafkaSource{}
-		require.NoError(t, km.K8sclient.Get(ctx, key, got))
+		require.NoError(t, km.K8sClient.Get(ctx, key, got))
 		require.Equal(t, []string{topicOrders}, got.Spec.Topics)
 		require.Equal(t, "immutable-group", got.Spec.ConsumerGroup)
 	})

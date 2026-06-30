@@ -37,7 +37,7 @@ func newPingSourceScheme() *runtime.Scheme {
 
 func newPingSourceManager(k8sClient client.Client) PingSourceManager {
 	return PingSourceManager{
-		ResourceManagerClient: rclient.ResourceManagerClient{K8sclient: k8sClient, Log: logr.Discard()},
+		ResourceManagerClient: rclient.ResourceManagerClient{K8sClient: k8sClient, Log: logr.Discard()},
 		EventRecorder:         events.NewFakeRecorder(10),
 	}
 }

@@ -21,7 +21,7 @@ import (
 
 func newSyslogNGOutputManager(k8sClient client.Client) SyslogNGOutputManager {
 	return SyslogNGOutputManager{
-		ResourceManagerClient: rclient.ResourceManagerClient{K8sclient: k8sClient, Log: logr.Discard()},
+		ResourceManagerClient: rclient.ResourceManagerClient{K8sClient: k8sClient, Log: logr.Discard()},
 		EventRecorder:         events.NewFakeRecorder(10),
 	}
 }
@@ -56,7 +56,7 @@ func TestSyslogNGOutputManagerCreateOrUpdate(t *testing.T) {
 		require.NoError(t, om.createOrUpdate(ctx, capp))
 
 		got := &loggingv1beta1.SyslogNGOutput{}
-		require.NoError(t, om.K8sclient.Get(ctx, key, got))
+		require.NoError(t, om.K8sClient.Get(ctx, key, got))
 		require.Equal(t, elasticIndex, got.Spec.Elasticsearch.Index)
 		require.Equal(t, elasticHost, got.Spec.Elasticsearch.URL)
 		require.Equal(t, cappName, got.OwnerReferences[0].Name)
@@ -66,7 +66,7 @@ func TestSyslogNGOutputManagerCreateOrUpdate(t *testing.T) {
 		const updatedIndex = "my-index-v2"
 
 		om := newSyslogNGOutputManager(newFakeClient(newSyslogNGScheme()))
-		require.NoError(t, om.K8sclient.Create(ctx, newSyslogNGOutput()))
+		require.NoError(t, om.K8sClient.Create(ctx, newSyslogNGOutput()))
 
 		spec := newLogSpec(cappv1alpha1.LogTypeElastic)
 		spec.Index = updatedIndex
@@ -75,7 +75,7 @@ func TestSyslogNGOutputManagerCreateOrUpdate(t *testing.T) {
 		require.NoError(t, om.createOrUpdate(ctx, capp))
 
 		got := &loggingv1beta1.SyslogNGOutput{}
-		require.NoError(t, om.K8sclient.Get(ctx, key, got))
+		require.NoError(t, om.K8sClient.Get(ctx, key, got))
 		require.Equal(t, updatedIndex, got.Spec.Elasticsearch.Index)
 	})
 
@@ -86,7 +86,7 @@ func TestSyslogNGOutputManagerCreateOrUpdate(t *testing.T) {
 		require.NoError(t, om.createOrUpdate(ctx, capp))
 
 		got := &loggingv1beta1.SyslogNGOutput{}
-		require.NoError(t, om.K8sclient.Get(ctx, key, got))
+		require.NoError(t, om.K8sClient.Get(ctx, key, got))
 		require.Nil(t, got.Spec.Elasticsearch)
 		require.NotNil(t, got.Spec.ElasticsearchDatastream)
 		require.Equal(t, elasticHost, got.Spec.ElasticsearchDatastream.URL)
@@ -154,7 +154,7 @@ func TestSyslogNGOutputManagerCleanUp(t *testing.T) {
 		require.NoError(t, om.CleanUp(ctx, capp))
 
 		got := &loggingv1beta1.SyslogNGOutput{}
-		require.NoError(t, om.K8sclient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: cappNamespace}, got))
+		require.NoError(t, om.K8sClient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: cappNamespace}, got))
 	})
 
 	t.Run("deletes when deleting and lacks owner reference", func(t *testing.T) {
@@ -165,7 +165,7 @@ func TestSyslogNGOutputManagerCleanUp(t *testing.T) {
 		require.NoError(t, om.CleanUp(ctx, capp))
 
 		got := &loggingv1beta1.SyslogNGOutput{}
-		getErr := om.K8sclient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: cappNamespace}, got)
+		getErr := om.K8sClient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: cappNamespace}, got)
 		require.True(t, errors.IsNotFound(getErr))
 	})
 }

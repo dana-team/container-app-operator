@@ -22,7 +22,7 @@ import (
 
 func newSyslogNGFlowManager(k8sClient client.Client) SyslogNGFlowManager {
 	return SyslogNGFlowManager{
-		ResourceManagerClient: rclient.ResourceManagerClient{K8sclient: k8sClient, Log: logr.Discard()},
+		ResourceManagerClient: rclient.ResourceManagerClient{K8sClient: k8sClient, Log: logr.Discard()},
 		EventRecorder:         events.NewFakeRecorder(10),
 	}
 }
@@ -62,7 +62,7 @@ func TestSyslogNGFlowManagerCreateOrUpdate(t *testing.T) {
 		require.NoError(t, fm.createOrUpdate(ctx, capp))
 
 		got := &loggingv1beta1.SyslogNGFlow{}
-		require.NoError(t, fm.K8sclient.Get(ctx, key, got))
+		require.NoError(t, fm.K8sClient.Get(ctx, key, got))
 		require.Equal(t, cappName, got.Spec.Match.Regexp.Pattern)
 		require.Equal(t, []string{cappName}, got.Spec.LocalOutputRefs)
 		require.Equal(t, cappName, got.OwnerReferences[0].Name)
@@ -70,14 +70,14 @@ func TestSyslogNGFlowManagerCreateOrUpdate(t *testing.T) {
 
 	t.Run("updates when spec differs", func(t *testing.T) {
 		fm := newSyslogNGFlowManager(newFakeClient(newSyslogNGScheme()))
-		require.NoError(t, fm.K8sclient.Create(ctx, newSyslogNGFlow("stale-output")))
+		require.NoError(t, fm.K8sClient.Create(ctx, newSyslogNGFlow("stale-output")))
 
 		capp := newBaseCapp()
 		capp.Spec.LogSpec = newLogSpec(cappv1alpha1.LogTypeElastic)
 		require.NoError(t, fm.createOrUpdate(ctx, capp))
 
 		got := &loggingv1beta1.SyslogNGFlow{}
-		require.NoError(t, fm.K8sclient.Get(ctx, key, got))
+		require.NoError(t, fm.K8sClient.Get(ctx, key, got))
 		require.Equal(t, []string{cappName}, got.Spec.LocalOutputRefs)
 	})
 }
@@ -142,7 +142,7 @@ func TestSyslogNGFlowManagerCleanUp(t *testing.T) {
 		require.NoError(t, fm.CleanUp(ctx, capp))
 
 		got := &loggingv1beta1.SyslogNGFlow{}
-		require.NoError(t, fm.K8sclient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: cappNamespace}, got))
+		require.NoError(t, fm.K8sClient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: cappNamespace}, got))
 	})
 
 	t.Run("deletes when deleting and lacks owner reference", func(t *testing.T) {
@@ -153,7 +153,7 @@ func TestSyslogNGFlowManagerCleanUp(t *testing.T) {
 		require.NoError(t, fm.CleanUp(ctx, capp))
 
 		got := &loggingv1beta1.SyslogNGFlow{}
-		getErr := fm.K8sclient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: cappNamespace}, got)
+		getErr := fm.K8sClient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: cappNamespace}, got)
 		require.True(t, errors.IsNotFound(getErr))
 	})
 }
