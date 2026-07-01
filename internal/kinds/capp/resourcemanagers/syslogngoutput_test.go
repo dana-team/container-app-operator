@@ -16,7 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/events"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
@@ -50,7 +49,7 @@ func TestSyslogNGOutputCreateOrUpdate(t *testing.T) {
 	key := types.NamespacedName{Name: cappName, Namespace: cappNamespace}
 
 	t.Run("creates when not found", func(t *testing.T) {
-		om := newSyslogNGOutputManager(fake.NewClientBuilder().WithScheme(newSyslogNGScheme()).Build())
+		om := newSyslogNGOutputManager(newFakeClient(newSyslogNGScheme()))
 		capp := newBaseCapp()
 		capp.Spec.LogSpec = newLogSpec(cappv1alpha1.LogTypeElastic)
 
@@ -66,7 +65,7 @@ func TestSyslogNGOutputCreateOrUpdate(t *testing.T) {
 	t.Run("updates when spec differs", func(t *testing.T) {
 		const updatedIndex = "my-index-v2"
 
-		om := newSyslogNGOutputManager(fake.NewClientBuilder().WithScheme(newSyslogNGScheme()).Build())
+		om := newSyslogNGOutputManager(newFakeClient(newSyslogNGScheme()))
 		require.NoError(t, om.K8sclient.Create(ctx, newSyslogNGOutput()))
 
 		spec := newLogSpec(cappv1alpha1.LogTypeElastic)
@@ -81,7 +80,7 @@ func TestSyslogNGOutputCreateOrUpdate(t *testing.T) {
 	})
 
 	t.Run("creates datastream output when log type is elastic-datastream", func(t *testing.T) {
-		om := newSyslogNGOutputManager(fake.NewClientBuilder().WithScheme(newSyslogNGScheme()).Build())
+		om := newSyslogNGOutputManager(newFakeClient(newSyslogNGScheme()))
 		capp := newBaseCapp()
 		capp.Spec.LogSpec = newLogSpec(cappv1alpha1.LogTypeElasticDataStream)
 		require.NoError(t, om.createOrUpdate(ctx, capp))
@@ -99,14 +98,14 @@ func TestSyslogNGOutputManage(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("reconciles when log is required", func(t *testing.T) {
-		om := newSyslogNGOutputManager(fake.NewClientBuilder().WithScheme(newSyslogNGScheme()).Build())
+		om := newSyslogNGOutputManager(newFakeClient(newSyslogNGScheme()))
 		capp := newBaseCapp()
 		capp.Spec.LogSpec = newLogSpec(cappv1alpha1.LogTypeElastic)
 		require.NoError(t, om.Manage(ctx, capp))
 	})
 
 	t.Run("cleans up when log is not required", func(t *testing.T) {
-		fakeClient := fake.NewClientBuilder().WithScheme(newSyslogNGScheme()).Build()
+		fakeClient := newFakeClient(newSyslogNGScheme())
 		require.NoError(t, fakeClient.Create(ctx, newSyslogNGOutput()))
 
 		om := newSyslogNGOutputManager(fakeClient)
@@ -119,7 +118,7 @@ func TestSyslogNGOutputManage(t *testing.T) {
 	})
 
 	t.Run("cleans up when log type is unsupported", func(t *testing.T) {
-		fakeClient := fake.NewClientBuilder().WithScheme(newSyslogNGScheme()).Build()
+		fakeClient := newFakeClient(newSyslogNGScheme())
 		require.NoError(t, fakeClient.Create(ctx, newSyslogNGOutput()))
 
 		om := newSyslogNGOutputManager(fakeClient)
@@ -141,12 +140,12 @@ func TestSyslogNGOutputCleanUp(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("succeeds when SyslogNGOutput does not exist", func(t *testing.T) {
-		om := newSyslogNGOutputManager(fake.NewClientBuilder().WithScheme(newSyslogNGScheme()).Build())
+		om := newSyslogNGOutputManager(newFakeClient(newSyslogNGScheme()))
 		require.NoError(t, om.CleanUp(ctx, newBaseCapp()))
 	})
 
 	t.Run("deletes SyslogNGOutput by capp name", func(t *testing.T) {
-		fakeClient := fake.NewClientBuilder().WithScheme(newSyslogNGScheme()).Build()
+		fakeClient := newFakeClient(newSyslogNGScheme())
 		require.NoError(t, fakeClient.Create(ctx, newSyslogNGOutput()))
 
 		require.NoError(t, newSyslogNGOutputManager(fakeClient).CleanUp(ctx, newBaseCapp()))
@@ -165,7 +164,7 @@ func TestSyslogNGOutputCleanUp(t *testing.T) {
 		syslogOutput := newSyslogNGOutput()
 		require.NoError(t, controllerutil.SetOwnerReference(&capp, syslogOutput, newSyslogNGScheme()))
 
-		om := newSyslogNGOutputManager(fake.NewClientBuilder().WithScheme(newSyslogNGScheme()).WithObjects(syslogOutput).Build())
+		om := newSyslogNGOutputManager(newFakeClient(newSyslogNGScheme(), syslogOutput))
 		require.NoError(t, om.CleanUp(ctx, capp))
 
 		got := &loggingv1beta1.SyslogNGOutput{}
