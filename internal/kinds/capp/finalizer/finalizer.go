@@ -4,8 +4,8 @@ import (
 	"context"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
-	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/resourceclient"
 	rmanagers "github.com/dana-team/container-app-operator/internal/kinds/capp/resourcemanagers"
+	utils "github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
@@ -29,7 +29,7 @@ func HandleResourceDeletion(ctx context.Context, capp cappv1alpha1.Capp, r clien
 // RemoveFinalizer removes the finalizer from the Capp manifest.
 func RemoveFinalizer(ctx context.Context, capp cappv1alpha1.Capp, r client.Client) error {
 	controllerutil.RemoveFinalizer(&capp, CappCleanupFinalizer)
-	ctrllog.FromContext(ctx).Info("kubernetes API write update", rclient.ObjectIdentityKeyVals(&capp)...)
+	ctrllog.FromContext(ctx).Info("kubernetes API write update", utils.ObjectIdentityKeyVals(&capp)...)
 	if err := r.Update(ctx, &capp); err != nil {
 		return err
 	}
@@ -50,7 +50,7 @@ func finalizeCapp(ctx context.Context, capp cappv1alpha1.Capp, resourceManagers 
 func EnsureFinalizer(ctx context.Context, service cappv1alpha1.Capp, r client.Client) error {
 	if !controllerutil.ContainsFinalizer(&service, CappCleanupFinalizer) {
 		controllerutil.AddFinalizer(&service, CappCleanupFinalizer)
-		ctrllog.FromContext(ctx).Info("kubernetes API write update", rclient.ObjectIdentityKeyVals(&service)...)
+		ctrllog.FromContext(ctx).Info("kubernetes API write update", utils.ObjectIdentityKeyVals(&service)...)
 		if err := r.Update(ctx, &service); err != nil {
 			return err
 		}
