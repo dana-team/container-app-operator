@@ -8830,6 +8830,11 @@ spec:
               scaleSpec:
                 description: ScaleSpec holds the Capp scaling configuration.
                 properties:
+                  maxReplicas:
+                    description: MaxReplicas is the maximum number of replicas for
+                      the Capp.
+                    minimum: 1
+                    type: integer
                   metric:
                     default: concurrency
                     description: |-

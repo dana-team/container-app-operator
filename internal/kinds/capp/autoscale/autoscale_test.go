@@ -71,12 +71,24 @@ func TestSetAutoScaler(t *testing.T) {
 	scaleTests := []struct {
 		name                  string
 		minReplicas           int
+		maxReplicas           int
 		templateAnnotations   map[string]string
 		expectMinScale        string
+		expectMaxScale        string
 		expectActivationScale string
 	}{
 		{
-			name:        "applies min replicas from spec and strips conflicting template scale annotations",
+			name:                  "sets min-scale when MinReplicas is non-zero",
+			minReplicas:           3,
+			expectMinScale:        "3",
+		},
+		{
+			name:                  "omits min-scale and sets activation-scale from config when MinReplicas is zero",
+			minReplicas:           0,
+			expectActivationScale: "3",
+		},
+		{
+			name:        "overrides template min-scale and removes activation-scale when MinReplicas is set",
 			minReplicas: 5,
 			templateAnnotations: map[string]string{
 				kautoscaling.ActivationScaleKey:    "2",
@@ -85,12 +97,23 @@ func TestSetAutoScaler(t *testing.T) {
 			expectMinScale: "5",
 		},
 		{
-			name:        "drops min-scale and uses activation scale from config when min replicas is zero",
+			name:        "removes template min-scale and sets activation-scale from config when MinReplicas is zero",
 			minReplicas: 0,
 			templateAnnotations: map[string]string{
 				kautoscaling.MinScaleAnnotationKey: "3",
 				kautoscaling.ActivationScaleKey:    "1",
 			},
+			expectActivationScale: "3",
+		},
+		{
+			name:                  "sets max-scale annotation when MaxReplicas is non-zero",
+			maxReplicas:           10,
+			expectMaxScale:        "10",
+			expectActivationScale: "3",
+		},
+		{
+			name:                  "omits max-scale annotation when MaxReplicas is zero",
+			maxReplicas:           0,
 			expectActivationScale: "3",
 		},
 	}
@@ -103,6 +126,7 @@ func TestSetAutoScaler(t *testing.T) {
 					ScaleSpec: cappv1alpha1.ScaleSpec{
 						Metric:      kautoscaling.CPU,
 						MinReplicas: tt.minReplicas,
+						MaxReplicas: tt.maxReplicas,
 					},
 					ConfigurationSpec: knativev1.ConfigurationSpec{
 						Template: knativev1.RevisionTemplateSpec{
@@ -121,6 +145,13 @@ func TestSetAutoScaler(t *testing.T) {
 				require.False(t, hasMinScale)
 			} else {
 				require.Equal(t, tt.expectMinScale, annotations[kautoscaling.MinScaleAnnotationKey])
+			}
+
+			if tt.expectMaxScale == "" {
+				_, hasMaxScale := annotations[kautoscaling.MaxScaleAnnotationKey]
+				require.False(t, hasMaxScale)
+			} else {
+				require.Equal(t, tt.expectMaxScale, annotations[kautoscaling.MaxScaleAnnotationKey])
 			}
 
 			if tt.expectActivationScale == "" {

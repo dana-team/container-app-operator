@@ -523,6 +523,7 @@ func TestValidateScaleSpec(t *testing.T) {
 	tests := []struct {
 		name              string
 		minReplicas       int
+		maxReplicas       int
 		scaleDelaySeconds int
 		autoscaleConfig   cappv1alpha1.AutoscaleConfig
 		wantErrContains   []string
@@ -561,6 +562,76 @@ func TestValidateScaleSpec(t *testing.T) {
 			},
 			wantErrContains: []string{"scaleDelaySeconds"},
 		},
+		{
+			name:        "allows when maxReplicas is at the limit",
+			maxReplicas: 10,
+			autoscaleConfig: cappv1alpha1.AutoscaleConfig{
+				MinReplicasLimit: 10,
+				MaxScaleDelay:    100,
+				MaxReplicasLimit: 10,
+			},
+		},
+		{
+			name:        "rejects when maxReplicas exceeds the limit",
+			maxReplicas: 11,
+			autoscaleConfig: cappv1alpha1.AutoscaleConfig{
+				MinReplicasLimit: 10,
+				MaxScaleDelay:    100,
+				MaxReplicasLimit: 10,
+			},
+			wantErrContains: []string{"maxReplicas"},
+		},
+		{
+			name:        "rejects when maxReplicas is less than minReplicas",
+			minReplicas: 5,
+			maxReplicas: 3,
+			autoscaleConfig: cappv1alpha1.AutoscaleConfig{
+				MinReplicasLimit: 10,
+				MaxScaleDelay:    100,
+				MaxReplicasLimit: 10,
+			},
+			wantErrContains: []string{"maxReplicas", "minReplicas"},
+		},
+		{
+			name:        "allows when maxReplicas equals minReplicas",
+			minReplicas: 3,
+			maxReplicas: 3,
+			autoscaleConfig: cappv1alpha1.AutoscaleConfig{
+				MinReplicasLimit: 10,
+				MaxScaleDelay:    100,
+				MaxReplicasLimit: 10,
+			},
+		},
+		{
+			name:        "rejects when maxReplicas is less than activationScale and minReplicas is zero",
+			maxReplicas: 1,
+			autoscaleConfig: cappv1alpha1.AutoscaleConfig{
+				MinReplicasLimit: 10,
+				MaxScaleDelay:    100,
+				MaxReplicasLimit: 10,
+				ActivationScale:  2,
+			},
+			wantErrContains: []string{"maxReplicas", "activationScale"},
+		},
+		{
+			name:        "allows when maxReplicas equals activationScale and minReplicas is zero",
+			maxReplicas: 2,
+			autoscaleConfig: cappv1alpha1.AutoscaleConfig{
+				MinReplicasLimit: 10,
+				MaxScaleDelay:    100,
+				MaxReplicasLimit: 10,
+				ActivationScale:  2,
+			},
+		},
+		{
+			name:        "allows when maxReplicas is zero (unset)",
+			maxReplicas: 0,
+			autoscaleConfig: cappv1alpha1.AutoscaleConfig{
+				MinReplicasLimit: 10,
+				MaxScaleDelay:    100,
+				MaxReplicasLimit: 10,
+			},
+		},
 	}
 
 	for _, tc := range tests {
@@ -569,6 +640,7 @@ func TestValidateScaleSpec(t *testing.T) {
 				Spec: cappv1alpha1.CappSpec{
 					ScaleSpec: cappv1alpha1.ScaleSpec{
 						MinReplicas:       tc.minReplicas,
+						MaxReplicas:       tc.maxReplicas,
 						ScaleDelaySeconds: tc.scaleDelaySeconds,
 					},
 				},
@@ -624,6 +696,7 @@ func newCappConfig() *cappv1alpha1.CappConfig {
 			AutoscaleConfig: cappv1alpha1.AutoscaleConfig{
 				MinReplicasLimit: 10,
 				MaxScaleDelay:    100,
+				MaxReplicasLimit: 10,
 			},
 		},
 	}
