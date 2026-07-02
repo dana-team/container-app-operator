@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	SyslogNGFlow                        = "syslogNGFlow"
+	SyslogNGFlow                        = "SyslogNGFlow"
 	eventCappSyslogNGFlowCreationFailed = "SyslogNGFlowCreationFailed"
 	eventCappSyslogNGFlowCreated        = "SyslogNGFlowCreated"
 	knativeConfiguration                = "serving.knative.dev/configuration"
@@ -93,14 +93,14 @@ func (f SyslogNGFlowManager) createOrUpdate(ctx context.Context, capp cappv1alph
 	if err := f.K8sClient.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: syslogNGFlowFromCapp.Name}, &syslogNGFlow); err != nil {
 		if errors.IsNotFound(err) {
 			return createManagedResource(ctx, f.K8sClient, f.CreateResource, f.EventRecorder, &capp, &syslogNGFlowFromCapp,
-				"SyslogNGFlow", eventCappSyslogNGFlowCreated, eventCappSyslogNGFlowCreationFailed)
+				SyslogNGFlow, eventCappSyslogNGFlowCreated, eventCappSyslogNGFlowCreationFailed)
 		}
 		return fmt.Errorf("failed to get SyslogNGFlow %q: %w", syslogNGFlow.Name, err)
 	}
 
 	orig := syslogNGFlow.DeepCopy()
 	syslogNGFlow.Spec = *syslogNGFlowFromCapp.Spec.DeepCopy()
-	if err := ensureOwnerReference(f.K8sClient, &capp, &syslogNGFlow, "SyslogNGFlow"); err != nil {
+	if err := ensureOwnerReference(f.K8sClient, &capp, &syslogNGFlow, SyslogNGFlow); err != nil {
 		return err
 	}
 	return updateManagedResourceIfNeeded(ctx, f.UpdateResource, &syslogNGFlow, orig.Spec, syslogNGFlow.Spec, orig.OwnerReferences)

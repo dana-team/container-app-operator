@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	KafkaSource                    = "kafkaSource"
+	KafkaSource                    = "KafkaSource"
 	eventKafkaSourceCreationFailed = "KafkaSourceCreationFailed"
 	eventKafkaSourceCreated        = "KafkaSourceCreated"
 )
@@ -80,13 +80,13 @@ func (k KafkaSourceManager) createOrUpdate(ctx context.Context, capp cappv1alpha
 			return fmt.Errorf("failed to get KafkaSource %q: %w", kafkaSourceFromCapp.Name, err)
 		}
 		return createManagedResource(ctx, k.K8sClient, k.CreateResource, k.EventRecorder, &capp, &kafkaSourceFromCapp,
-			"KafkaSource", eventKafkaSourceCreated, eventKafkaSourceCreationFailed)
+			KafkaSource, eventKafkaSourceCreated, eventKafkaSourceCreationFailed)
 	}
 
 	orig := existing.DeepCopy()
 	existing.Spec = kafkaSourceFromCapp.Spec
 	existing.Spec.ConsumerGroup = orig.Spec.ConsumerGroup
-	if err := ensureOwnerReference(k.K8sClient, &capp, existing, "KafkaSource"); err != nil {
+	if err := ensureOwnerReference(k.K8sClient, &capp, existing, KafkaSource); err != nil {
 		return err
 	}
 	if managedResourceNeedsUpdate(orig.Spec, existing.Spec, orig.OwnerReferences, existing.OwnerReferences) {
@@ -169,7 +169,7 @@ func (k KafkaSourceManager) cleanUpOrphans(ctx context.Context, capp cappv1alpha
 
 func (k KafkaSourceManager) getKafkaSources(ctx context.Context, capp cappv1alpha1.Capp) (kafkasourcev1.KafkaSourceList, error) {
 	list := kafkasourcev1.KafkaSourceList{}
-	if err := listManagedResources(ctx, k.K8sClient, capp, &list, "KafkaSource", nil); err != nil {
+	if err := listManagedResources(ctx, k.K8sClient, capp, &list, KafkaSource, nil); err != nil {
 		return list, err
 	}
 	return list, nil

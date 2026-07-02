@@ -124,7 +124,7 @@ func (r DNSRecordManager) createOrUpdate(ctx context.Context, capp cappv1alpha1.
 	if err := r.K8sClient.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: dnsRecordFromCapp.Name}, &dnsRecord); err != nil {
 		if errors.IsNotFound(err) {
 			return createManagedResource(ctx, r.K8sClient, r.CreateResource, r.EventRecorder, &capp, &dnsRecordFromCapp,
-				"DNSRecord", eventCappDNSRecordCreated, eventCappDNSRecordCreationFailed)
+				DNSRecord, eventCappDNSRecordCreated, eventCappDNSRecordCreationFailed)
 		}
 		return fmt.Errorf("failed to get DNSRecord %q: %w", dnsRecordFromCapp.Name, err)
 	}
@@ -151,7 +151,7 @@ func (r DNSRecordManager) createOrUpdate(ctx context.Context, capp cappv1alpha1.
 		}
 
 		orig := latestRecord.DeepCopy()
-		if err := ensureOwnerReference(r.K8sClient, &capp, &latestRecord, "DNSRecord"); err != nil {
+		if err := ensureOwnerReference(r.K8sClient, &capp, &latestRecord, DNSRecord); err != nil {
 			return err
 		}
 		latestRecord.Spec.ForProvider = *dnsRecordFromCapp.Spec.ForProvider.DeepCopy()
@@ -184,7 +184,7 @@ func (r DNSRecordManager) dnsRecordNeedsUpdate(current, desired dnsrecordv1alpha
 // getPreviousDNSRecords returns a list of all DNSRecord objects that are related to the given Capp.
 func (r DNSRecordManager) getPreviousDNSRecords(ctx context.Context, capp cappv1alpha1.Capp) (dnsrecordv1alpha1.CNAMERecordList, error) {
 	dnsRecords := dnsrecordv1alpha1.CNAMERecordList{}
-	if err := listManagedResources(ctx, r.K8sClient, capp, &dnsRecords, "DNSRecord", labels.Set{
+	if err := listManagedResources(ctx, r.K8sClient, capp, &dnsRecords, DNSRecord, labels.Set{
 		utils.CappNamespaceKey: capp.Namespace,
 	}); err != nil {
 		return dnsRecords, err

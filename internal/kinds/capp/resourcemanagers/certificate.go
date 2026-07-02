@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	Certificate                        = "certificate"
+	Certificate                        = "Certificate"
 	eventCappCertificateCreationFailed = "CertificateCreationFailed"
 	eventCappCertificateCreated        = "CertificateCreated"
 	PrivateKeySize                     = 4096
@@ -123,14 +123,14 @@ func (c CertificateManager) Manage(ctx context.Context, capp cappv1alpha1.Capp) 
 		if err := c.K8sClient.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: certificateFromCapp.Name}, &certificate); err != nil {
 			if errors.IsNotFound(err) {
 				return createManagedResource(ctx, c.K8sClient, c.CreateResource, c.EventRecorder, &capp, &certificateFromCapp,
-					"Certificate", eventCappCertificateCreated, eventCappCertificateCreationFailed)
+					Certificate, eventCappCertificateCreated, eventCappCertificateCreationFailed)
 			}
 			return fmt.Errorf("failed to get Certificate %q: %w", certificateFromCapp.Name, err)
 		}
 
 		orig := certificate.DeepCopy()
 		certificate.Spec = *certificateFromCapp.Spec.DeepCopy()
-		if err := ensureOwnerReference(c.K8sClient, &capp, &certificate, "Certificate"); err != nil {
+		if err := ensureOwnerReference(c.K8sClient, &capp, &certificate, Certificate); err != nil {
 			return err
 		}
 		if err := updateManagedResourceIfNeeded(ctx, c.UpdateResource, &certificate, orig.Spec, certificate.Spec, orig.OwnerReferences); err != nil {
@@ -146,7 +146,7 @@ func (c CertificateManager) Manage(ctx context.Context, capp cappv1alpha1.Capp) 
 // getPreviousCertificates returns a list of all Certificate objects that are related to the given Capp.
 func (c CertificateManager) getPreviousCertificates(ctx context.Context, capp cappv1alpha1.Capp) (cmapi.CertificateList, error) {
 	certificates := cmapi.CertificateList{}
-	if err := listManagedResources(ctx, c.K8sClient, capp, &certificates, "Certificate", nil); err != nil {
+	if err := listManagedResources(ctx, c.K8sClient, capp, &certificates, Certificate, nil); err != nil {
 		return certificates, err
 	}
 	return certificates, nil

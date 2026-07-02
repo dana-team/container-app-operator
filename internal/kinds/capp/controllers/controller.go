@@ -334,13 +334,13 @@ func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 	rmClient := rclient.ResourceManagerClient{K8sClient: r.Client, Log: logger}
 	resourceManagers := map[string]rmanagers.ResourceManager{
-		rmanagers.KnativeServing: rmanagers.KnativeServiceManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},
+		rmanagers.KnativeService: rmanagers.KnativeServiceManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},
 		rmanagers.DNSRecord:      rmanagers.DNSRecordManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},
 		rmanagers.Certificate:    rmanagers.CertificateManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},
 		rmanagers.DomainMapping:  rmanagers.DomainMappingManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},
 		rmanagers.SyslogNGFlow:   rmanagers.SyslogNGFlowManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},
 		rmanagers.SyslogNGOutput: rmanagers.SyslogNGOutputManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},
-		rmanagers.NfsPVC:         rmanagers.NFSPVCManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},
+		rmanagers.NfsPvc:         rmanagers.NFSPVCManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},
 		rmanagers.PingSource:     rmanagers.PingSourceManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},
 		rmanagers.KafkaSource:    rmanagers.KafkaSourceManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},
 	}

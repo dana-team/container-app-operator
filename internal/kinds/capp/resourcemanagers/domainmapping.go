@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	DomainMapping                        = "domainMapping"
+	DomainMapping                        = "DomainMapping"
 	eventCappDomainMappingCreationFailed = "DomainMappingCreationFailed"
 	eventCappDomainMappingCreated        = "DomainMappingCreated"
 )
@@ -140,14 +140,14 @@ func (k DomainMappingManager) createOrUpdate(ctx context.Context, capp cappv1alp
 	if err := k.K8sClient.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: domainMappingFromCapp.Name}, &domainMapping); err != nil {
 		if errors.IsNotFound(err) {
 			return createManagedResource(ctx, k.K8sClient, k.CreateResource, k.EventRecorder, &capp, &domainMappingFromCapp,
-				"DomainMapping", eventCappDomainMappingCreated, eventCappDomainMappingCreationFailed)
+				DomainMapping, eventCappDomainMappingCreated, eventCappDomainMappingCreationFailed)
 		}
 		return fmt.Errorf("failed to get DomainMapping %q: %w", domainMappingFromCapp.Name, err)
 	}
 
 	orig := domainMapping.DeepCopy()
 	domainMapping.Spec = domainMappingFromCapp.Spec
-	if err := ensureOwnerReference(k.K8sClient, &capp, &domainMapping, "DomainMapping"); err != nil {
+	if err := ensureOwnerReference(k.K8sClient, &capp, &domainMapping, DomainMapping); err != nil {
 		return err
 	}
 	return updateManagedResourceIfNeeded(ctx, k.UpdateResource, &domainMapping, orig.Spec, domainMapping.Spec, orig.OwnerReferences)
@@ -156,7 +156,7 @@ func (k DomainMappingManager) createOrUpdate(ctx context.Context, capp cappv1alp
 // getPreviousDomainMappings returns a list of all DomainMapping objects that are related to the given Capp.
 func (k DomainMappingManager) getPreviousDomainMappings(ctx context.Context, capp cappv1alpha1.Capp) (knativev1beta1.DomainMappingList, error) {
 	knativeDomainMappings := knativev1beta1.DomainMappingList{}
-	if err := listManagedResources(ctx, k.K8sClient, capp, &knativeDomainMappings, "DomainMapping", nil); err != nil {
+	if err := listManagedResources(ctx, k.K8sClient, capp, &knativeDomainMappings, DomainMapping, nil); err != nil {
 		return knativeDomainMappings, err
 	}
 	return knativeDomainMappings, nil

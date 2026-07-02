@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	SyslogNGOutput                        = "syslogNGOutput"
+	SyslogNGOutput                        = "SyslogNGOutput"
 	eventCappSyslogNGOutputCreationFailed = "SyslogNGOutputCreationFailed"
 	eventCappSyslogNGOutputCreated        = "SyslogNGOutputCreated"
 	elasticSSLVersion                     = "tlsv1_2"
@@ -175,14 +175,14 @@ func (o SyslogNGOutputManager) createOrUpdate(ctx context.Context, capp cappv1al
 	if err := o.K8sClient.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: syslogNGOutputFromCapp.Name}, &syslogNGOutput); err != nil {
 		if errors.IsNotFound(err) {
 			return createManagedResource(ctx, o.K8sClient, o.CreateResource, o.EventRecorder, &capp, &syslogNGOutputFromCapp,
-				"SyslogNGOutput", eventCappSyslogNGOutputCreated, eventCappSyslogNGOutputCreationFailed)
+				SyslogNGOutput, eventCappSyslogNGOutputCreated, eventCappSyslogNGOutputCreationFailed)
 		}
 		return fmt.Errorf("failed to get SyslogNGOutput %q: %w", syslogNGOutputFromCapp.Name, err)
 	}
 
 	orig := syslogNGOutput.DeepCopy()
 	syslogNGOutput.Spec = *syslogNGOutputFromCapp.Spec.DeepCopy()
-	if err := ensureOwnerReference(o.K8sClient, &capp, &syslogNGOutput, "SyslogNGOutput"); err != nil {
+	if err := ensureOwnerReference(o.K8sClient, &capp, &syslogNGOutput, SyslogNGOutput); err != nil {
 		return err
 	}
 	return updateManagedResourceIfNeeded(ctx, o.UpdateResource, &syslogNGOutput, orig.Spec, syslogNGOutput.Spec, orig.OwnerReferences)

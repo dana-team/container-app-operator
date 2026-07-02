@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	PingSource                    = "pingSource"
+	PingSource                    = "PingSource"
 	eventPingSourceCreationFailed = "PingSourceCreationFailed"
 	eventPingSourceCreated        = "PingSourceCreated"
 )
@@ -100,12 +100,12 @@ func (p PingSourceManager) createOrUpdate(ctx context.Context, capp cappv1alpha1
 			return fmt.Errorf("failed to get PingSource %q: %w", desired.Name, err)
 		}
 		return createManagedResource(ctx, p.K8sClient, p.CreateResource, p.EventRecorder, &capp, desired,
-			"PingSource", eventPingSourceCreated, eventPingSourceCreationFailed)
+			PingSource, eventPingSourceCreated, eventPingSourceCreationFailed)
 	}
 
 	orig := existing.DeepCopy()
 	existing.Spec = desired.Spec
-	if err := ensureOwnerReference(p.K8sClient, &capp, existing, "PingSource"); err != nil {
+	if err := ensureOwnerReference(p.K8sClient, &capp, existing, PingSource); err != nil {
 		return err
 	}
 	if managedResourceNeedsUpdate(orig.Spec, existing.Spec, orig.OwnerReferences, existing.OwnerReferences) {
@@ -138,7 +138,7 @@ func (p PingSourceManager) cleanUpOrphans(ctx context.Context, capp cappv1alpha1
 
 func (p PingSourceManager) getPingSources(ctx context.Context, capp cappv1alpha1.Capp) (sourcesv1.PingSourceList, error) {
 	list := sourcesv1.PingSourceList{}
-	if err := listManagedResources(ctx, p.K8sClient, capp, &list, "PingSource", nil); err != nil {
+	if err := listManagedResources(ctx, p.K8sClient, capp, &list, PingSource, nil); err != nil {
 		return list, err
 	}
 	return list, nil
