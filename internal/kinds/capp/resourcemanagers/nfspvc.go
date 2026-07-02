@@ -16,7 +16,6 @@ import (
 	"k8s.io/client-go/tools/events"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const (
@@ -73,28 +72,11 @@ func (n NFSPVCManager) CleanUp(ctx context.Context, capp cappv1alpha1.Capp) erro
 	if err != nil {
 		return err
 	}
-
-	for _, nfsPvc := range nfsPvcs.Items {
-		if capp.DeletionTimestamp != nil {
-			ok, err := controllerutil.HasOwnerReference(nfsPvc.OwnerReferences, &capp, n.K8sClient.Scheme())
-			if err != nil {
-				return err
-			}
-			if ok {
-				continue
-			}
-		}
-		nfsPvcVolume := nfspvcv1alpha1.NfsPvc{ObjectMeta: metav1.ObjectMeta{Name: nfsPvc.Name, Namespace: nfsPvc.Namespace}}
-
-		if err := n.DeleteResource(ctx, &nfsPvcVolume); err != nil {
-			if errors.IsNotFound(err) {
-				continue
-			}
-			return err
-		}
+	resources := make([]*nfspvcv1alpha1.NfsPvc, len(nfsPvcs.Items))
+	for i := range nfsPvcs.Items {
+		resources[i] = &nfsPvcs.Items[i]
 	}
-
-	return nil
+	return deleteOwnedResources(ctx, n.K8sClient, &capp, resources)
 }
 
 // IsRequired is responsible to determine if resource NfsPvc is required.

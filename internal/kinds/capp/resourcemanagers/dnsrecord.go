@@ -74,27 +74,11 @@ func (r DNSRecordManager) CleanUp(ctx context.Context, capp cappv1alpha1.Capp) e
 	if err != nil {
 		return err
 	}
-
-	for _, dnsRecord := range dnsRecords.Items {
-		if capp.DeletionTimestamp != nil {
-			ok, err := controllerutil.HasOwnerReference(dnsRecord.OwnerReferences, &capp, r.K8sClient.Scheme())
-			if err != nil {
-				return err
-			}
-			if ok {
-				continue
-			}
-		}
-		bareRecord := dnsrecordv1alpha1.CNAMERecord{ObjectMeta: metav1.ObjectMeta{Name: dnsRecord.Name, Namespace: dnsRecord.Namespace}}
-		if err := r.DeleteResource(ctx, &bareRecord); err != nil {
-			if errors.IsNotFound(err) {
-				continue
-			}
-			return err
-		}
+	resources := make([]*dnsrecordv1alpha1.CNAMERecord, len(dnsRecords.Items))
+	for i := range dnsRecords.Items {
+		resources[i] = &dnsRecords.Items[i]
 	}
-
-	return nil
+	return deleteOwnedResources(ctx, r.K8sClient, &capp, resources)
 }
 
 // IsRequired is responsible to determine if resource DNSRecord is required.

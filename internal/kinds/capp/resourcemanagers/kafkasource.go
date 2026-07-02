@@ -62,13 +62,11 @@ func (k KafkaSourceManager) CleanUp(ctx context.Context, capp cappv1alpha1.Capp)
 	if err != nil {
 		return err
 	}
+	resources := make([]*kafkasourcev1.KafkaSource, len(kafkaSources.Items))
 	for i := range kafkaSources.Items {
-		ks := &kafkaSources.Items[i]
-		if err := client.IgnoreNotFound(k.DeleteResource(ctx, ks)); err != nil {
-			return fmt.Errorf("failed to delete KafkaSource %q: %w", ks.Name, err)
-		}
+		resources[i] = &kafkaSources.Items[i]
 	}
-	return nil
+	return deleteOwnedResources(ctx, k.K8sClient, &capp, resources)
 }
 
 func (k KafkaSourceManager) createOrUpdate(ctx context.Context, capp cappv1alpha1.Capp, source cappv1alpha1.SourceConfiguration) error {

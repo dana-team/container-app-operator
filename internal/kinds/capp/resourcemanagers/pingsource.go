@@ -59,13 +59,11 @@ func (p PingSourceManager) CleanUp(ctx context.Context, capp cappv1alpha1.Capp) 
 	if err != nil {
 		return err
 	}
+	resources := make([]*sourcesv1.PingSource, len(pingSources.Items))
 	for i := range pingSources.Items {
-		ps := &pingSources.Items[i]
-		if err := client.IgnoreNotFound(p.DeleteResource(ctx, ps)); err != nil {
-			return fmt.Errorf("failed to delete PingSource %q: %w", ps.Name, err)
-		}
+		resources[i] = &pingSources.Items[i]
 	}
-	return nil
+	return deleteOwnedResources(ctx, p.K8sClient, &capp, resources)
 }
 
 func (p PingSourceManager) createOrUpdate(ctx context.Context, capp cappv1alpha1.Capp, source cappv1alpha1.SourceConfiguration) error {

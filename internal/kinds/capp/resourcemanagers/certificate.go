@@ -14,7 +14,6 @@ import (
 
 	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/resourceclient"
 	"k8s.io/client-go/tools/events"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const (
@@ -81,27 +80,11 @@ func (c CertificateManager) CleanUp(ctx context.Context, capp cappv1alpha1.Capp)
 	if err != nil {
 		return err
 	}
-
-	for _, certificate := range certificates.Items {
-		if capp.DeletionTimestamp != nil {
-			ok, err := controllerutil.HasOwnerReference(certificate.OwnerReferences, &capp, c.K8sClient.Scheme())
-			if err != nil {
-				return err
-			}
-			if ok {
-				continue
-			}
-		}
-		cert := cmapi.Certificate{ObjectMeta: metav1.ObjectMeta{Name: certificate.Name, Namespace: certificate.Namespace}}
-		if err := c.DeleteResource(ctx, &cert); err != nil {
-			if errors.IsNotFound(err) {
-				continue
-			}
-			return err
-		}
+	resources := make([]*cmapi.Certificate, len(certificates.Items))
+	for i := range certificates.Items {
+		resources[i] = &certificates.Items[i]
 	}
-
-	return nil
+	return deleteOwnedResources(ctx, c.K8sClient, &capp, resources)
 }
 
 // IsRequired is responsible to determine if resource Certificate is required.
