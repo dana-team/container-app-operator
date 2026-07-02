@@ -56,6 +56,26 @@ func updateManagedResourceIfNeeded(ctx context.Context, update func(context.Cont
 	return update(ctx, obj)
 }
 
+func deleteOwnedResources[T client.Object](ctx context.Context, c client.Client, capp *cappv1alpha1.Capp, resources []T) error {
+	for i := range resources {
+		resource := resources[i]
+		if capp.DeletionTimestamp != nil {
+			ok, err := controllerutil.HasOwnerReference(resource.GetOwnerReferences(), capp, c.Scheme())
+			if err != nil {
+				return err
+			}
+			if ok {
+				continue
+			}
+		}
+		if err := client.IgnoreNotFound(c.Delete(ctx, resource)); err != nil {
+			return fmt.Errorf("failed to delete %s %q: %w",
+				resource.GetObjectKind().GroupVersionKind().Kind, resource.GetName(), err)
+		}
+	}
+	return nil
+}
+
 func listManagedResources(
 	ctx context.Context,
 	k8s client.Client,

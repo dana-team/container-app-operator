@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	PingSource                    = "pingSource"
+	PingSource                    = "PingSource"
 	eventPingSourceCreationFailed = "PingSourceCreationFailed"
 	eventPingSourceCreated        = "PingSourceCreated"
 )
@@ -59,13 +59,11 @@ func (p PingSourceManager) CleanUp(ctx context.Context, capp cappv1alpha1.Capp) 
 	if err != nil {
 		return err
 	}
+	resources := make([]*sourcesv1.PingSource, len(pingSources.Items))
 	for i := range pingSources.Items {
-		ps := &pingSources.Items[i]
-		if err := client.IgnoreNotFound(p.DeleteResource(ctx, ps)); err != nil {
-			return fmt.Errorf("failed to delete PingSource %q: %w", ps.Name, err)
-		}
+		resources[i] = &pingSources.Items[i]
 	}
-	return nil
+	return deleteOwnedResources(ctx, p.K8sClient, &capp, resources)
 }
 
 func (p PingSourceManager) createOrUpdate(ctx context.Context, capp cappv1alpha1.Capp, source cappv1alpha1.SourceConfiguration) error {
@@ -94,18 +92,18 @@ func (p PingSourceManager) createOrUpdate(ctx context.Context, capp cappv1alpha1
 		},
 	}
 	existing := &sourcesv1.PingSource{}
-	err := p.K8sclient.Get(ctx, client.ObjectKey{Name: desired.Name, Namespace: desired.Namespace}, existing)
+	err := p.K8sClient.Get(ctx, client.ObjectKey{Name: desired.Name, Namespace: desired.Namespace}, existing)
 	if err != nil {
 		if !errors.IsNotFound(err) {
 			return fmt.Errorf("failed to get PingSource %q: %w", desired.Name, err)
 		}
-		return createManagedResource(ctx, p.K8sclient, p.CreateResource, p.EventRecorder, &capp, desired,
-			"PingSource", eventPingSourceCreated, eventPingSourceCreationFailed)
+		return createManagedResource(ctx, p.K8sClient, p.CreateResource, p.EventRecorder, &capp, desired,
+			PingSource, eventPingSourceCreated, eventPingSourceCreationFailed)
 	}
 
 	orig := existing.DeepCopy()
 	existing.Spec = desired.Spec
-	if err := ensureOwnerReference(p.K8sclient, &capp, existing, "PingSource"); err != nil {
+	if err := ensureOwnerReference(p.K8sClient, &capp, existing, PingSource); err != nil {
 		return err
 	}
 	if managedResourceNeedsUpdate(orig.Spec, existing.Spec, orig.OwnerReferences, existing.OwnerReferences) {
@@ -138,7 +136,7 @@ func (p PingSourceManager) cleanUpOrphans(ctx context.Context, capp cappv1alpha1
 
 func (p PingSourceManager) getPingSources(ctx context.Context, capp cappv1alpha1.Capp) (sourcesv1.PingSourceList, error) {
 	list := sourcesv1.PingSourceList{}
-	if err := listManagedResources(ctx, p.K8sclient, capp, &list, "PingSource", nil); err != nil {
+	if err := listManagedResources(ctx, p.K8sClient, capp, &list, PingSource, nil); err != nil {
 		return list, err
 	}
 	return list, nil
