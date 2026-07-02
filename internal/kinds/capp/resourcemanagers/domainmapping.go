@@ -83,25 +83,25 @@ func (k DomainMappingManager) CleanUp(ctx context.Context, capp cappv1alpha1.Cap
 	}
 
 	for _, item := range domainMappings.Items {
+		ownedByCapp := false
 		if capp.DeletionTimestamp != nil {
 			ok, err := controllerutil.HasOwnerReference(item.OwnerReferences, &capp, k.K8sClient.Scheme())
 			if err != nil {
 				return err
 			}
-			if ok {
-				continue
+			ownedByCapp = ok
+		}
+
+		if !ownedByCapp {
+			dm := knativev1beta1.DomainMapping{ObjectMeta: metav1.ObjectMeta{Name: item.Name, Namespace: item.Namespace}}
+			if err := k.DeleteResource(ctx, &dm); err != nil && !errors.IsNotFound(err) {
+				return err
 			}
 		}
-		dm := knativev1beta1.DomainMapping{ObjectMeta: metav1.ObjectMeta{Name: item.Name, Namespace: item.Namespace}}
-		if err := k.DeleteResource(ctx, &dm); err != nil {
-			if errors.IsNotFound(err) {
-				continue
-			}
-			return err
-		}
+
 		secretName := utils.GenerateSecretName(item.Name)
 		secret := corev1.Secret{}
-		if err := k.K8sClient.Get(ctx, types.NamespacedName{Name: secretName, Namespace: dm.Namespace}, &secret); err != nil {
+		if err := k.K8sClient.Get(ctx, types.NamespacedName{Name: secretName, Namespace: item.Namespace}, &secret); err != nil {
 			if !errors.IsNotFound(err) {
 				return err
 			}

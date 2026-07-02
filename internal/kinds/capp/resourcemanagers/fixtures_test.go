@@ -127,17 +127,13 @@ func newCappWithTLS(hostname string, tls bool) cappv1alpha1.Capp {
 	return capp
 }
 
-func newSecret(name string, mutate func(*corev1.Secret)) *corev1.Secret {
-	sec := &corev1.Secret{
+func newSecret(name string) *corev1.Secret {
+	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: cappNamespace,
 		},
 	}
-	if mutate != nil {
-		mutate(sec)
-	}
-	return sec
 }
 
 func newFakeClient(scheme *runtime.Scheme, objects ...client.Object) client.Client {

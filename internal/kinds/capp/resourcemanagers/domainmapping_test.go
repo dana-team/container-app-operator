@@ -65,7 +65,7 @@ func TestDomainMappingManagerPrepareResource(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("omits TLS when disabled", func(t *testing.T) {
-		mgr := newDomainMappingManager(newDomainMappingClient(newSecret(utils.GenerateSecretName(hostnameFQDN), nil)))
+		mgr := newDomainMappingManager(newDomainMappingClient(newSecret(utils.GenerateSecretName(hostnameFQDN))))
 		capp := newCappWithTLS(hostnameBare, false)
 
 		got, err := mgr.prepareResource(ctx, capp)
@@ -74,7 +74,7 @@ func TestDomainMappingManagerPrepareResource(t *testing.T) {
 	})
 
 	t.Run("sets TLS when enabled and secret exists", func(t *testing.T) {
-		mgr := newDomainMappingManager(newDomainMappingClient(newSecret(utils.GenerateSecretName(hostnameFQDN), nil)))
+		mgr := newDomainMappingManager(newDomainMappingClient(newSecret(utils.GenerateSecretName(hostnameFQDN))))
 		capp := newCappWithTLS(hostnameBare, true)
 
 		got, err := mgr.prepareResource(ctx, capp)
@@ -202,7 +202,7 @@ func TestDomainMappingManagerCleanUp(t *testing.T) {
 	t.Run("deletes associated TLS secret", func(t *testing.T) {
 		fakeClient := newFakeClient(newDomainMappingScheme(),
 			newDomainMapping(nil),
-			newSecret(utils.GenerateSecretName(hostnameFQDN), nil),
+			newSecret(utils.GenerateSecretName(hostnameFQDN)),
 		)
 		mgr := newDomainMappingManager(fakeClient)
 
@@ -229,6 +229,26 @@ func TestDomainMappingManagerCleanUp(t *testing.T) {
 
 		got := &knativev1beta1.DomainMapping{}
 		require.NoError(t, mgr.K8sClient.Get(ctx, types.NamespacedName{Name: hostnameFQDN, Namespace: cappNamespace}, got))
+	})
+
+	t.Run("deletes TLS secret even when deleting and DomainMapping is owned", func(t *testing.T) {
+		capp := cappWithDeletionTimestamp(newBaseCapp())
+
+		mapping := newDomainMapping(nil)
+		require.NoError(t, controllerutil.SetOwnerReference(&capp, mapping, newDomainMappingScheme()))
+
+		secretName := utils.GenerateSecretName(hostnameFQDN)
+		fakeClient := newFakeClient(newDomainMappingScheme(), mapping, newSecret(secretName))
+		mgr := newDomainMappingManager(fakeClient)
+
+		require.NoError(t, mgr.CleanUp(ctx, capp))
+
+		got := &knativev1beta1.DomainMapping{}
+		require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: hostnameFQDN, Namespace: cappNamespace}, got))
+
+		secret := &corev1.Secret{}
+		err := fakeClient.Get(ctx, types.NamespacedName{Name: secretName, Namespace: cappNamespace}, secret)
+		require.True(t, errors.IsNotFound(err))
 	})
 
 	t.Run("deletes when deleting and lacks owner reference", func(t *testing.T) {
