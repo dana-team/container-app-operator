@@ -90,6 +90,11 @@ type ScaleSpec struct {
 	// +optional
 	MinReplicas int `json:"minReplicas,omitempty"`
 
+	// MaxReplicas is the maximum number of replicas for the Capp.
+	// +kubebuilder:validation:Minimum=1
+	// +optional
+	MaxReplicas int `json:"maxReplicas,omitempty"`
+
 	// ScaleDelaySeconds is the delay in seconds before the Autoscaler scales down the Capp to zero.
 	// +kubebuilder:default:=0
 	// +kubebuilder:validation:Minimum=0

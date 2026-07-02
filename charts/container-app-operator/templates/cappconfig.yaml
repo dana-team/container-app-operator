@@ -13,6 +13,7 @@ spec:
     concurrency: {{ .Values.config.autoscaleConfig.concurrency }}
     activationScale: {{ .Values.config.autoscaleConfig.activationScale }}
     minReplicasLimit: {{ .Values.config.autoscaleConfig.minReplicasLimit }}
+    maxReplicasLimit: {{ .Values.config.autoscaleConfig.maxReplicasLimit }}
     maxScaleDelay: {{ .Values.config.autoscaleConfig.maxScaleDelay }}
   maxKafkaConsumers: {{ .Values.config.maxKafkaConsumers }}
   dnsConfig:
