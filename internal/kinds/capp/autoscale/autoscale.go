@@ -47,6 +47,10 @@ func SetAutoScaler(capp cappv1alpha1.Capp, defaults cappv1alpha1.AutoscaleConfig
 		autoScaleAnnotations[kautoscaling.ActivationScaleKey] = fmt.Sprintf("%d", defaults.ActivationScale)
 	}
 
+	if capp.Spec.ScaleSpec.MaxReplicas != 0 {
+		autoScaleAnnotations[kautoscaling.MaxScaleAnnotationKey] = fmt.Sprintf("%d", capp.Spec.ScaleSpec.MaxReplicas)
+	}
+
 	return autoScaleAnnotations
 }
 
