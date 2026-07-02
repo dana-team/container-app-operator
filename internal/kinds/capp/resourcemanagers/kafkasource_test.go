@@ -150,15 +150,12 @@ func TestKafkaSourceManagerManage(t *testing.T) {
 		require.NoError(t, km.Manage(ctx, capp))
 	})
 
-	t.Run("cleans up when not required", func(t *testing.T) {
+	t.Run("removes all owned KafkaSources when not required", func(t *testing.T) {
 		fakeClient := newFakeClient(newKafkaSourceScheme())
 		require.NoError(t, fakeClient.Create(ctx, newKafkaSource(ordersA)))
 
 		km := newKafkaSourceManager(fakeClient)
 		capp := newBaseCapp()
-		capp.Spec.EventSourcesSpec.Sources = []cappv1alpha1.SourceConfiguration{
-			newPingSourceEntry(ordersA, cappv1alpha1.PingSourceConfiguration{Schedule: schedule}),
-		}
 		require.NoError(t, km.Manage(ctx, capp))
 
 		got := &kafkasourcev1.KafkaSource{}
