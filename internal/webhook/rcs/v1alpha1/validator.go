@@ -105,16 +105,10 @@ func (c *CappValidator) handle(ctx context.Context, operation admissionv1.Operat
 		return admission.Denied(err.Error())
 	}
 
-	minReplicas := capp.Spec.ScaleSpec.MinReplicas
-	scaleDelay := capp.Spec.ScaleSpec.ScaleDelaySeconds
-
-	if minReplicas > config.Spec.AutoscaleConfig.MinReplicasLimit {
-		return admission.Denied(fmt.Sprintf("invalid minReplicas %d: must be less than or equal to global min scale %d", minReplicas, config.Spec.AutoscaleConfig.MinReplicasLimit))
+	if err := validateScaleSpec(capp, config.Spec.AutoscaleConfig); err != nil {
+		return admission.Denied(err.Error())
 	}
 
-	if scaleDelay > config.Spec.AutoscaleConfig.MaxScaleDelay {
-		return admission.Denied(fmt.Sprintf("invalid scaleDelaySeconds %d: must be less than or equal to global max scale delay %d", scaleDelay, config.Spec.AutoscaleConfig.MaxScaleDelay))
-	}
 	return admission.Allowed("")
 }
 
@@ -214,6 +208,21 @@ func validateEventSources(ctx context.Context, r client.Reader, capp cappv1alpha
 			}
 		}
 	}
+	return nil
+}
+
+func validateScaleSpec(capp cappv1alpha1.Capp, autoscaleConfig cappv1alpha1.AutoscaleConfig) error {
+	minReplicas := capp.Spec.ScaleSpec.MinReplicas
+	scaleDelay := capp.Spec.ScaleSpec.ScaleDelaySeconds
+
+	if minReplicas > autoscaleConfig.MinReplicasLimit {
+		return fmt.Errorf("invalid minReplicas %d: must be less than or equal to global min scale %d", minReplicas, autoscaleConfig.MinReplicasLimit)
+	}
+
+	if scaleDelay > autoscaleConfig.MaxScaleDelay {
+		return fmt.Errorf("invalid scaleDelaySeconds %d: must be less than or equal to global max scale delay %d", scaleDelay, autoscaleConfig.MaxScaleDelay)
+	}
+
 	return nil
 }
 
