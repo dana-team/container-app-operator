@@ -69,20 +69,10 @@ func CreateCappRevision(ctx context.Context, k8sClient client.Client, logger log
 		return err
 	}
 
-	logger.Info("kubernetes API write create", rclient.ObjectIdentityKeyVals(&cappRevision)...)
-	if err := k8sClient.Create(ctx, &cappRevision); err != nil {
-		logger.Error(err, "failed to create CappRevision", rclient.ObjectIdentityKeyVals(&cappRevision)...)
-		return err
-	}
-	return nil
+	return rclient.ResourceManagerClient{K8sClient: k8sClient, Log: logger}.CreateResource(ctx, &cappRevision)
 }
 
 // DeleteCappRevision deletes a specified CappRevision and returning an error on failure.
 func DeleteCappRevision(ctx context.Context, k8sClient client.Client, logger logr.Logger, cappRevision *cappv1alpha1.CappRevision) error {
-	logger.Info("kubernetes API write delete", rclient.ObjectIdentityKeyVals(cappRevision)...)
-	if err := k8sClient.Delete(ctx, cappRevision); err != nil {
-		logger.Error(err, "failed to delete CappRevision", rclient.ObjectIdentityKeyVals(cappRevision)...)
-		return err
-	}
-	return nil
+	return rclient.ResourceManagerClient{K8sClient: k8sClient, Log: logger}.DeleteResource(ctx, cappRevision)
 }
