@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	NfsPVC                    = "nfsPvc"
+	NfsPvc                    = "NfsPvc"
 	eventNFSPVCCreationFailed = "NfsPvcCreationFailed"
 	eventNFSPVCCreated        = "NfsPvcCreated"
 )
@@ -61,7 +61,7 @@ func (n NFSPVCManager) prepareResource(capp cappv1alpha1.Capp) []nfspvcv1alpha1.
 // getPreviousNFSPVCs returns a list of all NFSPVC objects that are related to the given Capp.
 func (n NFSPVCManager) getPreviousNFSPVCs(ctx context.Context, capp cappv1alpha1.Capp) (nfspvcv1alpha1.NfsPvcList, error) {
 	nfsPvcs := nfspvcv1alpha1.NfsPvcList{}
-	if err := listManagedResources(ctx, n.K8sclient, capp, &nfsPvcs, "NFSPVC", nil); err != nil {
+	if err := listManagedResources(ctx, n.K8sClient, capp, &nfsPvcs, NfsPvc, nil); err != nil {
 		return nfsPvcs, err
 	}
 	return nfsPvcs, nil
@@ -76,7 +76,7 @@ func (n NFSPVCManager) CleanUp(ctx context.Context, capp cappv1alpha1.Capp) erro
 
 	for _, nfsPvc := range nfsPvcs.Items {
 		if capp.DeletionTimestamp != nil {
-			ok, err := controllerutil.HasOwnerReference(nfsPvc.OwnerReferences, &capp, n.K8sclient.Scheme())
+			ok, err := controllerutil.HasOwnerReference(nfsPvc.OwnerReferences, &capp, n.K8sClient.Scheme())
 			if err != nil {
 				return err
 			}
@@ -84,7 +84,7 @@ func (n NFSPVCManager) CleanUp(ctx context.Context, capp cappv1alpha1.Capp) erro
 				continue
 			}
 		}
-		nfsPvcVolume := rclient.GetBareNFSPVC(nfsPvc.Name, nfsPvc.Namespace)
+		nfsPvcVolume := nfspvcv1alpha1.NfsPvc{ObjectMeta: metav1.ObjectMeta{Name: nfsPvc.Name, Namespace: nfsPvc.Namespace}}
 
 		if err := n.DeleteResource(ctx, &nfsPvcVolume); err != nil {
 			if errors.IsNotFound(err) {
@@ -119,10 +119,10 @@ func (n NFSPVCManager) createOrUpdate(ctx context.Context, capp cappv1alpha1.Cap
 	for i := range generatedNFSPVCs {
 		nfspvc := &generatedNFSPVCs[i]
 		existingNFSPVC := nfspvcv1alpha1.NfsPvc{}
-		if err := n.K8sclient.Get(ctx, client.ObjectKey{Namespace: nfspvc.Namespace, Name: nfspvc.Name}, &existingNFSPVC); err != nil {
+		if err := n.K8sClient.Get(ctx, client.ObjectKey{Namespace: nfspvc.Namespace, Name: nfspvc.Name}, &existingNFSPVC); err != nil {
 			if errors.IsNotFound(err) {
-				if err := createManagedResource(ctx, n.K8sclient, n.CreateResource, n.EventRecorder, &capp, nfspvc,
-					"NFSPVC", eventNFSPVCCreated, eventNFSPVCCreationFailed); err != nil {
+				if err := createManagedResource(ctx, n.K8sClient, n.CreateResource, n.EventRecorder, &capp, nfspvc,
+					NfsPvc, eventNFSPVCCreated, eventNFSPVCCreationFailed); err != nil {
 					return err
 				}
 			} else {
@@ -131,7 +131,7 @@ func (n NFSPVCManager) createOrUpdate(ctx context.Context, capp cappv1alpha1.Cap
 		} else {
 			orig := existingNFSPVC.DeepCopy()
 			existingNFSPVC.Spec = *nfspvc.Spec.DeepCopy()
-			if err := ensureOwnerReference(n.K8sclient, &capp, &existingNFSPVC, "NfsPvc"); err != nil {
+			if err := ensureOwnerReference(n.K8sClient, &capp, &existingNFSPVC, NfsPvc); err != nil {
 				return err
 			}
 			if err := updateManagedResourceIfNeeded(ctx, n.UpdateResource, &existingNFSPVC, orig.Spec, existingNFSPVC.Spec, orig.OwnerReferences); err != nil {

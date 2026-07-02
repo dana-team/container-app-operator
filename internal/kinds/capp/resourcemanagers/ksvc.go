@@ -24,7 +24,7 @@ import (
 const (
 	cappDisabledState                     = "disabled"
 	cappEnabledState                      = "enabled"
-	KnativeServing                        = "knativeServing"
+	KnativeService                        = "KnativeService"
 	eventCappKnativeServiceCreationFailed = "KnativeServiceCreationFailed"
 	eventCappKnativeServiceCreated        = "KnativeServiceCreated"
 	eventCappDisabled                     = "CappDisabled"
@@ -84,7 +84,7 @@ func (k KnativeServiceManager) prepareResource(capp cappv1alpha1.Capp, ctx conte
 		})
 	}
 
-	cappConfig, err := utils.GetCappConfig(ctx, k.K8sclient)
+	cappConfig, err := utils.GetCappConfig(ctx, k.K8sClient)
 	if err != nil {
 		k.Log.Error(err, fmt.Sprintf("could not fetch cappConfig from namespace %q", utils.CappNS))
 	}
@@ -98,11 +98,11 @@ func (k KnativeServiceManager) prepareResource(capp cappv1alpha1.Capp, ctx conte
 // CleanUp ensures the Knative Service is not left behind when it is no longer required for this Capp.
 func (k KnativeServiceManager) CleanUp(ctx context.Context, capp cappv1alpha1.Capp) error {
 	var ksvc knativev1.Service
-	if err := k.K8sclient.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: capp.Name}, &ksvc); err != nil {
+	if err := k.K8sClient.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: capp.Name}, &ksvc); err != nil {
 		return client.IgnoreNotFound(err)
 	}
 	if capp.DeletionTimestamp != nil {
-		if ok, err := controllerutil.HasOwnerReference(ksvc.OwnerReferences, &capp, k.K8sclient.Scheme()); err != nil || ok {
+		if ok, err := controllerutil.HasOwnerReference(ksvc.OwnerReferences, &capp, k.K8sClient.Scheme()); err != nil || ok {
 			return err
 		}
 	}
@@ -137,10 +137,10 @@ func (k KnativeServiceManager) createOrUpdate(ctx context.Context, capp cappv1al
 	knativeServiceFromCapp := k.prepareResource(capp, ctx)
 	knativeService := knativev1.Service{}
 
-	if err := k.K8sclient.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: capp.Name}, &knativeService); err != nil {
+	if err := k.K8sClient.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: capp.Name}, &knativeService); err != nil {
 		if errors.IsNotFound(err) {
-			if err := createManagedResource(ctx, k.K8sclient, k.CreateResource, k.EventRecorder, &capp, &knativeServiceFromCapp,
-				"KnativeService", eventCappKnativeServiceCreated, eventCappKnativeServiceCreationFailed); err != nil {
+			if err := createManagedResource(ctx, k.K8sClient, k.CreateResource, k.EventRecorder, &capp, &knativeServiceFromCapp,
+				KnativeService, eventCappKnativeServiceCreated, eventCappKnativeServiceCreationFailed); err != nil {
 				return err
 			}
 
@@ -156,7 +156,7 @@ func (k KnativeServiceManager) createOrUpdate(ctx context.Context, capp cappv1al
 
 	orig := knativeService.DeepCopy()
 	knativeService.Spec = knativeServiceFromCapp.Spec
-	if err := ensureOwnerReference(k.K8sclient, &capp, &knativeService, "Knative Service"); err != nil {
+	if err := ensureOwnerReference(k.K8sClient, &capp, &knativeService, KnativeService); err != nil {
 		return err
 	}
 	if managedResourceNeedsUpdate(orig.Spec, knativeService.Spec, orig.OwnerReferences, knativeService.OwnerReferences) {
