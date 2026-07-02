@@ -3,8 +3,8 @@ package status
 import (
 	"context"
 
-	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/resourceclient"
 	rmanagers "github.com/dana-team/container-app-operator/internal/kinds/capp/resourcemanagers"
+	utils "github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/go-logr/logr"
@@ -86,7 +86,7 @@ func SyncStatus(ctx context.Context, capp cappv1alpha1.Capp, log logr.Logger, r 
 		return nil
 	}
 
-	log.Info("kubernetes API write status update", rclient.ObjectIdentityKeyVals(&cappObject)...)
+	log.Info("kubernetes API write status update", utils.ObjectIdentityKeyVals(&cappObject)...)
 	if err := r.Status().Update(ctx, &cappObject); err != nil {
 		log.Error(err, "failed to update Capp status")
 		return err
