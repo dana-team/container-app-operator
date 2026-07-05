@@ -19,6 +19,7 @@ import (
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	servingv1 "knative.dev/serving/pkg/apis/serving/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const (
@@ -50,6 +51,62 @@ func newPingSource(source string) *sourcesv1.PingSource {
 			Labels:    utils.ManagedResourceLabels(cappName),
 		},
 	}
+}
+
+func TestPingSourceManagerCleanUp(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("deletes all when no DeletionTimestamp", func(t *testing.T) {
+		scheme := newPingSourceScheme()
+		fakeClient := newFakeClient(scheme)
+		ps := newPingSource(sourceA)
+		require.NoError(t, fakeClient.Create(ctx, ps))
+
+		capp := newBaseCapp()
+		pm := newPingSourceManager(fakeClient)
+		require.NoError(t, pm.CleanUp(ctx, capp))
+
+		got := &sourcesv1.PingSource{}
+		getErr := fakeClient.Get(ctx, types.NamespacedName{
+			Name: fmt.Sprintf("%s-%s", cappName, sourceA), Namespace: cappNamespace,
+		}, got)
+		require.True(t, errors.IsNotFound(getErr), "expected PingSource to be deleted")
+	})
+
+	t.Run("skips deletion when DeletionTimestamp set and resource has owner-ref", func(t *testing.T) {
+		scheme := newPingSourceScheme()
+		fakeClient := newFakeClient(scheme)
+		capp := newBaseCapp()
+		ps := newPingSource(sourceA)
+		require.NoError(t, controllerutil.SetOwnerReference(&capp, ps, scheme))
+		require.NoError(t, fakeClient.Create(ctx, ps))
+
+		cappDeleting := cappWithDeletionTimestamp(capp)
+		pm := newPingSourceManager(fakeClient)
+		require.NoError(t, pm.CleanUp(ctx, cappDeleting))
+
+		got := &sourcesv1.PingSource{}
+		require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{
+			Name: fmt.Sprintf("%s-%s", cappName, sourceA), Namespace: cappNamespace,
+		}, got))
+	})
+
+	t.Run("deletes when DeletionTimestamp set and resource lacks owner-ref", func(t *testing.T) {
+		scheme := newPingSourceScheme()
+		fakeClient := newFakeClient(scheme)
+		ps := newPingSource(sourceA)
+		require.NoError(t, fakeClient.Create(ctx, ps))
+
+		cappDeleting := cappWithDeletionTimestamp(newBaseCapp())
+		pm := newPingSourceManager(fakeClient)
+		require.NoError(t, pm.CleanUp(ctx, cappDeleting))
+
+		got := &sourcesv1.PingSource{}
+		getErr := fakeClient.Get(ctx, types.NamespacedName{
+			Name: fmt.Sprintf("%s-%s", cappName, sourceA), Namespace: cappNamespace,
+		}, got)
+		require.True(t, errors.IsNotFound(getErr), "expected PingSource to be deleted")
+	})
 }
 
 func TestPingSourceManagerCleanUpOrphans(t *testing.T) {
