@@ -70,19 +70,19 @@ func (k KafkaSourceManager) CleanUp(ctx context.Context, capp cappv1alpha1.Capp)
 }
 
 func (k KafkaSourceManager) createOrUpdate(ctx context.Context, capp cappv1alpha1.Capp, source cappv1alpha1.SourceConfiguration) error {
-	kafkaSourceFromCapp := k.prepareResource(capp, source)
+	desired := k.prepareResource(capp, source)
 	existing := &kafkasourcev1.KafkaSource{}
-	err := k.K8sClient.Get(ctx, client.ObjectKey{Name: kafkaSourceFromCapp.Name, Namespace: kafkaSourceFromCapp.Namespace}, existing)
+	err := k.K8sClient.Get(ctx, client.ObjectKey{Name: desired.Name, Namespace: desired.Namespace}, existing)
 	if err != nil {
 		if !errors.IsNotFound(err) {
-			return fmt.Errorf("failed to get KafkaSource %q: %w", kafkaSourceFromCapp.Name, err)
+			return fmt.Errorf("failed to get KafkaSource %q: %w", desired.Name, err)
 		}
-		return createManagedResource(ctx, k.K8sClient, k.CreateResource, k.EventRecorder, &capp, &kafkaSourceFromCapp,
+		return createManagedResource(ctx, k.K8sClient, k.CreateResource, k.EventRecorder, &capp, &desired,
 			KafkaSource, eventKafkaSourceCreated, eventKafkaSourceCreationFailed)
 	}
 
 	orig := existing.DeepCopy()
-	existing.Spec = kafkaSourceFromCapp.Spec
+	existing.Spec = *desired.Spec.DeepCopy()
 	existing.Spec.ConsumerGroup = orig.Spec.ConsumerGroup
 	if err := ensureOwnerReference(k.K8sClient, &capp, existing, KafkaSource); err != nil {
 		return err
