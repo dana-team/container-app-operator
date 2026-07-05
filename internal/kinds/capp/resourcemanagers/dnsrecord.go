@@ -16,7 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/events"
-	"k8s.io/client-go/util/retry"
 
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -120,37 +119,23 @@ func (r DNSRecordManager) createOrUpdate(ctx context.Context, capp cappv1alpha1.
 	if !needs {
 		return nil
 	}
-	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		latestRecord := dnsrecordv1alpha1.CNAMERecord{}
-		if err := r.K8sClient.Get(ctx, types.NamespacedName{Namespace: dnsRecord.Namespace, Name: dnsRecord.Name}, &latestRecord); err != nil {
-			return err
-		}
 
-		needs, err := r.dnsRecordNeedsUpdate(latestRecord, dnsRecordFromCapp, &capp)
-		if err != nil {
-			return err
-		}
-		if !needs {
-			return nil
-		}
+	orig := dnsRecord.DeepCopy()
+	if err := ensureOwnerReference(r.K8sClient, &capp, &dnsRecord, DNSRecord); err != nil {
+		return err
+	}
+	dnsRecord.Spec.ForProvider = *dnsRecordFromCapp.Spec.ForProvider.DeepCopy()
+	if dnsRecordFromCapp.Spec.ProviderConfigReference != nil {
+		dnsRecord.Spec.ProviderConfigReference = dnsRecordFromCapp.Spec.ProviderConfigReference.DeepCopy()
+	} else {
+		dnsRecord.Spec.ProviderConfigReference = nil
+	}
 
-		orig := latestRecord.DeepCopy()
-		if err := ensureOwnerReference(r.K8sClient, &capp, &latestRecord, DNSRecord); err != nil {
-			return err
-		}
-		latestRecord.Spec.ForProvider = *dnsRecordFromCapp.Spec.ForProvider.DeepCopy()
-		if dnsRecordFromCapp.Spec.ProviderConfigReference != nil {
-			latestRecord.Spec.ProviderConfigReference = dnsRecordFromCapp.Spec.ProviderConfigReference.DeepCopy()
-		} else {
-			latestRecord.Spec.ProviderConfigReference = nil
-		}
+	if !managedResourceNeedsUpdate(orig.Spec, dnsRecord.Spec, orig.OwnerReferences, dnsRecord.OwnerReferences) {
+		return nil
+	}
 
-		if !managedResourceNeedsUpdate(orig.Spec, latestRecord.Spec, orig.OwnerReferences, latestRecord.OwnerReferences) {
-			return nil
-		}
-
-		return r.UpdateResource(ctx, &latestRecord)
-	})
+	return r.UpdateResource(ctx, &dnsRecord)
 }
 
 func (r DNSRecordManager) dnsRecordNeedsUpdate(current, desired dnsrecordv1alpha1.CNAMERecord, capp *cappv1alpha1.Capp) (bool, error) {
