@@ -155,7 +155,7 @@ func (k KnativeServiceManager) createOrUpdate(ctx context.Context, capp cappv1al
 	}
 
 	orig := knativeService.DeepCopy()
-	knativeService.Spec = knativeServiceFromCapp.Spec
+	knativeService.Spec = *knativeServiceFromCapp.Spec.DeepCopy()
 	if err := ensureOwnerReference(k.K8sClient, &capp, &knativeService, KnativeService); err != nil {
 		return err
 	}

@@ -146,7 +146,7 @@ func (k DomainMappingManager) createOrUpdate(ctx context.Context, capp cappv1alp
 	}
 
 	orig := domainMapping.DeepCopy()
-	domainMapping.Spec = domainMappingFromCapp.Spec
+	domainMapping.Spec = *domainMappingFromCapp.Spec.DeepCopy()
 	if err := ensureOwnerReference(k.K8sClient, &capp, &domainMapping, DomainMapping); err != nil {
 		return err
 	}
