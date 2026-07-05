@@ -55,63 +55,47 @@ func isLogSpecRequired(capp cappv1alpha1.Capp) bool {
 	return isSupportedLogType(capp.Spec.LogSpec.Type)
 }
 
-// createElasticsearchOutput creates an Elasticsearch SyslogNGOutput object based on the provided logSpec.
-// It constructs the Elasticsearch SyslogNGOutput which is returned as a SyslogNGOutputSpec.
-func createElasticsearchOutput(logSpec cappv1alpha1.LogSpec) loggingv1beta1.SyslogNGOutputSpec {
+// newElasticHTTPOutput constructs the shared HTTPOutput used by both Elasticsearch output creators.
+func newElasticHTTPOutput(logSpec cappv1alpha1.LogSpec) output.HTTPOutput {
 	peerVerify := false
-
-	syslogNGOutputSpec := loggingv1beta1.SyslogNGOutputSpec{
-		Elasticsearch: &output.ElasticsearchOutput{
-			Index:    logSpec.Index,
-			Template: elasticTemplate,
-			HTTPOutput: output.HTTPOutput{
-				URL:  logSpec.Host,
-				User: logSpec.User,
-				Password: secret.Secret{
-					ValueFrom: &secret.ValueFrom{
-						SecretKeyRef: &corev1.SecretKeySelector{
-							LocalObjectReference: corev1.LocalObjectReference{Name: logSpec.PasswordSecret},
-							Key:                  elasticSecretKey,
-						},
-					},
-				},
-				TLS: &output.TLS{
-					PeerVerify: &peerVerify,
-					SslVersion: elasticSSLVersion,
+	return output.HTTPOutput{
+		URL:  logSpec.Host,
+		User: logSpec.User,
+		Password: secret.Secret{
+			ValueFrom: &secret.ValueFrom{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{Name: logSpec.PasswordSecret},
+					Key:                  elasticSecretKey,
 				},
 			},
 		},
+		TLS: &output.TLS{
+			PeerVerify: &peerVerify,
+			SslVersion: elasticSSLVersion,
+		},
 	}
+}
 
-	return syslogNGOutputSpec
+// createElasticsearchOutput creates an Elasticsearch SyslogNGOutput object based on the provided logSpec.
+// It constructs the Elasticsearch SyslogNGOutput which is returned as a SyslogNGOutputSpec.
+func createElasticsearchOutput(logSpec cappv1alpha1.LogSpec) loggingv1beta1.SyslogNGOutputSpec {
+	return loggingv1beta1.SyslogNGOutputSpec{
+		Elasticsearch: &output.ElasticsearchOutput{
+			Index:      logSpec.Index,
+			Template:   elasticTemplate,
+			HTTPOutput: newElasticHTTPOutput(logSpec),
+		},
+	}
 }
 
 // createElasticDataStreamOutput creates an Elasticsearch Data Stream SyslogNGOutput object based on the provided logSpec.
 func createElasticDataStreamOutput(logSpec cappv1alpha1.LogSpec) loggingv1beta1.SyslogNGOutputSpec {
-	peerVerify := false
-
-	syslogNGOutput := loggingv1beta1.SyslogNGOutputSpec{
+	return loggingv1beta1.SyslogNGOutputSpec{
 		ElasticsearchDatastream: &output.ElasticsearchDatastreamOutput{
-			Record: elasticDataStreamTemplate,
-			HTTPOutput: output.HTTPOutput{
-				URL:  logSpec.Host,
-				User: logSpec.User,
-				Password: secret.Secret{
-					ValueFrom: &secret.ValueFrom{
-						SecretKeyRef: &corev1.SecretKeySelector{
-							LocalObjectReference: corev1.LocalObjectReference{Name: logSpec.PasswordSecret},
-							Key:                  elasticSecretKey,
-						},
-					},
-				},
-				TLS: &output.TLS{
-					PeerVerify: &peerVerify,
-					SslVersion: elasticSSLVersion,
-				},
-			},
+			Record:     elasticDataStreamTemplate,
+			HTTPOutput: newElasticHTTPOutput(logSpec),
 		},
 	}
-	return syslogNGOutput
 }
 
 // prepareResource prepares a SyslogNGOutput resource based on the provided Capp.
