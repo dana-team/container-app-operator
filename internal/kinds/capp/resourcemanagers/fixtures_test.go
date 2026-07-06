@@ -29,6 +29,15 @@ const (
 	issuerGroup  = "cert-manager.io"
 	hostnameBare = "my-app"
 	hostnameFQDN = "my-app.capp-zone.com"
+
+	ordersSource    = "orders"
+	ordersA         = "orders-a"
+	ordersB         = "orders-b"
+	bootstrapServer = "kafka.example:9092"
+	topicOrders     = "orders"
+	topicPayments   = "payments"
+
+	schedule = "* * * * *"
 )
 
 func newScheme() *runtime.Scheme {
@@ -46,6 +55,12 @@ func newBaseCapp() cappv1alpha1.Capp {
 			UID:       types.UID("test-uid"),
 		},
 	}
+}
+
+func cappWithDeletionTimestamp(capp cappv1alpha1.Capp) cappv1alpha1.Capp {
+	now := metav1.Now()
+	capp.DeletionTimestamp = &now
+	return capp
 }
 
 func newCappConfig() *cappv1alpha1.CappConfig {
@@ -112,17 +127,13 @@ func newCappWithTLS(hostname string, tls bool) cappv1alpha1.Capp {
 	return capp
 }
 
-func newSecret(name string, mutate func(*corev1.Secret)) *corev1.Secret {
-	sec := &corev1.Secret{
+func newSecret(name string) *corev1.Secret {
+	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: cappNamespace,
 		},
 	}
-	if mutate != nil {
-		mutate(sec)
-	}
-	return sec
 }
 
 func newFakeClient(scheme *runtime.Scheme, objects ...client.Object) client.Client {
@@ -130,4 +141,26 @@ func newFakeClient(scheme *runtime.Scheme, objects ...client.Object) client.Clie
 		WithScheme(scheme).
 		WithObjects(objects...).
 		Build()
+}
+
+func newKafkaSourceConfiguration() cappv1alpha1.KafkaSourceConfiguration {
+	return cappv1alpha1.KafkaSourceConfiguration{
+		BootstrapServers: []string{bootstrapServer},
+		Topics:           []string{topicOrders, topicPayments},
+		SecretRef:        corev1.LocalObjectReference{Name: "kafka-creds"},
+	}
+}
+
+func newKafkaSourceEntry(name string, cfg cappv1alpha1.KafkaSourceConfiguration) cappv1alpha1.SourceConfiguration {
+	return cappv1alpha1.SourceConfiguration{
+		Name:                     name,
+		KafkaSourceConfiguration: &cfg,
+	}
+}
+
+func newPingSourceEntry(name string, cfg cappv1alpha1.PingSourceConfiguration) cappv1alpha1.SourceConfiguration {
+	return cappv1alpha1.SourceConfiguration{
+		Name:                    name,
+		PingSourceConfiguration: &cfg,
+	}
 }

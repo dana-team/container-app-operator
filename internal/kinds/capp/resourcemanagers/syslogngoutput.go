@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	SyslogNGOutput                        = "syslogNGOutput"
+	SyslogNGOutput                        = "SyslogNGOutput"
 	eventCappSyslogNGOutputCreationFailed = "SyslogNGOutputCreationFailed"
 	eventCappSyslogNGOutputCreated        = "SyslogNGOutputCreated"
 	elasticSSLVersion                     = "tlsv1_2"
@@ -55,63 +55,47 @@ func isLogSpecRequired(capp cappv1alpha1.Capp) bool {
 	return isSupportedLogType(capp.Spec.LogSpec.Type)
 }
 
-// createElasticsearchOutput creates an Elasticsearch SyslogNGOutput object based on the provided logSpec.
-// It constructs the Elasticsearch SyslogNGOutput which is returned as a SyslogNGOutputSpec.
-func createElasticsearchOutput(logSpec cappv1alpha1.LogSpec) loggingv1beta1.SyslogNGOutputSpec {
+// newElasticHTTPOutput constructs the shared HTTPOutput used by both Elasticsearch output creators.
+func newElasticHTTPOutput(logSpec cappv1alpha1.LogSpec) output.HTTPOutput {
 	peerVerify := false
-
-	syslogNGOutputSpec := loggingv1beta1.SyslogNGOutputSpec{
-		Elasticsearch: &output.ElasticsearchOutput{
-			Index:    logSpec.Index,
-			Template: elasticTemplate,
-			HTTPOutput: output.HTTPOutput{
-				URL:  logSpec.Host,
-				User: logSpec.User,
-				Password: secret.Secret{
-					ValueFrom: &secret.ValueFrom{
-						SecretKeyRef: &corev1.SecretKeySelector{
-							LocalObjectReference: corev1.LocalObjectReference{Name: logSpec.PasswordSecret},
-							Key:                  elasticSecretKey,
-						},
-					},
-				},
-				TLS: &output.TLS{
-					PeerVerify: &peerVerify,
-					SslVersion: elasticSSLVersion,
+	return output.HTTPOutput{
+		URL:  logSpec.Host,
+		User: logSpec.User,
+		Password: secret.Secret{
+			ValueFrom: &secret.ValueFrom{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{Name: logSpec.PasswordSecret},
+					Key:                  elasticSecretKey,
 				},
 			},
 		},
+		TLS: &output.TLS{
+			PeerVerify: &peerVerify,
+			SslVersion: elasticSSLVersion,
+		},
 	}
+}
 
-	return syslogNGOutputSpec
+// createElasticsearchOutput creates an Elasticsearch SyslogNGOutput object based on the provided logSpec.
+// It constructs the Elasticsearch SyslogNGOutput which is returned as a SyslogNGOutputSpec.
+func createElasticsearchOutput(logSpec cappv1alpha1.LogSpec) loggingv1beta1.SyslogNGOutputSpec {
+	return loggingv1beta1.SyslogNGOutputSpec{
+		Elasticsearch: &output.ElasticsearchOutput{
+			Index:      logSpec.Index,
+			Template:   elasticTemplate,
+			HTTPOutput: newElasticHTTPOutput(logSpec),
+		},
+	}
 }
 
 // createElasticDataStreamOutput creates an Elasticsearch Data Stream SyslogNGOutput object based on the provided logSpec.
 func createElasticDataStreamOutput(logSpec cappv1alpha1.LogSpec) loggingv1beta1.SyslogNGOutputSpec {
-	peerVerify := false
-
-	syslogNGOutput := loggingv1beta1.SyslogNGOutputSpec{
+	return loggingv1beta1.SyslogNGOutputSpec{
 		ElasticsearchDatastream: &output.ElasticsearchDatastreamOutput{
-			Record: elasticDataStreamTemplate,
-			HTTPOutput: output.HTTPOutput{
-				URL:  logSpec.Host,
-				User: logSpec.User,
-				Password: secret.Secret{
-					ValueFrom: &secret.ValueFrom{
-						SecretKeyRef: &corev1.SecretKeySelector{
-							LocalObjectReference: corev1.LocalObjectReference{Name: logSpec.PasswordSecret},
-							Key:                  elasticSecretKey,
-						},
-					},
-				},
-				TLS: &output.TLS{
-					PeerVerify: &peerVerify,
-					SslVersion: elasticSSLVersion,
-				},
-			},
+			Record:     elasticDataStreamTemplate,
+			HTTPOutput: newElasticHTTPOutput(logSpec),
 		},
 	}
-	return syslogNGOutput
 }
 
 // prepareResource prepares a SyslogNGOutput resource based on the provided Capp.
@@ -138,11 +122,11 @@ func (o SyslogNGOutputManager) prepareResource(capp cappv1alpha1.Capp) loggingv1
 // CleanUp attempts to delete the associated SyslogNGOutput for a given Capp resource.
 func (o SyslogNGOutputManager) CleanUp(ctx context.Context, capp cappv1alpha1.Capp) error {
 	var syslogNGOutput loggingv1beta1.SyslogNGOutput
-	if err := o.K8sclient.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: capp.Name}, &syslogNGOutput); err != nil {
+	if err := o.K8sClient.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: capp.Name}, &syslogNGOutput); err != nil {
 		return client.IgnoreNotFound(err)
 	}
 	if capp.DeletionTimestamp != nil {
-		if ok, err := controllerutil.HasOwnerReference(syslogNGOutput.OwnerReferences, &capp, o.K8sclient.Scheme()); err != nil || ok {
+		if ok, err := controllerutil.HasOwnerReference(syslogNGOutput.OwnerReferences, &capp, o.K8sClient.Scheme()); err != nil || ok {
 			return err
 		}
 	}
@@ -172,17 +156,17 @@ func (o SyslogNGOutputManager) createOrUpdate(ctx context.Context, capp cappv1al
 	}
 	syslogNGOutput := loggingv1beta1.SyslogNGOutput{}
 
-	if err := o.K8sclient.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: syslogNGOutputFromCapp.Name}, &syslogNGOutput); err != nil {
+	if err := o.K8sClient.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: syslogNGOutputFromCapp.Name}, &syslogNGOutput); err != nil {
 		if errors.IsNotFound(err) {
-			return createManagedResource(ctx, o.K8sclient, o.CreateResource, o.EventRecorder, &capp, &syslogNGOutputFromCapp,
-				"SyslogNGOutput", eventCappSyslogNGOutputCreated, eventCappSyslogNGOutputCreationFailed)
+			return createManagedResource(ctx, o.K8sClient, o.CreateResource, o.EventRecorder, &capp, &syslogNGOutputFromCapp,
+				SyslogNGOutput, eventCappSyslogNGOutputCreated, eventCappSyslogNGOutputCreationFailed)
 		}
 		return fmt.Errorf("failed to get SyslogNGOutput %q: %w", syslogNGOutputFromCapp.Name, err)
 	}
 
 	orig := syslogNGOutput.DeepCopy()
 	syslogNGOutput.Spec = *syslogNGOutputFromCapp.Spec.DeepCopy()
-	if err := ensureOwnerReference(o.K8sclient, &capp, &syslogNGOutput, "SyslogNGOutput"); err != nil {
+	if err := ensureOwnerReference(o.K8sClient, &capp, &syslogNGOutput, SyslogNGOutput); err != nil {
 		return err
 	}
 	return updateManagedResourceIfNeeded(ctx, o.UpdateResource, &syslogNGOutput, orig.Spec, syslogNGOutput.Spec, orig.OwnerReferences)

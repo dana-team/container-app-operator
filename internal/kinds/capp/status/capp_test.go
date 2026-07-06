@@ -36,13 +36,13 @@ func (s stubManager) IsRequired(_ cappv1alpha1.Capp) bool                  { ret
 
 func buildManagers(enabled map[string]bool) map[string]rmanagers.ResourceManager {
 	all := []string{
-		rmanagers.KnativeServing,
+		rmanagers.KnativeService,
 		rmanagers.SyslogNGFlow,
 		rmanagers.SyslogNGOutput,
 		rmanagers.DomainMapping,
 		rmanagers.DNSRecord,
 		rmanagers.Certificate,
-		rmanagers.NfsPVC,
+		rmanagers.NfsPvc,
 		rmanagers.PingSource,
 		rmanagers.KafkaSource,
 	}
@@ -268,7 +268,7 @@ func TestBuildCappConditions(t *testing.T) {
 				KnativeObjectStatus: knativeServiceReady(corev1.ConditionTrue),
 				VolumesStatus:       nfsVolumesUnbound("shared-data"),
 			},
-			enabled:        map[string]bool{rmanagers.NfsPVC: true},
+			enabled:        map[string]bool{rmanagers.NfsPvc: true},
 			expectedStatus: metav1.ConditionFalse,
 			expectedReason: cappv1alpha1.CappReadyReasonVolumesNotReady,
 		},
@@ -278,7 +278,7 @@ func TestBuildCappConditions(t *testing.T) {
 				KnativeObjectStatus: knativeServiceReady(corev1.ConditionTrue),
 				VolumesStatus:       nfsVolumesBound("shared-data"),
 			},
-			enabled:        map[string]bool{rmanagers.NfsPVC: true},
+			enabled:        map[string]bool{rmanagers.NfsPvc: true},
 			expectedStatus: metav1.ConditionTrue,
 			expectedReason: cappv1alpha1.CappReadyReasonReady,
 		},

@@ -332,20 +332,20 @@ func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, fmt.Errorf("failed to get Capp: %s", err.Error())
 	}
 
-	rmClient := rclient.ResourceManagerClient{K8sclient: r.Client, Log: logger}
+	rmClient := rclient.ResourceManagerClient{K8sClient: r.Client, Log: logger}
 	resourceManagers := map[string]rmanagers.ResourceManager{
-		rmanagers.KnativeServing: rmanagers.KnativeServiceManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},
+		rmanagers.KnativeService: rmanagers.KnativeServiceManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},
 		rmanagers.DNSRecord:      rmanagers.DNSRecordManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},
 		rmanagers.Certificate:    rmanagers.CertificateManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},
 		rmanagers.DomainMapping:  rmanagers.DomainMappingManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},
 		rmanagers.SyslogNGFlow:   rmanagers.SyslogNGFlowManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},
 		rmanagers.SyslogNGOutput: rmanagers.SyslogNGOutputManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},
-		rmanagers.NfsPVC:         rmanagers.NFSPVCManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},
+		rmanagers.NfsPvc:         rmanagers.NFSPVCManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},
 		rmanagers.PingSource:     rmanagers.PingSourceManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},
 		rmanagers.KafkaSource:    rmanagers.KafkaSourceManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},
 	}
 
-	err, deleted := finalizer.HandleResourceDeletion(ctx, capp, r.Client, resourceManagers)
+	err, deleted := finalizer.HandleResourceDeletion(ctx, capp, rmClient, resourceManagers)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to handle Capp deletion: %s", err.Error())
 	}
@@ -354,7 +354,7 @@ func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, nil
 	}
 
-	if err := finalizer.EnsureFinalizer(ctx, capp, r.Client); err != nil {
+	if err := finalizer.EnsureFinalizer(ctx, capp, rmClient); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to ensure finalizer in Capp: %s", err.Error())
 	}
 

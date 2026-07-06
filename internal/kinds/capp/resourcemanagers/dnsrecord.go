@@ -16,7 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/events"
-	"k8s.io/client-go/util/retry"
 
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -35,7 +34,7 @@ type DNSRecordManager struct {
 
 // prepareResource prepares a DNSRecord resource based on the provided Capp.
 func (r DNSRecordManager) prepareResource(ctx context.Context, capp cappv1alpha1.Capp) (dnsrecordv1alpha1.CNAMERecord, error) {
-	dnsConfig, err := utils.GetDNSConfig(ctx, r.K8sclient)
+	dnsConfig, err := utils.GetDNSConfig(ctx, r.K8sClient)
 	if err != nil {
 		return dnsrecordv1alpha1.CNAMERecord{}, err
 	}
@@ -74,27 +73,11 @@ func (r DNSRecordManager) CleanUp(ctx context.Context, capp cappv1alpha1.Capp) e
 	if err != nil {
 		return err
 	}
-
-	for _, dnsRecord := range dnsRecords.Items {
-		if capp.DeletionTimestamp != nil {
-			ok, err := controllerutil.HasOwnerReference(dnsRecord.OwnerReferences, &capp, r.K8sclient.Scheme())
-			if err != nil {
-				return err
-			}
-			if ok {
-				continue
-			}
-		}
-		bareRecord := rclient.GetBareDNSRecord(dnsRecord.Name, dnsRecord.Namespace)
-		if err := r.DeleteResource(ctx, &bareRecord); err != nil {
-			if errors.IsNotFound(err) {
-				continue
-			}
-			return err
-		}
+	resources := make([]*dnsrecordv1alpha1.CNAMERecord, len(dnsRecords.Items))
+	for i := range dnsRecords.Items {
+		resources[i] = &dnsRecords.Items[i]
 	}
-
-	return nil
+	return deleteOwnedResources(ctx, r.K8sClient, &capp, resources)
 }
 
 // IsRequired is responsible to determine if resource DNSRecord is required.
@@ -121,10 +104,10 @@ func (r DNSRecordManager) createOrUpdate(ctx context.Context, capp cappv1alpha1.
 
 	dnsRecord := dnsrecordv1alpha1.CNAMERecord{}
 
-	if err := r.K8sclient.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: dnsRecordFromCapp.Name}, &dnsRecord); err != nil {
+	if err := r.K8sClient.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: dnsRecordFromCapp.Name}, &dnsRecord); err != nil {
 		if errors.IsNotFound(err) {
-			return createManagedResource(ctx, r.K8sclient, r.CreateResource, r.EventRecorder, &capp, &dnsRecordFromCapp,
-				"DNSRecord", eventCappDNSRecordCreated, eventCappDNSRecordCreationFailed)
+			return createManagedResource(ctx, r.K8sClient, r.CreateResource, r.EventRecorder, &capp, &dnsRecordFromCapp,
+				DNSRecord, eventCappDNSRecordCreated, eventCappDNSRecordCreationFailed)
 		}
 		return fmt.Errorf("failed to get DNSRecord %q: %w", dnsRecordFromCapp.Name, err)
 	}
@@ -136,37 +119,23 @@ func (r DNSRecordManager) createOrUpdate(ctx context.Context, capp cappv1alpha1.
 	if !needs {
 		return nil
 	}
-	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		latestRecord := dnsrecordv1alpha1.CNAMERecord{}
-		if err := r.K8sclient.Get(ctx, types.NamespacedName{Namespace: dnsRecord.Namespace, Name: dnsRecord.Name}, &latestRecord); err != nil {
-			return err
-		}
 
-		needs, err := r.dnsRecordNeedsUpdate(latestRecord, dnsRecordFromCapp, &capp)
-		if err != nil {
-			return err
-		}
-		if !needs {
-			return nil
-		}
+	orig := dnsRecord.DeepCopy()
+	if err := ensureOwnerReference(r.K8sClient, &capp, &dnsRecord, DNSRecord); err != nil {
+		return err
+	}
+	dnsRecord.Spec.ForProvider = *dnsRecordFromCapp.Spec.ForProvider.DeepCopy()
+	if dnsRecordFromCapp.Spec.ProviderConfigReference != nil {
+		dnsRecord.Spec.ProviderConfigReference = dnsRecordFromCapp.Spec.ProviderConfigReference.DeepCopy()
+	} else {
+		dnsRecord.Spec.ProviderConfigReference = nil
+	}
 
-		orig := latestRecord.DeepCopy()
-		if err := ensureOwnerReference(r.K8sclient, &capp, &latestRecord, "DNSRecord"); err != nil {
-			return err
-		}
-		latestRecord.Spec.ForProvider = *dnsRecordFromCapp.Spec.ForProvider.DeepCopy()
-		if dnsRecordFromCapp.Spec.ProviderConfigReference != nil {
-			latestRecord.Spec.ProviderConfigReference = dnsRecordFromCapp.Spec.ProviderConfigReference.DeepCopy()
-		} else {
-			latestRecord.Spec.ProviderConfigReference = nil
-		}
+	if !managedResourceNeedsUpdate(orig.Spec, dnsRecord.Spec, orig.OwnerReferences, dnsRecord.OwnerReferences) {
+		return nil
+	}
 
-		if !managedResourceNeedsUpdate(orig.Spec, latestRecord.Spec, orig.OwnerReferences, latestRecord.OwnerReferences) {
-			return nil
-		}
-
-		return r.UpdateResource(ctx, &latestRecord)
-	})
+	return r.UpdateResource(ctx, &dnsRecord)
 }
 
 func (r DNSRecordManager) dnsRecordNeedsUpdate(current, desired dnsrecordv1alpha1.CNAMERecord, capp *cappv1alpha1.Capp) (bool, error) {
@@ -174,7 +143,7 @@ func (r DNSRecordManager) dnsRecordNeedsUpdate(current, desired dnsrecordv1alpha
 		!equality.Semantic.DeepEqual(current.Spec.ProviderConfigReference, desired.Spec.ProviderConfigReference) {
 		return true, nil
 	}
-	ok, err := controllerutil.HasOwnerReference(current.OwnerReferences, capp, r.K8sclient.Scheme())
+	ok, err := controllerutil.HasOwnerReference(current.OwnerReferences, capp, r.K8sClient.Scheme())
 	if err != nil {
 		return false, err
 	}
@@ -184,7 +153,7 @@ func (r DNSRecordManager) dnsRecordNeedsUpdate(current, desired dnsrecordv1alpha
 // getPreviousDNSRecords returns a list of all DNSRecord objects that are related to the given Capp.
 func (r DNSRecordManager) getPreviousDNSRecords(ctx context.Context, capp cappv1alpha1.Capp) (dnsrecordv1alpha1.CNAMERecordList, error) {
 	dnsRecords := dnsrecordv1alpha1.CNAMERecordList{}
-	if err := listManagedResources(ctx, r.K8sclient, capp, &dnsRecords, "DNSRecord", labels.Set{
+	if err := listManagedResources(ctx, r.K8sClient, capp, &dnsRecords, DNSRecord, labels.Set{
 		utils.CappNamespaceKey: capp.Namespace,
 	}); err != nil {
 		return dnsRecords, err

@@ -84,6 +84,23 @@ func GetListOptions(set labels.Set) client.ListOptions {
 	return listOptions
 }
 
+// ObjectIdentityKeyVals returns key/value pairs identifying obj for structured logs.
+func ObjectIdentityKeyVals(obj client.Object) []any {
+	gvk := obj.GetObjectKind().GroupVersionKind()
+	kind := gvk.Kind
+	if kind == "" {
+		kind = "Unknown"
+	}
+	return []any{
+		"kind", kind,
+		"group", gvk.Group,
+		"version", gvk.Version,
+		"namespace", obj.GetNamespace(),
+		"name", obj.GetName(),
+		"resourceVersion", obj.GetResourceVersion(),
+	}
+}
+
 // GetResource fetches an existing resource and returns an instance of it.
 func GetResource(ctx context.Context, k8sClient client.Client, obj client.Object, name, namespace string) error {
 	if err := k8sClient.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, obj); err != nil {

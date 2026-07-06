@@ -33,7 +33,7 @@ func newKsvcScheme() *runtime.Scheme {
 func newKsvcManager(k8sClient client.Client) (KnativeServiceManager, *events.FakeRecorder) {
 	recorder := events.NewFakeRecorder(10)
 	return KnativeServiceManager{
-		ResourceManagerClient: rclient.ResourceManagerClient{K8sclient: k8sClient, Log: logr.Discard()},
+		ResourceManagerClient: rclient.ResourceManagerClient{K8sClient: k8sClient, Log: logr.Discard()},
 		EventRecorder:         recorder,
 	}, recorder
 }
@@ -57,7 +57,7 @@ func newKsvcCapp() cappv1alpha1.Capp {
 	return capp
 }
 
-func TestKnativeServicePrepareResource(t *testing.T) {
+func TestKnativeServiceManagerPrepareResource(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("filters internal annotations and propagates allowed metadata", func(t *testing.T) {
@@ -151,7 +151,7 @@ func TestKnativeServicePrepareResource(t *testing.T) {
 	})
 }
 
-func TestKnativeServiceManage(t *testing.T) {
+func TestKnativeServiceManagerManage(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("creates ksvc with owner reference when enabled", func(t *testing.T) {
@@ -161,7 +161,7 @@ func TestKnativeServiceManage(t *testing.T) {
 		require.NoError(t, km.Manage(ctx, capp))
 
 		got := &knativev1.Service{}
-		require.NoError(t, km.K8sclient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: cappNamespace}, got))
+		require.NoError(t, km.K8sClient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: cappNamespace}, got))
 		require.Len(t, got.OwnerReferences, 1)
 		require.Equal(t, cappName, got.OwnerReferences[0].Name)
 		require.Equal(t, cappName, got.Labels[utils.CappResourceKey])
@@ -178,23 +178,23 @@ func TestKnativeServiceManage(t *testing.T) {
 		require.NoError(t, km.Manage(ctx, capp))
 
 		got := &knativev1.Service{}
-		require.NoError(t, km.K8sclient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: cappNamespace}, got))
+		require.NoError(t, km.K8sClient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: cappNamespace}, got))
 		require.Equal(t, updatedContainerImage, got.Spec.Template.Spec.Containers[0].Image)
 	})
 
-	t.Run("skips update when spec is unchanged", func(t *testing.T) {
+	t.Run("skips update when unchanged", func(t *testing.T) {
 		km, _ := newKsvcManager(newFakeClient(newKsvcScheme(), newCappConfig()))
 		capp := newKsvcCapp()
 		require.NoError(t, km.Manage(ctx, capp))
 
 		before := &knativev1.Service{}
-		require.NoError(t, km.K8sclient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: cappNamespace}, before))
+		require.NoError(t, km.K8sClient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: cappNamespace}, before))
 		beforeRV := before.ResourceVersion
 
 		require.NoError(t, km.Manage(ctx, capp))
 
 		after := &knativev1.Service{}
-		require.NoError(t, km.K8sclient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: cappNamespace}, after))
+		require.NoError(t, km.K8sClient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: cappNamespace}, after))
 		require.Equal(t, beforeRV, after.ResourceVersion)
 	})
 
@@ -208,7 +208,7 @@ func TestKnativeServiceManage(t *testing.T) {
 		require.NoError(t, km.Manage(ctx, capp))
 
 		got := &knativev1.Service{}
-		getErr := km.K8sclient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: cappNamespace}, got)
+		getErr := km.K8sClient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: cappNamespace}, got)
 		require.Error(t, getErr)
 		require.True(t, errors.IsNotFound(getErr))
 
@@ -226,7 +226,7 @@ func TestKnativeServiceManage(t *testing.T) {
 		require.NoError(t, km.Manage(ctx, capp))
 
 		got := &knativev1.Service{}
-		require.NoError(t, km.K8sclient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: cappNamespace}, got))
+		require.NoError(t, km.K8sClient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: cappNamespace}, got))
 		require.Len(t, got.OwnerReferences, 1)
 		require.Equal(t, cappName, got.OwnerReferences[0].Name)
 
@@ -235,18 +235,16 @@ func TestKnativeServiceManage(t *testing.T) {
 	})
 }
 
-func TestKnativeServiceCleanUp(t *testing.T) {
+func TestKnativeServiceManagerCleanUp(t *testing.T) {
 	ctx := context.Background()
 
-	t.Run("succeeds when ksvc does not exist", func(t *testing.T) {
+	t.Run("succeeds when none exist", func(t *testing.T) {
 		km, _ := newKsvcManager(newFakeClient(newKsvcScheme()))
 		require.NoError(t, km.CleanUp(ctx, newKsvcCapp()))
 	})
 
-	t.Run("skips delete when capp is deleting and ksvc has owner reference", func(t *testing.T) {
-		capp := newKsvcCapp()
-		now := metav1.Now()
-		capp.DeletionTimestamp = &now
+	t.Run("skips delete when deleting and has owner reference", func(t *testing.T) {
+		capp := cappWithDeletionTimestamp(newKsvcCapp())
 
 		ksvc := &knativev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
@@ -260,6 +258,23 @@ func TestKnativeServiceCleanUp(t *testing.T) {
 		require.NoError(t, km.CleanUp(ctx, capp))
 
 		got := &knativev1.Service{}
-		require.NoError(t, km.K8sclient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: cappNamespace}, got))
+		require.NoError(t, km.K8sClient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: cappNamespace}, got))
+	})
+
+	t.Run("deletes when deleting and lacks owner reference", func(t *testing.T) {
+		capp := cappWithDeletionTimestamp(newKsvcCapp())
+
+		ksvc := &knativev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      cappName,
+				Namespace: cappNamespace,
+			},
+		}
+		km, _ := newKsvcManager(newFakeClient(newKsvcScheme(), ksvc))
+		require.NoError(t, km.CleanUp(ctx, capp))
+
+		got := &knativev1.Service{}
+		getErr := km.K8sClient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: cappNamespace}, got)
+		require.True(t, errors.IsNotFound(getErr))
 	})
 }

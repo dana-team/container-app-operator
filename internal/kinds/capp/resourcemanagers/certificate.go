@@ -14,11 +14,10 @@ import (
 
 	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/resourceclient"
 	"k8s.io/client-go/tools/events"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const (
-	Certificate                        = "certificate"
+	Certificate                        = "Certificate"
 	eventCappCertificateCreationFailed = "CertificateCreationFailed"
 	eventCappCertificateCreated        = "CertificateCreated"
 	PrivateKeySize                     = 4096
@@ -32,7 +31,7 @@ type CertificateManager struct {
 
 // prepareResource prepares a Certificate resource based on the provided Capp.
 func (c CertificateManager) prepareResource(ctx context.Context, capp cappv1alpha1.Capp) (cmapi.Certificate, error) {
-	dnsConfig, err := utils.GetDNSConfig(ctx, c.K8sclient)
+	dnsConfig, err := utils.GetDNSConfig(ctx, c.K8sClient)
 	if err != nil {
 		return cmapi.Certificate{}, err
 	}
@@ -81,27 +80,11 @@ func (c CertificateManager) CleanUp(ctx context.Context, capp cappv1alpha1.Capp)
 	if err != nil {
 		return err
 	}
-
-	for _, certificate := range certificates.Items {
-		if capp.DeletionTimestamp != nil {
-			ok, err := controllerutil.HasOwnerReference(certificate.OwnerReferences, &capp, c.K8sclient.Scheme())
-			if err != nil {
-				return err
-			}
-			if ok {
-				continue
-			}
-		}
-		cert := rclient.GetBareCertificate(certificate.Name, certificate.Namespace)
-		if err := c.DeleteResource(ctx, &cert); err != nil {
-			if errors.IsNotFound(err) {
-				continue
-			}
-			return err
-		}
+	resources := make([]*cmapi.Certificate, len(certificates.Items))
+	for i := range certificates.Items {
+		resources[i] = &certificates.Items[i]
 	}
-
-	return nil
+	return deleteOwnedResources(ctx, c.K8sClient, &capp, resources)
 }
 
 // IsRequired is responsible to determine if resource Certificate is required.
@@ -113,40 +96,45 @@ func (c CertificateManager) IsRequired(capp cappv1alpha1.Capp) bool {
 // If it's not, then it cleans up the resource if it exists.
 func (c CertificateManager) Manage(ctx context.Context, capp cappv1alpha1.Capp) error {
 	if c.IsRequired(capp) {
-		certificateFromCapp, err := c.prepareResource(ctx, capp)
-		if err != nil {
-			return fmt.Errorf("failed to prepare Certificate: %w", err)
-		}
-
-		certificate := cmapi.Certificate{}
-
-		if err := c.K8sclient.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: certificateFromCapp.Name}, &certificate); err != nil {
-			if errors.IsNotFound(err) {
-				return createManagedResource(ctx, c.K8sclient, c.CreateResource, c.EventRecorder, &capp, &certificateFromCapp,
-					"Certificate", eventCappCertificateCreated, eventCappCertificateCreationFailed)
-			}
-			return fmt.Errorf("failed to get Certificate %q: %w", certificateFromCapp.Name, err)
-		}
-
-		orig := certificate.DeepCopy()
-		certificate.Spec = *certificateFromCapp.Spec.DeepCopy()
-		if err := ensureOwnerReference(c.K8sclient, &capp, &certificate, "Certificate"); err != nil {
-			return err
-		}
-		if err := updateManagedResourceIfNeeded(ctx, c.UpdateResource, &certificate, orig.Spec, certificate.Spec, orig.OwnerReferences); err != nil {
-			return fmt.Errorf("update Certificate %q: %w", certificate.Name, err)
-		}
-
-		return nil
+		return c.createOrUpdate(ctx, capp)
 	}
 
 	return c.CleanUp(ctx, capp)
 }
 
+// createOrUpdate creates or updates a Certificate resource.
+func (c CertificateManager) createOrUpdate(ctx context.Context, capp cappv1alpha1.Capp) error {
+	certificateFromCapp, err := c.prepareResource(ctx, capp)
+	if err != nil {
+		return fmt.Errorf("failed to prepare Certificate: %w", err)
+	}
+
+	certificate := cmapi.Certificate{}
+
+	if err := c.K8sClient.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: certificateFromCapp.Name}, &certificate); err != nil {
+		if errors.IsNotFound(err) {
+			return createManagedResource(ctx, c.K8sClient, c.CreateResource, c.EventRecorder, &capp, &certificateFromCapp,
+				Certificate, eventCappCertificateCreated, eventCappCertificateCreationFailed)
+		}
+		return fmt.Errorf("failed to get Certificate %q: %w", certificateFromCapp.Name, err)
+	}
+
+	orig := certificate.DeepCopy()
+	certificate.Spec = *certificateFromCapp.Spec.DeepCopy()
+	if err := ensureOwnerReference(c.K8sClient, &capp, &certificate, Certificate); err != nil {
+		return err
+	}
+	if err := updateManagedResourceIfNeeded(ctx, c.UpdateResource, &certificate, orig.Spec, certificate.Spec, orig.OwnerReferences); err != nil {
+		return fmt.Errorf("update Certificate %q: %w", certificate.Name, err)
+	}
+
+	return nil
+}
+
 // getPreviousCertificates returns a list of all Certificate objects that are related to the given Capp.
 func (c CertificateManager) getPreviousCertificates(ctx context.Context, capp cappv1alpha1.Capp) (cmapi.CertificateList, error) {
 	certificates := cmapi.CertificateList{}
-	if err := listManagedResources(ctx, c.K8sclient, capp, &certificates, "Certificate", nil); err != nil {
+	if err := listManagedResources(ctx, c.K8sClient, capp, &certificates, Certificate, nil); err != nil {
 		return certificates, err
 	}
 	return certificates, nil

@@ -3,8 +3,8 @@ package status
 import (
 	"context"
 
-	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/resourceclient"
 	rmanagers "github.com/dana-team/container-app-operator/internal/kinds/capp/resourcemanagers"
+	utils "github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/go-logr/logr"
@@ -35,7 +35,7 @@ func SyncStatus(ctx context.Context, capp cappv1alpha1.Capp, log logr.Logger, r 
 
 	oldStatus := cappObject.Status.DeepCopy()
 
-	knativeServiceManager := resourceManagers[rmanagers.KnativeServing]
+	knativeServiceManager := resourceManagers[rmanagers.KnativeService]
 	knativeObjectStatus, revisionInfo, err := buildKnativeStatus(ctx, r, capp, knativeServiceManager.IsRequired(capp))
 	if err != nil {
 		return err
@@ -62,7 +62,7 @@ func SyncStatus(ctx context.Context, capp cappv1alpha1.Capp, log logr.Logger, r 
 	}
 	cappObject.Status.RouteStatus = routeStatus
 
-	nfspvcManager := resourceManagers[rmanagers.NfsPVC]
+	nfspvcManager := resourceManagers[rmanagers.NfsPvc]
 	volumesStatus, err := buildVolumesStatus(ctx, r, capp, nfspvcManager.IsRequired(capp))
 	if err != nil {
 		return err
@@ -86,7 +86,7 @@ func SyncStatus(ctx context.Context, capp cappv1alpha1.Capp, log logr.Logger, r 
 		return nil
 	}
 
-	log.Info("kubernetes API write status update", rclient.ObjectIdentityKeyVals(&cappObject)...)
+	log.Info("kubernetes API write status update", utils.ObjectIdentityKeyVals(&cappObject)...)
 	if err := r.Status().Update(ctx, &cappObject); err != nil {
 		log.Error(err, "failed to update Capp status")
 		return err
@@ -122,7 +122,7 @@ func computeReadyCondition(status *cappv1alpha1.CappStatus, capp cappv1alpha1.Ca
 		}
 	}
 
-	if resourceManagers[rmanagers.NfsPVC].IsRequired(capp) {
+	if resourceManagers[rmanagers.NfsPvc].IsRequired(capp) {
 		if reason, msg, ok := volumesNotReady(status.VolumesStatus); !ok {
 			return readyFalse(reason, msg)
 		}
