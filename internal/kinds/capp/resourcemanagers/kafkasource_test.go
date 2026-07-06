@@ -19,6 +19,7 @@ import (
 	kafkasourcev1 "knative.dev/eventing-kafka-broker/control-plane/pkg/apis/sources/v1"
 	servingv1 "knative.dev/serving/pkg/apis/serving/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 func newKafkaSourceScheme() *runtime.Scheme {
@@ -109,6 +110,62 @@ func TestKafkaSourceManagerCreateOrUpdate(t *testing.T) {
 		require.NoError(t, km.K8sClient.Get(ctx, key, got))
 		require.Equal(t, []string{topicOrders}, got.Spec.Topics)
 		require.Equal(t, "immutable-group", got.Spec.ConsumerGroup)
+	})
+}
+
+func TestKafkaSourceManagerCleanUp(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("deletes all when no DeletionTimestamp", func(t *testing.T) {
+		scheme := newKafkaSourceScheme()
+		fakeClient := newFakeClient(scheme)
+		ks := newKafkaSource(ordersA)
+		require.NoError(t, fakeClient.Create(ctx, ks))
+
+		capp := newBaseCapp()
+		km := newKafkaSourceManager(fakeClient)
+		require.NoError(t, km.CleanUp(ctx, capp))
+
+		got := &kafkasourcev1.KafkaSource{}
+		getErr := fakeClient.Get(ctx, types.NamespacedName{
+			Name: fmt.Sprintf("%s-%s", cappName, ordersA), Namespace: cappNamespace,
+		}, got)
+		require.True(t, errors.IsNotFound(getErr), "expected KafkaSource to be deleted")
+	})
+
+	t.Run("skips deletion when DeletionTimestamp set and resource has owner-ref", func(t *testing.T) {
+		scheme := newKafkaSourceScheme()
+		fakeClient := newFakeClient(scheme)
+		capp := newBaseCapp()
+		ks := newKafkaSource(ordersA)
+		require.NoError(t, controllerutil.SetOwnerReference(&capp, ks, scheme))
+		require.NoError(t, fakeClient.Create(ctx, ks))
+
+		cappDeleting := cappWithDeletionTimestamp(capp)
+		km := newKafkaSourceManager(fakeClient)
+		require.NoError(t, km.CleanUp(ctx, cappDeleting))
+
+		got := &kafkasourcev1.KafkaSource{}
+		require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{
+			Name: fmt.Sprintf("%s-%s", cappName, ordersA), Namespace: cappNamespace,
+		}, got))
+	})
+
+	t.Run("deletes when DeletionTimestamp set and resource lacks owner-ref", func(t *testing.T) {
+		scheme := newKafkaSourceScheme()
+		fakeClient := newFakeClient(scheme)
+		ks := newKafkaSource(ordersA)
+		require.NoError(t, fakeClient.Create(ctx, ks))
+
+		cappDeleting := cappWithDeletionTimestamp(newBaseCapp())
+		km := newKafkaSourceManager(fakeClient)
+		require.NoError(t, km.CleanUp(ctx, cappDeleting))
+
+		got := &kafkasourcev1.KafkaSource{}
+		getErr := fakeClient.Get(ctx, types.NamespacedName{
+			Name: fmt.Sprintf("%s-%s", cappName, ordersA), Namespace: cappNamespace,
+		}, got)
+		require.True(t, errors.IsNotFound(getErr), "expected KafkaSource to be deleted")
 	})
 }
 
