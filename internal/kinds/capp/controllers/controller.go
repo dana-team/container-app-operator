@@ -48,7 +48,6 @@ const (
 
 // CappReconciler reconciles a Capp object
 type CappReconciler struct {
-	Log logr.Logger
 	client.Client
 	Scheme        *runtime.Scheme
 	EventRecorder events.EventRecorder
@@ -292,7 +291,7 @@ func certificateConditions(conds []cmapi.CertificateCondition) []conditionPair {
 	return out
 }
 
-// findCappFromKnative maps reconciliation requests to Capp reconciliation requests.
+// findCappFromEvent maps a watched object to a Capp reconcile request by name.
 func (r *CappReconciler) findCappFromEvent(ctx context.Context, object client.Object) []reconcile.Request {
 	request := reconcile.Request{NamespacedName: types.NamespacedName{
 		Namespace: object.GetNamespace(),
@@ -327,7 +326,7 @@ func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			logger.Info(fmt.Sprintf("Didn't find Capp: %s, from the namespace: %s", capp.Name, capp.Namespace))
 			return ctrl.Result{}, nil
 		}
-		return ctrl.Result{}, fmt.Errorf("failed to get Capp: %s", err.Error())
+		return ctrl.Result{}, fmt.Errorf("failed to get Capp: %w", err)
 	}
 
 	rmClient := rclient.ResourceManagerClient{K8sClient: r.Client, Log: logger}
@@ -345,7 +344,7 @@ func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 	deleted, err := handleResourceDeletion(ctx, capp, rmClient, resourceManagers)
 	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to handle Capp deletion: %s", err.Error())
+		return ctrl.Result{}, fmt.Errorf("failed to handle Capp deletion: %w", err)
 	}
 
 	if deleted {
@@ -353,7 +352,7 @@ func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	}
 
 	if err := ensureFinalizer(ctx, capp, rmClient); err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to ensure finalizer in Capp: %s", err.Error())
+		return ctrl.Result{}, fmt.Errorf("failed to ensure finalizer in Capp: %w", err)
 	}
 
 	if err := r.SyncApplication(ctx, capp, resourceManagers, logger); err != nil {
@@ -361,7 +360,7 @@ func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			logger.Info(fmt.Sprintf("Conflict detected, requeuing: %s", err.Error()))
 			return ctrl.Result{RequeueAfter: RequeueTime}, nil
 		}
-		return ctrl.Result{}, fmt.Errorf("failed to sync Capp: %s", err.Error())
+		return ctrl.Result{}, fmt.Errorf("failed to sync Capp: %w", err)
 	}
 	return ctrl.Result{}, nil
 }
@@ -375,8 +374,5 @@ func (r *CappReconciler) SyncApplication(ctx context.Context, capp cappv1alpha1.
 		}
 	}
 
-	if err := status.SyncStatus(ctx, capp, logger, r.Client, resourceManagers); err != nil {
-		return err
-	}
-	return nil
+	return status.SyncStatus(ctx, capp, logger, r.Client, resourceManagers)
 }
