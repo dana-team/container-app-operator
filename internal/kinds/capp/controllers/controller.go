@@ -26,8 +26,6 @@ import (
 
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/status"
 
-	"github.com/dana-team/container-app-operator/internal/kinds/capp/finalizer"
-
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/events"
@@ -345,7 +343,7 @@ func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		rmanagers.KafkaSource:    rmanagers.KafkaSourceManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},
 	}
 
-	err, deleted := finalizer.HandleResourceDeletion(ctx, capp, rmClient, resourceManagers)
+	deleted, err := handleResourceDeletion(ctx, capp, rmClient, resourceManagers)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to handle Capp deletion: %s", err.Error())
 	}
@@ -354,7 +352,7 @@ func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, nil
 	}
 
-	if err := finalizer.EnsureFinalizer(ctx, capp, rmClient); err != nil {
+	if err := ensureFinalizer(ctx, capp, rmClient); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to ensure finalizer in Capp: %s", err.Error())
 	}
 

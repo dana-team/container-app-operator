@@ -1,4 +1,4 @@
-package finalizer
+package controllers
 
 import (
 	"context"
@@ -13,7 +13,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/client-go/scale/scheme"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -31,13 +30,11 @@ func newScheme() *runtime.Scheme {
 	utilruntime.Must(cappv1alpha1.AddToScheme(s))
 	utilruntime.Must(knativev1beta1.AddToScheme(s))
 	utilruntime.Must(knativev1.AddToScheme(s))
-	utilruntime.Must(scheme.AddToScheme(s))
 	return s
 }
 
 func newFakeClient() client.Client {
-	runtimeScheme := newScheme()
-	return fake.NewClientBuilder().WithScheme(runtimeScheme).Build()
+	return fake.NewClientBuilder().WithScheme(newScheme()).Build()
 }
 
 func TestEnsureFinalizer(t *testing.T) {
@@ -54,15 +51,21 @@ func TestEnsureFinalizer(t *testing.T) {
 		},
 	}
 	fakeClient := newFakeClient()
-	assert.NoError(t, fakeClient.Create(ctx, capp), "Expected no error when creating capp")
+	assert.NoError(t, fakeClient.Create(ctx, capp))
 	assert.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: nsName}, capp))
 	rmClient := rclient.ResourceManagerClient{K8sClient: fakeClient, Log: logr.Discard()}
-	assert.NoError(t, EnsureFinalizer(ctx, *capp, rmClient))
-	assert.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: nsName}, capp))
-	assert.Contains(t, capp.Finalizers, CappCleanupFinalizer)
 
-	// Check if there is no error after the finalizer exists.
-	assert.NoError(t, EnsureFinalizer(ctx, *capp, rmClient))
+	t.Run("adds finalizer when absent", func(t *testing.T) {
+		assert.NoError(t, ensureFinalizer(ctx, *capp, rmClient))
+		assert.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: nsName}, capp))
+		assert.Contains(t, capp.Finalizers, cappCleanupFinalizer)
+	})
+
+	t.Run("no-op when finalizer already present", func(t *testing.T) {
+		assert.NoError(t, ensureFinalizer(ctx, *capp, rmClient))
+		assert.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: nsName}, capp))
+		assert.Contains(t, capp.Finalizers, cappCleanupFinalizer)
+	})
 }
 
 func TestRemoveFinalizer(t *testing.T) {
@@ -77,7 +80,7 @@ func TestRemoveFinalizer(t *testing.T) {
 			Name:      cappName,
 			Namespace: nsName,
 			Finalizers: []string{
-				CappCleanupFinalizer,
+				cappCleanupFinalizer,
 			},
 		},
 	}
@@ -85,10 +88,16 @@ func TestRemoveFinalizer(t *testing.T) {
 	rmClient := rclient.ResourceManagerClient{K8sClient: fakeClient, Log: logr.Discard()}
 	assert.NoError(t, fakeClient.Create(ctx, capp))
 	assert.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: nsName}, capp))
-	assert.NoError(t, RemoveFinalizer(ctx, *capp, rmClient), "Expected no error when removing finalizer")
-	assert.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: nsName}, capp))
-	assert.NotContains(t, capp.Finalizers, CappCleanupFinalizer)
 
-	// Check if there is no error after the finalizer removed.
-	assert.NoError(t, RemoveFinalizer(ctx, *capp, rmClient))
+	t.Run("removes finalizer when present", func(t *testing.T) {
+		assert.NoError(t, removeFinalizer(ctx, *capp, rmClient))
+		assert.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: nsName}, capp))
+		assert.NotContains(t, capp.Finalizers, cappCleanupFinalizer)
+	})
+
+	t.Run("no-op when finalizer already absent", func(t *testing.T) {
+		assert.NoError(t, removeFinalizer(ctx, *capp, rmClient))
+		assert.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: nsName}, capp))
+		assert.NotContains(t, capp.Finalizers, cappCleanupFinalizer)
+	})
 }
