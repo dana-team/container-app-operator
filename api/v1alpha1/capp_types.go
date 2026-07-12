@@ -155,7 +155,7 @@ type SourceConfiguration struct {
 
 	// URI is a relative path appended to the resolved Capp Knative Service address (e.g. "/path").
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:xValidation:rule="self == null || self.startsWith('/')",message="uri must be a relative path"
+	// +kubebuilder:validation:XValidation:rule="self.startsWith('/')",message="uri must be a relative path"
 	URI *kapis.URL `json:"uri,omitempty"`
 
 	// Configuration for a PingSource.
