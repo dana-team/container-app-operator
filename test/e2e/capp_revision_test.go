@@ -24,7 +24,7 @@ var _ = Describe("Validate CappRevision creation", func() {
 	It("Should validate CappRevison lifecycle based on Capp lifecycle", func() {
 		baseCapp := mocks.CreateBaseCapp()
 		By("Creating regular Capp")
-		desiredCapp := utils.CreateCapp(k8sClient, baseCapp)
+		desiredCapp := utils.CreateCapp(Default, k8sClient, baseCapp)
 
 		Eventually(func(g Gomega) {
 			cappRevisions, err := utils.GetCappRevisions(context.Background(), k8sClient, *desiredCapp)
@@ -55,7 +55,7 @@ var _ = Describe("Validate CappRevision creation", func() {
 		utils.GetCappRevision(k8sClient, cappRevisionName, desiredCapp.Namespace)
 
 		By("Deleting Capp")
-		utils.DeleteCapp(k8sClient, desiredCapp)
+		utils.DeleteCapp(Default, k8sClient, desiredCapp)
 		Eventually(func(g Gomega) {
 			cappRevisions, err := utils.GetCappRevisions(context.Background(), k8sClient, *desiredCapp)
 			g.Expect(err).NotTo(HaveOccurred())
@@ -68,7 +68,7 @@ var _ = Describe("Validate CappRevision creation", func() {
 		baseCapp := mocks.CreateBaseCapp()
 
 		By("Creating Capp")
-		desiredCapp := utils.CreateCapp(k8sClient, baseCapp)
+		desiredCapp := utils.CreateCapp(Default, k8sClient, baseCapp)
 		desiredCapp = utils.GetCapp(k8sClient, desiredCapp.Name, desiredCapp.Namespace)
 		desiredCapp.Annotations = make(map[string]string)
 

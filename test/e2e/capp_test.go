@@ -15,13 +15,13 @@ var _ = Describe("Validate capp creation", func() {
 	It("Should default scale metric when unset", func() {
 		baseCapp := mocks.CreateBaseCapp()
 		By("Creating Capp with no scale metric")
-		desiredCapp := utils.CreateCapp(k8sClient, baseCapp)
+		desiredCapp := utils.CreateCapp(Default, k8sClient, baseCapp)
 		Expect(desiredCapp.Spec.ScaleSpec.Metric).ShouldNot(BeNil())
 	})
 
 	It("Should succeed all adapter functions", func() {
 		baseCapp := mocks.CreateBaseCapp()
-		desiredCapp := utils.CreateCapp(k8sClient, baseCapp)
+		desiredCapp := utils.CreateCapp(Default, k8sClient, baseCapp)
 
 		By("Checks unique creation of Capp")
 		assertionCapp := utils.GetCapp(k8sClient, desiredCapp.Name, desiredCapp.Namespace)
@@ -42,16 +42,16 @@ var _ = Describe("Validate capp creation", func() {
 		}, consts.Timeout, consts.Interval).Should(Equal(consts.RPSScaleMetric), "Should fetch capp.")
 
 		By("Checks if deleted successfully")
-		utils.DeleteCapp(k8sClient, assertionCapp)
-		Eventually(func() bool {
-			return utils.DoesResourceExist(k8sClient, assertionCapp)
+		utils.DeleteCapp(Default, k8sClient, assertionCapp)
+		Eventually(func() (bool, error) {
+			return utils.ResourceExists(k8sClient, assertionCapp)
 		}, consts.Timeout, consts.Interval).ShouldNot(BeTrue(), "Should not find a resource.")
 	})
 
 	It("Validate state functionality", func() {
 		By("Creating a capp instance")
 		testCapp := mocks.CreateBaseCapp()
-		createdCapp := utils.CreateCapp(k8sClient, testCapp)
+		createdCapp := utils.CreateCapp(Default, k8sClient, testCapp)
 
 		By("Checking if the capp state is enabled")
 		Eventually(func() string {
@@ -61,8 +61,8 @@ var _ = Describe("Validate capp creation", func() {
 
 		By("Checking if the ksvc was created successfully")
 		ksvcObject := mocks.CreateKnativeServiceObject(createdCapp.Name)
-		Eventually(func() bool {
-			return utils.DoesResourceExist(k8sClient, ksvcObject)
+		Eventually(func() (bool, error) {
+			return utils.ResourceExists(k8sClient, ksvcObject)
 		}, consts.Timeout, consts.Interval).Should(BeTrue(), "Should find a resource.")
 
 		By("Checking if the revision is ready")
@@ -85,12 +85,12 @@ var _ = Describe("Validate capp creation", func() {
 		}, consts.Timeout, consts.Interval).Should(Equal(consts.DisabledState))
 
 		By("Checking if the ksvc and the revision were deleted successfully")
-		Eventually(func() bool {
-			return utils.DoesResourceExist(k8sClient, ksvcObject)
+		Eventually(func() (bool, error) {
+			return utils.ResourceExists(k8sClient, ksvcObject)
 		}, consts.Timeout, consts.Interval).ShouldNot(BeTrue(), "Should not find a resource.")
-		Eventually(func() bool {
+		Eventually(func() (bool, error) {
 			revision := mocks.CreateRevisionObject(revisionName)
-			return utils.DoesResourceExist(k8sClient, revision)
+			return utils.ResourceExists(k8sClient, revision)
 		}, consts.Timeout, consts.Interval).ShouldNot(BeTrue(), "Should not find a resource.")
 
 		By("Updating the capp status to be enabled")
@@ -103,8 +103,8 @@ var _ = Describe("Validate capp creation", func() {
 		Expect(err).ToNot(HaveOccurred())
 
 		By("Checking if the ksvc was recreated successfully")
-		Eventually(func() bool {
-			return utils.DoesResourceExist(k8sClient, ksvcObject)
+		Eventually(func() (bool, error) {
+			return utils.ResourceExists(k8sClient, ksvcObject)
 		}, consts.Timeout, consts.Interval).Should(BeTrue(), "Should find a resource.")
 
 		By("Checking if the revision is ready")
@@ -115,7 +115,7 @@ var _ = Describe("Validate capp creation", func() {
 		baseCapp.Name = utils.GenerateCappName()
 
 		By("Creating Capp with no minReplicas (should default to 0)")
-		createdCapp := utils.CreateCapp(k8sClient, baseCapp)
+		createdCapp := utils.CreateCapp(Default, k8sClient, baseCapp)
 		Eventually(func() int {
 			capp := utils.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
 			return capp.Spec.ScaleSpec.MinReplicas
@@ -164,6 +164,6 @@ var _ = Describe("Validate capp creation", func() {
 		Expect(err.Error()).To(ContainSubstring("must be less than or equal to global min scale"))
 
 		By("Cleaning up")
-		utils.DeleteCapp(k8sClient, createdCapp)
+		utils.DeleteCapp(Default, k8sClient, createdCapp)
 	})
 })

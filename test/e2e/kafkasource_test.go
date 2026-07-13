@@ -19,18 +19,18 @@ const (
 	kafkaUpdatedTopic    = "payments"
 )
 
-func createCappAndWaitForKafkaSource(spec cappv1alpha1.EventSourcesSpec) (*cappv1alpha1.Capp, string) {
+func createCappAndWaitForKafkaSource(g Gomega, spec cappv1alpha1.EventSourcesSpec) (*cappv1alpha1.Capp, string) {
 	utilst.CreateSecret(k8sClient, mocks.CreateKafkaCredentialsSecret())
 	testCapp := mocks.CreateBaseCapp()
 	testCapp.Spec.EventSourcesSpec = spec
-	createdCapp := utilst.CreateCapp(k8sClient, testCapp)
+	createdCapp := utilst.CreateCapp(g, k8sClient, testCapp)
 	ksName := createdCapp.Name + "-" + spec.Sources[0].Name
 
 	ksObj := &kafkasourcev1.KafkaSource{}
 	ksObj.Name = ksName
 	ksObj.Namespace = consts.NSName
-	Eventually(func() bool {
-		return utilst.DoesResourceExist(k8sClient, ksObj)
+	Eventually(func() (bool, error) {
+		return utilst.ResourceExists(k8sClient, ksObj)
 	}, consts.Timeout, consts.Interval).Should(BeTrue())
 
 	return createdCapp, ksName
@@ -53,7 +53,7 @@ func newEventSourceSpec() cappv1alpha1.EventSourcesSpec {
 
 var _ = Describe("Validate KafkaSource functionality", func() {
 	It("Should create a KafkaSource when adding a Kafka event source to a Capp", func() {
-		createdCapp, ksName := createCappAndWaitForKafkaSource(newEventSourceSpec())
+		createdCapp, ksName := createCappAndWaitForKafkaSource(Default, newEventSourceSpec())
 
 		By("Verifying EventingStatus is populated with the source")
 		Eventually(func(g Gomega) {
@@ -64,7 +64,7 @@ var _ = Describe("Validate KafkaSource functionality", func() {
 	})
 
 	It("Should update the KafkaSource when the Capp event source spec changes", func() {
-		createdCapp, ksName := createCappAndWaitForKafkaSource(newEventSourceSpec())
+		createdCapp, ksName := createCappAndWaitForKafkaSource(Default, newEventSourceSpec())
 
 		By("Updating the Capp KafkaSource topics")
 		err := retry.RetryOnConflict(utilst.NewRetryOnConflictBackoff(), func() error {
@@ -83,7 +83,7 @@ var _ = Describe("Validate KafkaSource functionality", func() {
 	})
 
 	It("Should delete the KafkaSource when the event source is removed from the Capp spec", func() {
-		createdCapp, ksName := createCappAndWaitForKafkaSource(newEventSourceSpec())
+		createdCapp, ksName := createCappAndWaitForKafkaSource(Default, newEventSourceSpec())
 
 		By("Removing all event sources from Capp spec")
 		err := retry.RetryOnConflict(utilst.NewRetryOnConflictBackoff(), func() error {
@@ -97,8 +97,8 @@ var _ = Describe("Validate KafkaSource functionality", func() {
 		ksObj := &kafkasourcev1.KafkaSource{}
 		ksObj.Name = ksName
 		ksObj.Namespace = consts.NSName
-		Eventually(func() bool {
-			return utilst.DoesResourceExist(k8sClient, ksObj)
+		Eventually(func() (bool, error) {
+			return utilst.ResourceExists(k8sClient, ksObj)
 		}, consts.Timeout, consts.Interval).Should(BeFalse())
 
 		By("Verifying EventingStatus is cleared")

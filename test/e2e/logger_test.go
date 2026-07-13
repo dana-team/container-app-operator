@@ -51,7 +51,7 @@ func testCappWithLogger(logType cappv1alpha1.LogType) {
 		utils.CreateCredentialsSecret(logType, k8sClient)
 
 		By(fmt.Sprintf("Creating a Capp with %s logger", logType))
-		createdCapp := utils.CreateCappWithLogger(logType, k8sClient)
+		createdCapp := utils.CreateCappWithLogger(Default, logType, k8sClient)
 
 		syslogNGOutputName := createdCapp.Name
 		syslogNGOutputObject := mocks.CreateSyslogNGOutputObject(syslogNGOutputName)
@@ -79,8 +79,8 @@ func testCappWithLogger(logType cappv1alpha1.LogType) {
 		syslogNGFlowName := createdCapp.Name
 		syslogNGFlowObject := mocks.CreateSyslogNGFlowObject(syslogNGFlowName)
 
-		Eventually(func() bool {
-			return utils.DoesResourceExist(k8sClient, syslogNGFlowObject)
+		Eventually(func() (bool, error) {
+			return utils.ResourceExists(k8sClient, syslogNGFlowObject)
 		}, consts.Timeout, consts.Interval).Should(BeTrue(), "Should find a resource.")
 
 		By("Checking the SyslogNGFlow has the needed labels")
@@ -109,19 +109,19 @@ func testCappWithLogger(logType cappv1alpha1.LogType) {
 		checkOutputParameters(logType, syslogNGOutputName, createdCapp.Namespace, consts.TestIndex, consts.ElasticDataStreamURL)
 
 		By("Deleting the Capp instance")
-		utils.DeleteCapp(k8sClient, createdCapp)
-		Eventually(func() bool {
-			return utils.DoesResourceExist(k8sClient, createdCapp)
+		utils.DeleteCapp(Default, k8sClient, createdCapp)
+		Eventually(func() (bool, error) {
+			return utils.ResourceExists(k8sClient, createdCapp)
 		}, consts.Timeout, consts.Interval).ShouldNot(BeTrue(), "Should not find a resource.")
 
 		By("Checking if the SyslogNGOutput was deleted successfully")
-		Eventually(func() bool {
-			return utils.DoesResourceExist(k8sClient, syslogNGOutputObject)
+		Eventually(func() (bool, error) {
+			return utils.ResourceExists(k8sClient, syslogNGOutputObject)
 		}, consts.Timeout, consts.Interval).ShouldNot(BeTrue(), "Should not find a resource.")
 
 		By("Checking if the SyslogNGFlow was deleted successfully")
-		Eventually(func() bool {
-			return utils.DoesResourceExist(k8sClient, syslogNGFlowObject)
+		Eventually(func() (bool, error) {
+			return utils.ResourceExists(k8sClient, syslogNGFlowObject)
 		}, consts.Timeout, consts.Interval).ShouldNot(BeTrue(), "Should not find a resource.")
 	})
 
@@ -130,7 +130,7 @@ func testCappWithLogger(logType cappv1alpha1.LogType) {
 		utils.CreateCredentialsSecret(logType, k8sClient)
 
 		By(fmt.Sprintf("Creating a Capp with %s logger", logType))
-		createdCapp := utils.CreateCappWithLogger(logType, k8sClient)
+		createdCapp := utils.CreateCappWithLogger(Default, logType, k8sClient)
 
 		By("Checking if the SyslogNGFlow and SyslogNGOutput were created successfully")
 		syslogNGFlowName := createdCapp.Name
@@ -139,12 +139,12 @@ func testCappWithLogger(logType cappv1alpha1.LogType) {
 		syslogNGOutputName := createdCapp.Name
 		syslogNGOutputObject := mocks.CreateSyslogNGOutputObject(syslogNGOutputName)
 
-		Eventually(func() bool {
-			return utils.DoesResourceExist(k8sClient, syslogNGFlowObject)
+		Eventually(func() (bool, error) {
+			return utils.ResourceExists(k8sClient, syslogNGFlowObject)
 		}, consts.Timeout, consts.Interval).Should(BeTrue(), "Should find a resource.")
 
-		Eventually(func() bool {
-			return utils.DoesResourceExist(k8sClient, syslogNGOutputObject)
+		Eventually(func() (bool, error) {
+			return utils.ResourceExists(k8sClient, syslogNGOutputObject)
 		}, consts.Timeout, consts.Interval).Should(BeTrue(), "Should find a resource.")
 
 		By("Removing the logging requirement from Capp Spec and checking cleanup")
@@ -156,12 +156,12 @@ func testCappWithLogger(logType cappv1alpha1.LogType) {
 		})
 		Expect(err).ToNot(HaveOccurred())
 
-		Eventually(func() bool {
-			return utils.DoesResourceExist(k8sClient, syslogNGFlowObject)
+		Eventually(func() (bool, error) {
+			return utils.ResourceExists(k8sClient, syslogNGFlowObject)
 		}, consts.Timeout, consts.Interval).Should(BeFalse(), "Should not find a resource.")
 
-		Eventually(func() bool {
-			return utils.DoesResourceExist(k8sClient, syslogNGOutputObject)
+		Eventually(func() (bool, error) {
+			return utils.ResourceExists(k8sClient, syslogNGOutputObject)
 		}, consts.Timeout, consts.Interval).Should(BeFalse(), "Should not find a resource.")
 	})
 }

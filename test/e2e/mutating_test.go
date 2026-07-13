@@ -25,7 +25,7 @@ var _ = Describe("Validate the mutating webhook", func() {
 
 	It("Should add annotation on create", func() {
 		baseCapp := mock.CreateBaseCapp()
-		capp := utils.CreateCapp(k8sClient, baseCapp)
+		capp := utils.CreateCapp(Default, k8sClient, baseCapp)
 
 		annotation := capp.ObjectMeta.Annotations[consts.LastUpdatedByAnnotationKey]
 		Expect(annotation).To(Equal(adminAnnotationValue))
@@ -33,7 +33,7 @@ var _ = Describe("Validate the mutating webhook", func() {
 
 	It("Should add annotation on update", func() {
 		baseCapp := mock.CreateBaseCapp()
-		capp := utils.CreateCapp(k8sClient, baseCapp)
+		capp := utils.CreateCapp(Default, k8sClient, baseCapp)
 
 		annotation := capp.ObjectMeta.Annotations[consts.LastUpdatedByAnnotationKey]
 		Expect(annotation).To(Equal(adminAnnotationValue))
@@ -59,7 +59,7 @@ var _ = Describe("Validate the mutating webhook", func() {
 
 	It("Should add default resources to Capp", func() {
 		baseCapp := mock.CreateBaseCapp()
-		capp := utils.CreateCapp(k8sClient, baseCapp)
+		capp := utils.CreateCapp(Default, k8sClient, baseCapp)
 
 		cpuRequest := capp.Spec.ConfigurationSpec.Template.Spec.Containers[0].Resources.Requests.Cpu()
 		Expect(cpuRequest.String()).ToNot(Equal(""))
@@ -80,7 +80,7 @@ var _ = Describe("Validate the mutating webhook", func() {
 				corev1.ResourceMemory: resource.MustParse("23Mi"),
 			},
 		}
-		capp := utils.CreateCapp(k8sClient, baseCapp)
+		capp := utils.CreateCapp(Default, k8sClient, baseCapp)
 
 		cpuRequest := capp.Spec.ConfigurationSpec.Template.Spec.Containers[0].Resources.Requests.Cpu()
 		Expect(cpuRequest.String()).To(Equal("23m"))
