@@ -8697,6 +8697,9 @@ spec:
                           description: URI is a relative path appended to the resolved
                             Capp Knative Service address (e.g. "/path").
                           type: string
+                          x-kubernetes-validations:
+                          - message: uri must be a relative path
+                            rule: self.startsWith('/')
                       required:
                       - name
                       type: object
