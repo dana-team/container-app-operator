@@ -51,8 +51,8 @@ var _ = Describe("Validate NFSPVC functionality", func() {
 
 		By("Checking if the NFSPVC was created successfully")
 		nfspvcObject := mocks.CreateNFSPVCObject(nfspvcName)
-		Eventually(func() bool {
-			return utils.DoesResourceExist(k8sClient, nfspvcObject)
+		Eventually(func() (bool, error) {
+			return utils.ResourceExists(k8sClient, nfspvcObject)
 		}, consts.Timeout, consts.Interval).Should(BeTrue(), "Should find a resource.")
 
 		By("Checking the NFSPVC has the needed labels")
@@ -61,9 +61,9 @@ var _ = Describe("Validate NFSPVC functionality", func() {
 		Expect(nfspvcObject.Labels[consts.ManagedByLabelKey]).Should(Equal(consts.CappKey))
 
 		By("Deleting the Capp instance")
-		utils.DeleteCapp(k8sClient, testCapp)
-		Eventually(func() bool {
-			return utils.DoesResourceExist(k8sClient, nfspvcObject)
+		utils.DeleteCapp(Default, k8sClient, testCapp)
+		Eventually(func() (bool, error) {
+			return utils.ResourceExists(k8sClient, nfspvcObject)
 		}, consts.Timeout, consts.Interval).Should(BeFalse(), "Should find a resource.")
 	})
 })

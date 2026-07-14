@@ -13,13 +13,13 @@ import (
 var _ = Describe("Validate DomainMapping functionality", func() {
 	It("Should create, update and delete DomainMapping when creating, updating and deleting a Capp instance", func() {
 		By("Creating a capp with a route")
-		createdCapp, routeHostname := utils.CreateCappWithHTTPHostname(k8sClient)
+		createdCapp, routeHostname := utils.CreateCappWithHTTPHostname(Default, k8sClient)
 
 		By("Checking if the domainMapping was created successfully")
 		domainMappingName := utils.GenerateResourceName(routeHostname, consts.ZoneValue)
 		domainMappingObject := mocks.CreateDomainMappingObject(domainMappingName)
-		Eventually(func() bool {
-			return utils.DoesResourceExist(k8sClient, domainMappingObject)
+		Eventually(func() (bool, error) {
+			return utils.ResourceExists(k8sClient, domainMappingObject)
 		}, consts.Timeout, consts.Interval).Should(BeTrue(), "Should find a resource.")
 
 		By("Checking the domainMapping has the needed labels")
@@ -55,28 +55,28 @@ var _ = Describe("Validate DomainMapping functionality", func() {
 		}, consts.Timeout, consts.Interval).Should(Equal(createdCapp.Name), "Should keep DomainMapping after route timeout update")
 
 		By("Deleting the Capp instance")
-		utils.DeleteCapp(k8sClient, createdCapp)
-		Eventually(func() bool {
-			return utils.DoesResourceExist(k8sClient, createdCapp)
+		utils.DeleteCapp(Default, k8sClient, createdCapp)
+		Eventually(func() (bool, error) {
+			return utils.ResourceExists(k8sClient, createdCapp)
 		}, consts.Timeout, consts.Interval).ShouldNot(BeTrue(), "Should not find a resource.")
 
 		By("Checking if the domainMapping was deleted successfully")
-		Eventually(func() bool {
-			return utils.DoesResourceExist(k8sClient, domainMappingObject)
+		Eventually(func() (bool, error) {
+			return utils.ResourceExists(k8sClient, domainMappingObject)
 		}, consts.Timeout, consts.Interval).ShouldNot(BeTrue(), "Should not find a resource.")
 	})
 
 	It("Should create DomainMapping with secret when Creating an HTTPS Capp instance", func() {
 		By("Creating an HTTP Capp")
-		createdCapp, routeHostname := utils.CreateCappWithHTTPHostname(k8sClient)
+		createdCapp, routeHostname := utils.CreateCappWithHTTPHostname(Default, k8sClient)
 
 		By("Making sure the tls secret exists in advance")
 		resourceName := utils.GenerateResourceName(routeHostname, consts.ZoneValue)
 		secretName := utils.GenerateCertSecretName(resourceName)
 		secretObject := mocks.CreateSecretObject(secretName)
 		utils.CreateSecret(k8sClient, secretObject)
-		Eventually(func() bool {
-			return utils.DoesResourceExist(k8sClient, secretObject)
+		Eventually(func() (bool, error) {
+			return utils.ResourceExists(k8sClient, secretObject)
 		}, consts.Timeout, consts.Interval).Should(BeTrue(), "Should find a resource.")
 
 		By("Changing Capp to be HTTPS")
@@ -101,7 +101,7 @@ var _ = Describe("Validate DomainMapping functionality", func() {
 
 	It("Should update the RouteStatus of the Capp accordingly", func() {
 		By("Creating a capp with a route")
-		createdCapp, routeHostname := utils.CreateCappWithHTTPHostname(k8sClient)
+		createdCapp, routeHostname := utils.CreateCappWithHTTPHostname(Default, k8sClient)
 
 		domainMappingName := utils.GenerateResourceName(routeHostname, consts.ZoneValue)
 		By("Checking if the RouteStatus of the Capp was updated successfully")

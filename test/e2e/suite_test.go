@@ -69,8 +69,8 @@ func createE2ETestNamespace() {
 	}
 
 	Expect(k8sClient.Create(context.Background(), namespace)).To(SatisfyAny(BeNil(), WithTransform(errors.IsAlreadyExists, BeTrue())))
-	Eventually(func() bool {
-		return utils.DoesResourceExist(k8sClient, namespace)
+	Eventually(func() (bool, error) {
+		return utils.ResourceExists(k8sClient, namespace)
 	}, consts.Timeout, consts.Interval).Should(BeTrue(), "The namespace should be created")
 }
 
@@ -82,7 +82,7 @@ func cleanUp() {
 		},
 	}
 
-	if utils.DoesResourceExist(k8sClient, namespace) {
+	if exists, err := utils.ResourceExists(k8sClient, namespace); err == nil && exists {
 		Expect(k8sClient.Delete(context.Background(), namespace)).To(Succeed())
 		Eventually(func() error {
 			return k8sClient.Get(context.Background(), client.ObjectKey{Name: consts.NSName}, namespace)

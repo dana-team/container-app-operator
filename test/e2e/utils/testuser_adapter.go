@@ -7,6 +7,7 @@ import (
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/dana-team/container-app-operator/test/e2e/consts"
 	mock "github.com/dana-team/container-app-operator/test/e2e/mocks"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -19,12 +20,14 @@ import (
 
 // CreateTestUser creates a test user with the specified Kubernetes client and namespace.
 func CreateTestUser(k8sClient client.Client, namespace string) {
+	GinkgoHelper()
 	createTestUserServiceAccount(k8sClient)
 	createTestUserRoleAndRoleBinding(k8sClient, namespace)
 }
 
 // CreateExcludedServiceAccount configures a service account that should be excluded from the mutating webhook.
 func CreateExcludedServiceAccount(k8sClient client.Client) {
+	GinkgoHelper()
 	createUserServiceAccount(k8sClient, consts.ExcludedServiceAccountName, consts.ExcludedServiceAccountNamespace)
 	createUserRoleAndRoleBinding(k8sClient, consts.ExcludedServiceAccountName, consts.ExcludedServiceAccountNamespace)
 }
@@ -32,6 +35,7 @@ func CreateExcludedServiceAccount(k8sClient client.Client) {
 // SwitchUser switches the Kubernetes client's user context to the given serviceAccountName if it's not empty.
 // If serviceAccountName is empty, it reverts to the original context.
 func SwitchUser(k8sClient *client.Client, cfg *rest.Config, namespace string, scheme *runtime.Scheme, serviceAccountName string) {
+	GinkgoHelper()
 	cfg.Impersonate = rest.ImpersonationConfig{}
 	if serviceAccountName != "" {
 		cfg.Impersonate = rest.ImpersonationConfig{
@@ -48,23 +52,27 @@ func SwitchUser(k8sClient *client.Client, cfg *rest.Config, namespace string, sc
 
 // DeleteTestUser deletes the test user created in the specified namespace.
 func DeleteTestUser(k8sClient client.Client, namespace string) {
+	GinkgoHelper()
 	deleteUserRoleAndRoleBinding(k8sClient, consts.ServiceAccountName, namespace)
 	deleteTestUserServiceAccount(k8sClient, namespace)
 }
 
 // DeleteExcludedServiceAccount deletes the excluded user created in the specified namespace.
 func DeleteExcludedServiceAccount(k8sClient client.Client) {
+	GinkgoHelper()
 	deleteUserRoleAndRoleBinding(k8sClient, consts.ExcludedServiceAccountName, consts.ExcludedServiceAccountNamespace)
 	deleteUserServiceAccount(k8sClient, consts.ExcludedServiceAccountName, consts.ExcludedServiceAccountNamespace)
 }
 
 // createTestUserServiceAccount creates a service account for the test user in the specified namespace.
 func createTestUserServiceAccount(k8sClient client.Client) {
+	GinkgoHelper()
 	createUserServiceAccount(k8sClient, consts.ServiceAccountName, "")
 }
 
 // createUserServiceAccount creates a service account for the test user in the specified namespace.
 func createUserServiceAccount(k8sClient client.Client, serviceAccountName, namespace string) {
+	GinkgoHelper()
 	serviceAccount := mock.CreateServiceAccount(serviceAccountName, namespace)
 
 	err := k8sClient.Create(context.Background(), serviceAccount)
@@ -73,11 +81,13 @@ func createUserServiceAccount(k8sClient client.Client, serviceAccountName, names
 
 // createTestUserRoleAndRoleBinding creates a role and role binding for the test user in the specified namespace.
 func createTestUserRoleAndRoleBinding(k8sClient client.Client, namespace string) {
+	GinkgoHelper()
 	createUserRoleAndRoleBinding(k8sClient, consts.ServiceAccountName, namespace)
 }
 
 // createUserRoleAndRoleBinding creates a role and role binding for a user in the specified namespace.
 func createUserRoleAndRoleBinding(k8sClient client.Client, serviceAccountName, namespace string) {
+	GinkgoHelper()
 	rules := []rbacv1.PolicyRule{
 		{
 			APIGroups: []string{cappv1alpha1.GroupVersion.Group},
@@ -113,11 +123,13 @@ func createUserRoleAndRoleBinding(k8sClient client.Client, serviceAccountName, n
 
 // deleteTestUserServiceAccount deletes the service account of the test user in the specified namespace.
 func deleteTestUserServiceAccount(k8sClient client.Client, namespace string) {
+	GinkgoHelper()
 	deleteUserServiceAccount(k8sClient, consts.ServiceAccountName, namespace)
 }
 
 // deleteUserServiceAccount deletes the service account of a user in the specified namespace.
 func deleteUserServiceAccount(k8sClient client.Client, serviceAccountName, namespace string) {
+	GinkgoHelper()
 	serviceAccount := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      serviceAccountName,
@@ -130,6 +142,7 @@ func deleteUserServiceAccount(k8sClient client.Client, serviceAccountName, names
 
 // deleteUserRoleAndRoleBinding deletes the role and role binding of a user in the specified namespace.
 func deleteUserRoleAndRoleBinding(k8sClient client.Client, serviceAccountName, namespace string) {
+	GinkgoHelper()
 	roleBinding := &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      serviceAccountName,

@@ -14,13 +14,13 @@ import (
 var _ = Describe("Validate DNSRecord functionality", func() {
 	It("Should create, update and delete DNSRecord when creating, updating and deleting a Capp instance", func() {
 		By("Creating a capp with a route")
-		createdCapp, _ := utils.CreateCappWithHTTPHostname(k8sClient)
+		createdCapp, _ := utils.CreateCappWithHTTPHostname(Default, k8sClient)
 
 		By("Checking if the DNSRecord was created successfully")
 		dnsRecordName := utils.GenerateResourceName(createdCapp.Spec.RouteSpec.Hostname, consts.ZoneValue)
 		dnsRecordObject := mocks.CreateDNSRecordObject(dnsRecordName)
-		Eventually(func() bool {
-			return utils.DoesResourceExist(k8sClient, dnsRecordObject)
+		Eventually(func() (bool, error) {
+			return utils.ResourceExists(k8sClient, dnsRecordObject)
 		}, consts.Timeout, consts.Interval).Should(BeTrue(), "Should find a resource.")
 
 		By("Checking the DNSRecord has the needed labels")
@@ -45,26 +45,26 @@ var _ = Describe("Validate DNSRecord functionality", func() {
 		}, consts.Timeout, consts.Interval).Should(Equal(&createdCapp.Spec.RouteSpec.Hostname))
 
 		By("Deleting the Capp instance")
-		utils.DeleteCapp(k8sClient, createdCapp)
-		Eventually(func() bool {
-			return utils.DoesResourceExist(k8sClient, createdCapp)
+		utils.DeleteCapp(Default, k8sClient, createdCapp)
+		Eventually(func() (bool, error) {
+			return utils.ResourceExists(k8sClient, createdCapp)
 		}, consts.Timeout, consts.Interval).ShouldNot(BeTrue(), "Should not find a resource.")
 
 		By("Checking if the DNSRecord was deleted successfully")
-		Eventually(func() bool {
-			return utils.DoesResourceExist(k8sClient, dnsRecordObject)
+		Eventually(func() (bool, error) {
+			return utils.ResourceExists(k8sClient, dnsRecordObject)
 		}, consts.Timeout, consts.Interval).ShouldNot(BeTrue(), "Should not find a resource.")
 	})
 
 	It("Should not update DNSRecord when only Capp metadata changes", func() {
 		By("Creating a capp with a route")
-		createdCapp, _ := utils.CreateCappWithHTTPHostname(k8sClient)
+		createdCapp, _ := utils.CreateCappWithHTTPHostname(Default, k8sClient)
 
 		By("Checking if the DNSRecord was created successfully")
 		dnsRecordName := utils.GenerateResourceName(createdCapp.Spec.RouteSpec.Hostname, consts.ZoneValue)
 		dnsRecordObject := mocks.CreateDNSRecordObject(dnsRecordName)
-		Eventually(func() bool {
-			return utils.DoesResourceExist(k8sClient, dnsRecordObject)
+		Eventually(func() (bool, error) {
+			return utils.ResourceExists(k8sClient, dnsRecordObject)
 		}, consts.Timeout, consts.Interval).Should(BeTrue(), "Should find a resource.")
 
 		By("Simulating external mutation of DNSRecord spec")

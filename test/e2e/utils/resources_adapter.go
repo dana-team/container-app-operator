@@ -30,22 +30,28 @@ func generateRandomString(length int) string {
 	return string(b)
 }
 
-// DoesResourceExist checks if a given Kubernetes object exists in the cluster.
-func DoesResourceExist(k8sClient client.Client, obj client.Object) bool {
+// ResourceExists checks if a given Kubernetes object exists in the cluster.
+// Returns (false, nil) when the object is not found, and (false, err) on any other API error.
+func ResourceExists(k8sClient client.Client, obj client.Object) (bool, error) {
 	copyObject := obj.DeepCopyObject().(client.Object)
 	key := client.ObjectKeyFromObject(copyObject)
 	err := k8sClient.Get(context.Background(), key, copyObject)
 	if errors.IsNotFound(err) {
-		return false
+		return false, nil
 	} else if err != nil {
-		Fail(fmt.Sprintf("The function failed with error: \n %s", err.Error()))
+		return false, err
 	}
-	return true
+	return true, nil
 }
 
-// GetResource fetches an existing resource and returns an instance of it.
+// GetResource fetches a resource into obj. NotFound is silently ignored so the
+// caller receives a zero-value obj; any other API error fails the test.
 func GetResource(k8sClient client.Client, obj client.Object, name, namespace string) {
-	Expect(k8sClient.Get(context.Background(), client.ObjectKey{Name: name, Namespace: namespace}, obj))
+	GinkgoHelper()
+	err := k8sClient.Get(context.Background(), client.ObjectKey{Name: name, Namespace: namespace}, obj)
+	if !errors.IsNotFound(err) {
+		Expect(err).ToNot(HaveOccurred())
+	}
 }
 
 // generateName generates a new name by combining the given baseName
@@ -57,6 +63,7 @@ func generateName(baseName string) string {
 
 // GetSecret fetches and returns an existing instance of a Secret.
 func GetSecret(k8sClient client.Client, name string, namespace string) *corev1.Secret {
+	GinkgoHelper()
 	secret := &corev1.Secret{}
 	GetResource(k8sClient, secret, name, namespace)
 	return secret
@@ -64,6 +71,7 @@ func GetSecret(k8sClient client.Client, name string, namespace string) *corev1.S
 
 // GetCappConfig fetches and returns an existing instance of an existing cappConfig
 func GetCappConfig(k8sClient client.Client, name string, namespace string) *cappv1alpha1.CappConfig {
+	GinkgoHelper()
 	cappConfig := &cappv1alpha1.CappConfig{}
 	GetResource(k8sClient, cappConfig, name, namespace)
 	return cappConfig
@@ -93,6 +101,7 @@ func UpdateResource(k8sClient client.Client, object client.Object) error {
 
 // CreateSecret creates a new secret, ignoring AlreadyExists errors.
 func CreateSecret(k8sClient client.Client, secret *corev1.Secret) {
+	GinkgoHelper()
 	err := k8sClient.Create(context.Background(), secret)
 	if err != nil && !errors.IsAlreadyExists(err) {
 		Expect(err).ToNot(HaveOccurred())

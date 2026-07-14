@@ -4,11 +4,12 @@ import (
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	mock "github.com/dana-team/container-app-operator/test/e2e/mocks"
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
+	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // CreateCappWithLogger creates a Capp instance with the specified logger type and returns the created Capp object.
-func CreateCappWithLogger(logType cappv1alpha1.LogType, k8sClient client.Client) *cappv1alpha1.Capp {
+func CreateCappWithLogger(g Gomega, logType cappv1alpha1.LogType, k8sClient client.Client) *cappv1alpha1.Capp {
 	capp := mock.CreateBaseCapp()
 	switch logType {
 	case cappv1alpha1.LogTypeElastic:
@@ -16,7 +17,7 @@ func CreateCappWithLogger(logType cappv1alpha1.LogType, k8sClient client.Client)
 	case cappv1alpha1.LogTypeElasticDataStream:
 		capp.Spec.LogSpec = mock.CreateElasticDataStreamLogSpec()
 	}
-	return CreateCapp(k8sClient, capp)
+	return CreateCapp(g, k8sClient, capp)
 }
 
 // CreateCredentialsSecret creates a Kubernetes secret containing credentials for the specified logger type.
