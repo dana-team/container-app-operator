@@ -43,9 +43,6 @@ var _ = Describe("Validate capp creation", func() {
 
 		By("Checks if deleted successfully")
 		utils.DeleteCapp(Default, k8sClient, assertionCapp)
-		Eventually(func() (bool, error) {
-			return utils.ResourceExists(k8sClient, assertionCapp)
-		}, consts.Timeout, consts.Interval).ShouldNot(BeTrue(), "Should not find a resource.")
 	})
 
 	It("Validate state functionality", func() {

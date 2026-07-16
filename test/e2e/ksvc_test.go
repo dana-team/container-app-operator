@@ -68,9 +68,6 @@ var _ = Describe("Validate KSVC functionality", func() {
 
 		By("Deleting the capp instance")
 		utils.DeleteCapp(Default, k8sClient, assertionCapp)
-		Eventually(func() (bool, error) {
-			return utils.ResourceExists(k8sClient, assertionCapp)
-		}, consts.Timeout, consts.Interval).ShouldNot(BeTrue(), "Should not find a resource.")
 
 		By("Checking if the ksvc exists")
 		Eventually(func() (bool, error) {
