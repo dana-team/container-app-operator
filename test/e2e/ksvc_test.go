@@ -140,23 +140,6 @@ var _ = Describe("Validate KSVC functionality", func() {
 		verifyLatestReadyRevision(createdCapp.Name, createdCapp.Namespace, latestReadyRevisionBeforeUpdate)
 	})
 
-	It("Should create capp with autoscale annotation. The default annotation in the ksvc should be overridden", func() {
-		By("Creating a capp instance")
-		testCapp := mocks.CreateBaseCapp()
-		annotations := map[string]string{
-			autoscaling.TargetAnnotationKey: "666",
-		}
-		testCapp.Spec.ConfigurationSpec.Template.Annotations = annotations
-		createdCapp := utils.CreateCapp(Default, k8sClient, testCapp)
-		assertionCapp := utils.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-
-		By("Checking if the ksvc's defaults annotations were overridden")
-		Eventually(func() string {
-			ksvc := utils.GetKSVC(k8sClient, assertionCapp.Name, assertionCapp.Namespace)
-			return ksvc.Spec.ConfigurationSpec.Template.Annotations[autoscaling.TargetAnnotationKey]
-		}, consts.Timeout, consts.Interval).Should(Equal("666"))
-	})
-
 	It("Should check the default ksvc annotation is equal to the cappConfig's concurrency value", func() {
 		By("Creating a capp instance")
 		testCapp := mocks.CreateBaseCapp()

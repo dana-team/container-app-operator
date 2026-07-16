@@ -19,6 +19,7 @@ import (
 	kafkasecurity "knative.dev/eventing-kafka-broker/control-plane/pkg/security"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	kautoscaling "knative.dev/serving/pkg/apis/autoscaling"
 	servingv1 "knative.dev/serving/pkg/apis/serving/v1"
 
 	"github.com/go-logr/logr"
@@ -102,6 +103,10 @@ func (c *CappValidator) handle(ctx context.Context, operation admissionv1.Operat
 	}
 
 	if err := validateEventSources(ctx, c.Client, capp, config.Spec.MaxKafkaConsumers); err != nil {
+		return admission.Denied(err.Error())
+	}
+
+	if err := validateTemplateAnnotations(capp); err != nil {
 		return admission.Denied(err.Error())
 	}
 
@@ -206,6 +211,16 @@ func validateEventSources(ctx context.Context, r client.Reader, capp cappv1alpha
 			if err := common.ValidateURI(src.URI); err != nil {
 				return fmt.Errorf("%s[%d].uri: %w", eventSourcePath, i, err)
 			}
+		}
+	}
+	return nil
+}
+
+func validateTemplateAnnotations(capp cappv1alpha1.Capp) error {
+	prefix := kautoscaling.GroupName + "/"
+	for key := range capp.Spec.ConfigurationSpec.Template.Annotations {
+		if strings.HasPrefix(key, prefix) {
+			return fmt.Errorf("forbidden annotation %q in template annotations: autoscaling annotations are derived by the operator and cannot be set directly", key)
 		}
 	}
 	return nil
