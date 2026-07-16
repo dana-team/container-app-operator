@@ -77,6 +77,11 @@ spec:
                     description: CPU is the desired CPU utilization to trigger upscaling.
                     minimum: 1
                     type: integer
+                  maxReplicasLimit:
+                    description: MaxReplicasLimit is the global maximum scale (maximum
+                      allowed value for maxReplicas).
+                    minimum: 1
+                    type: integer
                   maxScaleDelay:
                     default: 3600
                     description: MaxScaleDelay is the maximum delay in seconds before
@@ -102,6 +107,7 @@ spec:
                 - activationScale
                 - concurrency
                 - cpu
+                - maxReplicasLimit
                 - maxScaleDelay
                 - memory
                 - minReplicasLimit
