@@ -519,6 +519,44 @@ func TestValidateKafkaSourceConsumers(t *testing.T) {
 	}
 }
 
+func TestValidateTemplateAnnotations(t *testing.T) {
+	forbiddenKey := knativeautoscaling.GroupName + "/minScale"
+
+	tests := []struct {
+		name            string
+		annotations     map[string]string
+		wantErrContains []string
+	}{
+		{
+			name:        "allows capp with non-autoscaling annotations",
+			annotations: map[string]string{"app.example.com/foo": "bar"},
+		},
+		{
+			name:            "rejects capp with autoscaling annotation",
+			annotations:     map[string]string{forbiddenKey: "3"},
+			wantErrContains: []string{"forbidden annotation", forbiddenKey},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			capp := cappv1alpha1.Capp{}
+			capp.Spec.ConfigurationSpec.Template.Annotations = tc.annotations
+
+			err := validateTemplateAnnotations(capp)
+			if len(tc.wantErrContains) == 0 {
+				require.NoError(t, err)
+				return
+			}
+
+			require.Error(t, err)
+			for _, s := range tc.wantErrContains {
+				assert.Contains(t, err.Error(), s)
+			}
+		})
+	}
+}
+
 func TestValidateScaleSpec(t *testing.T) {
 	const maxReplicasErrMsg = "maxReplicas"
 
