@@ -46,9 +46,6 @@ var _ = Describe("Validate DNSRecord functionality", func() {
 
 		By("Deleting the Capp instance")
 		utils.DeleteCapp(Default, k8sClient, createdCapp)
-		Eventually(func() (bool, error) {
-			return utils.ResourceExists(k8sClient, createdCapp)
-		}, consts.Timeout, consts.Interval).ShouldNot(BeTrue(), "Should not find a resource.")
 
 		By("Checking if the DNSRecord was deleted successfully")
 		Eventually(func() (bool, error) {

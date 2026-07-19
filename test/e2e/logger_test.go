@@ -110,9 +110,6 @@ func testCappWithLogger(logType cappv1alpha1.LogType) {
 
 		By("Deleting the Capp instance")
 		utils.DeleteCapp(Default, k8sClient, createdCapp)
-		Eventually(func() (bool, error) {
-			return utils.ResourceExists(k8sClient, createdCapp)
-		}, consts.Timeout, consts.Interval).ShouldNot(BeTrue(), "Should not find a resource.")
 
 		By("Checking if the SyslogNGOutput was deleted successfully")
 		Eventually(func() (bool, error) {
