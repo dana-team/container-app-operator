@@ -4,8 +4,9 @@ import (
 	"context"
 	"fmt"
 	"maps"
+	"slices"
+	"time"
 
-	"github.com/dana-team/container-app-operator/internal/kinds/capp/autoscale"
 	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/resourceclient"
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 
@@ -15,6 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/events"
+	kautoscaling "knative.dev/serving/pkg/apis/autoscaling"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -32,7 +34,14 @@ const (
 	knativeServiceKind                    = "Service"
 
 	kubectlKubernetesIOAnnotationPrefix = "kubectl.kubernetes.io/"
+
+	rpsScaleKey         = "rps"
+	cpuScaleKey         = "cpu"
+	memoryScaleKey      = "memory"
+	concurrencyScaleKey = "concurrency"
 )
+
+var kpaMetrics = []string{"rps", "concurrency"}
 
 type KnativeServiceManager struct {
 	rclient.ResourceManagerClient
@@ -89,7 +98,7 @@ func (k KnativeServiceManager) prepareResource(capp cappv1alpha1.Capp, ctx conte
 		k.Log.Error(err, fmt.Sprintf("could not fetch cappConfig from namespace %q", utils.CappNS))
 	}
 
-	knativeService.Spec.Template.Annotations = utils.MergeMaps(knativeServiceAnnotations, autoscale.SetAutoScaler(capp, cappConfig.Spec.AutoscaleConfig))
+	knativeService.Spec.Template.Annotations = utils.MergeMaps(knativeServiceAnnotations, setAutoScaler(capp, cappConfig.Spec.AutoscaleConfig))
 	knativeService.Spec.Template.Labels = knativeServiceLabels
 
 	return knativeService
@@ -167,4 +176,55 @@ func (k KnativeServiceManager) createOrUpdate(ctx context.Context, capp cappv1al
 			"generation", knativeService.Generation)
 	}
 	return updateManagedResourceIfNeeded(ctx, k.UpdateResource, &knativeService, orig.Spec, knativeService.Spec, orig.OwnerReferences)
+}
+
+// setAutoScaler takes a Capp and returns autoscaler annotations based on the Capp's ScaleSpec.Metric value.
+func setAutoScaler(capp cappv1alpha1.Capp, defaults cappv1alpha1.AutoscaleConfig) map[string]string {
+	scaleMetric := capp.Spec.ScaleSpec.Metric
+	autoScaleAnnotations := make(map[string]string)
+	if scaleMetric == "" {
+		return autoScaleAnnotations
+	}
+
+	autoScaleAnnotations[kautoscaling.ClassAnnotationKey] = getAutoScaleClassByMetric(scaleMetric)
+	autoScaleAnnotations[kautoscaling.MetricAnnotationKey] = scaleMetric
+	autoScaleAnnotations[kautoscaling.TargetAnnotationKey] = getTargetValue(scaleMetric, defaults)
+
+	if capp.Spec.ScaleSpec.ScaleDelaySeconds != nil {
+		autoScaleAnnotations[kautoscaling.ScaleDownDelayAnnotationKey] = (time.Duration(*capp.Spec.ScaleSpec.ScaleDelaySeconds) * time.Second).String()
+	}
+
+	if capp.Spec.ScaleSpec.MinReplicas != nil {
+		autoScaleAnnotations[kautoscaling.MinScaleAnnotationKey] = fmt.Sprintf("%d", *capp.Spec.ScaleSpec.MinReplicas)
+	} else {
+		autoScaleAnnotations[kautoscaling.ActivationScaleKey] = fmt.Sprintf("%d", defaults.ActivationScale)
+	}
+
+	if capp.Spec.ScaleSpec.MaxReplicas != nil {
+		autoScaleAnnotations[kautoscaling.MaxScaleAnnotationKey] = fmt.Sprintf("%d", *capp.Spec.ScaleSpec.MaxReplicas)
+	}
+
+	return autoScaleAnnotations
+}
+
+func getTargetValue(scaleMetric string, autoscale cappv1alpha1.AutoscaleConfig) string {
+	switch scaleMetric {
+	case rpsScaleKey:
+		return fmt.Sprintf("%d", autoscale.RPS)
+	case cpuScaleKey:
+		return fmt.Sprintf("%d", autoscale.CPU)
+	case memoryScaleKey:
+		return fmt.Sprintf("%d", autoscale.Memory)
+	case concurrencyScaleKey:
+		return fmt.Sprintf("%d", autoscale.Concurrency)
+	default:
+		return ""
+	}
+}
+
+func getAutoScaleClassByMetric(metric string) string {
+	if slices.Contains(kpaMetrics, metric) {
+		return "kpa.autoscaling.knative.dev"
+	}
+	return "hpa.autoscaling.knative.dev"
 }

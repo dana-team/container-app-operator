@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/tools/events"
+	"k8s.io/utils/ptr"
 	kautoscaling "knative.dev/serving/pkg/apis/autoscaling"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -276,5 +277,86 @@ func TestKnativeServiceManagerCleanUp(t *testing.T) {
 		got := &knativev1.Service{}
 		getErr := km.K8sClient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: cappNamespace}, got)
 		require.True(t, errors.IsNotFound(getErr))
+	})
+}
+
+func TestSetAutoScaler(t *testing.T) {
+	defaults := cappv1alpha1.AutoscaleConfig{
+		RPS: 200, CPU: 80, Memory: 70, Concurrency: 10, ActivationScale: 3,
+	}
+
+	t.Run("uses HPA class and cpu target from autoscale config", func(t *testing.T) {
+		capp := cappv1alpha1.Capp{
+			ObjectMeta: metav1.ObjectMeta{Name: cappName},
+			Spec:       cappv1alpha1.CappSpec{ScaleSpec: cappv1alpha1.ScaleSpec{Metric: kautoscaling.CPU}},
+		}
+		got := setAutoScaler(capp, defaults)
+		require.Equal(t, kautoscaling.HPA, got[kautoscaling.ClassAnnotationKey])
+		require.Equal(t, kautoscaling.CPU, got[kautoscaling.MetricAnnotationKey])
+		require.Equal(t, "80", got[kautoscaling.TargetAnnotationKey])
+		require.Equal(t, "3", got[kautoscaling.ActivationScaleKey])
+	})
+
+	t.Run("uses KPA class and rps target from autoscale config", func(t *testing.T) {
+		capp := cappv1alpha1.Capp{
+			ObjectMeta: metav1.ObjectMeta{Name: cappName},
+			Spec:       cappv1alpha1.CappSpec{ScaleSpec: cappv1alpha1.ScaleSpec{Metric: kautoscaling.RPS}},
+		}
+		got := setAutoScaler(capp, defaults)
+		require.Equal(t, kautoscaling.KPA, got[kautoscaling.ClassAnnotationKey])
+		require.Equal(t, kautoscaling.RPS, got[kautoscaling.MetricAnnotationKey])
+		require.Equal(t, "200", got[kautoscaling.TargetAnnotationKey])
+		require.Equal(t, "3", got[kautoscaling.ActivationScaleKey])
+	})
+
+	t.Run("uses HPA class and memory target from autoscale config", func(t *testing.T) {
+		capp := cappv1alpha1.Capp{
+			ObjectMeta: metav1.ObjectMeta{Name: cappName},
+			Spec:       cappv1alpha1.CappSpec{ScaleSpec: cappv1alpha1.ScaleSpec{Metric: kautoscaling.Memory}},
+		}
+		got := setAutoScaler(capp, defaults)
+		require.Equal(t, kautoscaling.HPA, got[kautoscaling.ClassAnnotationKey])
+		require.Equal(t, kautoscaling.Memory, got[kautoscaling.MetricAnnotationKey])
+		require.Equal(t, "70", got[kautoscaling.TargetAnnotationKey])
+		require.Equal(t, "3", got[kautoscaling.ActivationScaleKey])
+	})
+
+	t.Run("sets min-scale and omits activation-scale when MinReplicas is set", func(t *testing.T) {
+		capp := cappv1alpha1.Capp{
+			ObjectMeta: metav1.ObjectMeta{Name: cappName},
+			Spec:       cappv1alpha1.CappSpec{ScaleSpec: cappv1alpha1.ScaleSpec{Metric: kautoscaling.CPU, MinReplicas: ptr.To(int32(5))}},
+		}
+		got := setAutoScaler(capp, defaults)
+		require.Equal(t, "5", got[kautoscaling.MinScaleAnnotationKey])
+		require.NotContains(t, got, kautoscaling.ActivationScaleKey)
+	})
+
+	t.Run("omits min-scale and sets activation-scale from config when MinReplicas is unset", func(t *testing.T) {
+		capp := cappv1alpha1.Capp{
+			ObjectMeta: metav1.ObjectMeta{Name: cappName},
+			Spec:       cappv1alpha1.CappSpec{ScaleSpec: cappv1alpha1.ScaleSpec{Metric: kautoscaling.CPU}},
+		}
+		got := setAutoScaler(capp, defaults)
+		require.NotContains(t, got, kautoscaling.MinScaleAnnotationKey)
+		require.Equal(t, "3", got[kautoscaling.ActivationScaleKey])
+	})
+
+	t.Run("sets max-scale annotation when MaxReplicas is set", func(t *testing.T) {
+		capp := cappv1alpha1.Capp{
+			ObjectMeta: metav1.ObjectMeta{Name: cappName},
+			Spec:       cappv1alpha1.CappSpec{ScaleSpec: cappv1alpha1.ScaleSpec{Metric: kautoscaling.CPU, MaxReplicas: ptr.To(int32(10))}},
+		}
+		got := setAutoScaler(capp, defaults)
+		require.Equal(t, "10", got[kautoscaling.MaxScaleAnnotationKey])
+		require.Equal(t, "3", got[kautoscaling.ActivationScaleKey])
+	})
+
+	t.Run("returns empty map when metric is empty", func(t *testing.T) {
+		capp := cappv1alpha1.Capp{
+			ObjectMeta: metav1.ObjectMeta{Name: cappName},
+			Spec:       cappv1alpha1.CappSpec{ScaleSpec: cappv1alpha1.ScaleSpec{Metric: ""}},
+		}
+		got := setAutoScaler(capp, defaults)
+		require.Empty(t, got)
 	})
 }
