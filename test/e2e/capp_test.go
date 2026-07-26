@@ -1,12 +1,15 @@
 package e2e
 
 import (
+	"fmt"
+
 	"github.com/dana-team/container-app-operator/test/e2e/consts"
 	"github.com/dana-team/container-app-operator/test/e2e/mocks"
 	"github.com/dana-team/container-app-operator/test/e2e/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/client-go/util/retry"
+	"k8s.io/utils/ptr"
 	"knative.dev/serving/pkg/apis/autoscaling"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 )
@@ -111,37 +114,36 @@ var _ = Describe("Validate capp creation", func() {
 		baseCapp := mocks.CreateBaseCapp()
 		baseCapp.Name = utils.GenerateCappName()
 
-		By("Creating Capp with no minReplicas (should default to 0)")
+		By("Creating Capp with no minReplicas (should stay unset)")
 		createdCapp := utils.CreateCapp(Default, k8sClient, baseCapp)
-		Eventually(func() int {
+		Eventually(func() *int32 {
 			capp := utils.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
 			return capp.Spec.ScaleSpec.MinReplicas
-		}, consts.Timeout, consts.Interval).Should(Equal(0))
+		}, consts.Timeout, consts.Interval).Should(BeNil())
 
-		By("Verifying KSVC annotation for default minReplicas")
+		By("Verifying KSVC falls back to the cappConfig's activationScale when minReplicas is unset")
+		cappConfig := utils.GetCappConfig(k8sClient, consts.CappConfigName, consts.ControllerNS)
 		Eventually(func() bool {
 			ksvc := &knativev1.Service{}
 			utils.GetResource(k8sClient, ksvc, createdCapp.Name, createdCapp.Namespace)
-			minReplicas, found := ksvc.Spec.Template.Annotations[autoscaling.MinScaleAnnotationKey]
-			if !found {
-				return true
-			}
-			return minReplicas == "0"
+			_, hasMinScale := ksvc.Spec.Template.Annotations[autoscaling.MinScaleAnnotationKey]
+			activationScale := ksvc.Spec.Template.Annotations[autoscaling.ActivationScaleKey]
+			return !hasMinScale && activationScale == fmt.Sprintf("%d", cappConfig.Spec.AutoscaleConfig.ActivationScale)
 		}, consts.Timeout, consts.Interval).Should(BeTrue())
 
 		By("Updating Capp with valid minReplicas")
 		err := retry.RetryOnConflict(utils.NewRetryOnConflictBackoff(), func() error {
 			capp := utils.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-			capp.Spec.ScaleSpec.MinReplicas = 3
+			capp.Spec.ScaleSpec.MinReplicas = ptr.To(int32(3))
 			return utils.UpdateResource(k8sClient, capp)
 		})
 		Expect(err).ToNot(HaveOccurred())
 
 		By("Verifying Capp has minReplicas=3")
-		Eventually(func() int {
+		Eventually(func() int32 {
 			capp := utils.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-			return capp.Spec.ScaleSpec.MinReplicas
-		}, consts.Timeout, consts.Interval).Should(Equal(3))
+			return ptr.Deref(capp.Spec.ScaleSpec.MinReplicas, 0)
+		}, consts.Timeout, consts.Interval).Should(Equal(int32(3)))
 
 		By("Verifying KSVC annotation for minReplicas=3")
 		Eventually(func() string {
@@ -154,7 +156,7 @@ var _ = Describe("Validate capp creation", func() {
 
 		err = retry.RetryOnConflict(utils.NewRetryOnConflictBackoff(), func() error {
 			capp := utils.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-			capp.Spec.ScaleSpec.MinReplicas = 20
+			capp.Spec.ScaleSpec.MinReplicas = ptr.To(int32(20))
 			return utils.UpdateResource(k8sClient, capp)
 		})
 		Expect(err).To(HaveOccurred())

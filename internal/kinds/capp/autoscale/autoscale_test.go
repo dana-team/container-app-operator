@@ -6,6 +6,7 @@ import (
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	kautoscaling "knative.dev/serving/pkg/apis/autoscaling"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 )
@@ -70,8 +71,8 @@ func TestSetAutoScaler(t *testing.T) {
 
 	scaleTests := []struct {
 		name                  string
-		minReplicas           int
-		maxReplicas           int
+		minReplicas           *int32
+		maxReplicas           *int32
 		templateAnnotations   map[string]string
 		expectMinScale        string
 		expectMaxScale        string
@@ -79,7 +80,7 @@ func TestSetAutoScaler(t *testing.T) {
 	}{
 		{
 			name:        "overrides template min-scale and removes activation-scale when MinReplicas is set",
-			minReplicas: 5,
+			minReplicas: ptr.To(int32(5)),
 			templateAnnotations: map[string]string{
 				kautoscaling.ActivationScaleKey:    "2",
 				kautoscaling.MinScaleAnnotationKey: "2",
@@ -87,8 +88,8 @@ func TestSetAutoScaler(t *testing.T) {
 			expectMinScale: "5",
 		},
 		{
-			name:        "removes template min-scale and sets activation-scale from config when MinReplicas is zero",
-			minReplicas: 0,
+			name:        "removes template min-scale and sets activation-scale from config when MinReplicas is unset",
+			minReplicas: nil,
 			templateAnnotations: map[string]string{
 				kautoscaling.MinScaleAnnotationKey: "3",
 				kautoscaling.ActivationScaleKey:    "1",
@@ -96,8 +97,8 @@ func TestSetAutoScaler(t *testing.T) {
 			expectActivationScale: "3",
 		},
 		{
-			name:                  "sets max-scale annotation when MaxReplicas is non-zero",
-			maxReplicas:           10,
+			name:                  "sets max-scale annotation when MaxReplicas is set",
+			maxReplicas:           ptr.To(int32(10)),
 			expectMaxScale:        "10",
 			expectActivationScale: "3",
 		},

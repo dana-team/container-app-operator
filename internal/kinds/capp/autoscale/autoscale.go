@@ -31,18 +31,18 @@ func SetAutoScaler(capp cappv1alpha1.Capp, defaults cappv1alpha1.AutoscaleConfig
 	autoScaleAnnotations[kautoscaling.MetricAnnotationKey] = scaleMetric
 	autoScaleAnnotations[kautoscaling.TargetAnnotationKey] = getTargetValue(scaleMetric, defaults)
 
-	if capp.Spec.ScaleSpec.ScaleDelaySeconds != 0 {
-		autoScaleAnnotations[kautoscaling.ScaleDownDelayAnnotationKey] = (time.Duration(capp.Spec.ScaleSpec.ScaleDelaySeconds) * time.Second).String()
+	if capp.Spec.ScaleSpec.ScaleDelaySeconds != nil {
+		autoScaleAnnotations[kautoscaling.ScaleDownDelayAnnotationKey] = (time.Duration(*capp.Spec.ScaleSpec.ScaleDelaySeconds) * time.Second).String()
 	}
 
-	if capp.Spec.ScaleSpec.MinReplicas != 0 {
-		autoScaleAnnotations[kautoscaling.MinScaleAnnotationKey] = fmt.Sprintf("%d", capp.Spec.ScaleSpec.MinReplicas)
+	if capp.Spec.ScaleSpec.MinReplicas != nil {
+		autoScaleAnnotations[kautoscaling.MinScaleAnnotationKey] = fmt.Sprintf("%d", *capp.Spec.ScaleSpec.MinReplicas)
 	} else {
 		autoScaleAnnotations[kautoscaling.ActivationScaleKey] = fmt.Sprintf("%d", defaults.ActivationScale)
 	}
 
-	if capp.Spec.ScaleSpec.MaxReplicas != 0 {
-		autoScaleAnnotations[kautoscaling.MaxScaleAnnotationKey] = fmt.Sprintf("%d", capp.Spec.ScaleSpec.MaxReplicas)
+	if capp.Spec.ScaleSpec.MaxReplicas != nil {
+		autoScaleAnnotations[kautoscaling.MaxScaleAnnotationKey] = fmt.Sprintf("%d", *capp.Spec.ScaleSpec.MaxReplicas)
 	}
 
 	return autoScaleAnnotations

@@ -231,25 +231,25 @@ func validateScaleSpec(capp cappv1alpha1.Capp, autoscaleConfig cappv1alpha1.Auto
 	maxReplicas := capp.Spec.ScaleSpec.MaxReplicas
 	scaleDelay := capp.Spec.ScaleSpec.ScaleDelaySeconds
 
-	if minReplicas > autoscaleConfig.MinReplicasLimit {
-		return fmt.Errorf("invalid minReplicas %d: must be less than or equal to global min scale %d", minReplicas, autoscaleConfig.MinReplicasLimit)
+	if minReplicas != nil && int(*minReplicas) > autoscaleConfig.MinReplicasLimit {
+		return fmt.Errorf("invalid minReplicas %d: must be less than or equal to global min scale %d", *minReplicas, autoscaleConfig.MinReplicasLimit)
 	}
 
-	if maxReplicas != 0 && maxReplicas > autoscaleConfig.MaxReplicasLimit {
-		return fmt.Errorf("invalid maxReplicas %d: must be less than or equal to global max scale %d", maxReplicas, autoscaleConfig.MaxReplicasLimit)
+	if maxReplicas != nil && int(*maxReplicas) > autoscaleConfig.MaxReplicasLimit {
+		return fmt.Errorf("invalid maxReplicas %d: must be less than or equal to global max scale %d", *maxReplicas, autoscaleConfig.MaxReplicasLimit)
 	}
 
-	if maxReplicas != 0 && minReplicas != 0 && maxReplicas < minReplicas {
-		return fmt.Errorf("invalid maxReplicas %d: must be greater than or equal to minReplicas %d", maxReplicas, minReplicas)
+	if maxReplicas != nil && minReplicas != nil && *maxReplicas < *minReplicas {
+		return fmt.Errorf("invalid maxReplicas %d: must be greater than or equal to minReplicas %d", *maxReplicas, *minReplicas)
 	}
 
-	if maxReplicas != 0 && minReplicas == 0 && maxReplicas < autoscaleConfig.ActivationScale {
+	if maxReplicas != nil && minReplicas == nil && int(*maxReplicas) < autoscaleConfig.ActivationScale {
 		return fmt.Errorf("invalid maxReplicas %d: must be greater than or equal to activationScale %d",
-			maxReplicas, autoscaleConfig.ActivationScale)
+			*maxReplicas, autoscaleConfig.ActivationScale)
 	}
 
-	if scaleDelay > autoscaleConfig.MaxScaleDelay {
-		return fmt.Errorf("invalid scaleDelaySeconds %d: must be less than or equal to global max scale delay %d", scaleDelay, autoscaleConfig.MaxScaleDelay)
+	if scaleDelay != nil && int(*scaleDelay) > autoscaleConfig.MaxScaleDelay {
+		return fmt.Errorf("invalid scaleDelaySeconds %d: must be less than or equal to global max scale delay %d", *scaleDelay, autoscaleConfig.MaxScaleDelay)
 	}
 
 	return nil
