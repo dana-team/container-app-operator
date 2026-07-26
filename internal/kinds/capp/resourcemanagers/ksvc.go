@@ -24,8 +24,6 @@ import (
 )
 
 const (
-	cappDisabledState                     = "disabled"
-	cappEnabledState                      = "enabled"
 	KnativeService                        = "KnativeService"
 	eventCappKnativeServiceCreationFailed = "KnativeServiceCreationFailed"
 	eventCappKnativeServiceCreated        = "KnativeServiceCreated"
@@ -120,7 +118,7 @@ func (k KnativeServiceManager) CleanUp(ctx context.Context, capp cappv1alpha1.Ca
 
 // IsRequired determines if a Knative service (ksvc) is required based on the Capp's spec.
 func (k KnativeServiceManager) IsRequired(capp cappv1alpha1.Capp) bool {
-	return capp.Spec.State == cappEnabledState
+	return capp.Spec.State == cappv1alpha1.CappStateEnabled
 }
 
 // Manage creates or updates a KnativeService resource based on the provided Capp if it's required.
@@ -153,7 +151,7 @@ func (k KnativeServiceManager) createOrUpdate(ctx context.Context, capp cappv1al
 				return err
 			}
 
-			if capp.Status.StateStatus.State == cappDisabledState && k.IsRequired(capp) &&
+			if capp.Status.StateStatus.State == cappv1alpha1.CappStateDisabled && k.IsRequired(capp) &&
 				!capp.Status.StateStatus.LastChange.IsZero() {
 				k.Log.Info("Capp resumed to enabled state")
 				k.EventRecorder.Eventf(&capp, nil, corev1.EventTypeNormal, eventCappEnabled, eventCappEnabled, fmt.Sprintf("Capp %q state changed to enabled", capp.Name))

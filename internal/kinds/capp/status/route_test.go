@@ -5,7 +5,10 @@ import (
 	"testing"
 
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	rmanagers "github.com/dana-team/container-app-operator/internal/kinds/capp/resourcemanagers"
+	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 	dnsrecordv1alpha1 "github.com/dana-team/provider-dns-v2/apis/namespaced/record/v1alpha1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -36,6 +39,101 @@ func routeCapp() cappv1alpha1.Capp {
 	capp := newCapp()
 	capp.Spec.RouteSpec.Hostname = hostname
 	return capp
+}
+
+func newCappConfig() *cappv1alpha1.CappConfig {
+	return &cappv1alpha1.CappConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      utils.CappConfigName,
+			Namespace: utils.CappNS,
+		},
+		Spec: cappv1alpha1.CappConfigSpec{
+			DNSConfig: cappv1alpha1.DNSConfig{
+				Zone: zone,
+			},
+		},
+	}
+}
+
+func TestBuildRouteStatus(t *testing.T) {
+	ctx := context.Background()
+	capp := routeCapp()
+
+	t.Run("returns error when capp config missing", func(t *testing.T) {
+		fakeClient := fake.NewClientBuilder().WithScheme(newRouteScheme()).Build()
+		isRequired := map[string]bool{}
+
+		_, err := buildRouteStatus(ctx, fakeClient, capp, isRequired)
+		require.Error(t, err)
+	})
+
+	t.Run("returns empty statuses when no sub-resources required", func(t *testing.T) {
+		fakeClient := fake.NewClientBuilder().WithScheme(newRouteScheme()).
+			WithObjects(newCappConfig()).Build()
+		isRequired := map[string]bool{
+			rmanagers.DomainMapping: false,
+			rmanagers.DNSRecord:     false,
+			rmanagers.Certificate:   false,
+		}
+
+		result, err := buildRouteStatus(ctx, fakeClient, capp, isRequired)
+		require.NoError(t, err)
+		assert.Empty(t, result.DomainMappingObjectStatus.Conditions)
+		assert.Empty(t, result.DNSRecordObjectStatus.CNAMERecordObjectStatus.Conditions)
+		assert.Empty(t, result.CertificateObjectStatus.Conditions)
+	})
+
+	t.Run("populates all sub-statuses when resources exist", func(t *testing.T) {
+		dm := &knativev1beta1.DomainMapping{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      resourceName,
+				Namespace: cappNamespace,
+			},
+			Status: knativev1beta1.DomainMappingStatus{
+				URL: apis.HTTPS(resourceName),
+			},
+		}
+		cert := &cmapi.Certificate{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      resourceName,
+				Namespace: cappNamespace,
+			},
+			Status: cmapi.CertificateStatus{
+				Conditions: []cmapi.CertificateCondition{
+					{Type: cmapi.CertificateConditionReady, Status: cmmeta.ConditionTrue},
+				},
+			},
+		}
+		target := "target.example.com."
+		cname := &dnsrecordv1alpha1.CNAMERecord{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      resourceName,
+				Namespace: cappNamespace,
+			},
+			Status: dnsrecordv1alpha1.CNAMERecordStatus{
+				AtProvider: dnsrecordv1alpha1.CNAMERecordObservation{
+					Cname: &target,
+				},
+			},
+		}
+
+		fakeClient := fake.NewClientBuilder().WithScheme(newRouteScheme()).
+			WithObjects(newCappConfig(), dm, cert, cname).Build()
+		isRequired := map[string]bool{
+			rmanagers.DomainMapping: true,
+			rmanagers.DNSRecord:     true,
+			rmanagers.Certificate:   true,
+		}
+
+		result, err := buildRouteStatus(ctx, fakeClient, capp, isRequired)
+		require.NoError(t, err)
+		require.NotNil(t, result.DomainMappingObjectStatus.URL)
+		assert.Equal(t, resourceName, result.DomainMappingObjectStatus.URL.Host)
+		require.Len(t, result.CertificateObjectStatus.Conditions, 1)
+		assert.Equal(t, cmapi.CertificateConditionReady, result.CertificateObjectStatus.Conditions[0].Type)
+		require.NotNil(t, result.DNSRecordObjectStatus.CNAMERecordObjectStatus.AtProvider.Cname)
+		assert.Equal(t, target, *result.DNSRecordObjectStatus.CNAMERecordObjectStatus.AtProvider.Cname)
+	})
 }
 
 func TestBuildDomainMappingStatus(t *testing.T) {
@@ -106,7 +204,7 @@ func TestBuildCertificateStatus(t *testing.T) {
 			},
 			Status: cmapi.CertificateStatus{
 				Conditions: []cmapi.CertificateCondition{
-					{Type: cmapi.CertificateConditionReady, Status: "True"},
+					{Type: cmapi.CertificateConditionReady, Status: cmmeta.ConditionTrue},
 				},
 			},
 		}

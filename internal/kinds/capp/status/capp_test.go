@@ -3,12 +3,15 @@ package status
 import (
 	"context"
 	"testing"
+	"time"
 
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
+	xpv1 "github.com/crossplane/crossplane-runtime/v2/apis/common/v1"
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	rmanagers "github.com/dana-team/container-app-operator/internal/kinds/capp/resourcemanagers"
 	nfspvcv1alpha1 "github.com/dana-team/nfspvc-operator/api/v1alpha1"
+	dnsrecordv1alpha1 "github.com/dana-team/provider-dns-v2/apis/namespaced/record/v1alpha1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -400,4 +403,104 @@ func TestBuildCappConditionsPreservesExistingConditions(t *testing.T) {
 	}
 	require.NotNil(t, other)
 	assert.Equal(t, metav1.ConditionTrue, other.Status)
+}
+
+func TestCreateStateStatus(t *testing.T) {
+	t.Run("sets state and timestamp when state is empty", func(t *testing.T) {
+		status := &cappv1alpha1.StateStatus{}
+
+		CreateStateStatus(status, cappv1alpha1.CappStateEnabled)
+
+		assert.Equal(t, cappv1alpha1.CappStateEnabled, status.State)
+		assert.False(t, status.LastChange.IsZero())
+	})
+
+	t.Run("updates state and timestamp on state change", func(t *testing.T) {
+		original := metav1.Now()
+		status := &cappv1alpha1.StateStatus{
+			State:      cappv1alpha1.CappStateEnabled,
+			LastChange: original,
+		}
+
+		CreateStateStatus(status, cappv1alpha1.CappStateDisabled)
+
+		assert.Equal(t, cappv1alpha1.CappStateDisabled, status.State)
+		assert.False(t, status.LastChange.Before(&original))
+	})
+
+	t.Run("does not change timestamp when state is unchanged", func(t *testing.T) {
+		original := metav1.Now()
+		status := &cappv1alpha1.StateStatus{
+			State:      cappv1alpha1.CappStateEnabled,
+			LastChange: original,
+		}
+
+		CreateStateStatus(status, cappv1alpha1.CappStateEnabled)
+
+		assert.Equal(t, cappv1alpha1.CappStateEnabled, status.State)
+		assert.Equal(t, original, status.LastChange)
+	})
+}
+
+func TestStripVolatileStatusFields(t *testing.T) {
+	ts := metav1.NewTime(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC))
+	ptrTs := &ts
+
+	status := cappv1alpha1.CappStatus{
+		Conditions: []metav1.Condition{
+			{Type: cappv1alpha1.CappConditionReady, Status: metav1.ConditionTrue, LastTransitionTime: ts},
+		},
+		LoggingStatus: cappv1alpha1.LoggingStatus{
+			Conditions: []metav1.Condition{
+				{Type: loggingReady, Status: metav1.ConditionTrue, LastTransitionTime: ts},
+			},
+		},
+		RouteStatus: cappv1alpha1.RouteStatus{
+			CertificateObjectStatus: cmapi.CertificateStatus{
+				Conditions: []cmapi.CertificateCondition{
+					{Type: cmapi.CertificateConditionReady, Status: cmmeta.ConditionTrue, LastTransitionTime: ptrTs},
+				},
+			},
+			DNSRecordObjectStatus: cappv1alpha1.DNSRecordObjectStatus{
+				CNAMERecordObjectStatus: dnsrecordv1alpha1.CNAMERecordStatus{
+					ResourceStatus: xpv1.ResourceStatus{
+						ConditionedStatus: xpv1.ConditionedStatus{
+							Conditions: []xpv1.Condition{
+								{Type: xpv1.TypeReady, Status: corev1.ConditionTrue, LastTransitionTime: ts},
+							},
+						},
+					},
+				},
+			},
+		},
+		EventingStatus: cappv1alpha1.EventingStatus{
+			EventSources: []cappv1alpha1.EventSourceStatus{
+				{
+					Name: "src",
+					Condition: kapis.Condition{
+						Type:               kapis.ConditionReady,
+						Status:             corev1.ConditionTrue,
+						LastTransitionTime: kapis.VolatileTime{Inner: ts},
+					},
+				},
+			},
+		},
+	}
+
+	result := stripVolatileStatusFields(status)
+
+	require.Len(t, result.Conditions, 1)
+	assert.True(t, result.Conditions[0].LastTransitionTime.IsZero())
+
+	require.Len(t, result.LoggingStatus.Conditions, 1)
+	assert.True(t, result.LoggingStatus.Conditions[0].LastTransitionTime.IsZero())
+
+	require.Len(t, result.RouteStatus.CertificateObjectStatus.Conditions, 1)
+	assert.Nil(t, result.RouteStatus.CertificateObjectStatus.Conditions[0].LastTransitionTime)
+
+	require.Len(t, result.RouteStatus.DNSRecordObjectStatus.CNAMERecordObjectStatus.Conditions, 1)
+	assert.True(t, result.RouteStatus.DNSRecordObjectStatus.CNAMERecordObjectStatus.Conditions[0].LastTransitionTime.IsZero())
+
+	require.Len(t, result.EventingStatus.EventSources, 1)
+	assert.True(t, result.EventingStatus.EventSources[0].Condition.LastTransitionTime.Inner.IsZero())
 }
