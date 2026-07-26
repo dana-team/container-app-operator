@@ -15,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/utils/ptr"
 	knativeautoscaling "knative.dev/serving/pkg/apis/autoscaling"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -78,7 +79,7 @@ func TestCappValidatorHandle(t *testing.T) {
 				},
 				Spec: cappv1alpha1.CappSpec{
 					ScaleSpec: cappv1alpha1.ScaleSpec{
-						ScaleDelaySeconds: 150,
+						ScaleDelaySeconds: ptr.To(int32(150)),
 					},
 				},
 			},
@@ -562,15 +563,15 @@ func TestValidateScaleSpec(t *testing.T) {
 
 	tests := []struct {
 		name              string
-		minReplicas       int
-		maxReplicas       int
-		scaleDelaySeconds int
+		minReplicas       *int32
+		maxReplicas       *int32
+		scaleDelaySeconds *int32
 		autoscaleConfig   cappv1alpha1.AutoscaleConfig
 		wantErrContains   []string
 	}{
 		{
 			name:        "allows when minReplicas is at the limit",
-			minReplicas: 10,
+			minReplicas: ptr.To(int32(10)),
 			autoscaleConfig: cappv1alpha1.AutoscaleConfig{
 				MinReplicasLimit: 10,
 				MaxScaleDelay:    100,
@@ -578,7 +579,7 @@ func TestValidateScaleSpec(t *testing.T) {
 		},
 		{
 			name:              "allows when scaleDelaySeconds is at the limit",
-			scaleDelaySeconds: 100,
+			scaleDelaySeconds: ptr.To(int32(100)),
 			autoscaleConfig: cappv1alpha1.AutoscaleConfig{
 				MinReplicasLimit: 10,
 				MaxScaleDelay:    100,
@@ -586,7 +587,7 @@ func TestValidateScaleSpec(t *testing.T) {
 		},
 		{
 			name:        "rejects when minReplicas exceeds the limit",
-			minReplicas: 11,
+			minReplicas: ptr.To(int32(11)),
 			autoscaleConfig: cappv1alpha1.AutoscaleConfig{
 				MinReplicasLimit: 10,
 				MaxScaleDelay:    100,
@@ -595,7 +596,7 @@ func TestValidateScaleSpec(t *testing.T) {
 		},
 		{
 			name:              "rejects when scaleDelaySeconds exceeds the limit",
-			scaleDelaySeconds: 101,
+			scaleDelaySeconds: ptr.To(int32(101)),
 			autoscaleConfig: cappv1alpha1.AutoscaleConfig{
 				MinReplicasLimit: 10,
 				MaxScaleDelay:    100,
@@ -604,7 +605,7 @@ func TestValidateScaleSpec(t *testing.T) {
 		},
 		{
 			name:        "allows when maxReplicas is at the limit",
-			maxReplicas: 10,
+			maxReplicas: ptr.To(int32(10)),
 			autoscaleConfig: cappv1alpha1.AutoscaleConfig{
 				MinReplicasLimit: 10,
 				MaxScaleDelay:    100,
@@ -613,7 +614,7 @@ func TestValidateScaleSpec(t *testing.T) {
 		},
 		{
 			name:        "rejects when maxReplicas exceeds the limit",
-			maxReplicas: 11,
+			maxReplicas: ptr.To(int32(11)),
 			autoscaleConfig: cappv1alpha1.AutoscaleConfig{
 				MinReplicasLimit: 10,
 				MaxScaleDelay:    100,
@@ -623,8 +624,8 @@ func TestValidateScaleSpec(t *testing.T) {
 		},
 		{
 			name:        "rejects when maxReplicas is less than minReplicas",
-			minReplicas: 5,
-			maxReplicas: 3,
+			minReplicas: ptr.To(int32(5)),
+			maxReplicas: ptr.To(int32(3)),
 			autoscaleConfig: cappv1alpha1.AutoscaleConfig{
 				MinReplicasLimit: 10,
 				MaxScaleDelay:    100,
@@ -634,8 +635,8 @@ func TestValidateScaleSpec(t *testing.T) {
 		},
 		{
 			name:        "allows when maxReplicas equals minReplicas",
-			minReplicas: 3,
-			maxReplicas: 3,
+			minReplicas: ptr.To(int32(3)),
+			maxReplicas: ptr.To(int32(3)),
 			autoscaleConfig: cappv1alpha1.AutoscaleConfig{
 				MinReplicasLimit: 10,
 				MaxScaleDelay:    100,
@@ -644,7 +645,7 @@ func TestValidateScaleSpec(t *testing.T) {
 		},
 		{
 			name:        "rejects when maxReplicas is less than activationScale and minReplicas is zero",
-			maxReplicas: 1,
+			maxReplicas: ptr.To(int32(1)),
 			autoscaleConfig: cappv1alpha1.AutoscaleConfig{
 				MinReplicasLimit: 10,
 				MaxScaleDelay:    100,
@@ -655,7 +656,7 @@ func TestValidateScaleSpec(t *testing.T) {
 		},
 		{
 			name:        "allows when maxReplicas equals activationScale and minReplicas is zero",
-			maxReplicas: 2,
+			maxReplicas: ptr.To(int32(2)),
 			autoscaleConfig: cappv1alpha1.AutoscaleConfig{
 				MinReplicasLimit: 10,
 				MaxScaleDelay:    100,

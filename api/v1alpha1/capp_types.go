@@ -85,21 +85,19 @@ type ScaleSpec struct {
 	Metric string `json:"metric,omitempty"`
 
 	// MinReplicas is the minimum number of replicas for the Capp.
-	// +kubebuilder:default:=0
 	// +kubebuilder:validation:Minimum=0
 	// +optional
-	MinReplicas int `json:"minReplicas,omitempty"`
+	MinReplicas *int32 `json:"minReplicas,omitempty"`
 
 	// MaxReplicas is the maximum number of replicas for the Capp.
 	// +kubebuilder:validation:Minimum=1
 	// +optional
-	MaxReplicas int `json:"maxReplicas,omitempty"`
+	MaxReplicas *int32 `json:"maxReplicas,omitempty"`
 
 	// ScaleDelaySeconds is the delay in seconds before the Autoscaler scales down the Capp to zero.
-	// +kubebuilder:default:=0
 	// +kubebuilder:validation:Minimum=0
 	// +optional
-	ScaleDelaySeconds int `json:"scaleDelaySeconds,omitempty"`
+	ScaleDelaySeconds *int32 `json:"scaleDelaySeconds,omitempty"`
 }
 
 // EventSourcesSpec defines all event sources for a Capp.

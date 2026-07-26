@@ -9027,6 +9027,7 @@ spec:
                           maxReplicas:
                             description: MaxReplicas is the maximum number of replicas
                               for the Capp.
+                            format: int32
                             minimum: 1
                             type: integer
                           metric:
@@ -9041,15 +9042,15 @@ spec:
                             - concurrency
                             type: string
                           minReplicas:
-                            default: 0
                             description: MinReplicas is the minimum number of replicas
                               for the Capp.
+                            format: int32
                             minimum: 0
                             type: integer
                           scaleDelaySeconds:
-                            default: 0
                             description: ScaleDelaySeconds is the delay in seconds
                               before the Autoscaler scales down the Capp to zero.
+                            format: int32
                             minimum: 0
                             type: integer
                         type: object
