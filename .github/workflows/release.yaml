@@ -28,6 +28,14 @@ jobs:
       - name: Build and push image
         run: make docker-build docker-push IMG=${{ env.REGISTRY }}/${{ env.REPOSITORY_NAME }}:${GITHUB_REF##*/}
 
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: '${{ env.REGISTRY }}/${{ env.REPOSITORY_NAME }}:${{ github.ref_name }}'
+          format: 'table'
+          exit-code: '0'
+          severity: 'CRITICAL,HIGH'
+
       - name: Create install.yaml file
         run: make build-installer IMG=${{ env.REGISTRY }}/${{ env.REPOSITORY_NAME }}:${GITHUB_REF##*/}
 
