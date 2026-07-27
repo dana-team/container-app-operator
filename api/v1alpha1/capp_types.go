@@ -29,6 +29,9 @@ import (
 )
 
 const (
+	// CappStateEnabled is the enabled state value for a Capp.
+	CappStateEnabled = "enabled"
+
 	// CappStateDisabled is the disabled state value for a Capp.
 	CappStateDisabled = "disabled"
 

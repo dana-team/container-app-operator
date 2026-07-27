@@ -41,7 +41,7 @@ func newKsvcManager(k8sClient client.Client) (KnativeServiceManager, *events.Fak
 
 func newKsvcCapp() cappv1alpha1.Capp {
 	capp := newBaseCapp()
-	capp.Spec.State = cappEnabledState
+	capp.Spec.State = cappv1alpha1.CappStateEnabled
 	capp.Spec.ScaleSpec = cappv1alpha1.ScaleSpec{Metric: kautoscaling.CPU}
 	capp.Spec.ConfigurationSpec = knativev1.ConfigurationSpec{
 		Template: knativev1.RevisionTemplateSpec{
@@ -205,7 +205,7 @@ func TestKnativeServiceManagerManage(t *testing.T) {
 		require.NoError(t, km.Manage(ctx, capp))
 		require.Contains(t, <-recorder.Events, eventCappKnativeServiceCreated)
 
-		capp.Spec.State = cappDisabledState
+		capp.Spec.State = cappv1alpha1.CappStateDisabled
 		require.NoError(t, km.Manage(ctx, capp))
 
 		got := &knativev1.Service{}
@@ -220,7 +220,7 @@ func TestKnativeServiceManagerManage(t *testing.T) {
 		km, recorder := newKsvcManager(newFakeClient(newKsvcScheme(), newCappConfig()))
 		capp := newKsvcCapp()
 		capp.Status.StateStatus = cappv1alpha1.StateStatus{
-			State:      cappDisabledState,
+			State:      cappv1alpha1.CappStateDisabled,
 			LastChange: metav1.Now(),
 		}
 
