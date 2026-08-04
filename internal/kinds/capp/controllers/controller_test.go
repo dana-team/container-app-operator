@@ -7,6 +7,7 @@ import (
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	xpv1 "github.com/crossplane/crossplane-runtime/v2/apis/common/v1"
+	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 	dnsrecordv1alpha1 "github.com/dana-team/provider-dns-v2/apis/namespaced/record/v1alpha1"
 	"github.com/stretchr/testify/assert"
@@ -18,11 +19,19 @@ import (
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-const conditionTypeReady = "Ready"
+const (
+	conditionTypeReady = "Ready"
+	cappNameA          = "app-a"
+	cappNameB          = "app-b"
+	cappNameC          = "app-c"
+	nsName1            = "ns-1"
+	nsName2            = "ns-2"
+)
 
 func TestConditionStatusChanged(t *testing.T) {
 	tests := []struct {
@@ -388,6 +397,71 @@ func TestKnativeServiceWatchPredicate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			e := event.UpdateEvent{ObjectOld: tt.oldObj, ObjectNew: tt.newObj}
 			assert.Equal(t, tt.expected, pred.Update(e))
+		})
+	}
+}
+
+func TestFindCappsForCappConfig(t *testing.T) {
+	ctx := context.Background()
+	cappConfig := &cappv1alpha1.CappConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "capp-config",
+			Namespace: "container-app-operator-system",
+		},
+	}
+
+	tests := []struct {
+		name     string
+		capps    []client.Object
+		expected []reconcile.Request
+	}{
+		{
+			name:     "returns empty when no Capps exist",
+			capps:    nil,
+			expected: nil,
+		},
+		{
+			name: "returns request for single Capp",
+			capps: []client.Object{
+				&cappv1alpha1.Capp{
+					ObjectMeta: metav1.ObjectMeta{Name: cappNameA, Namespace: nsName1},
+				},
+			},
+			expected: []reconcile.Request{
+				{NamespacedName: types.NamespacedName{Name: cappNameA, Namespace: nsName1}},
+			},
+		},
+		{
+			name: "returns requests for Capps across namespaces",
+			capps: []client.Object{
+				&cappv1alpha1.Capp{
+					ObjectMeta: metav1.ObjectMeta{Name: cappNameA, Namespace: nsName1},
+				},
+				&cappv1alpha1.Capp{
+					ObjectMeta: metav1.ObjectMeta{Name: cappNameB, Namespace: nsName2},
+				},
+				&cappv1alpha1.Capp{
+					ObjectMeta: metav1.ObjectMeta{Name: cappNameC, Namespace: nsName1},
+				},
+			},
+			expected: []reconcile.Request{
+				{NamespacedName: types.NamespacedName{Name: cappNameA, Namespace: nsName1}},
+				{NamespacedName: types.NamespacedName{Name: cappNameC, Namespace: nsName1}},
+				{NamespacedName: types.NamespacedName{Name: cappNameB, Namespace: nsName2}},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			builder := fake.NewClientBuilder().WithScheme(newScheme())
+			if len(tt.capps) > 0 {
+				builder = builder.WithObjects(tt.capps...)
+			}
+			r := &CappReconciler{Client: builder.Build()}
+
+			result := r.findCappsForCappConfig(ctx, cappConfig)
+			assert.ElementsMatch(t, tt.expected, result)
 		})
 	}
 }

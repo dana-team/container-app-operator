@@ -124,6 +124,10 @@ func (r *CappReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			&kafkasourcev1.KafkaSource{},
 			handler.EnqueueRequestsFromMapFunc(r.findCappFromLabels),
 			builder.WithPredicates(kafkaSourceWatchPredicate())).
+		Watches(
+			&cappv1alpha1.CappConfig{},
+			handler.EnqueueRequestsFromMapFunc(r.findCappsForCappConfig),
+			builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Complete(r)
 }
 
@@ -299,6 +303,29 @@ func (r *CappReconciler) findCappFromEvent(ctx context.Context, object client.Ob
 	}}
 
 	return []reconcile.Request{request}
+}
+
+// findCappsForCappConfig enqueues every Capp in the cluster when CappConfig changes.
+func (r *CappReconciler) findCappsForCappConfig(ctx context.Context, _ client.Object) []reconcile.Request {
+	logger := log.FromContext(ctx)
+
+	cappList := cappv1alpha1.CappList{}
+	if err := r.List(ctx, &cappList); err != nil {
+		logger.Error(err, "failed to list Capps for CappConfig change")
+		return nil
+	}
+
+	requests := make([]reconcile.Request, 0, len(cappList.Items))
+	for _, capp := range cappList.Items {
+		requests = append(requests, reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Name:      capp.Name,
+				Namespace: capp.Namespace,
+			},
+		})
+	}
+
+	return requests
 }
 
 // findCappFromLabels finds the owner Capp of a resource based on labels.
