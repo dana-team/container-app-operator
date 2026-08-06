@@ -7,7 +7,7 @@ import (
 
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 
-	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
+	"github.com/dana-team/container-app-operator/internal/kinds/capp/cappmeta"
 
 	xpv1 "github.com/crossplane/crossplane-runtime/v2/apis/common/v1"
 	dnsrecordv1alpha1 "github.com/dana-team/provider-dns-v2/apis/namespaced/record/v1alpha1"
@@ -331,7 +331,7 @@ func (r *CappReconciler) findCappsForCappConfig(ctx context.Context, _ client.Ob
 // findCappFromLabels finds the owner Capp of a resource based on labels.
 func (r *CappReconciler) findCappFromLabels(ctx context.Context, object client.Object) []reconcile.Request {
 	labels := object.GetLabels()
-	cappName := labels[utils.CappResourceKey]
+	cappName := labels[cappmeta.CappResourceKey]
 	if cappName == "" {
 		return nil
 	}

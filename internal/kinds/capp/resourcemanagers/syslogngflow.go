@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/dana-team/container-app-operator/internal/kinds/capp/cappmeta"
 	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/resourceclient"
-	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
@@ -40,7 +40,7 @@ func (f SyslogNGFlowManager) prepareResource(capp cappv1alpha1.Capp) loggingv1be
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      syslogNGFlowName,
 			Namespace: capp.GetNamespace(),
-			Labels:    utils.ManagedResourceLabels(capp.Name),
+			Labels:    cappmeta.ManagedResourceLabels(capp.Name),
 		},
 		Spec: loggingv1beta1.SyslogNGFlowSpec{
 			Match: &loggingv1beta1.SyslogNGMatch{

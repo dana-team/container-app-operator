@@ -7,8 +7,8 @@ import (
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	"github.com/dana-team/container-app-operator/internal/kinds/capp/cappmeta"
 	rmanagers "github.com/dana-team/container-app-operator/internal/kinds/capp/resourcemanagers"
-	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 	dnsrecordv1alpha1 "github.com/dana-team/provider-dns-v2/apis/namespaced/record/v1alpha1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -44,8 +44,8 @@ func routeCapp() cappv1alpha1.Capp {
 func newCappConfig() *cappv1alpha1.CappConfig {
 	return &cappv1alpha1.CappConfig{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      utils.CappConfigName,
-			Namespace: utils.CappNS,
+			Name:      cappmeta.CappConfigName,
+			Namespace: cappmeta.CappNS,
 		},
 		Spec: cappv1alpha1.CappConfigSpec{
 			DNSConfig: cappv1alpha1.DNSConfig{

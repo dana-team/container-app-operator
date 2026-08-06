@@ -6,8 +6,8 @@ import (
 
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
+	"github.com/dana-team/container-app-operator/internal/kinds/capp/cappmeta"
 	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/resourceclient"
-	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -43,7 +43,7 @@ func newCertificate(mutate func(*cmapi.Certificate)) *cmapi.Certificate {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      hostnameFQDN,
 			Namespace: cappNamespace,
-			Labels:    utils.ManagedResourceLabels(cappName),
+			Labels:    cappmeta.ManagedResourceLabels(cappName),
 		},
 	}
 	if mutate != nil {
@@ -63,7 +63,7 @@ func TestCertificateManagerPrepareResource(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, hostnameFQDN, got.Name)
 		require.Equal(t, cmmeta.IssuerReference{Name: issuerName, Kind: issuerKind, Group: issuerGroup}, got.Spec.IssuerRef)
-		require.Equal(t, utils.GenerateSecretName(hostnameFQDN), got.Spec.SecretName)
+		require.Equal(t, generateTLSSecretName(hostnameFQDN), got.Spec.SecretName)
 		require.NotNil(t, got.Spec.SecretTemplate)
 		require.Equal(t, "", got.Spec.SecretTemplate.Labels[certificateUIDSecretLabelKey])
 		require.Equal(t, []string{hostnameFQDN}, got.Spec.DNSNames)

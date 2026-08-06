@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
+	"github.com/dana-team/container-app-operator/internal/kinds/capp/cappmeta"
 
 	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/resourceclient"
 
@@ -34,20 +34,21 @@ type DomainMappingManager struct {
 
 // prepareResource creates a new DomainMapping for a Knative service.
 func (k DomainMappingManager) prepareResource(ctx context.Context, capp cappv1alpha1.Capp) (knativev1beta1.DomainMapping, error) {
-	dnsConfig, err := utils.GetDNSConfig(ctx, k.K8sClient)
+	cappConfig, err := GetCappConfig(ctx, k.K8sClient)
 	if err != nil {
 		return knativev1beta1.DomainMapping{}, err
 	}
+	dnsConfig := cappConfig.Spec.DNSConfig
 
-	resourceName := utils.GenerateResourceName(capp.Spec.RouteSpec.Hostname, dnsConfig.Zone)
-	secretName := utils.GenerateSecretName(resourceName)
+	resourceName := GenerateResourceName(capp.Spec.RouteSpec.Hostname, dnsConfig.Zone)
+	secretName := generateTLSSecretName(resourceName)
 
 	knativeDomainMapping := &knativev1beta1.DomainMapping{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      resourceName,
 			Namespace: capp.Namespace,
-			Labels:    utils.ManagedResourceLabels(capp.Name),
+			Labels:    cappmeta.ManagedResourceLabels(capp.Name),
 		},
 		Spec: knativev1beta1.DomainMappingSpec{
 			Ref: duckv1.KReference{
@@ -99,7 +100,7 @@ func (k DomainMappingManager) CleanUp(ctx context.Context, capp cappv1alpha1.Cap
 			}
 		}
 
-		secretName := utils.GenerateSecretName(item.Name)
+		secretName := generateTLSSecretName(item.Name)
 		secret := corev1.Secret{}
 		if err := k.K8sClient.Get(ctx, types.NamespacedName{Name: secretName, Namespace: item.Namespace}, &secret); err != nil {
 			if !errors.IsNotFound(err) {

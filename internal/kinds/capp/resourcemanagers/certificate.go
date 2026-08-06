@@ -7,7 +7,7 @@ import (
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
-	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
+	"github.com/dana-team/container-app-operator/internal/kinds/capp/cappmeta"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -21,6 +21,7 @@ const (
 	eventCappCertificateCreationFailed = "CertificateCreationFailed"
 	eventCappCertificateCreated        = "CertificateCreated"
 	PrivateKeySize                     = 4096
+	maxCommonNameLength                = 64
 	certificateUIDSecretLabelKey       = "networking.internal.knative.dev/certificate-uid"
 )
 
@@ -31,23 +32,24 @@ type CertificateManager struct {
 
 // prepareResource prepares a Certificate resource based on the provided Capp.
 func (c CertificateManager) prepareResource(ctx context.Context, capp cappv1alpha1.Capp) (cmapi.Certificate, error) {
-	dnsConfig, err := utils.GetDNSConfig(ctx, c.K8sClient)
+	cappConfig, err := GetCappConfig(ctx, c.K8sClient)
 	if err != nil {
 		return cmapi.Certificate{}, err
 	}
+	dnsConfig := cappConfig.Spec.DNSConfig
 
-	resourceName := utils.GenerateResourceName(capp.Spec.RouteSpec.Hostname, dnsConfig.Zone)
-	secretName := utils.GenerateSecretName(resourceName)
+	resourceName := GenerateResourceName(capp.Spec.RouteSpec.Hostname, dnsConfig.Zone)
+	secretName := generateTLSSecretName(resourceName)
 
 	certificate := cmapi.Certificate{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      resourceName,
 			Namespace: capp.Namespace,
-			Labels:    utils.ManagedResourceLabels(capp.Name),
+			Labels:    cappmeta.ManagedResourceLabels(capp.Name),
 		},
 		Spec: cmapi.CertificateSpec{
-			CommonName: utils.TruncateCommonName(resourceName),
+			CommonName: resourceName[:min(len(resourceName), maxCommonNameLength)],
 			DNSNames:   []string{resourceName},
 			PrivateKey: &cmapi.CertificatePrivateKey{
 				Algorithm: cmapi.RSAKeyAlgorithm,
@@ -89,7 +91,7 @@ func (c CertificateManager) CleanUp(ctx context.Context, capp cappv1alpha1.Capp)
 
 // IsRequired is responsible to determine if resource Certificate is required.
 func (c CertificateManager) IsRequired(capp cappv1alpha1.Capp) bool {
-	return capp.Spec.RouteSpec.TlsEnabled && utils.IsCustomHostnameSet(capp.Spec.RouteSpec.Hostname)
+	return capp.Spec.RouteSpec.TlsEnabled && capp.Spec.RouteSpec.Hostname != ""
 }
 
 // Manage creates or updates a Certificate resource based on the provided Capp if it's required.

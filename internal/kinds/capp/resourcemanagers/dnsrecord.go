@@ -8,8 +8,8 @@ import (
 
 	xpv1 "github.com/crossplane/crossplane-runtime/v2/apis/common/v1"
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	"github.com/dana-team/container-app-operator/internal/kinds/capp/cappmeta"
 	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/resourceclient"
-	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,21 +34,22 @@ type DNSRecordManager struct {
 
 // prepareResource prepares a DNSRecord resource based on the provided Capp.
 func (r DNSRecordManager) prepareResource(ctx context.Context, capp cappv1alpha1.Capp) (dnsrecordv1alpha1.CNAMERecord, error) {
-	dnsConfig, err := utils.GetDNSConfig(ctx, r.K8sClient)
+	cappConfig, err := GetCappConfig(ctx, r.K8sClient)
 	if err != nil {
 		return dnsrecordv1alpha1.CNAMERecord{}, err
 	}
+	dnsConfig := cappConfig.Spec.DNSConfig
 
-	resourceName := utils.GenerateResourceName(capp.Spec.RouteSpec.Hostname, dnsConfig.Zone)
-	recordName := utils.GenerateRecordName(capp.Spec.RouteSpec.Hostname, dnsConfig.Zone)
+	resourceName := GenerateResourceName(capp.Spec.RouteSpec.Hostname, dnsConfig.Zone)
+	recordName := GenerateRecordName(capp.Spec.RouteSpec.Hostname, dnsConfig.Zone)
 
 	dnsRecord := dnsrecordv1alpha1.CNAMERecord{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      resourceName,
 			Namespace: capp.Namespace,
-			Labels: utils.MergeMaps(utils.ManagedResourceLabels(capp.Name), map[string]string{
-				utils.CappNamespaceKey: capp.Namespace,
+			Labels: cappmeta.MergeMaps(cappmeta.ManagedResourceLabels(capp.Name), map[string]string{
+				cappmeta.CappNamespaceKey: capp.Namespace,
 			}),
 		},
 		Spec: dnsrecordv1alpha1.CNAMERecordSpec{
@@ -154,7 +155,7 @@ func (r DNSRecordManager) dnsRecordNeedsUpdate(current, desired dnsrecordv1alpha
 func (r DNSRecordManager) getPreviousDNSRecords(ctx context.Context, capp cappv1alpha1.Capp) (dnsrecordv1alpha1.CNAMERecordList, error) {
 	dnsRecords := dnsrecordv1alpha1.CNAMERecordList{}
 	if err := listManagedResources(ctx, r.K8sClient, capp, &dnsRecords, DNSRecord, labels.Set{
-		utils.CappNamespaceKey: capp.Namespace,
+		cappmeta.CappNamespaceKey: capp.Namespace,
 	}); err != nil {
 		return dnsRecords, err
 	}

@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	"github.com/dana-team/container-app-operator/internal/kinds/capp/cappmeta"
 	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/resourceclient"
-	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -67,7 +67,7 @@ func TestKnativeServiceManagerPrepareResource(t *testing.T) {
 			allowedAnnotationValue  = "propagated"
 			strippedAnnotationValue = "drop-me"
 		)
-		internalAnnotationKey := utils.CappAPIGroup + "/internal"
+		internalAnnotationKey := cappmeta.CappAPIGroup + "/internal"
 
 		km, _ := newKsvcManager(newFakeClient(newKsvcScheme(), newCappConfig()))
 		capp := newKsvcCapp()
@@ -94,16 +94,16 @@ func TestKnativeServiceManagerPrepareResource(t *testing.T) {
 		km, _ := newKsvcManager(newFakeClient(newKsvcScheme(), newCappConfig()))
 		capp := newKsvcCapp()
 		capp.Labels = map[string]string{
-			userLabelKey:          userLabelValue,
-			utils.CappResourceKey: "user-override",
+			userLabelKey:             userLabelValue,
+			cappmeta.CappResourceKey: "user-override",
 		}
 
 		got := km.prepareResource(capp, ctx)
 
 		require.Equal(t, userLabelValue, got.Spec.Template.Labels[userLabelKey])
-		require.Equal(t, cappName, got.Spec.Template.Labels[utils.CappResourceKey])
-		require.Equal(t, cappName, got.Labels[utils.CappResourceKey])
-		require.Equal(t, utils.CappKey, got.Labels[utils.ManagedByLabelKey])
+		require.Equal(t, cappName, got.Spec.Template.Labels[cappmeta.CappResourceKey])
+		require.Equal(t, cappName, got.Labels[cappmeta.CappResourceKey])
+		require.Equal(t, cappmeta.CappKey, got.Labels[cappmeta.ManagedByLabelKey])
 	})
 
 	t.Run("sets route timeout on template", func(t *testing.T) {
@@ -165,7 +165,7 @@ func TestKnativeServiceManagerManage(t *testing.T) {
 		require.NoError(t, km.K8sClient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: cappNamespace}, got))
 		require.Len(t, got.OwnerReferences, 1)
 		require.Equal(t, cappName, got.OwnerReferences[0].Name)
-		require.Equal(t, cappName, got.Labels[utils.CappResourceKey])
+		require.Equal(t, cappName, got.Labels[cappmeta.CappResourceKey])
 	})
 
 	t.Run("updates ksvc when spec changes", func(t *testing.T) {

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
+	"github.com/dana-team/container-app-operator/internal/kinds/capp/cappmeta"
 
 	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/resourceclient"
 
@@ -39,7 +39,7 @@ func (n NFSPVCManager) prepareResource(capp cappv1alpha1.Capp) []nfspvcv1alpha1.
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      nfsVolume.Name,
 				Namespace: capp.Namespace,
-				Labels:    utils.ManagedResourceLabels(capp.Name),
+				Labels:    cappmeta.ManagedResourceLabels(capp.Name),
 			},
 			Spec: nfspvcv1alpha1.NfsPvcSpec{
 				Server: nfsVolume.Server,

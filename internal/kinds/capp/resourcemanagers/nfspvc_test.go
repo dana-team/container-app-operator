@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	"github.com/dana-team/container-app-operator/internal/kinds/capp/cappmeta"
 	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/resourceclient"
-	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 	nfspvcv1alpha1 "github.com/dana-team/nfspvc-operator/api/v1alpha1"
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
@@ -63,7 +63,7 @@ func newNFSPVC() *nfspvcv1alpha1.NfsPvc {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      nfsVolA,
 			Namespace: cappNamespace,
-			Labels:    utils.ManagedResourceLabels(cappName),
+			Labels:    cappmeta.ManagedResourceLabels(cappName),
 		},
 		Spec: nfspvcv1alpha1.NfsPvcSpec{
 			Server: nfsServer,

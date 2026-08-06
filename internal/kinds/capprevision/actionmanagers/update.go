@@ -8,13 +8,14 @@ import (
 	"k8s.io/apimachinery/pkg/api/equality"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
-	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
+	"github.com/dana-team/container-app-operator/internal/kinds/capp/cappmeta"
+	rmanagers "github.com/dana-team/container-app-operator/internal/kinds/capp/resourcemanagers"
 	"github.com/dana-team/container-app-operator/internal/kinds/capprevision/adapters"
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var annotationToIgnore = utils.CappAPIGroup + "/last-updated-by"
+var annotationToIgnore = cappmeta.CappAPIGroup + "/last-updated-by"
 
 // splitRevisionsAtIndex splits a slice of CappRevisions into two slices:
 // one containing the elements before the specified index (exclusive),
@@ -72,7 +73,7 @@ func HandleCappUpdate(ctx context.Context, k8sClient client.Client, capp cappv1a
 	sortByCreationTime(cappRevisions)
 	numOfRevisions := len(cappRevisions)
 
-	cappConfig, err := utils.GetCappConfig(ctx, k8sClient)
+	cappConfig, err := rmanagers.GetCappConfig(ctx, k8sClient)
 	if err != nil {
 		return err
 	}

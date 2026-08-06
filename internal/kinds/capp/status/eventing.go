@@ -6,7 +6,7 @@ import (
 	"sort"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
-	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
+	"github.com/dana-team/container-app-operator/internal/kinds/capp/cappmeta"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -46,9 +46,11 @@ func buildEventingStatus(ctx context.Context, r client.Client, capp cappv1alpha1
 }
 
 func listOwnedEventSources(ctx context.Context, r client.Client, capp cappv1alpha1.Capp, list client.ObjectList) error {
-	set := labels.Set{utils.CappResourceKey: capp.Name}
-	listOptions := utils.GetListOptions(set)
-	listOptions.Namespace = capp.Namespace
+	set := labels.Set{cappmeta.CappResourceKey: capp.Name}
+	listOptions := client.ListOptions{
+		LabelSelector: labels.SelectorFromSet(set),
+		Namespace:     capp.Namespace,
+	}
 	return r.List(ctx, list, &listOptions)
 }
 
