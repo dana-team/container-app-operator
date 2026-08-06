@@ -7,8 +7,8 @@ import (
 	"net/http"
 
 	v1alpha2 "github.com/dana-team/container-app-operator/api/v1alpha1"
-	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
-	"github.com/dana-team/container-app-operator/internal/webhook/rcs/common"
+	"github.com/dana-team/container-app-operator/internal/kinds/capp/cappmeta"
+	rmanagers "github.com/dana-team/container-app-operator/internal/kinds/capp/resourcemanagers"
 	corev1 "k8s.io/api/core/v1"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -24,7 +24,7 @@ type CappMutator struct {
 // +kubebuilder:webhook:path=/mutate-capp,mutating=true,sideEffects=None,failurePolicy=fail,groups=rcs.dana.io,resources=capps,verbs=create;update,versions=v1alpha1,name=capp.dana.io,admissionReviewVersions=v1;v1beta1
 
 var (
-	lastUpdatedByAnnotationKey = utils.CappAPIGroup + "/last-updated-by"
+	lastUpdatedByAnnotationKey = cappmeta.CappAPIGroup + "/last-updated-by"
 )
 
 // Handle implements the mutation webhook.
@@ -41,7 +41,7 @@ func (c *CappMutator) Handle(ctx context.Context, req admission.Request) admissi
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	cappConfig, err := common.GetCappConfig(ctx, c.Client)
+	cappConfig, err := rmanagers.GetCappConfig(ctx, c.Client)
 	if err != nil {
 		logger.Error(err, "failed to get RCS Config")
 		return admission.Errored(http.StatusInternalServerError, err)

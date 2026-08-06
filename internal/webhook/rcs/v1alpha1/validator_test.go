@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
-	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
+	"github.com/dana-team/container-app-operator/internal/kinds/capp/cappmeta"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	admissionv1 "k8s.io/api/admission/v1"
@@ -719,8 +719,8 @@ func newCappValidator(t *testing.T, scheme *runtime.Scheme, decoder admission.De
 func newCappConfig() *cappv1alpha1.CappConfig {
 	return &cappv1alpha1.CappConfig{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      utils.CappConfigName,
-			Namespace: utils.CappNS,
+			Name:      cappmeta.CappConfigName,
+			Namespace: cappmeta.CappNS,
 		},
 		Spec: cappv1alpha1.CappConfigSpec{
 			AllowedHostnamePatterns: []cappv1alpha1.HostnamePattern{{Match: ".*"}},

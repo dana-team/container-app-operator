@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
-	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
+	"github.com/dana-team/container-app-operator/internal/kinds/capp/cappmeta"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -46,7 +46,7 @@ func newPingSource(name string, ready corev1.ConditionStatus) *sourcesv1.PingSou
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: cappNamespace,
-			Labels:    utils.ManagedResourceLabels(cappName),
+			Labels:    cappmeta.ManagedResourceLabels(cappName),
 		},
 	}
 	ps.Status.Conditions = duckv1.Conditions{{Type: kapis.ConditionReady, Status: ready}}
@@ -58,7 +58,7 @@ func newKafkaSource(name string, ready corev1.ConditionStatus) *kafkasourcev1.Ka
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: cappNamespace,
-			Labels:    utils.ManagedResourceLabels(cappName),
+			Labels:    cappmeta.ManagedResourceLabels(cappName),
 		},
 	}
 	ks.Status.Conditions = duckv1.Conditions{{Type: kafkasourcev1.KafkaConditionReady, Status: ready}}

@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	"github.com/dana-team/container-app-operator/internal/kinds/capp/cappmeta"
 	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/resourceclient"
-	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 	"github.com/go-logr/logr"
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
 	"github.com/kube-logging/logging-operator/pkg/sdk/logging/model/syslogng/output"
@@ -31,7 +31,7 @@ func newSyslogNGOutput() *loggingv1beta1.SyslogNGOutput {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cappName,
 			Namespace: cappNamespace,
-			Labels:    utils.ManagedResourceLabels(cappName),
+			Labels:    cappmeta.ManagedResourceLabels(cappName),
 		},
 		Spec: loggingv1beta1.SyslogNGOutputSpec{
 			Elasticsearch: &output.ElasticsearchOutput{

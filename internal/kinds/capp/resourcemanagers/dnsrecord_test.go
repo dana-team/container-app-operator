@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	xpv1 "github.com/crossplane/crossplane-runtime/v2/apis/common/v1"
+	"github.com/dana-team/container-app-operator/internal/kinds/capp/cappmeta"
 	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/resourceclient"
-	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 	dnsrecordv1alpha1 "github.com/dana-team/provider-dns-v2/apis/namespaced/record/v1alpha1"
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
@@ -46,8 +46,8 @@ func newCNAMERecord(mutate func(*dnsrecordv1alpha1.CNAMERecord)) *dnsrecordv1alp
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      hostnameFQDN,
 			Namespace: cappNamespace,
-			Labels: utils.MergeMaps(utils.ManagedResourceLabels(cappName), map[string]string{
-				utils.CappNamespaceKey: cappNamespace,
+			Labels: cappmeta.MergeMaps(cappmeta.ManagedResourceLabels(cappName), map[string]string{
+				cappmeta.CappNamespaceKey: cappNamespace,
 			}),
 		},
 		Spec: dnsrecordv1alpha1.CNAMERecordSpec{

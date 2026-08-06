@@ -2,7 +2,7 @@ package resourcemanagers
 
 import (
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
-	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
+	"github.com/dana-team/container-app-operator/internal/kinds/capp/cappmeta"
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -66,8 +66,8 @@ func cappWithDeletionTimestamp(capp cappv1alpha1.Capp) cappv1alpha1.Capp {
 func newCappConfig() *cappv1alpha1.CappConfig {
 	return &cappv1alpha1.CappConfig{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      utils.CappConfigName,
-			Namespace: utils.CappNS,
+			Name:      cappmeta.CappConfigName,
+			Namespace: cappmeta.CappNS,
 		},
 		Spec: cappv1alpha1.CappConfigSpec{
 			AutoscaleConfig: cappv1alpha1.AutoscaleConfig{
