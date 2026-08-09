@@ -30,12 +30,12 @@ func newDNSRecordManager(k8sClient client.Client) DNSRecordManager {
 	return DNSRecordManager{
 		ResourceManagerClient: rclient.ResourceManagerClient{K8sClient: k8sClient, Log: logr.Discard()},
 		EventRecorder:         events.NewFakeRecorder(10),
+		CappConfig:            newCappConfigWithDNS(),
 	}
 }
 
 func newDNSRecordClient(objects ...client.Object) client.Client {
-	objs := append([]client.Object{newCappConfigWithDNS()}, objects...)
-	return newFakeClient(newDNSRecordScheme(), objs...)
+	return newFakeClient(newDNSRecordScheme(), objects...)
 }
 
 func newCNAMERecord(mutate func(*dnsrecordv1alpha1.CNAMERecord)) *dnsrecordv1alpha1.CNAMERecord {
@@ -155,13 +155,6 @@ func TestDNSRecordManagerCreateOrUpdate(t *testing.T) {
 		require.Equal(t, beforeRV, after.ResourceVersion)
 	})
 
-	t.Run("returns error when CappConfig missing", func(t *testing.T) {
-		dm := newDNSRecordManager(newFakeClient(newDNSRecordScheme()))
-		capp := newCappWithHostname(hostnameBare)
-
-		err := dm.createOrUpdate(ctx, capp)
-		require.Error(t, err)
-	})
 }
 
 func TestDNSRecordManagerManage(t *testing.T) {

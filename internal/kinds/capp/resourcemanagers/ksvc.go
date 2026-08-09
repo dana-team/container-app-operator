@@ -45,6 +45,7 @@ var kpaMetrics = []string{"rps", "concurrency"}
 type KnativeServiceManager struct {
 	rclient.ResourceManagerClient
 	EventRecorder events.EventRecorder
+	CappConfig    *cappv1alpha1.CappConfig
 }
 
 // prepareResource generates a Knative Service definition from a given Capp resource.
@@ -94,12 +95,7 @@ func (k KnativeServiceManager) prepareResource(capp cappv1alpha1.Capp, ctx conte
 		})
 	}
 
-	cappConfig, err := GetCappConfig(ctx, k.K8sClient)
-	if err != nil {
-		k.Log.Error(err, fmt.Sprintf("could not fetch cappConfig from namespace %q", cappmeta.CappNS))
-	}
-
-	knativeService.Spec.Template.Annotations = cappmeta.MergeMaps(knativeServiceAnnotations, setAutoScaler(capp, cappConfig.Spec.AutoscaleConfig))
+	knativeService.Spec.Template.Annotations = cappmeta.MergeMaps(knativeServiceAnnotations, setAutoScaler(capp, k.CappConfig.Spec.AutoscaleConfig))
 	knativeService.Spec.Template.Labels = knativeServiceLabels
 
 	return knativeService

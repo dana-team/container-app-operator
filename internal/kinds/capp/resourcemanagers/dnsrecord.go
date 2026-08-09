@@ -30,15 +30,12 @@ const (
 type DNSRecordManager struct {
 	rclient.ResourceManagerClient
 	EventRecorder events.EventRecorder
+	CappConfig    *cappv1alpha1.CappConfig
 }
 
 // prepareResource prepares a DNSRecord resource based on the provided Capp.
-func (r DNSRecordManager) prepareResource(ctx context.Context, capp cappv1alpha1.Capp) (dnsrecordv1alpha1.CNAMERecord, error) {
-	cappConfig, err := GetCappConfig(ctx, r.K8sClient)
-	if err != nil {
-		return dnsrecordv1alpha1.CNAMERecord{}, err
-	}
-	dnsConfig := cappConfig.Spec.DNSConfig
+func (r DNSRecordManager) prepareResource(capp cappv1alpha1.Capp) dnsrecordv1alpha1.CNAMERecord {
+	dnsConfig := r.CappConfig.Spec.DNSConfig
 
 	resourceName := GenerateResourceName(capp.Spec.RouteSpec.Hostname, dnsConfig.Zone)
 	recordName := GenerateRecordName(capp.Spec.RouteSpec.Hostname, dnsConfig.Zone)
@@ -65,7 +62,7 @@ func (r DNSRecordManager) prepareResource(ctx context.Context, capp cappv1alpha1
 		Kind: ClusterProviderConfigKind,
 	}
 
-	return dnsRecord, nil
+	return dnsRecord
 }
 
 // CleanUp attempts to delete all DNSRecords associated with a given Capp resource.
@@ -98,11 +95,7 @@ func (r DNSRecordManager) Manage(ctx context.Context, capp cappv1alpha1.Capp) er
 
 // createOrUpdate creates or updates a DNSRecord resource.
 func (r DNSRecordManager) createOrUpdate(ctx context.Context, capp cappv1alpha1.Capp) error {
-	dnsRecordFromCapp, err := r.prepareResource(ctx, capp)
-	if err != nil {
-		return fmt.Errorf("failed to prepare DNSRecord: %w", err)
-	}
-
+	dnsRecordFromCapp := r.prepareResource(capp)
 	dnsRecord := dnsrecordv1alpha1.CNAMERecord{}
 
 	if err := r.K8sClient.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: dnsRecordFromCapp.Name}, &dnsRecord); err != nil {

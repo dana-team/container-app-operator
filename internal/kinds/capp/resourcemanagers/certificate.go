@@ -28,20 +28,17 @@ const (
 type CertificateManager struct {
 	rclient.ResourceManagerClient
 	EventRecorder events.EventRecorder
+	CappConfig    *cappv1alpha1.CappConfig
 }
 
 // prepareResource prepares a Certificate resource based on the provided Capp.
-func (c CertificateManager) prepareResource(ctx context.Context, capp cappv1alpha1.Capp) (cmapi.Certificate, error) {
-	cappConfig, err := GetCappConfig(ctx, c.K8sClient)
-	if err != nil {
-		return cmapi.Certificate{}, err
-	}
-	dnsConfig := cappConfig.Spec.DNSConfig
+func (c CertificateManager) prepareResource(capp cappv1alpha1.Capp) cmapi.Certificate {
+	dnsConfig := c.CappConfig.Spec.DNSConfig
 
 	resourceName := GenerateResourceName(capp.Spec.RouteSpec.Hostname, dnsConfig.Zone)
 	secretName := generateTLSSecretName(resourceName)
 
-	certificate := cmapi.Certificate{
+	return cmapi.Certificate{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      resourceName,
@@ -72,8 +69,6 @@ func (c CertificateManager) prepareResource(ctx context.Context, capp cappv1alph
 			},
 		},
 	}
-
-	return certificate, nil
 }
 
 // CleanUp attempts to delete all Certificates associated with a given Capp resource.
@@ -106,11 +101,7 @@ func (c CertificateManager) Manage(ctx context.Context, capp cappv1alpha1.Capp) 
 
 // createOrUpdate creates or updates a Certificate resource.
 func (c CertificateManager) createOrUpdate(ctx context.Context, capp cappv1alpha1.Capp) error {
-	certificateFromCapp, err := c.prepareResource(ctx, capp)
-	if err != nil {
-		return fmt.Errorf("failed to prepare Certificate: %w", err)
-	}
-
+	certificateFromCapp := c.prepareResource(capp)
 	certificate := cmapi.Certificate{}
 
 	if err := c.K8sClient.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: certificateFromCapp.Name}, &certificate); err != nil {

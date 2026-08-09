@@ -30,15 +30,12 @@ const (
 type DomainMappingManager struct {
 	rclient.ResourceManagerClient
 	EventRecorder events.EventRecorder
+	CappConfig    *cappv1alpha1.CappConfig
 }
 
 // prepareResource creates a new DomainMapping for a Knative service.
 func (k DomainMappingManager) prepareResource(ctx context.Context, capp cappv1alpha1.Capp) (knativev1beta1.DomainMapping, error) {
-	cappConfig, err := GetCappConfig(ctx, k.K8sClient)
-	if err != nil {
-		return knativev1beta1.DomainMapping{}, err
-	}
-	dnsConfig := cappConfig.Spec.DNSConfig
+	dnsConfig := k.CappConfig.Spec.DNSConfig
 
 	resourceName := GenerateResourceName(capp.Spec.RouteSpec.Hostname, dnsConfig.Zone)
 	secretName := generateTLSSecretName(resourceName)

@@ -17,13 +17,8 @@ import (
 
 // buildRouteStatus constructs the Route Status of the Capp object in accordance to the
 // status of the corresponding DomainMapping, DNSRecord and Certificate objects if such exist.
-func buildRouteStatus(ctx context.Context, kubeClient client.Client, capp cappv1alpha1.Capp, isRequired map[string]bool) (cappv1alpha1.RouteStatus, error) {
+func buildRouteStatus(ctx context.Context, kubeClient client.Client, capp cappv1alpha1.Capp, isRequired map[string]bool, cappConfig *cappv1alpha1.CappConfig) (cappv1alpha1.RouteStatus, error) {
 	routeStatus := cappv1alpha1.RouteStatus{}
-
-	cappConfig, err := rmanagers.GetCappConfig(ctx, kubeClient)
-	if err != nil {
-		return routeStatus, err
-	}
 	dnsConfig := cappConfig.Spec.DNSConfig
 
 	domainMappingStatus, err := buildDomainMappingStatus(ctx, kubeClient, capp, isRequired[rmanagers.DomainMapping], dnsConfig.Zone)

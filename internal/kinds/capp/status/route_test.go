@@ -59,24 +59,15 @@ func TestBuildRouteStatus(t *testing.T) {
 	ctx := context.Background()
 	capp := routeCapp()
 
-	t.Run("returns error when capp config missing", func(t *testing.T) {
-		fakeClient := fake.NewClientBuilder().WithScheme(newRouteScheme()).Build()
-		isRequired := map[string]bool{}
-
-		_, err := buildRouteStatus(ctx, fakeClient, capp, isRequired)
-		require.Error(t, err)
-	})
-
 	t.Run("returns empty statuses when no sub-resources required", func(t *testing.T) {
-		fakeClient := fake.NewClientBuilder().WithScheme(newRouteScheme()).
-			WithObjects(newCappConfig()).Build()
+		fakeClient := fake.NewClientBuilder().WithScheme(newRouteScheme()).Build()
 		isRequired := map[string]bool{
 			rmanagers.DomainMapping: false,
 			rmanagers.DNSRecord:     false,
 			rmanagers.Certificate:   false,
 		}
 
-		result, err := buildRouteStatus(ctx, fakeClient, capp, isRequired)
+		result, err := buildRouteStatus(ctx, fakeClient, capp, isRequired, newCappConfig())
 		require.NoError(t, err)
 		assert.Empty(t, result.DomainMappingObjectStatus.Conditions)
 		assert.Empty(t, result.DNSRecordObjectStatus.CNAMERecordObjectStatus.Conditions)
@@ -118,14 +109,14 @@ func TestBuildRouteStatus(t *testing.T) {
 		}
 
 		fakeClient := fake.NewClientBuilder().WithScheme(newRouteScheme()).
-			WithObjects(newCappConfig(), dm, cert, cname).Build()
+			WithObjects(dm, cert, cname).Build()
 		isRequired := map[string]bool{
 			rmanagers.DomainMapping: true,
 			rmanagers.DNSRecord:     true,
 			rmanagers.Certificate:   true,
 		}
 
-		result, err := buildRouteStatus(ctx, fakeClient, capp, isRequired)
+		result, err := buildRouteStatus(ctx, fakeClient, capp, isRequired, newCappConfig())
 		require.NoError(t, err)
 		require.NotNil(t, result.DomainMappingObjectStatus.URL)
 		assert.Equal(t, resourceName, result.DomainMappingObjectStatus.URL.Host)

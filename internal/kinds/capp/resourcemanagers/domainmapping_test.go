@@ -32,12 +32,12 @@ func newDomainMappingManager(k8sClient client.Client) DomainMappingManager {
 	return DomainMappingManager{
 		ResourceManagerClient: rclient.ResourceManagerClient{K8sClient: k8sClient, Log: logr.Discard()},
 		EventRecorder:         events.NewFakeRecorder(10),
+		CappConfig:            newCappConfigWithDNS(),
 	}
 }
 
 func newDomainMappingClient(objects ...client.Object) client.Client {
-	objs := append([]client.Object{newCappConfigWithDNS()}, objects...)
-	return newFakeClient(newDomainMappingScheme(), objs...)
+	return newFakeClient(newDomainMappingScheme(), objects...)
 }
 
 func newDomainMapping(mutate func(*knativev1beta1.DomainMapping)) *knativev1beta1.DomainMapping {
@@ -164,13 +164,6 @@ func TestDomainMappingManagerCreateOrUpdate(t *testing.T) {
 		require.Equal(t, beforeRV, after.ResourceVersion)
 	})
 
-	t.Run("returns error when CappConfig missing", func(t *testing.T) {
-		mgr := newDomainMappingManager(newFakeClient(newDomainMappingScheme()))
-		capp := newCappWithHostname(hostnameBare)
-
-		err := mgr.createOrUpdate(ctx, capp)
-		require.Error(t, err)
-	})
 }
 
 func TestDomainMappingManagerManage(t *testing.T) {
