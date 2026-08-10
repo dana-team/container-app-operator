@@ -7,7 +7,7 @@ import (
 
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 
-	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
+	"github.com/dana-team/container-app-operator/internal/kinds/capp/cappmeta"
 
 	xpv1 "github.com/crossplane/crossplane-runtime/v2/apis/common/v1"
 	dnsrecordv1alpha1 "github.com/dana-team/provider-dns-v2/apis/namespaced/record/v1alpha1"
@@ -331,7 +331,7 @@ func (r *CappReconciler) findCappsForCappConfig(ctx context.Context, _ client.Ob
 // findCappFromLabels finds the owner Capp of a resource based on labels.
 func (r *CappReconciler) findCappFromLabels(ctx context.Context, object client.Object) []reconcile.Request {
 	labels := object.GetLabels()
-	cappName := labels[utils.CappResourceKey]
+	cappName := labels[cappmeta.CappResourceKey]
 	if cappName == "" {
 		return nil
 	}
@@ -357,11 +357,17 @@ func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	}
 
 	rmClient := rclient.ResourceManagerClient{K8sClient: r.Client, Log: logger}
+
+	cappConfig, err := rmanagers.GetCappConfig(ctx, r.Client)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to get CappConfig: %w", err)
+	}
+
 	resourceManagers := map[string]rmanagers.ResourceManager{
-		rmanagers.KnativeService: rmanagers.KnativeServiceManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},
-		rmanagers.DNSRecord:      rmanagers.DNSRecordManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},
-		rmanagers.Certificate:    rmanagers.CertificateManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},
-		rmanagers.DomainMapping:  rmanagers.DomainMappingManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},
+		rmanagers.KnativeService: rmanagers.KnativeServiceManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder, CappConfig: cappConfig},
+		rmanagers.DNSRecord:      rmanagers.DNSRecordManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder, CappConfig: cappConfig},
+		rmanagers.Certificate:    rmanagers.CertificateManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder, CappConfig: cappConfig},
+		rmanagers.DomainMapping:  rmanagers.DomainMappingManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder, CappConfig: cappConfig},
 		rmanagers.SyslogNGFlow:   rmanagers.SyslogNGFlowManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},
 		rmanagers.SyslogNGOutput: rmanagers.SyslogNGOutputManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},
 		rmanagers.NfsPvc:         rmanagers.NFSPVCManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},
@@ -382,7 +388,7 @@ func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, fmt.Errorf("failed to ensure finalizer in Capp: %w", err)
 	}
 
-	if err := r.SyncApplication(ctx, capp, resourceManagers, logger); err != nil {
+	if err := r.SyncApplication(ctx, capp, resourceManagers, cappConfig, logger); err != nil {
 		if errors.IsConflict(err) {
 			logger.Info(fmt.Sprintf("Conflict detected, requeuing: %s", err.Error()))
 			return ctrl.Result{RequeueAfter: RequeueTime}, nil
@@ -394,12 +400,12 @@ func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 // SyncApplication manages the lifecycle of Capp.
 // It ensures all manifests are applied according to the specification and synchronizes the status accordingly.
-func (r *CappReconciler) SyncApplication(ctx context.Context, capp cappv1alpha1.Capp, resourceManagers map[string]rmanagers.ResourceManager, logger logr.Logger) error {
+func (r *CappReconciler) SyncApplication(ctx context.Context, capp cappv1alpha1.Capp, resourceManagers map[string]rmanagers.ResourceManager, cappConfig *cappv1alpha1.CappConfig, logger logr.Logger) error {
 	for _, manager := range resourceManagers {
 		if err := manager.Manage(ctx, capp); err != nil {
 			return err
 		}
 	}
 
-	return status.SyncStatus(ctx, capp, logger, r.Client, resourceManagers)
+	return status.SyncStatus(ctx, capp, logger, r.Client, resourceManagers, cappConfig)
 }

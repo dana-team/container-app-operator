@@ -8,7 +8,7 @@ import (
 	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	xpv1 "github.com/crossplane/crossplane-runtime/v2/apis/common/v1"
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
-	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
+	"github.com/dana-team/container-app-operator/internal/kinds/capp/cappmeta"
 	dnsrecordv1alpha1 "github.com/dana-team/provider-dns-v2/apis/namespaced/record/v1alpha1"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
@@ -499,7 +499,7 @@ func TestFindCappFromLabels(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      resourceName,
 					Namespace: nsName,
-					Labels:    map[string]string{utils.CappResourceKey: cappName},
+					Labels:    map[string]string{cappmeta.CappResourceKey: cappName},
 				},
 			},
 			expected: []reconcile.Request{

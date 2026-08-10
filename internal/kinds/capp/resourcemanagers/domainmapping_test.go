@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/dana-team/container-app-operator/internal/kinds/capp/cappmeta"
 	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/resourceclient"
-	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -32,12 +32,12 @@ func newDomainMappingManager(k8sClient client.Client) DomainMappingManager {
 	return DomainMappingManager{
 		ResourceManagerClient: rclient.ResourceManagerClient{K8sClient: k8sClient, Log: logr.Discard()},
 		EventRecorder:         events.NewFakeRecorder(10),
+		CappConfig:            newCappConfigWithDNS(),
 	}
 }
 
 func newDomainMappingClient(objects ...client.Object) client.Client {
-	objs := append([]client.Object{newCappConfigWithDNS()}, objects...)
-	return newFakeClient(newDomainMappingScheme(), objs...)
+	return newFakeClient(newDomainMappingScheme(), objects...)
 }
 
 func newDomainMapping(mutate func(*knativev1beta1.DomainMapping)) *knativev1beta1.DomainMapping {
@@ -45,7 +45,7 @@ func newDomainMapping(mutate func(*knativev1beta1.DomainMapping)) *knativev1beta
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      hostnameFQDN,
 			Namespace: cappNamespace,
-			Labels:    utils.ManagedResourceLabels(cappName),
+			Labels:    cappmeta.ManagedResourceLabels(cappName),
 		},
 		Spec: knativev1beta1.DomainMappingSpec{
 			Ref: duckv1.KReference{
@@ -65,7 +65,7 @@ func TestDomainMappingManagerPrepareResource(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("omits TLS when disabled", func(t *testing.T) {
-		mgr := newDomainMappingManager(newDomainMappingClient(newSecret(utils.GenerateSecretName(hostnameFQDN))))
+		mgr := newDomainMappingManager(newDomainMappingClient(newSecret(generateTLSSecretName(hostnameFQDN))))
 		capp := newCappWithTLS(hostnameBare, false)
 
 		got, err := mgr.prepareResource(ctx, capp)
@@ -74,13 +74,13 @@ func TestDomainMappingManagerPrepareResource(t *testing.T) {
 	})
 
 	t.Run("sets TLS when enabled and secret exists", func(t *testing.T) {
-		mgr := newDomainMappingManager(newDomainMappingClient(newSecret(utils.GenerateSecretName(hostnameFQDN))))
+		mgr := newDomainMappingManager(newDomainMappingClient(newSecret(generateTLSSecretName(hostnameFQDN))))
 		capp := newCappWithTLS(hostnameBare, true)
 
 		got, err := mgr.prepareResource(ctx, capp)
 		require.NoError(t, err)
 		require.NotNil(t, got.Spec.TLS)
-		require.Equal(t, utils.GenerateSecretName(hostnameFQDN), got.Spec.TLS.SecretName)
+		require.Equal(t, generateTLSSecretName(hostnameFQDN), got.Spec.TLS.SecretName)
 	})
 
 	t.Run("omits TLS when enabled and secret is missing", func(t *testing.T) {
@@ -108,7 +108,7 @@ func TestDomainMappingManagerCreateOrUpdate(t *testing.T) {
 		require.Equal(t, cappName, got.Spec.Ref.Name)
 		require.Equal(t, knativeServiceKind, got.Spec.Ref.Kind)
 		require.Equal(t, knativev1.SchemeGroupVersion.String(), got.Spec.Ref.APIVersion)
-		require.Equal(t, cappName, got.Labels[utils.CappResourceKey])
+		require.Equal(t, cappName, got.Labels[cappmeta.CappResourceKey])
 	})
 
 	t.Run("creates FQDN hostname", func(t *testing.T) {
@@ -164,13 +164,6 @@ func TestDomainMappingManagerCreateOrUpdate(t *testing.T) {
 		require.Equal(t, beforeRV, after.ResourceVersion)
 	})
 
-	t.Run("returns error when CappConfig missing", func(t *testing.T) {
-		mgr := newDomainMappingManager(newFakeClient(newDomainMappingScheme()))
-		capp := newCappWithHostname(hostnameBare)
-
-		err := mgr.createOrUpdate(ctx, capp)
-		require.Error(t, err)
-	})
 }
 
 func TestDomainMappingManagerManage(t *testing.T) {
@@ -202,14 +195,14 @@ func TestDomainMappingManagerCleanUp(t *testing.T) {
 	t.Run("deletes associated TLS secret", func(t *testing.T) {
 		fakeClient := newFakeClient(newDomainMappingScheme(),
 			newDomainMapping(nil),
-			newSecret(utils.GenerateSecretName(hostnameFQDN)),
+			newSecret(generateTLSSecretName(hostnameFQDN)),
 		)
 		mgr := newDomainMappingManager(fakeClient)
 
 		require.NoError(t, mgr.CleanUp(ctx, newBaseCapp()))
 
 		got := &corev1.Secret{}
-		getErr := fakeClient.Get(ctx, types.NamespacedName{Name: utils.GenerateSecretName(hostnameFQDN), Namespace: cappNamespace}, got)
+		getErr := fakeClient.Get(ctx, types.NamespacedName{Name: generateTLSSecretName(hostnameFQDN), Namespace: cappNamespace}, got)
 		require.True(t, errors.IsNotFound(getErr))
 	})
 
@@ -237,7 +230,7 @@ func TestDomainMappingManagerCleanUp(t *testing.T) {
 		mapping := newDomainMapping(nil)
 		require.NoError(t, controllerutil.SetOwnerReference(&capp, mapping, newDomainMappingScheme()))
 
-		secretName := utils.GenerateSecretName(hostnameFQDN)
+		secretName := generateTLSSecretName(hostnameFQDN)
 		fakeClient := newFakeClient(newDomainMappingScheme(), mapping, newSecret(secretName))
 		mgr := newDomainMappingManager(fakeClient)
 

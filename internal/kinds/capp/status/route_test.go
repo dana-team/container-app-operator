@@ -7,8 +7,8 @@ import (
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	"github.com/dana-team/container-app-operator/internal/kinds/capp/cappmeta"
 	rmanagers "github.com/dana-team/container-app-operator/internal/kinds/capp/resourcemanagers"
-	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 	dnsrecordv1alpha1 "github.com/dana-team/provider-dns-v2/apis/namespaced/record/v1alpha1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -44,8 +44,8 @@ func routeCapp() cappv1alpha1.Capp {
 func newCappConfig() *cappv1alpha1.CappConfig {
 	return &cappv1alpha1.CappConfig{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      utils.CappConfigName,
-			Namespace: utils.CappNS,
+			Name:      cappmeta.CappConfigName,
+			Namespace: cappmeta.CappNS,
 		},
 		Spec: cappv1alpha1.CappConfigSpec{
 			DNSConfig: cappv1alpha1.DNSConfig{
@@ -59,24 +59,15 @@ func TestBuildRouteStatus(t *testing.T) {
 	ctx := context.Background()
 	capp := routeCapp()
 
-	t.Run("returns error when capp config missing", func(t *testing.T) {
-		fakeClient := fake.NewClientBuilder().WithScheme(newRouteScheme()).Build()
-		isRequired := map[string]bool{}
-
-		_, err := buildRouteStatus(ctx, fakeClient, capp, isRequired)
-		require.Error(t, err)
-	})
-
 	t.Run("returns empty statuses when no sub-resources required", func(t *testing.T) {
-		fakeClient := fake.NewClientBuilder().WithScheme(newRouteScheme()).
-			WithObjects(newCappConfig()).Build()
+		fakeClient := fake.NewClientBuilder().WithScheme(newRouteScheme()).Build()
 		isRequired := map[string]bool{
 			rmanagers.DomainMapping: false,
 			rmanagers.DNSRecord:     false,
 			rmanagers.Certificate:   false,
 		}
 
-		result, err := buildRouteStatus(ctx, fakeClient, capp, isRequired)
+		result, err := buildRouteStatus(ctx, fakeClient, capp, isRequired, newCappConfig())
 		require.NoError(t, err)
 		assert.Empty(t, result.DomainMappingObjectStatus.Conditions)
 		assert.Empty(t, result.DNSRecordObjectStatus.CNAMERecordObjectStatus.Conditions)
@@ -118,14 +109,14 @@ func TestBuildRouteStatus(t *testing.T) {
 		}
 
 		fakeClient := fake.NewClientBuilder().WithScheme(newRouteScheme()).
-			WithObjects(newCappConfig(), dm, cert, cname).Build()
+			WithObjects(dm, cert, cname).Build()
 		isRequired := map[string]bool{
 			rmanagers.DomainMapping: true,
 			rmanagers.DNSRecord:     true,
 			rmanagers.Certificate:   true,
 		}
 
-		result, err := buildRouteStatus(ctx, fakeClient, capp, isRequired)
+		result, err := buildRouteStatus(ctx, fakeClient, capp, isRequired, newCappConfig())
 		require.NoError(t, err)
 		require.NotNil(t, result.DomainMappingObjectStatus.URL)
 		assert.Equal(t, resourceName, result.DomainMappingObjectStatus.URL.Host)

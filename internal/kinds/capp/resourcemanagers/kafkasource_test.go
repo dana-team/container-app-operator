@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	"github.com/dana-team/container-app-operator/internal/kinds/capp/cappmeta"
 	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/resourceclient"
-	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -41,7 +41,7 @@ func newKafkaSource(source string) *kafkasourcev1.KafkaSource {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%s-%s", cappName, source),
 			Namespace: cappNamespace,
-			Labels:    utils.ManagedResourceLabels(cappName),
+			Labels:    cappmeta.ManagedResourceLabels(cappName),
 		},
 	}
 }

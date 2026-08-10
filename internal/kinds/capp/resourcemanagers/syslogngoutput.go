@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
+	"github.com/dana-team/container-app-operator/internal/kinds/capp/cappmeta"
 
 	"github.com/cisco-open/operator-tools/pkg/secret"
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
@@ -109,7 +109,7 @@ func (o SyslogNGOutputManager) prepareResource(capp cappv1alpha1.Capp) loggingv1
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      syslogNGOutputName,
 				Namespace: capp.GetNamespace(),
-				Labels:    utils.ManagedResourceLabels(capp.Name),
+				Labels:    cappmeta.ManagedResourceLabels(capp.Name),
 			},
 			Spec: syslogNGOutputSpec,
 		}

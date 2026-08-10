@@ -6,8 +6,8 @@ import (
 	"fmt"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	"github.com/dana-team/container-app-operator/internal/kinds/capp/cappmeta"
 	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/resourceclient"
-	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -110,7 +110,7 @@ func (k KafkaSourceManager) prepareResource(capp cappv1alpha1.Capp, source cappv
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: capp.Namespace,
-			Labels:    utils.ManagedResourceLabels(capp.Name),
+			Labels:    cappmeta.ManagedResourceLabels(capp.Name),
 		},
 		Spec: kafkasourcev1.KafkaSourceSpec{
 			Consumers: &consumers,

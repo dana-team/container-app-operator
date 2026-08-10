@@ -11,6 +11,7 @@ import (
 
 	"github.com/cloudevents/sdk-go/v2/event"
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	rmanagers "github.com/dana-team/container-app-operator/internal/kinds/capp/resourcemanagers"
 	"github.com/dana-team/container-app-operator/internal/webhook/rcs/common"
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -65,7 +66,7 @@ func (c *CappValidator) Handle(ctx context.Context, req admission.Request) admis
 }
 
 func (c *CappValidator) handle(ctx context.Context, operation admissionv1.Operation, capp cappv1alpha1.Capp, oldCapp *cappv1alpha1.Capp) admission.Response {
-	config, err := common.GetCappConfig(ctx, c.Client)
+	config, err := rmanagers.GetCappConfig(ctx, c.Client)
 	if err != nil {
 		return admission.Denied("Failed to fetch CappConfig")
 	}

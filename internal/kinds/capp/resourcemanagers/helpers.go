@@ -3,9 +3,10 @@ package resourcemanagers
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
-	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
+	"github.com/dana-team/container-app-operator/internal/kinds/capp/cappmeta"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -76,6 +77,41 @@ func deleteOwnedResources[T client.Object](ctx context.Context, c client.Client,
 	return nil
 }
 
+// GenerateResourceName appends suffix (minus its trailing dot) to hostname
+// when hostname does not already end with that suffix.
+func GenerateResourceName(hostname, suffix string) string {
+	bare := strings.TrimSuffix(suffix, ".")
+	if !strings.HasSuffix(hostname, bare) {
+		return hostname + "." + bare
+	}
+
+	return hostname
+}
+
+// GenerateRecordName returns hostname with the zone suffix stripped when
+// present, or the original hostname unchanged otherwise.
+func GenerateRecordName(hostname, suffix string) string {
+	bare := strings.TrimSuffix(suffix, ".")
+	if !strings.HasSuffix(hostname, bare) {
+		return hostname
+	}
+
+	return hostname[:len(hostname)-len(suffix)]
+}
+
+func generateTLSSecretName(resourceName string) string {
+	return fmt.Sprintf("%s-tls", resourceName)
+}
+
+// GetCappConfig fetches and returns the singleton CappConfig resource.
+func GetCappConfig(ctx context.Context, k8sClient client.Client) (*cappv1alpha1.CappConfig, error) {
+	cappConfig := &cappv1alpha1.CappConfig{}
+	if err := k8sClient.Get(ctx, client.ObjectKey{Name: cappmeta.CappConfigName, Namespace: cappmeta.CappNS}, cappConfig); err != nil {
+		return nil, err
+	}
+	return cappConfig, nil
+}
+
 func listManagedResources(
 	ctx context.Context,
 	k8s client.Client,
@@ -84,12 +120,14 @@ func listManagedResources(
 	kind string,
 	extraLabels labels.Set,
 ) error {
-	set := labels.Set{utils.CappResourceKey: capp.Name}
+	set := labels.Set{cappmeta.CappResourceKey: capp.Name}
 	for key, value := range extraLabels {
 		set[key] = value
 	}
-	listOptions := utils.GetListOptions(set)
-	listOptions.Namespace = capp.Namespace
+	listOptions := client.ListOptions{
+		LabelSelector: labels.SelectorFromSet(set),
+		Namespace:     capp.Namespace,
+	}
 	if err := k8s.List(ctx, list, &listOptions); err != nil {
 		return fmt.Errorf("unable to list %ss of Capp %q: %w", kind, capp.Name, err)
 	}

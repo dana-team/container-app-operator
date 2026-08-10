@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	xpv1 "github.com/crossplane/crossplane-runtime/v2/apis/common/v1"
+	"github.com/dana-team/container-app-operator/internal/kinds/capp/cappmeta"
 	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/resourceclient"
-	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 	dnsrecordv1alpha1 "github.com/dana-team/provider-dns-v2/apis/namespaced/record/v1alpha1"
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
@@ -30,12 +30,12 @@ func newDNSRecordManager(k8sClient client.Client) DNSRecordManager {
 	return DNSRecordManager{
 		ResourceManagerClient: rclient.ResourceManagerClient{K8sClient: k8sClient, Log: logr.Discard()},
 		EventRecorder:         events.NewFakeRecorder(10),
+		CappConfig:            newCappConfigWithDNS(),
 	}
 }
 
 func newDNSRecordClient(objects ...client.Object) client.Client {
-	objs := append([]client.Object{newCappConfigWithDNS()}, objects...)
-	return newFakeClient(newDNSRecordScheme(), objs...)
+	return newFakeClient(newDNSRecordScheme(), objects...)
 }
 
 func newCNAMERecord(mutate func(*dnsrecordv1alpha1.CNAMERecord)) *dnsrecordv1alpha1.CNAMERecord {
@@ -46,8 +46,8 @@ func newCNAMERecord(mutate func(*dnsrecordv1alpha1.CNAMERecord)) *dnsrecordv1alp
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      hostnameFQDN,
 			Namespace: cappNamespace,
-			Labels: utils.MergeMaps(utils.ManagedResourceLabels(cappName), map[string]string{
-				utils.CappNamespaceKey: cappNamespace,
+			Labels: cappmeta.MergeMaps(cappmeta.ManagedResourceLabels(cappName), map[string]string{
+				cappmeta.CappNamespaceKey: cappNamespace,
 			}),
 		},
 		Spec: dnsrecordv1alpha1.CNAMERecordSpec{
@@ -155,13 +155,6 @@ func TestDNSRecordManagerCreateOrUpdate(t *testing.T) {
 		require.Equal(t, beforeRV, after.ResourceVersion)
 	})
 
-	t.Run("returns error when CappConfig missing", func(t *testing.T) {
-		dm := newDNSRecordManager(newFakeClient(newDNSRecordScheme()))
-		capp := newCappWithHostname(hostnameBare)
-
-		err := dm.createOrUpdate(ctx, capp)
-		require.Error(t, err)
-	})
 }
 
 func TestDNSRecordManagerManage(t *testing.T) {

@@ -6,8 +6,8 @@ import (
 
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
+	"github.com/dana-team/container-app-operator/internal/kinds/capp/cappmeta"
 	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/resourceclient"
-	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -30,12 +30,12 @@ func newCertificateManager(k8sClient client.Client) CertificateManager {
 	return CertificateManager{
 		ResourceManagerClient: rclient.ResourceManagerClient{K8sClient: k8sClient, Log: logr.Discard()},
 		EventRecorder:         events.NewFakeRecorder(10),
+		CappConfig:            newCappConfigWithDNS(),
 	}
 }
 
 func newCertificateClient(objects ...client.Object) client.Client {
-	objs := append([]client.Object{newCappConfigWithDNS()}, objects...)
-	return newFakeClient(newCertificateScheme(), objs...)
+	return newFakeClient(newCertificateScheme(), objects...)
 }
 
 func newCertificate(mutate func(*cmapi.Certificate)) *cmapi.Certificate {
@@ -43,7 +43,7 @@ func newCertificate(mutate func(*cmapi.Certificate)) *cmapi.Certificate {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      hostnameFQDN,
 			Namespace: cappNamespace,
-			Labels:    utils.ManagedResourceLabels(cappName),
+			Labels:    cappmeta.ManagedResourceLabels(cappName),
 		},
 	}
 	if mutate != nil {
@@ -53,29 +53,19 @@ func newCertificate(mutate func(*cmapi.Certificate)) *cmapi.Certificate {
 }
 
 func TestCertificateManagerPrepareResource(t *testing.T) {
-	ctx := context.Background()
-
 	t.Run("prepares certificate spec from capp and DNS config", func(t *testing.T) {
 		mgr := newCertificateManager(newCertificateClient())
 		capp := newCappWithTLS(hostnameBare, true)
 
-		got, err := mgr.prepareResource(ctx, capp)
-		require.NoError(t, err)
+		got := mgr.prepareResource(capp)
 		require.Equal(t, hostnameFQDN, got.Name)
 		require.Equal(t, cmmeta.IssuerReference{Name: issuerName, Kind: issuerKind, Group: issuerGroup}, got.Spec.IssuerRef)
-		require.Equal(t, utils.GenerateSecretName(hostnameFQDN), got.Spec.SecretName)
+		require.Equal(t, generateTLSSecretName(hostnameFQDN), got.Spec.SecretName)
 		require.NotNil(t, got.Spec.SecretTemplate)
 		require.Equal(t, "", got.Spec.SecretTemplate.Labels[certificateUIDSecretLabelKey])
 		require.Equal(t, []string{hostnameFQDN}, got.Spec.DNSNames)
 	})
 
-	t.Run("returns error when CappConfig missing", func(t *testing.T) {
-		mgr := newCertificateManager(newFakeClient(newCertificateScheme()))
-		capp := newCappWithTLS(hostnameBare, true)
-
-		_, err := mgr.prepareResource(ctx, capp)
-		require.Error(t, err)
-	})
 }
 
 func TestCertificateManagerManage(t *testing.T) {

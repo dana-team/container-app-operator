@@ -3,8 +3,8 @@ package status
 import (
 	"context"
 
+	"github.com/dana-team/container-app-operator/internal/kinds/capp/cappmeta"
 	rmanagers "github.com/dana-team/container-app-operator/internal/kinds/capp/resourcemanagers"
-	utils "github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/go-logr/logr"
@@ -27,7 +27,7 @@ func CreateStateStatus(stateStatus *cappv1alpha1.StateStatus, cappStateFromSpec 
 }
 
 // SyncStatus updates the Capp status subresource from the observed state of its managed resources.
-func SyncStatus(ctx context.Context, capp cappv1alpha1.Capp, log logr.Logger, r client.Client, resourceManagers map[string]rmanagers.ResourceManager) error {
+func SyncStatus(ctx context.Context, capp cappv1alpha1.Capp, log logr.Logger, r client.Client, resourceManagers map[string]rmanagers.ResourceManager, cappConfig *cappv1alpha1.CappConfig) error {
 	cappObject := cappv1alpha1.Capp{}
 	if err := r.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: capp.Name}, &cappObject); err != nil {
 		return err
@@ -56,7 +56,7 @@ func SyncStatus(ctx context.Context, capp cappv1alpha1.Capp, log logr.Logger, r 
 		rmanagers.DNSRecord:     resourceManagers[rmanagers.DNSRecord].IsRequired(capp),
 		rmanagers.Certificate:   resourceManagers[rmanagers.Certificate].IsRequired(capp),
 	}
-	routeStatus, err := buildRouteStatus(ctx, r, capp, routeRequired)
+	routeStatus, err := buildRouteStatus(ctx, r, capp, routeRequired, cappConfig)
 	if err != nil {
 		return err
 	}
@@ -86,7 +86,7 @@ func SyncStatus(ctx context.Context, capp cappv1alpha1.Capp, log logr.Logger, r 
 		return nil
 	}
 
-	log.Info("kubernetes API write status update", utils.ObjectIdentityKeyVals(&cappObject)...)
+	log.Info("kubernetes API write status update", cappmeta.ObjectIdentityKeyVals(&cappObject)...)
 	if err := r.Status().Update(ctx, &cappObject); err != nil {
 		log.Error(err, "failed to update Capp status")
 		return err

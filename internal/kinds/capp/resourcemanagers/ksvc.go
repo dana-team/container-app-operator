@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+	"strings"
 	"time"
 
+	"github.com/dana-team/container-app-operator/internal/kinds/capp/cappmeta"
 	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/resourceclient"
-	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -44,28 +45,31 @@ var kpaMetrics = []string{"rps", "concurrency"}
 type KnativeServiceManager struct {
 	rclient.ResourceManagerClient
 	EventRecorder events.EventRecorder
+	CappConfig    *cappv1alpha1.CappConfig
 }
 
 // prepareResource generates a Knative Service definition from a given Capp resource.
 func (k KnativeServiceManager) prepareResource(capp cappv1alpha1.Capp, ctx context.Context) knativev1.Service {
-	knativeServiceAnnotations := utils.ExcludeKeysWithPrefix(
-		utils.ExcludeKeysWithPrefix(capp.Annotations, utils.CappAPIGroup),
-		kubectlKubernetesIOAnnotationPrefix,
-	)
+	knativeServiceAnnotations := make(map[string]string, len(capp.Annotations))
+	for k, v := range capp.Annotations {
+		if !strings.HasPrefix(k, cappmeta.CappAPIGroup) && !strings.HasPrefix(k, kubectlKubernetesIOAnnotationPrefix) {
+			knativeServiceAnnotations[k] = v
+		}
+	}
 	knativeServiceLabels := map[string]string{}
 
 	if capp.Labels != nil {
 		maps.Copy(knativeServiceLabels, capp.Labels)
 
 	}
-	knativeServiceLabels[utils.CappResourceKey] = capp.Name
+	knativeServiceLabels[cappmeta.CappResourceKey] = capp.Name
 
 	knativeService := knativev1.Service{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        capp.Name,
 			Namespace:   capp.Namespace,
-			Labels:      utils.ManagedResourceLabels(capp.Name),
+			Labels:      cappmeta.ManagedResourceLabels(capp.Name),
 			Annotations: knativeServiceAnnotations,
 		},
 		Spec: knativev1.ServiceSpec{
@@ -91,12 +95,7 @@ func (k KnativeServiceManager) prepareResource(capp cappv1alpha1.Capp, ctx conte
 		})
 	}
 
-	cappConfig, err := utils.GetCappConfig(ctx, k.K8sClient)
-	if err != nil {
-		k.Log.Error(err, fmt.Sprintf("could not fetch cappConfig from namespace %q", utils.CappNS))
-	}
-
-	knativeService.Spec.Template.Annotations = utils.MergeMaps(knativeServiceAnnotations, setAutoScaler(capp, cappConfig.Spec.AutoscaleConfig))
+	knativeService.Spec.Template.Annotations = cappmeta.MergeMaps(knativeServiceAnnotations, setAutoScaler(capp, k.CappConfig.Spec.AutoscaleConfig))
 	knativeService.Spec.Template.Labels = knativeServiceLabels
 
 	return knativeService

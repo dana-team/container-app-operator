@@ -6,8 +6,8 @@ import (
 
 	"github.com/cloudevents/sdk-go/v2/event"
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	"github.com/dana-team/container-app-operator/internal/kinds/capp/cappmeta"
 	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/resourceclient"
-	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -96,7 +96,7 @@ func (p PingSourceManager) prepareResource(capp cappv1alpha1.Capp, source cappv1
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%s-%s", capp.Name, source.Name),
 			Namespace: capp.Namespace,
-			Labels:    utils.ManagedResourceLabels(capp.Name),
+			Labels:    cappmeta.ManagedResourceLabels(capp.Name),
 		},
 		Spec: sourcesv1.PingSourceSpec{
 			Schedule:    cfg.Schedule,

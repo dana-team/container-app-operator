@@ -8,15 +8,11 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/dana-team/container-app-operator/internal/kinds/capp/utils"
-	"k8s.io/apimachinery/pkg/types"
-
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"knative.dev/pkg/apis"
 	"knative.dev/pkg/network"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // ValidateDomainName checks if the hostname is valid domain name and not part of the cluster's domain.
@@ -75,17 +71,6 @@ func IsDomainNameTaken(ctx context.Context, domainName string) (bool, error) {
 		return false, err
 	}
 	return true, nil
-}
-
-// GetCappConfig returns an instance of Capp Config.
-func GetCappConfig(ctx context.Context, k8sClient client.Client) (*cappv1alpha1.CappConfig, error) {
-	config := cappv1alpha1.CappConfig{}
-	key := types.NamespacedName{Name: utils.CappConfigName, Namespace: utils.CappNS}
-	if err := k8sClient.Get(ctx, key, &config); err != nil {
-		return nil, err
-	}
-
-	return &config, nil
 }
 
 // ValidateURI checks if the provided URI is valid and is a relative path.
