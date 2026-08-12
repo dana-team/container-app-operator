@@ -23,6 +23,7 @@ import (
 )
 
 const (
+	cappCleanupFinalizer      = "dana.io/capp-cleanup"
 	cappName                  = "test-capp"
 	nsName                    = "test-ns"
 	mountedNFSVolumeName      = "mounted"
@@ -100,6 +101,31 @@ func TestCappValidatorHandle(t *testing.T) {
 			oldCapp:     newCapp(oldHostname),
 			expectAllow: false,
 			expectMsg:   "spec.routeSpec.hostname is immutable once set",
+		},
+		{
+			name:      "allows update when capp is terminating with forbidden annotation",
+			operation: admissionv1.Update,
+			capp: func() *cappv1alpha1.Capp {
+				now := metav1.Now()
+				capp := newCapp("")
+				capp.DeletionTimestamp = &now
+				capp.Finalizers = []string{cappCleanupFinalizer}
+				capp.Spec.ConfigurationSpec.Template.Annotations = map[string]string{
+					knativeautoscaling.GroupName + "/minScale": "3",
+				}
+				return capp
+			}(),
+			oldCapp: func() *cappv1alpha1.Capp {
+				now := metav1.Now()
+				capp := newCapp("")
+				capp.DeletionTimestamp = &now
+				capp.Finalizers = []string{cappCleanupFinalizer}
+				capp.Spec.ConfigurationSpec.Template.Annotations = map[string]string{
+					knativeautoscaling.GroupName + "/minScale": "3",
+				}
+				return capp
+			}(),
+			expectAllow: true,
 		},
 		{
 			name:      "denies capp when password secret does not exist",

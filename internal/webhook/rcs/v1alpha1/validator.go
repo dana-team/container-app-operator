@@ -52,6 +52,10 @@ func (c *CappValidator) Handle(ctx context.Context, req admission.Request) admis
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
+	if capp.DeletionTimestamp != nil {
+		return admission.Allowed("object is being deleted")
+	}
+
 	var oldCapp *cappv1alpha1.Capp
 	if req.Operation == admissionv1.Update {
 		oldCapp = &cappv1alpha1.Capp{}
