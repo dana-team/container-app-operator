@@ -72,13 +72,3 @@ func IsDomainNameTaken(ctx context.Context, domainName string) (bool, error) {
 	}
 	return true, nil
 }
-
-// ValidateURI checks if the provided URI is valid and is a relative path.
-func ValidateURI(uri *apis.URL) error {
-
-	_, err := apis.ParseURL(uri.String())
-	if err != nil {
-		return err
-	}
-	return nil
-}

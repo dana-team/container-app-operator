@@ -211,12 +211,6 @@ func validateEventSources(ctx context.Context, r client.Reader, capp cappv1alpha
 				return fmt.Errorf("%s[%d]: %w", eventSourcePath, i, err)
 			}
 		}
-
-		if src.URI != nil {
-			if err := common.ValidateURI(src.URI); err != nil {
-				return fmt.Errorf("%s[%d].uri: %w", eventSourcePath, i, err)
-			}
-		}
 	}
 	return nil
 }
