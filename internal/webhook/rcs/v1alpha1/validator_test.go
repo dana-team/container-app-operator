@@ -6,36 +6,17 @@ import (
 	"testing"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
-	"github.com/dana-team/container-app-operator/internal/kinds/capp/cappmeta"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/ptr"
 	knativeautoscaling "knative.dev/serving/pkg/apis/autoscaling"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
-)
-
-const (
-	cappCleanupFinalizer      = "dana.io/capp-cleanup"
-	cappName                  = "test-capp"
-	nsName                    = "test-ns"
-	mountedNFSVolumeName      = "mounted"
-	unmountedNFSVolumeName    = "a-data"
-	eventSourceName           = "ping-a"
-	unchangedHostname         = "same.example.com"
-	oldHostname               = "old.example.com"
-	newHostname               = "new.example.com"
-	elasticHost               = "https://elastic.example.com"
-	elasticIndex              = "my-index"
-	missingSecretName         = "missing-secret"
-	missingRequiredKeyMessage = "missing required key"
 )
 
 func TestCappValidatorHandle(t *testing.T) {
@@ -516,12 +497,12 @@ func TestValidateKafkaSourceConsumers(t *testing.T) {
 	}{
 		{
 			name:         "allows consumers within capacity",
-			cfg:          &cappv1alpha1.KafkaSourceConfiguration{Consumers: ptrInt32(3)},
+			cfg:          &cappv1alpha1.KafkaSourceConfiguration{Consumers: ptr.To(int32(3))},
 			maxConsumers: 5,
 		},
 		{
 			name:         "rejects consumers above capacity",
-			cfg:          &cappv1alpha1.KafkaSourceConfiguration{Consumers: ptrInt32(6)},
+			cfg:          &cappv1alpha1.KafkaSourceConfiguration{Consumers: ptr.To(int32(6))},
 			maxConsumers: 5,
 			wantErrContains: []string{
 				"consumers",
@@ -718,16 +699,6 @@ func TestValidateScaleSpec(t *testing.T) {
 	}
 }
 
-func newScheme(t *testing.T) *runtime.Scheme {
-	t.Helper()
-
-	scheme := runtime.NewScheme()
-	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-	utilruntime.Must(cappv1alpha1.AddToScheme(scheme))
-
-	return scheme
-}
-
 func newCappValidator(t *testing.T, scheme *runtime.Scheme, decoder admission.Decoder) *CappValidator {
 	t.Helper()
 
@@ -739,41 +710,5 @@ func newCappValidator(t *testing.T, scheme *runtime.Scheme, decoder admission.De
 	return &CappValidator{
 		Client:  fakeClient,
 		Decoder: decoder,
-	}
-}
-
-func newCappConfig() *cappv1alpha1.CappConfig {
-	return &cappv1alpha1.CappConfig{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cappmeta.CappConfigName,
-			Namespace: cappmeta.CappNS,
-		},
-		Spec: cappv1alpha1.CappConfigSpec{
-			AllowedHostnamePatterns: []cappv1alpha1.HostnamePattern{{Match: ".*"}},
-			MaxKafkaConsumers:       5,
-			AutoscaleConfig: cappv1alpha1.AutoscaleConfig{
-				MinReplicasLimit: 10,
-				MaxScaleDelay:    100,
-				MaxReplicasLimit: 10,
-			},
-		},
-	}
-}
-
-func ptrInt32(v int32) *int32 {
-	return &v
-}
-
-func newCapp(hostname string) *cappv1alpha1.Capp {
-	return &cappv1alpha1.Capp{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cappName,
-			Namespace: nsName,
-		},
-		Spec: cappv1alpha1.CappSpec{
-			RouteSpec: cappv1alpha1.RouteSpec{
-				Hostname: hostname,
-			},
-		},
 	}
 }
