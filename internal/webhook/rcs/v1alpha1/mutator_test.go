@@ -12,7 +12,9 @@ import (
 	authenticationv1 "k8s.io/api/authentication/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	knativeautoscaling "knative.dev/serving/pkg/apis/autoscaling"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
@@ -49,6 +51,32 @@ func TestCappMutatorHandle(t *testing.T) {
 				Object:      runtime.RawExtension{Raw: raw},
 				Name:        cappName,
 				Namespace:   nsName,
+			},
+		}
+
+		resp := mutator.Handle(context.Background(), req)
+		require.True(t, resp.Allowed)
+		require.Empty(t, resp.Patches)
+	})
+
+	t.Run("skips mutation when capp is terminating", func(t *testing.T) {
+		now := metav1.Now()
+		capp := newCapp("")
+		capp.DeletionTimestamp = &now
+		capp.Finalizers = []string{cappCleanupFinalizer}
+		capp.Spec.ConfigurationSpec.Template.Annotations = map[string]string{
+			knativeautoscaling.GroupName + "/minScale": "3",
+		}
+
+		raw, err := json.Marshal(capp)
+		require.NoError(t, err)
+
+		req := admission.Request{
+			AdmissionRequest: admissionv1.AdmissionRequest{
+				Operation: admissionv1.Update,
+				Object:    runtime.RawExtension{Raw: raw},
+				Name:      cappName,
+				Namespace: nsName,
 			},
 		}
 

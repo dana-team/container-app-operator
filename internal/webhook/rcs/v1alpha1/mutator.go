@@ -41,6 +41,10 @@ func (c *CappMutator) Handle(ctx context.Context, req admission.Request) admissi
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
+	if capp.DeletionTimestamp != nil {
+		return admission.Allowed("object is being deleted")
+	}
+
 	cappConfig, err := rmanagers.GetCappConfig(ctx, c.Client)
 	if err != nil {
 		logger.Error(err, "failed to get RCS Config")
