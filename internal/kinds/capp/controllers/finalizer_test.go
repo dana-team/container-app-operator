@@ -134,7 +134,7 @@ func TestHandleResourceDeletion(t *testing.T) {
 		assert.NoError(t, fakeClient.Create(ctx, capp))
 
 		rmClient := rclient.ResourceManagerClient{K8sClient: fakeClient, Log: logr.Discard()}
-		managers := map[string]rmanagers.ResourceManager{stubKey: stubResourceManager{}}
+		managers := []rmanagers.ResourceManagerEntry{{Name: stubKey, Manager: stubResourceManager{}}}
 
 		deleted, err := handleResourceDeletion(ctx, *capp, rmClient, managers)
 
@@ -152,7 +152,7 @@ func TestHandleResourceDeletion(t *testing.T) {
 		assert.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: nsName}, capp))
 
 		rmClient := rclient.ResourceManagerClient{K8sClient: fakeClient, Log: logr.Discard()}
-		managers := map[string]rmanagers.ResourceManager{stubKey: stubResourceManager{}}
+		managers := []rmanagers.ResourceManagerEntry{{Name: stubKey, Manager: stubResourceManager{}}}
 
 		deleted, err := handleResourceDeletion(ctx, *capp, rmClient, managers)
 
@@ -169,7 +169,7 @@ func TestHandleResourceDeletion(t *testing.T) {
 		assert.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: nsName}, capp))
 
 		rmClient := rclient.ResourceManagerClient{K8sClient: fakeClient, Log: logr.Discard()}
-		managers := map[string]rmanagers.ResourceManager{stubKey: stubResourceManager{cleanUpErr: cleanUpErr}}
+		managers := []rmanagers.ResourceManagerEntry{{Name: stubKey, Manager: stubResourceManager{cleanUpErr: cleanUpErr}}}
 
 		deleted, err := handleResourceDeletion(ctx, *capp, rmClient, managers)
 
@@ -187,7 +187,7 @@ func TestHandleResourceDeletion(t *testing.T) {
 		assert.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: cappName, Namespace: nsName}, capp))
 
 		rmClient := rclient.ResourceManagerClient{K8sClient: fakeClient, Log: logr.Discard()}
-		managers := map[string]rmanagers.ResourceManager{stubKey: stubResourceManager{}}
+		managers := []rmanagers.ResourceManagerEntry{{Name: stubKey, Manager: stubResourceManager{}}}
 
 		deleted, err := handleResourceDeletion(ctx, *capp, rmClient, managers)
 

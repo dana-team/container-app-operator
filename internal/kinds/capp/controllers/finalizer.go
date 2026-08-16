@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"slices"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/resourceclient"
@@ -11,7 +12,7 @@ import (
 
 const cappCleanupFinalizer = "dana.io/capp-cleanup"
 
-func handleResourceDeletion(ctx context.Context, capp cappv1alpha1.Capp, rmClient rclient.ResourceManagerClient, resourceManagers map[string]rmanagers.ResourceManager) (bool, error) {
+func handleResourceDeletion(ctx context.Context, capp cappv1alpha1.Capp, rmClient rclient.ResourceManagerClient, resourceManagers []rmanagers.ResourceManagerEntry) (bool, error) {
 	if capp.DeletionTimestamp != nil {
 		if controllerutil.ContainsFinalizer(&capp, cappCleanupFinalizer) {
 			if err := finalizeCapp(ctx, capp, resourceManagers); err != nil {
@@ -28,9 +29,9 @@ func removeFinalizer(ctx context.Context, capp cappv1alpha1.Capp, rmClient rclie
 	return rmClient.UpdateResource(ctx, &capp)
 }
 
-func finalizeCapp(ctx context.Context, capp cappv1alpha1.Capp, resourceManagers map[string]rmanagers.ResourceManager) error {
-	for _, manager := range resourceManagers {
-		if err := manager.CleanUp(ctx, capp); err != nil {
+func finalizeCapp(ctx context.Context, capp cappv1alpha1.Capp, resourceManagers []rmanagers.ResourceManagerEntry) error {
+	for _, entry := range slices.Backward(resourceManagers) {
+		if err := entry.Manager.CleanUp(ctx, capp); err != nil {
 			return err
 		}
 	}
