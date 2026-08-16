@@ -363,16 +363,16 @@ func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, fmt.Errorf("failed to get CappConfig: %w", err)
 	}
 
-	resourceManagers := map[string]rmanagers.ResourceManager{
-		rmanagers.KnativeService: rmanagers.KnativeServiceManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder, CappConfig: cappConfig},
-		rmanagers.DNSRecord:      rmanagers.DNSRecordManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder, CappConfig: cappConfig},
-		rmanagers.Certificate:    rmanagers.CertificateManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder, CappConfig: cappConfig},
-		rmanagers.DomainMapping:  rmanagers.DomainMappingManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder, CappConfig: cappConfig},
-		rmanagers.SyslogNGFlow:   rmanagers.SyslogNGFlowManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},
-		rmanagers.SyslogNGOutput: rmanagers.SyslogNGOutputManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},
-		rmanagers.NfsPvc:         rmanagers.NFSPVCManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},
-		rmanagers.PingSource:     rmanagers.PingSourceManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},
-		rmanagers.KafkaSource:    rmanagers.KafkaSourceManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder},
+	resourceManagers := []rmanagers.ResourceManagerEntry{
+		{Name: rmanagers.KnativeService, Manager: rmanagers.KnativeServiceManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder, CappConfig: cappConfig}},
+		{Name: rmanagers.NfsPvc, Manager: rmanagers.NFSPVCManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder}},
+		{Name: rmanagers.SyslogNGOutput, Manager: rmanagers.SyslogNGOutputManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder}},
+		{Name: rmanagers.SyslogNGFlow, Manager: rmanagers.SyslogNGFlowManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder}},
+		{Name: rmanagers.Certificate, Manager: rmanagers.CertificateManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder, CappConfig: cappConfig}},
+		{Name: rmanagers.DomainMapping, Manager: rmanagers.DomainMappingManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder, CappConfig: cappConfig}},
+		{Name: rmanagers.DNSRecord, Manager: rmanagers.DNSRecordManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder, CappConfig: cappConfig}},
+		{Name: rmanagers.PingSource, Manager: rmanagers.PingSourceManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder}},
+		{Name: rmanagers.KafkaSource, Manager: rmanagers.KafkaSourceManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder}},
 	}
 
 	deleted, err := handleResourceDeletion(ctx, capp, rmClient, resourceManagers)
@@ -400,12 +400,12 @@ func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 // SyncApplication manages the lifecycle of Capp.
 // It ensures all manifests are applied according to the specification and synchronizes the status accordingly.
-func (r *CappReconciler) SyncApplication(ctx context.Context, capp cappv1alpha1.Capp, resourceManagers map[string]rmanagers.ResourceManager, cappConfig *cappv1alpha1.CappConfig, logger logr.Logger) error {
-	for _, manager := range resourceManagers {
-		if err := manager.Manage(ctx, capp); err != nil {
+func (r *CappReconciler) SyncApplication(ctx context.Context, capp cappv1alpha1.Capp, resourceManagers []rmanagers.ResourceManagerEntry, cappConfig *cappv1alpha1.CappConfig, logger logr.Logger) error {
+	for _, entry := range resourceManagers {
+		if err := entry.Manager.Manage(ctx, capp); err != nil {
 			return err
 		}
 	}
 
-	return status.SyncStatus(ctx, capp, logger, r.Client, resourceManagers, cappConfig)
+	return status.SyncStatus(ctx, capp, logger, r.Client, rmanagers.ManagerMap(resourceManagers), cappConfig)
 }
