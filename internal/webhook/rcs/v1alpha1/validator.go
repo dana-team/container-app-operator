@@ -2,24 +2,29 @@ package webhooks
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"maps"
+	"net"
+	"net/http"
+	"regexp"
 	"slices"
 	"strings"
-
-	"net/http"
 
 	"github.com/cloudevents/sdk-go/v2/event"
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	rmanagers "github.com/dana-team/container-app-operator/internal/kinds/capp/resourcemanagers"
-	"github.com/dana-team/container-app-operator/internal/webhook/rcs/common"
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/validation"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	kafkasecurity "knative.dev/eventing-kafka-broker/control-plane/pkg/security"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
+	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/pkg/network"
 	kautoscaling "knative.dev/serving/pkg/apis/autoscaling"
 	servingv1 "knative.dev/serving/pkg/apis/serving/v1"
 
@@ -85,10 +90,10 @@ func (c *CappValidator) handle(ctx context.Context, operation admissionv1.Operat
 	}
 
 	if operation == admissionv1.Create || capp.Spec.RouteSpec.Hostname != oldCapp.Spec.RouteSpec.Hostname {
-		if errs := common.ValidateDomainName(capp.Spec.RouteSpec.Hostname, allowedHostnamePatterns); errs != nil {
+		if errs := validateDomainName(capp.Spec.RouteSpec.Hostname, allowedHostnamePatterns); errs != nil {
 			return admission.Denied(errs.Error())
 		}
-		taken, err := common.IsDomainNameTaken(ctx, capp.Spec.RouteSpec.Hostname)
+		taken, err := isDomainNameTaken(ctx, capp.Spec.RouteSpec.Hostname)
 		if err != nil {
 			return admission.Denied(fmt.Sprintf("hostname check error: %v", err))
 		}
@@ -170,7 +175,7 @@ func validateSecretHasKeys(ctx context.Context, r client.Reader, namespace, name
 	secret := &corev1.Secret{}
 	key := types.NamespacedName{Namespace: namespace, Name: name}
 	if err := r.Get(ctx, key, secret); err != nil {
-		if errors.IsNotFound(err) {
+		if k8serrors.IsNotFound(err) {
 			return fmt.Errorf("secret %q not found in namespace %q", name, namespace)
 		}
 		return fmt.Errorf("failed to look up secret %q: %w", name, err)
@@ -289,4 +294,60 @@ func validatePingSourceConfiguration(ctx context.Context, cfg *cappv1alpha1.Ping
 		return err
 	}
 	return nil
+}
+
+// validateDomainName checks if the hostname is valid domain name and not part of the cluster's domain.
+func validateDomainName(domainName string, allowedPatterns []cappv1alpha1.HostnamePattern) (errs *apis.FieldError) {
+	if domainName == "" {
+		return nil
+	}
+	err := validation.IsFullyQualifiedDomainName(field.NewPath("name"), domainName)
+	if err != nil {
+		errs = errs.Also(apis.ErrGeneric(fmt.Sprintf(
+			"invalid name %q: %s", domainName, err.ToAggregate()), "name"))
+	}
+	matched := false
+	descriptions := make([]string, 0, len(allowedPatterns))
+	for i, hp := range allowedPatterns {
+		re, err := regexp.Compile(hp.Match)
+		if err != nil {
+			errs = errs.Also(apis.ErrGeneric(fmt.Sprintf("invalid pattern %q: %s", hp.Match, err), fmt.Sprintf("allowedHostnamePatterns[%d].pattern", i)))
+			continue
+		}
+		if hp.Explanation != "" {
+			descriptions = append(descriptions, hp.Explanation)
+		} else {
+			descriptions = append(descriptions, hp.Match)
+		}
+		if !matched && re.MatchString(domainName) {
+			matched = true
+			break
+		}
+	}
+	if !matched {
+		msg := fmt.Sprintf("invalid name %q: must match one of the allowed patterns", domainName)
+		if len(descriptions) > 0 {
+			msg = fmt.Sprintf("%s (%s)", msg, strings.Join(descriptions, ", "))
+		}
+		errs = errs.Also(apis.ErrGeneric(msg, "name").ViaField("routeSpec").ViaField("hostname"))
+	}
+
+	clusterLocalDomain := network.GetClusterDomainName()
+	if strings.HasSuffix(domainName, "."+clusterLocalDomain) {
+		errs = errs.Also(apis.ErrGeneric(
+			fmt.Sprintf("invalid name %q: must not be a subdomain of cluster local domain %q", domainName, clusterLocalDomain), "name"))
+	}
+	return errs
+}
+
+func isDomainNameTaken(ctx context.Context, domainName string) (bool, error) {
+	_, err := net.DefaultResolver.LookupHost(ctx, domainName)
+	if err != nil {
+		var dnsErr *net.DNSError
+		if errors.As(err, &dnsErr) && dnsErr.IsNotFound {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
 }
