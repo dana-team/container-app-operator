@@ -34,6 +34,10 @@ const (
 	elasticIndex              = "my-index"
 	missingSecretName         = "missing-secret"
 	missingRequiredKeyMessage = "missing required key"
+
+	allowedHostnamePattern      = `.*\.example\.com`
+	nonMatchingHostname         = "myapp.other.com"
+	errMustMatchAllowedPatterns = "must match one of the allowed patterns"
 )
 
 func newScheme(t *testing.T) *runtime.Scheme {
