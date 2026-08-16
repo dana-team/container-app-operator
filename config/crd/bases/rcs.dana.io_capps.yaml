@@ -23,6 +23,14 @@ spec:
       jsonPath: .spec.scaleSpec.metric
       name: AutoScale Type
       type: string
+    - description: whether the Capp and its child resources are ready
+      jsonPath: .status.conditions[?(@.type=='Ready')].status
+      name: Ready
+      type: string
+    - description: reason for the current Ready status
+      jsonPath: .status.conditions[?(@.type=='Ready')].reason
+      name: Reason
+      type: string
     name: v1alpha1
     schema:
       openAPIV3Schema:

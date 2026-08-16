@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	stderrors "errors"
 	"fmt"
 	"time"
 
@@ -28,6 +29,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/tools/events"
 	ctrl "sigs.k8s.io/controller-runtime"
 
@@ -389,7 +391,7 @@ func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	}
 
 	if err := r.SyncApplication(ctx, capp, resourceManagers, cappConfig, logger); err != nil {
-		if errors.IsConflict(err) {
+		if hasConflictError(err) {
 			logger.Info(fmt.Sprintf("Conflict detected, requeuing: %s", err.Error()))
 			return ctrl.Result{RequeueAfter: RequeueTime}, nil
 		}
@@ -401,11 +403,39 @@ func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 // SyncApplication manages the lifecycle of Capp.
 // It ensures all manifests are applied according to the specification and synchronizes the status accordingly.
 func (r *CappReconciler) SyncApplication(ctx context.Context, capp cappv1alpha1.Capp, resourceManagers []rmanagers.ResourceManagerEntry, cappConfig *cappv1alpha1.CappConfig, logger logr.Logger) error {
+	var syncErrors []error
 	for _, entry := range resourceManagers {
 		if err := entry.Manager.Manage(ctx, capp); err != nil {
-			return err
+			syncErrors = append(syncErrors, fmt.Errorf("%s: %w", entry.Name, err))
 		}
 	}
 
-	return status.SyncStatus(ctx, capp, logger, r.Client, rmanagers.ManagerMap(resourceManagers), cappConfig)
+	if err := status.SyncStatus(ctx, capp, logger, r.Client, rmanagers.ManagerMap(resourceManagers), cappConfig, syncErrors); err != nil {
+		return err
+	}
+
+	return utilerrors.NewAggregate(syncErrors)
+}
+
+// hasConflictError reports whether err, or if err aggregates multiple child-resource
+// sync failures, every error within it is a K8s conflict. A mix of a conflict and a
+// non-conflict error is treated as non-conflict, so it isn't silently requeued.
+func hasConflictError(err error) bool {
+	if errors.IsConflict(err) {
+		return true
+	}
+	var agg utilerrors.Aggregate
+	if stderrors.As(err, &agg) {
+		errs := agg.Errors()
+		if len(errs) == 0 {
+			return false
+		}
+		for _, e := range errs {
+			if !errors.IsConflict(e) {
+				return false
+			}
+		}
+		return true
+	}
+	return false
 }

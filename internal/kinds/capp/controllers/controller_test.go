@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
@@ -12,8 +13,11 @@ import (
 	dnsrecordv1alpha1 "github.com/dana-team/provider-dns-v2/apis/namespaced/record/v1alpha1"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	knativeapis "knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
@@ -32,6 +36,30 @@ const (
 	nsName1            = "ns-1"
 	nsName2            = "ns-2"
 )
+
+func TestHasConflictError(t *testing.T) {
+	conflictErr := apierrors.NewConflict(schema.GroupResource{Resource: "capps"}, "capp-a", errors.New("conflict"))
+	plainErr := errors.New("boom")
+
+	tests := []struct {
+		name     string
+		err      error
+		expected bool
+	}{
+		{name: "nil error", err: nil, expected: false},
+		{name: "direct conflict error", err: conflictErr, expected: true},
+		{name: "direct non-conflict error", err: plainErr, expected: false},
+		{name: "aggregate with no conflict inside", err: utilerrors.NewAggregate([]error{plainErr, errors.New("other")}), expected: false},
+		{name: "aggregate with a conflict among other errors", err: utilerrors.NewAggregate([]error{plainErr, conflictErr}), expected: false},
+		{name: "aggregate with only conflicts", err: utilerrors.NewAggregate([]error{conflictErr, apierrors.NewConflict(schema.GroupResource{Resource: "capps"}, "capp-b", errors.New("conflict"))}), expected: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, hasConflictError(tt.err))
+		})
+	}
+}
 
 func TestConditionStatusChanged(t *testing.T) {
 	tests := []struct {
