@@ -25,6 +25,7 @@ const (
 	KafkaSource                    = "KafkaSource"
 	eventKafkaSourceCreationFailed = "KafkaSourceCreationFailed"
 	eventKafkaSourceCreated        = "KafkaSourceCreated"
+	eventKafkaSourceUpdateFailed   = "KafkaSourceUpdateFailed"
 )
 
 type KafkaSourceManager struct {
@@ -90,7 +91,8 @@ func (k KafkaSourceManager) createOrUpdate(ctx context.Context, capp cappv1alpha
 	if managedResourceNeedsUpdate(orig.Spec, existing.Spec, orig.OwnerReferences, existing.OwnerReferences) {
 		k.Log.Info("Updating KafkaSource", "Name", existing.Name)
 	}
-	return updateManagedResourceIfNeeded(ctx, k.UpdateResource, existing, orig.Spec, existing.Spec, orig.OwnerReferences)
+	return updateManagedResourceIfNeeded(ctx, k.UpdateResource, existing, orig.Spec, existing.Spec, orig.OwnerReferences,
+		k.EventRecorder, &capp, KafkaSource, eventKafkaSourceUpdateFailed)
 }
 
 // prepareResource prepares a KafkaSource resource based on the provided Capp and source entry.

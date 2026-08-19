@@ -50,11 +50,25 @@ func managedResourceNeedsUpdate(origSpec, newSpec any, origOwners, newOwners []m
 		!equality.Semantic.DeepEqual(origOwners, newOwners)
 }
 
-func updateManagedResourceIfNeeded(ctx context.Context, update func(context.Context, client.Object) error, obj client.Object, origSpec, newSpec any, origOwners []metav1.OwnerReference) error {
+func updateManagedResourceIfNeeded(
+	ctx context.Context,
+	update func(context.Context, client.Object) error,
+	obj client.Object,
+	origSpec, newSpec any,
+	origOwners []metav1.OwnerReference,
+	recorder events.EventRecorder,
+	capp *cappv1alpha1.Capp,
+	kind, eventFailed string,
+) error {
 	if !managedResourceNeedsUpdate(origSpec, newSpec, origOwners, obj.GetOwnerReferences()) {
 		return nil
 	}
-	return update(ctx, obj)
+	if err := update(ctx, obj); err != nil {
+		recorder.Eventf(capp, nil, corev1.EventTypeWarning, eventFailed, eventFailed,
+			fmt.Sprintf("Failed to update %s %s", kind, obj.GetName()))
+		return err
+	}
+	return nil
 }
 
 func deleteOwnedResources[T client.Object](ctx context.Context, c client.Client, capp *cappv1alpha1.Capp, resources []T) error {

@@ -23,6 +23,7 @@ const (
 	SyslogNGFlow                        = "SyslogNGFlow"
 	eventCappSyslogNGFlowCreationFailed = "SyslogNGFlowCreationFailed"
 	eventCappSyslogNGFlowCreated        = "SyslogNGFlowCreated"
+	eventCappSyslogNGFlowUpdateFailed   = "SyslogNGFlowUpdateFailed"
 	knativeConfiguration                = "serving.knative.dev/configuration"
 )
 
@@ -103,5 +104,6 @@ func (f SyslogNGFlowManager) createOrUpdate(ctx context.Context, capp cappv1alph
 	if err := ensureOwnerReference(f.K8sClient, &capp, &syslogNGFlow, SyslogNGFlow); err != nil {
 		return err
 	}
-	return updateManagedResourceIfNeeded(ctx, f.UpdateResource, &syslogNGFlow, orig.Spec, syslogNGFlow.Spec, orig.OwnerReferences)
+	return updateManagedResourceIfNeeded(ctx, f.UpdateResource, &syslogNGFlow, orig.Spec, syslogNGFlow.Spec, orig.OwnerReferences,
+		f.EventRecorder, &capp, SyslogNGFlow, eventCappSyslogNGFlowUpdateFailed)
 }

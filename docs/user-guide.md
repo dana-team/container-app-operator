@@ -207,6 +207,15 @@ kubectl describe capp my-app -n my-namespace         # detailed status
 
 The status section includes: `knativeObjectStatus`, `routeStatus`, `loggingStatus`, `volumesStatus`, `eventingStatus`, and `conditions`.
 
+**Diagnose failures**: the `Ready` condition in `status.conditions` reflects why a Capp isn't
+progressing. A `reason` of `ManagedResourceError` means a child resource (e.g. the Knative
+Service or DomainMapping) was rejected on create/update — often by an admission webhook — and
+the `message` includes which resource and the underlying error:
+
+```bash
+kubectl get capp my-app -n my-namespace -o jsonpath='{.status.conditions[?(@.type=="Ready")]}'
+```
+
 ## Practical Examples
 
 ### Example 1: Web Application with Custom Domain

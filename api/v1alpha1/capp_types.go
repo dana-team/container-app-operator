@@ -47,6 +47,10 @@ const (
 	CappReadyReasonCertificateNotReady   = "CertificateNotReady"
 	CappReadyReasonVolumesNotReady       = "VolumesNotReady"
 	CappReadyReasonEventingNotReady      = "EventingNotReady"
+
+	// CappReadyReasonManagedResourceError indicates a child resource managed by
+	// Capp could not be created or updated (e.g. rejected by an admission webhook).
+	CappReadyReasonManagedResourceError = "ManagedResourceError"
 )
 
 // CappSpec defines the desired state of Capp.

@@ -25,6 +25,7 @@ const (
 	DomainMapping                        = "DomainMapping"
 	eventCappDomainMappingCreationFailed = "DomainMappingCreationFailed"
 	eventCappDomainMappingCreated        = "DomainMappingCreated"
+	eventCappDomainMappingUpdateFailed   = "DomainMappingUpdateFailed"
 )
 
 type DomainMappingManager struct {
@@ -148,7 +149,8 @@ func (k DomainMappingManager) createOrUpdate(ctx context.Context, capp cappv1alp
 	if err := ensureOwnerReference(k.K8sClient, &capp, &domainMapping, DomainMapping); err != nil {
 		return err
 	}
-	return updateManagedResourceIfNeeded(ctx, k.UpdateResource, &domainMapping, orig.Spec, domainMapping.Spec, orig.OwnerReferences)
+	return updateManagedResourceIfNeeded(ctx, k.UpdateResource, &domainMapping, orig.Spec, domainMapping.Spec, orig.OwnerReferences,
+		k.EventRecorder, &capp, DomainMapping, eventCappDomainMappingUpdateFailed)
 }
 
 // getPreviousDomainMappings returns a list of all DomainMapping objects that are related to the given Capp.

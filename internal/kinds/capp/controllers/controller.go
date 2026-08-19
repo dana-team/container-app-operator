@@ -401,11 +401,33 @@ func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 // SyncApplication manages the lifecycle of Capp.
 // It ensures all manifests are applied according to the specification and synchronizes the status accordingly.
 func (r *CappReconciler) SyncApplication(ctx context.Context, capp cappv1alpha1.Capp, resourceManagers []rmanagers.ResourceManagerEntry, cappConfig *cappv1alpha1.CappConfig, logger logr.Logger) error {
+	var manageErrors []rmanagers.ManageError
+	var conflictErr error
+
 	for _, entry := range resourceManagers {
-		if err := entry.Manager.Manage(ctx, capp); err != nil {
-			return err
+		err := entry.Manager.Manage(ctx, capp)
+		if err == nil {
+			continue
 		}
+		// Conflicts are transient and are retried quickly by Reconcile;
+		// they are not surfaced to users in the Capp status.
+		if errors.IsConflict(err) {
+			if conflictErr == nil {
+				conflictErr = err
+			}
+			continue
+		}
+		logger.Error(err, "failed to manage resource", "resourceManager", entry.Name)
+		manageErrors = append(manageErrors, rmanagers.ManageError{Name: entry.Name, Err: err})
 	}
 
-	return status.SyncStatus(ctx, capp, logger, r.Client, rmanagers.ManagerMap(resourceManagers), cappConfig)
+	if len(manageErrors) == 0 && conflictErr != nil {
+		return conflictErr
+	}
+
+	if err := status.SyncStatus(ctx, capp, logger, r.Client, rmanagers.ManagerMap(resourceManagers), cappConfig, manageErrors); err != nil {
+		return err
+	}
+
+	return rmanagers.JoinManageErrors(manageErrors)
 }

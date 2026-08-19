@@ -20,6 +20,7 @@ const (
 	Certificate                        = "Certificate"
 	eventCappCertificateCreationFailed = "CertificateCreationFailed"
 	eventCappCertificateCreated        = "CertificateCreated"
+	eventCappCertificateUpdateFailed   = "CertificateUpdateFailed"
 	PrivateKeySize                     = 4096
 	maxCommonNameLength                = 64
 	certificateUIDSecretLabelKey       = "networking.internal.knative.dev/certificate-uid"
@@ -117,7 +118,8 @@ func (c CertificateManager) createOrUpdate(ctx context.Context, capp cappv1alpha
 	if err := ensureOwnerReference(c.K8sClient, &capp, &certificate, Certificate); err != nil {
 		return err
 	}
-	if err := updateManagedResourceIfNeeded(ctx, c.UpdateResource, &certificate, orig.Spec, certificate.Spec, orig.OwnerReferences); err != nil {
+	if err := updateManagedResourceIfNeeded(ctx, c.UpdateResource, &certificate, orig.Spec, certificate.Spec, orig.OwnerReferences,
+		c.EventRecorder, &capp, Certificate, eventCappCertificateUpdateFailed); err != nil {
 		return fmt.Errorf("update Certificate %q: %w", certificate.Name, err)
 	}
 

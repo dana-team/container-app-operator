@@ -15,6 +15,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	kafkasourcev1 "knative.dev/eventing-kafka-broker/control-plane/pkg/apis/sources/v1"
+	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -43,6 +45,8 @@ func newScheme() *runtime.Scheme {
 	utilruntime.Must(cappv1alpha1.AddToScheme(s))
 	utilruntime.Must(knativev1beta1.AddToScheme(s))
 	utilruntime.Must(knativev1.AddToScheme(s))
+	utilruntime.Must(sourcesv1.AddToScheme(s))
+	utilruntime.Must(kafkasourcev1.AddToScheme(s))
 	return s
 }
 

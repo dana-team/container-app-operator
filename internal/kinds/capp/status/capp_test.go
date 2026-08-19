@@ -2,6 +2,8 @@ package status
 
 import (
 	"context"
+	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -129,11 +131,13 @@ func TestBuildCappConditions(t *testing.T) {
 	capp := cappv1alpha1.Capp{}
 
 	tests := []struct {
-		name           string
-		status         cappv1alpha1.CappStatus
-		enabled        map[string]bool
-		expectedStatus metav1.ConditionStatus
-		expectedReason string
+		name                    string
+		status                  cappv1alpha1.CappStatus
+		enabled                 map[string]bool
+		manageErrors            []rmanagers.ManageError
+		expectedStatus          metav1.ConditionStatus
+		expectedReason          string
+		expectedMessageContains []string
 	}{
 		{
 			name: "ready when knative is ready and no optional features enabled",
@@ -363,20 +367,120 @@ func TestBuildCappConditions(t *testing.T) {
 			expectedStatus: metav1.ConditionFalse,
 			expectedReason: cappv1alpha1.CappReadyReasonLoggingNotReady,
 		},
+
+		// --- Managed resource sync errors ---
+		{
+			name: "not ready when a managed resource failed to sync",
+			status: cappv1alpha1.CappStatus{
+				KnativeObjectStatus: knativeServiceReady(corev1.ConditionTrue),
+			},
+			enabled: map[string]bool{},
+			manageErrors: []rmanagers.ManageError{
+				{Name: rmanagers.KnativeService, Err: errors.New("admission webhook denied the request")},
+			},
+			expectedStatus:          metav1.ConditionFalse,
+			expectedReason:          cappv1alpha1.CappReadyReasonManagedResourceError,
+			expectedMessageContains: []string{rmanagers.KnativeService, "admission webhook denied the request"},
+		},
+		{
+			name: "sync error takes precedence over a not-ready sub-resource",
+			status: cappv1alpha1.CappStatus{
+				KnativeObjectStatus: knativeServiceReady(corev1.ConditionFalse),
+			},
+			enabled: map[string]bool{},
+			manageErrors: []rmanagers.ManageError{
+				{Name: rmanagers.KnativeService, Err: errors.New("admission webhook denied the request")},
+			},
+			expectedStatus: metav1.ConditionFalse,
+			expectedReason: cappv1alpha1.CappReadyReasonManagedResourceError,
+		},
+		{
+			name: "sync error takes precedence over logging failure",
+			status: cappv1alpha1.CappStatus{
+				KnativeObjectStatus: knativeServiceReady(corev1.ConditionTrue),
+				LoggingStatus: cappv1alpha1.LoggingStatus{
+					Conditions: []metav1.Condition{
+						{Type: loggingReady, Status: metav1.ConditionFalse, Reason: loggingResourceInvalid, Message: "flow err"},
+					},
+				},
+			},
+			enabled: map[string]bool{rmanagers.SyslogNGFlow: true},
+			manageErrors: []rmanagers.ManageError{
+				{Name: rmanagers.DomainMapping, Err: errors.New("invalid hostname")},
+			},
+			expectedStatus: metav1.ConditionFalse,
+			expectedReason: cappv1alpha1.CappReadyReasonManagedResourceError,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			status := tt.status
 			managers := buildManagers(tt.enabled)
-			buildCappConditions(&status, capp, managers)
+			buildCappConditions(&status, capp, managers, tt.manageErrors)
 
 			cond := readyCondition(&status)
 			require.NotNil(t, cond, "Ready condition should be set")
 			assert.Equal(t, tt.expectedStatus, cond.Status)
 			assert.Equal(t, tt.expectedReason, cond.Reason)
+			for _, substr := range tt.expectedMessageContains {
+				assert.Contains(t, cond.Message, substr)
+			}
 		})
 	}
+}
+
+func TestBuildCappConditionsClearsManagedResourceError(t *testing.T) {
+	capp := cappv1alpha1.Capp{}
+	managers := buildManagers(map[string]bool{})
+
+	status := cappv1alpha1.CappStatus{
+		KnativeObjectStatus: knativeServiceReady(corev1.ConditionTrue),
+	}
+	buildCappConditions(&status, capp, managers, []rmanagers.ManageError{
+		{Name: rmanagers.KnativeService, Err: errors.New("admission webhook denied the request")},
+	})
+
+	cond := readyCondition(&status)
+	require.NotNil(t, cond)
+	assert.Equal(t, cappv1alpha1.CappReadyReasonManagedResourceError, cond.Reason)
+
+	buildCappConditions(&status, capp, managers, nil)
+
+	cond = readyCondition(&status)
+	require.NotNil(t, cond)
+	assert.Equal(t, metav1.ConditionTrue, cond.Status)
+	assert.Equal(t, cappv1alpha1.CappReadyReasonReady, cond.Reason)
+
+	readyCount := 0
+	for _, c := range status.Conditions {
+		if c.Type == cappv1alpha1.CappConditionReady {
+			readyCount++
+		}
+	}
+	assert.Equal(t, 1, readyCount)
+}
+
+func TestFormatManageErrors(t *testing.T) {
+	t.Run("empty slice returns empty string", func(t *testing.T) {
+		assert.Equal(t, "", formatManageErrors(nil))
+	})
+
+	t.Run("joins multiple errors preserving order", func(t *testing.T) {
+		msg := formatManageErrors([]rmanagers.ManageError{
+			{Name: rmanagers.KnativeService, Err: errors.New("a")},
+			{Name: rmanagers.DomainMapping, Err: errors.New("b")},
+		})
+		assert.Equal(t, "KnativeService: a; DomainMapping: b", msg)
+	})
+
+	t.Run("truncates overly long messages", func(t *testing.T) {
+		msg := formatManageErrors([]rmanagers.ManageError{
+			{Name: rmanagers.KnativeService, Err: errors.New(strings.Repeat("x", maxConditionMessageLength*2))},
+		})
+		assert.Len(t, msg, maxConditionMessageLength)
+		assert.True(t, strings.HasSuffix(msg, conditionMessageTruncationSuffix))
+	})
 }
 
 func TestBuildCappConditionsPreservesExistingConditions(t *testing.T) {
@@ -388,7 +492,7 @@ func TestBuildCappConditionsPreservesExistingConditions(t *testing.T) {
 	}
 
 	managers := buildManagers(map[string]bool{})
-	buildCappConditions(&status, cappv1alpha1.Capp{}, managers)
+	buildCappConditions(&status, cappv1alpha1.Capp{}, managers, nil)
 
 	assert.Len(t, status.Conditions, 2)
 	cond := readyCondition(&status)

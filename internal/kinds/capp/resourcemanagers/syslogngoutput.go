@@ -26,6 +26,7 @@ const (
 	SyslogNGOutput                        = "SyslogNGOutput"
 	eventCappSyslogNGOutputCreationFailed = "SyslogNGOutputCreationFailed"
 	eventCappSyslogNGOutputCreated        = "SyslogNGOutputCreated"
+	eventCappSyslogNGOutputUpdateFailed   = "SyslogNGOutputUpdateFailed"
 	elasticSSLVersion                     = "tlsv1_2"
 	elasticTemplate                       = "$(format-json --subkeys json# --key-delimiter #)"
 	elasticDataStreamTemplate             = "--subkeys json# --key-delimiter # --exclude DATE --key ISODATE @timestamp=${ISODATE}"
@@ -169,5 +170,6 @@ func (o SyslogNGOutputManager) createOrUpdate(ctx context.Context, capp cappv1al
 	if err := ensureOwnerReference(o.K8sClient, &capp, &syslogNGOutput, SyslogNGOutput); err != nil {
 		return err
 	}
-	return updateManagedResourceIfNeeded(ctx, o.UpdateResource, &syslogNGOutput, orig.Spec, syslogNGOutput.Spec, orig.OwnerReferences)
+	return updateManagedResourceIfNeeded(ctx, o.UpdateResource, &syslogNGOutput, orig.Spec, syslogNGOutput.Spec, orig.OwnerReferences,
+		o.EventRecorder, &capp, SyslogNGOutput, eventCappSyslogNGOutputUpdateFailed)
 }

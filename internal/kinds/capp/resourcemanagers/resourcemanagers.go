@@ -2,6 +2,8 @@ package resourcemanagers
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 )
@@ -28,4 +30,25 @@ func ManagerMap(entries []ResourceManagerEntry) map[string]ResourceManager {
 		m[e.Name] = e.Manager
 	}
 	return m
+}
+
+// ManageError associates a resource manager with the failure it returned.
+type ManageError struct {
+	Name string
+	Err  error
+}
+
+func (e ManageError) Error() string { return fmt.Sprintf("%s: %v", e.Name, e.Err) }
+func (e ManageError) Unwrap() error { return e.Err }
+
+// JoinManageErrors aggregates manager failures into a single error.
+func JoinManageErrors(manageErrors []ManageError) error {
+	if len(manageErrors) == 0 {
+		return nil
+	}
+	errs := make([]error, 0, len(manageErrors))
+	for _, e := range manageErrors {
+		errs = append(errs, e)
+	}
+	return errors.Join(errs...)
 }

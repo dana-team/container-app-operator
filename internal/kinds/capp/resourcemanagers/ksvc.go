@@ -28,6 +28,7 @@ const (
 	KnativeService                        = "KnativeService"
 	eventCappKnativeServiceCreationFailed = "KnativeServiceCreationFailed"
 	eventCappKnativeServiceCreated        = "KnativeServiceCreated"
+	eventCappKnativeServiceUpdateFailed   = "KnativeServiceUpdateFailed"
 	eventCappDisabled                     = "CappDisabled"
 	eventCappEnabled                      = "CappEnabled"
 	knativeServiceKind                    = "Service"
@@ -172,7 +173,8 @@ func (k KnativeServiceManager) createOrUpdate(ctx context.Context, capp cappv1al
 			"resourceVersion", knativeService.ResourceVersion,
 			"generation", knativeService.Generation)
 	}
-	return updateManagedResourceIfNeeded(ctx, k.UpdateResource, &knativeService, orig.Spec, knativeService.Spec, orig.OwnerReferences)
+	return updateManagedResourceIfNeeded(ctx, k.UpdateResource, &knativeService, orig.Spec, knativeService.Spec, orig.OwnerReferences,
+		k.EventRecorder, &capp, KnativeService, eventCappKnativeServiceUpdateFailed)
 }
 
 // setAutoScaler takes a Capp and returns autoscaler annotations based on the Capp's ScaleSpec.Metric value.

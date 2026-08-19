@@ -22,6 +22,7 @@ const (
 	NfsPvc                    = "NfsPvc"
 	eventNFSPVCCreationFailed = "NfsPvcCreationFailed"
 	eventNFSPVCCreated        = "NfsPvcCreated"
+	eventNFSPVCUpdateFailed   = "NfsPvcUpdateFailed"
 )
 
 type NFSPVCManager struct {
@@ -116,7 +117,8 @@ func (n NFSPVCManager) createOrUpdate(ctx context.Context, capp cappv1alpha1.Cap
 			if err := ensureOwnerReference(n.K8sClient, &capp, &existingNFSPVC, NfsPvc); err != nil {
 				return err
 			}
-			if err := updateManagedResourceIfNeeded(ctx, n.UpdateResource, &existingNFSPVC, orig.Spec, existingNFSPVC.Spec, orig.OwnerReferences); err != nil {
+			if err := updateManagedResourceIfNeeded(ctx, n.UpdateResource, &existingNFSPVC, orig.Spec, existingNFSPVC.Spec, orig.OwnerReferences,
+				n.EventRecorder, &capp, NfsPvc, eventNFSPVCUpdateFailed); err != nil {
 				return err
 			}
 		}

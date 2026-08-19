@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
@@ -9,10 +10,15 @@ import (
 	xpv1 "github.com/crossplane/crossplane-runtime/v2/apis/common/v1"
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/cappmeta"
+	rmanagers "github.com/dana-team/container-app-operator/internal/kinds/capp/resourcemanagers"
 	dnsrecordv1alpha1 "github.com/dana-team/provider-dns-v2/apis/namespaced/record/v1alpha1"
+	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	knativeapis "knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -534,4 +540,180 @@ func TestFindCappFromLabels(t *testing.T) {
 			assert.Equal(t, tt.expected, r.findCappFromLabels(ctx, tt.object))
 		})
 	}
+}
+
+// syncStubManager is a configurable rmanagers.ResourceManager used to exercise
+// SyncApplication's error-collection behavior without a real managed resource.
+type syncStubManager struct {
+	manageErr error
+	calls     *int
+}
+
+func (s syncStubManager) Manage(_ context.Context, _ cappv1alpha1.Capp) error {
+	*s.calls++
+	return s.manageErr
+}
+func (s syncStubManager) CleanUp(_ context.Context, _ cappv1alpha1.Capp) error { return nil }
+func (s syncStubManager) IsRequired(_ cappv1alpha1.Capp) bool                  { return false }
+
+// allManagerNames mirrors the manager set registered in Reconcile; SyncStatus
+// map-indexes by name so every one of these must be present in the test's managers slice.
+var allManagerNames = []string{
+	rmanagers.KnativeService,
+	rmanagers.NfsPvc,
+	rmanagers.SyslogNGOutput,
+	rmanagers.SyslogNGFlow,
+	rmanagers.Certificate,
+	rmanagers.DomainMapping,
+	rmanagers.DNSRecord,
+	rmanagers.PingSource,
+	rmanagers.KafkaSource,
+}
+
+// newSyncManagers builds one syncStubManager per registered manager name, failing
+// with manageErrs[name] where set, and returns the entries plus a per-name call counter.
+func newSyncManagers(manageErrs map[string]error) ([]rmanagers.ResourceManagerEntry, map[string]*int) {
+	entries := make([]rmanagers.ResourceManagerEntry, 0, len(allManagerNames))
+	calls := make(map[string]*int, len(allManagerNames))
+	for _, name := range allManagerNames {
+		count := 0
+		calls[name] = &count
+		entries = append(entries, rmanagers.ResourceManagerEntry{
+			Name:    name,
+			Manager: syncStubManager{manageErr: manageErrs[name], calls: &count},
+		})
+	}
+	return entries, calls
+}
+
+func readyConditionFromCapp(capp *cappv1alpha1.Capp) *metav1.Condition {
+	for i := range capp.Status.Conditions {
+		if capp.Status.Conditions[i].Type == conditionTypeReady {
+			return &capp.Status.Conditions[i]
+		}
+	}
+	return nil
+}
+
+func TestSyncApplication(t *testing.T) {
+	ctx := context.Background()
+
+	newReconciler := func(capp *cappv1alpha1.Capp) (*CappReconciler, *cappv1alpha1.CappConfig) {
+		fakeClient := fake.NewClientBuilder().
+			WithScheme(newScheme()).
+			WithObjects(capp).
+			WithStatusSubresource(&cappv1alpha1.Capp{}).
+			Build()
+		return &CappReconciler{Client: fakeClient}, &cappv1alpha1.CappConfig{}
+	}
+
+	getCapp := func(t *testing.T, r *CappReconciler) *cappv1alpha1.Capp {
+		t.Helper()
+		got := &cappv1alpha1.Capp{}
+		require.NoError(t, r.Get(ctx, types.NamespacedName{Namespace: nsName, Name: cappName}, got))
+		return got
+	}
+
+	t.Run("all managers succeed", func(t *testing.T) {
+		capp := newCapp()
+		r, cappConfig := newReconciler(capp)
+		entries, calls := newSyncManagers(nil)
+
+		err := r.SyncApplication(ctx, *capp, entries, cappConfig, logr.Discard())
+		require.NoError(t, err)
+
+		for _, name := range allManagerNames {
+			assert.Equal(t, 1, *calls[name], "manager %s should have been called", name)
+		}
+
+		got := getCapp(t, r)
+		cond := readyConditionFromCapp(got)
+		require.NotNil(t, cond, "Ready condition should be set")
+		// KnativeService.IsRequired() is false here, but computeReadyCondition checks
+		// knativeNotReady unconditionally, so the cascade lands on KnativeServiceNotReady.
+		assert.Equal(t, cappv1alpha1.CappReadyReasonKnativeNotReady, cond.Reason)
+	})
+
+	t.Run("one manager fails with a non-conflict error", func(t *testing.T) {
+		capp := newCapp()
+		r, cappConfig := newReconciler(capp)
+		manageErr := errors.New("admission webhook denied the request")
+		entries, calls := newSyncManagers(map[string]error{rmanagers.KnativeService: manageErr})
+
+		err := r.SyncApplication(ctx, *capp, entries, cappConfig, logr.Discard())
+		require.Error(t, err)
+		assert.ErrorIs(t, err, manageErr)
+
+		for _, name := range allManagerNames {
+			assert.Equal(t, 1, *calls[name], "manager %s should still have been called", name)
+		}
+
+		got := getCapp(t, r)
+		cond := readyConditionFromCapp(got)
+		require.NotNil(t, cond)
+		assert.Equal(t, metav1.ConditionFalse, cond.Status)
+		assert.Equal(t, cappv1alpha1.CappReadyReasonManagedResourceError, cond.Reason)
+		assert.Contains(t, cond.Message, rmanagers.KnativeService)
+		assert.Contains(t, cond.Message, "admission webhook denied the request")
+	})
+
+	t.Run("two managers fail", func(t *testing.T) {
+		capp := newCapp()
+		r, cappConfig := newReconciler(capp)
+		ksvcErr := errors.New("ksvc denied")
+		dmErr := errors.New("domain mapping denied")
+		entries, _ := newSyncManagers(map[string]error{
+			rmanagers.KnativeService: ksvcErr,
+			rmanagers.DomainMapping:  dmErr,
+		})
+
+		err := r.SyncApplication(ctx, *capp, entries, cappConfig, logr.Discard())
+		require.Error(t, err)
+		assert.ErrorIs(t, err, ksvcErr)
+		assert.ErrorIs(t, err, dmErr)
+
+		got := getCapp(t, r)
+		cond := readyConditionFromCapp(got)
+		require.NotNil(t, cond)
+		assert.Equal(t, cappv1alpha1.CappReadyReasonManagedResourceError, cond.Reason)
+		assert.Contains(t, cond.Message, rmanagers.KnativeService)
+		assert.Contains(t, cond.Message, rmanagers.DomainMapping)
+	})
+
+	t.Run("conflict error is quietly propagated without touching status", func(t *testing.T) {
+		capp := newCapp()
+		r, cappConfig := newReconciler(capp)
+		conflictErr := apierrors.NewConflict(schema.GroupResource{Resource: "services"}, cappName, errors.New("resourceVersion mismatch"))
+		entries, _ := newSyncManagers(map[string]error{rmanagers.KnativeService: conflictErr})
+
+		err := r.SyncApplication(ctx, *capp, entries, cappConfig, logr.Discard())
+		require.Error(t, err)
+		assert.True(t, apierrors.IsConflict(err))
+
+		got := getCapp(t, r)
+		assert.Nil(t, readyConditionFromCapp(got), "status should not be touched on a conflict-only failure")
+	})
+
+	t.Run("conflict plus real failure surfaces only the real failure", func(t *testing.T) {
+		capp := newCapp()
+		r, cappConfig := newReconciler(capp)
+		conflictErr := apierrors.NewConflict(schema.GroupResource{Resource: "services"}, cappName, errors.New("resourceVersion mismatch"))
+		realErr := errors.New("admission webhook denied the request")
+		entries, _ := newSyncManagers(map[string]error{
+			rmanagers.KnativeService: conflictErr,
+			rmanagers.DomainMapping:  realErr,
+		})
+
+		err := r.SyncApplication(ctx, *capp, entries, cappConfig, logr.Discard())
+		require.Error(t, err)
+		assert.False(t, apierrors.IsConflict(err))
+		assert.ErrorIs(t, err, realErr)
+
+		got := getCapp(t, r)
+		cond := readyConditionFromCapp(got)
+		require.NotNil(t, cond)
+		assert.Equal(t, cappv1alpha1.CappReadyReasonManagedResourceError, cond.Reason)
+		assert.Contains(t, cond.Message, rmanagers.DomainMapping)
+		assert.NotContains(t, cond.Message, rmanagers.KnativeService+":")
+	})
 }

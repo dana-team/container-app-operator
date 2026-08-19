@@ -22,6 +22,7 @@ const (
 	PingSource                    = "PingSource"
 	eventPingSourceCreationFailed = "PingSourceCreationFailed"
 	eventPingSourceCreated        = "PingSourceCreated"
+	eventPingSourceUpdateFailed   = "PingSourceUpdateFailed"
 )
 
 type PingSourceManager struct {
@@ -86,7 +87,8 @@ func (p PingSourceManager) createOrUpdate(ctx context.Context, capp cappv1alpha1
 	if managedResourceNeedsUpdate(orig.Spec, existing.Spec, orig.OwnerReferences, existing.OwnerReferences) {
 		p.Log.Info("Updating PingSource", "Name", existing.Name)
 	}
-	return updateManagedResourceIfNeeded(ctx, p.UpdateResource, existing, orig.Spec, existing.Spec, orig.OwnerReferences)
+	return updateManagedResourceIfNeeded(ctx, p.UpdateResource, existing, orig.Spec, existing.Spec, orig.OwnerReferences,
+		p.EventRecorder, &capp, PingSource, eventPingSourceUpdateFailed)
 }
 
 // prepareResource prepares a PingSource resource based on the provided Capp and source entry.

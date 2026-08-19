@@ -2,6 +2,7 @@ package status
 
 import (
 	"context"
+	"strings"
 
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/cappmeta"
 	rmanagers "github.com/dana-team/container-app-operator/internal/kinds/capp/resourcemanagers"
@@ -27,7 +28,7 @@ func CreateStateStatus(stateStatus *cappv1alpha1.StateStatus, cappStateFromSpec 
 }
 
 // SyncStatus updates the Capp status subresource from the observed state of its managed resources.
-func SyncStatus(ctx context.Context, capp cappv1alpha1.Capp, log logr.Logger, r client.Client, resourceManagers map[string]rmanagers.ResourceManager, cappConfig *cappv1alpha1.CappConfig) error {
+func SyncStatus(ctx context.Context, capp cappv1alpha1.Capp, log logr.Logger, r client.Client, resourceManagers map[string]rmanagers.ResourceManager, cappConfig *cappv1alpha1.CappConfig, manageErrors []rmanagers.ManageError) error {
 	cappObject := cappv1alpha1.Capp{}
 	if err := r.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: capp.Name}, &cappObject); err != nil {
 		return err
@@ -77,7 +78,7 @@ func SyncStatus(ctx context.Context, capp cappv1alpha1.Capp, log logr.Logger, r 
 
 	CreateStateStatus(&cappObject.Status.StateStatus, capp.Spec.State)
 
-	buildCappConditions(&cappObject.Status, capp, resourceManagers)
+	buildCappConditions(&cappObject.Status, capp, resourceManagers, manageErrors)
 
 	if equality.Semantic.DeepEqual(
 		stripVolatileStatusFields(*oldStatus),
@@ -96,14 +97,18 @@ func SyncStatus(ctx context.Context, capp cappv1alpha1.Capp, log logr.Logger, r 
 }
 
 // buildCappConditions derives top-level Capp conditions from the collected sub-statuses.
-func buildCappConditions(status *cappv1alpha1.CappStatus, capp cappv1alpha1.Capp, resourceManagers map[string]rmanagers.ResourceManager) {
-	condition := computeReadyCondition(status, capp, resourceManagers)
+func buildCappConditions(status *cappv1alpha1.CappStatus, capp cappv1alpha1.Capp, resourceManagers map[string]rmanagers.ResourceManager, manageErrors []rmanagers.ManageError) {
+	condition := computeReadyCondition(status, capp, resourceManagers, manageErrors)
 	meta.SetStatusCondition(&status.Conditions, condition)
 }
 
 // computeReadyCondition determines the Ready condition by cascading through
 // each configured sub-resource, broadcasting its own Ready status.
-func computeReadyCondition(status *cappv1alpha1.CappStatus, capp cappv1alpha1.Capp, resourceManagers map[string]rmanagers.ResourceManager) metav1.Condition {
+func computeReadyCondition(status *cappv1alpha1.CappStatus, capp cappv1alpha1.Capp, resourceManagers map[string]rmanagers.ResourceManager, manageErrors []rmanagers.ManageError) metav1.Condition {
+	if len(manageErrors) > 0 {
+		return readyFalse(cappv1alpha1.CappReadyReasonManagedResourceError, formatManageErrors(manageErrors))
+	}
+
 	if resourceManagers[rmanagers.SyslogNGFlow].IsRequired(capp) {
 		if reason, msg, ok := loggingNotReady(status.LoggingStatus); !ok {
 			return readyFalse(reason, msg)
@@ -145,6 +150,23 @@ func computeReadyCondition(status *cappv1alpha1.CappStatus, capp cappv1alpha1.Ca
 		Reason:  cappv1alpha1.CappReadyReasonReady,
 		Message: "Capp is ready",
 	}
+}
+
+const maxConditionMessageLength = 4096
+const conditionMessageTruncationSuffix = "... (truncated)"
+
+// formatManageErrors renders manager failures into a single condition message,
+// bounded to respect the CRD's condition-message size limit.
+func formatManageErrors(manageErrors []rmanagers.ManageError) string {
+	parts := make([]string, 0, len(manageErrors))
+	for _, e := range manageErrors {
+		parts = append(parts, e.Error())
+	}
+	msg := strings.Join(parts, "; ")
+	if len(msg) > maxConditionMessageLength {
+		msg = msg[:maxConditionMessageLength-len(conditionMessageTruncationSuffix)] + conditionMessageTruncationSuffix
+	}
+	return msg
 }
 
 func readyFalse(reason, message string) metav1.Condition {
