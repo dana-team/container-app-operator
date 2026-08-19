@@ -2,6 +2,8 @@ package status
 
 import (
 	"context"
+	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -132,8 +134,10 @@ func TestBuildCappConditions(t *testing.T) {
 		name           string
 		status         cappv1alpha1.CappStatus
 		enabled        map[string]bool
+		syncErrors     []error
 		expectedStatus metav1.ConditionStatus
 		expectedReason string
+		expectedMsg    string
 	}{
 		{
 			name: "ready when knative is ready and no optional features enabled",
@@ -363,20 +367,81 @@ func TestBuildCappConditions(t *testing.T) {
 			expectedStatus: metav1.ConditionFalse,
 			expectedReason: cappv1alpha1.CappReadyReasonLoggingNotReady,
 		},
+
+		// --- Resource sync errors ---
+		{
+			name: "not ready when a single resource manager fails, even though knative is ready",
+			status: cappv1alpha1.CappStatus{
+				KnativeObjectStatus: knativeServiceReady(corev1.ConditionTrue),
+			},
+			enabled:        map[string]bool{},
+			syncErrors:     []error{errors.New("KnativeService: failed to create resource Service capp-name: admission webhook denied the request")},
+			expectedStatus: metav1.ConditionFalse,
+			expectedReason: cappv1alpha1.CappReadyReasonResourceSyncFailed,
+			expectedMsg:    "KnativeService: failed to create resource Service capp-name: admission webhook denied the request",
+		},
+		{
+			name: "sync errors take priority over an otherwise-ready cascade",
+			status: cappv1alpha1.CappStatus{
+				KnativeObjectStatus: knativeServiceReady(corev1.ConditionTrue),
+				VolumesStatus:       nfsVolumesBound("shared-data"),
+			},
+			enabled:        map[string]bool{rmanagers.NfsPvc: true},
+			syncErrors:     []error{errors.New("NfsPvc: conflict")},
+			expectedStatus: metav1.ConditionFalse,
+			expectedReason: cappv1alpha1.CappReadyReasonResourceSyncFailed,
+			expectedMsg:    "NfsPvc: conflict",
+		},
+		{
+			name: "only the first of multiple sync errors is surfaced in the condition message",
+			status: cappv1alpha1.CappStatus{
+				KnativeObjectStatus: knativeServiceReady(corev1.ConditionTrue),
+			},
+			enabled: map[string]bool{},
+			syncErrors: []error{
+				errors.New("Certificate: cert failed"),
+				errors.New("KnativeService: ksvc failed"),
+			},
+			expectedStatus: metav1.ConditionFalse,
+			expectedReason: cappv1alpha1.CappReadyReasonResourceSyncFailed,
+			expectedMsg:    "Certificate: cert failed",
+		},
+		{
+			name: "empty (non-nil) sync errors slice falls through to the existing cascade unchanged",
+			status: cappv1alpha1.CappStatus{
+				KnativeObjectStatus: knativeServiceReady(corev1.ConditionTrue),
+			},
+			enabled:        map[string]bool{},
+			syncErrors:     []error{},
+			expectedStatus: metav1.ConditionTrue,
+			expectedReason: cappv1alpha1.CappReadyReasonReady,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			status := tt.status
 			managers := buildManagers(tt.enabled)
-			buildCappConditions(&status, capp, managers)
+			buildCappConditions(&status, capp, managers, tt.syncErrors)
 
 			cond := readyCondition(&status)
 			require.NotNil(t, cond, "Ready condition should be set")
 			assert.Equal(t, tt.expectedStatus, cond.Status)
 			assert.Equal(t, tt.expectedReason, cond.Reason)
+			if tt.expectedMsg != "" {
+				assert.Equal(t, tt.expectedMsg, cond.Message)
+			}
 		})
 	}
+}
+
+func TestFormatSyncErrorTruncatesLongMessages(t *testing.T) {
+	longErr := errors.New(strings.Repeat("x", maxSyncErrorMessageLen+1000))
+
+	got := formatSyncError(longErr)
+
+	assert.LessOrEqual(t, len(got), maxSyncErrorMessageLen+len("...(truncated)"))
+	assert.True(t, strings.HasSuffix(got, "...(truncated)"))
 }
 
 func TestBuildCappConditionsPreservesExistingConditions(t *testing.T) {
@@ -388,7 +453,7 @@ func TestBuildCappConditionsPreservesExistingConditions(t *testing.T) {
 	}
 
 	managers := buildManagers(map[string]bool{})
-	buildCappConditions(&status, cappv1alpha1.Capp{}, managers)
+	buildCappConditions(&status, cappv1alpha1.Capp{}, managers, nil)
 
 	assert.Len(t, status.Conditions, 2)
 	cond := readyCondition(&status)

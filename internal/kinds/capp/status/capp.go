@@ -18,6 +18,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// maxSyncErrorMessageLen enforce sync-error message length written to Capp.status.conditions
+// so it always stays within metav1.Condition.Message's validation limit.
+const maxSyncErrorMessageLen = 32768
+
 // CreateStateStatus changes the state status by identifying changes in the manifest
 func CreateStateStatus(stateStatus *cappv1alpha1.StateStatus, cappStateFromSpec string) {
 	if cappStateFromSpec != stateStatus.State || stateStatus.State == "" {
@@ -27,7 +31,7 @@ func CreateStateStatus(stateStatus *cappv1alpha1.StateStatus, cappStateFromSpec 
 }
 
 // SyncStatus updates the Capp status subresource from the observed state of its managed resources.
-func SyncStatus(ctx context.Context, capp cappv1alpha1.Capp, log logr.Logger, r client.Client, resourceManagers map[string]rmanagers.ResourceManager, cappConfig *cappv1alpha1.CappConfig) error {
+func SyncStatus(ctx context.Context, capp cappv1alpha1.Capp, log logr.Logger, r client.Client, resourceManagers map[string]rmanagers.ResourceManager, cappConfig *cappv1alpha1.CappConfig, syncErrors []error) error {
 	cappObject := cappv1alpha1.Capp{}
 	if err := r.Get(ctx, types.NamespacedName{Namespace: capp.Namespace, Name: capp.Name}, &cappObject); err != nil {
 		return err
@@ -77,7 +81,7 @@ func SyncStatus(ctx context.Context, capp cappv1alpha1.Capp, log logr.Logger, r 
 
 	CreateStateStatus(&cappObject.Status.StateStatus, capp.Spec.State)
 
-	buildCappConditions(&cappObject.Status, capp, resourceManagers)
+	buildCappConditions(&cappObject.Status, capp, resourceManagers, syncErrors)
 
 	if equality.Semantic.DeepEqual(
 		stripVolatileStatusFields(*oldStatus),
@@ -96,14 +100,18 @@ func SyncStatus(ctx context.Context, capp cappv1alpha1.Capp, log logr.Logger, r 
 }
 
 // buildCappConditions derives top-level Capp conditions from the collected sub-statuses.
-func buildCappConditions(status *cappv1alpha1.CappStatus, capp cappv1alpha1.Capp, resourceManagers map[string]rmanagers.ResourceManager) {
-	condition := computeReadyCondition(status, capp, resourceManagers)
+func buildCappConditions(status *cappv1alpha1.CappStatus, capp cappv1alpha1.Capp, resourceManagers map[string]rmanagers.ResourceManager, syncErrors []error) {
+	condition := computeReadyCondition(status, capp, resourceManagers, syncErrors)
 	meta.SetStatusCondition(&status.Conditions, condition)
 }
 
-// computeReadyCondition determines the Ready condition by cascading through
-// each configured sub-resource, broadcasting its own Ready status.
-func computeReadyCondition(status *cappv1alpha1.CappStatus, capp cappv1alpha1.Capp, resourceManagers map[string]rmanagers.ResourceManager) metav1.Condition {
+// computeReadyCondition determines the Ready condition by checking sync errors first,
+// then cascading through each configured sub-resource's Ready status.
+func computeReadyCondition(status *cappv1alpha1.CappStatus, capp cappv1alpha1.Capp, resourceManagers map[string]rmanagers.ResourceManager, syncErrors []error) metav1.Condition {
+	if len(syncErrors) > 0 {
+		return readyFalse(cappv1alpha1.CappReadyReasonResourceSyncFailed, formatSyncError(syncErrors[0]))
+	}
+
 	if resourceManagers[rmanagers.SyslogNGFlow].IsRequired(capp) {
 		if reason, msg, ok := loggingNotReady(status.LoggingStatus); !ok {
 			return readyFalse(reason, msg)
@@ -145,6 +153,16 @@ func computeReadyCondition(status *cappv1alpha1.CappStatus, capp cappv1alpha1.Ca
 		Reason:  cappv1alpha1.CappReadyReasonReady,
 		Message: "Capp is ready",
 	}
+}
+
+// formatSyncError truncates a child-resource sync failure's message so it always stays
+// within metav1.Condition.Message's validation limit, regardless of how verbose an underlying error is.
+func formatSyncError(err error) string {
+	message := err.Error()
+	if len(message) > maxSyncErrorMessageLen {
+		message = message[:maxSyncErrorMessageLen] + "...(truncated)"
+	}
+	return message
 }
 
 func readyFalse(reason, message string) metav1.Condition {

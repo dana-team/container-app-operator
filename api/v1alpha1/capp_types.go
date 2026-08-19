@@ -47,6 +47,10 @@ const (
 	CappReadyReasonCertificateNotReady   = "CertificateNotReady"
 	CappReadyReasonVolumesNotReady       = "VolumesNotReady"
 	CappReadyReasonEventingNotReady      = "EventingNotReady"
+
+	// CappReadyReasonResourceSyncFailed indicates that one or more child resources
+	// could not be created or updated during reconciliation (e.g. a webhook validation error).
+	CappReadyReasonResourceSyncFailed = "ResourceSyncFailed"
 )
 
 // CappSpec defines the desired state of Capp.
@@ -385,6 +389,8 @@ type CappStatus struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:printcolumn:name="Custom URL",type="string",JSONPath=".spec.routeSpec.hostname",description="shorten url"
 // +kubebuilder:printcolumn:name="AutoScale Type",type="string",JSONPath=".spec.scaleSpec.metric",description="autoscale metric"
+// +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.conditions[?(@.type=='Ready')].status",description="whether the Capp and its child resources are ready"
+// +kubebuilder:printcolumn:name="Reason",type="string",JSONPath=".status.conditions[?(@.type=='Ready')].reason",description="reason for the current Ready status"
 // +kubebuilder:subresource:status
 
 // Capp is the Schema for the capps API.
