@@ -8,9 +8,12 @@ import (
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	kapis "knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
@@ -120,4 +123,95 @@ func TestBuildRevisionsStatus(t *testing.T) {
 		require.NoError(t, err)
 		assert.Empty(t, revisions)
 	})
+}
+
+func TestKnativeNotReady(t *testing.T) {
+	tests := []struct {
+		name       string
+		status     knativev1.ServiceStatus
+		wantReason string
+		wantMsg    string
+		wantOK     bool
+	}{
+		{
+			name:       "not ready when no conditions exist",
+			status:     knativev1.ServiceStatus{},
+			wantReason: cappv1alpha1.CappReadyReasonKnativeNotReady,
+			wantMsg:    "Knative Service has no status yet",
+		},
+		{
+			name: "not ready when knative Ready condition is false",
+			status: knativev1.ServiceStatus{
+				Status: duckv1.Status{
+					Conditions: duckv1.Conditions{
+						{Type: kapis.ConditionReady, Status: corev1.ConditionFalse, Message: "image pull failed"},
+					},
+				},
+				ConfigurationStatusFields: knativev1.ConfigurationStatusFields{
+					LatestCreatedRevisionName: readyRevision,
+					LatestReadyRevisionName:   readyRevision,
+				},
+			},
+			wantReason: cappv1alpha1.CappReadyReasonKnativeNotReady,
+			wantMsg:    "image pull failed",
+		},
+		{
+			name: "not ready when latest revision differs from latest ready",
+			status: knativev1.ServiceStatus{
+				Status: duckv1.Status{
+					Conditions: duckv1.Conditions{
+						{Type: kapis.ConditionReady, Status: corev1.ConditionTrue},
+					},
+				},
+				ConfigurationStatusFields: knativev1.ConfigurationStatusFields{
+					LatestCreatedRevisionName: pendingRevision,
+					LatestReadyRevisionName:   readyRevision,
+				},
+			},
+			wantReason: cappv1alpha1.CappReadyReasonKnativeNotReady,
+			wantMsg:    "latest revision " + pendingRevision + " is not ready",
+		},
+		{
+			name: "not ready when Ready condition is missing from non-empty conditions",
+			status: knativev1.ServiceStatus{
+				Status: duckv1.Status{
+					Conditions: duckv1.Conditions{
+						{Type: "ConfigurationsReady", Status: corev1.ConditionTrue},
+					},
+				},
+				ConfigurationStatusFields: knativev1.ConfigurationStatusFields{
+					LatestCreatedRevisionName: readyRevision,
+					LatestReadyRevisionName:   readyRevision,
+				},
+			},
+			wantReason: cappv1alpha1.CappReadyReasonKnativeNotReady,
+			wantMsg:    "Knative Service Ready condition not found",
+		},
+		{
+			name: "ready when Ready condition is true and revisions match",
+			status: knativev1.ServiceStatus{
+				Status: duckv1.Status{
+					Conditions: duckv1.Conditions{
+						{Type: kapis.ConditionReady, Status: corev1.ConditionTrue},
+					},
+				},
+				ConfigurationStatusFields: knativev1.ConfigurationStatusFields{
+					LatestCreatedRevisionName: readyRevision,
+					LatestReadyRevisionName:   readyRevision,
+				},
+			},
+			wantOK: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			reason, msg, ok := knativeNotReady(tt.status)
+			assert.Equal(t, tt.wantOK, ok)
+			if !ok {
+				assert.Equal(t, tt.wantReason, reason)
+				assert.Equal(t, tt.wantMsg, msg)
+			}
+		})
+	}
 }

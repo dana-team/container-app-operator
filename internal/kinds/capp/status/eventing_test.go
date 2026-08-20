@@ -7,6 +7,7 @@ import (
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/cappmeta"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -165,6 +166,54 @@ func TestNewEventSourceStatus(t *testing.T) {
 			require.Equal(t, tt.wantMessage, result.Condition.Message)
 			if tt.wantReason != "" {
 				require.Equal(t, tt.wantReason, result.Condition.Reason)
+			}
+		})
+	}
+}
+
+func TestEventingNotReady(t *testing.T) {
+	tests := []struct {
+		name       string
+		status     cappv1alpha1.EventingStatus
+		wantReason string
+		wantMsg    string
+		wantOK     bool
+	}{
+		{
+			name:   "ready when no event sources exist",
+			status: cappv1alpha1.EventingStatus{},
+			wantOK: true,
+		},
+		{
+			name: "ready when all event sources are ready",
+			status: cappv1alpha1.EventingStatus{
+				EventSources: []cappv1alpha1.EventSourceStatus{
+					{Name: "src-a", Condition: kapis.Condition{Status: corev1.ConditionTrue}},
+					{Name: "src-b", Condition: kapis.Condition{Status: corev1.ConditionTrue}},
+				},
+			},
+			wantOK: true,
+		},
+		{
+			name: "not ready when an event source is not ready",
+			status: cappv1alpha1.EventingStatus{
+				EventSources: []cappv1alpha1.EventSourceStatus{
+					{Name: "src-a", Condition: kapis.Condition{Status: corev1.ConditionTrue}},
+					{Name: "src-b", Condition: kapis.Condition{Status: corev1.ConditionFalse}},
+				},
+			},
+			wantReason: cappv1alpha1.CappReadyReasonEventingNotReady,
+			wantMsg:    "event source src-b is not ready",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			reason, msg, ok := eventingNotReady(tt.status)
+			assert.Equal(t, tt.wantOK, ok)
+			if !ok {
+				assert.Equal(t, tt.wantReason, reason)
+				assert.Equal(t, tt.wantMsg, msg)
 			}
 		})
 	}
