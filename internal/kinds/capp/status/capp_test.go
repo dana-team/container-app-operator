@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kapis "knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -422,7 +423,8 @@ func TestBuildCappConditions(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			status := tt.status
 			managers := buildManagers(tt.enabled)
-			buildCappConditions(&status, capp, managers, tt.syncErrors)
+			condition := computeReadyCondition(&status, capp, managers, tt.syncErrors)
+			meta.SetStatusCondition(&status.Conditions, condition)
 
 			cond := readyCondition(&status)
 			require.NotNil(t, cond, "Ready condition should be set")
@@ -453,7 +455,8 @@ func TestBuildCappConditionsPreservesExistingConditions(t *testing.T) {
 	}
 
 	managers := buildManagers(map[string]bool{})
-	buildCappConditions(&status, cappv1alpha1.Capp{}, managers, nil)
+	condition := computeReadyCondition(&status, cappv1alpha1.Capp{}, managers, nil)
+	meta.SetStatusCondition(&status.Conditions, condition)
 
 	assert.Len(t, status.Conditions, 2)
 	cond := readyCondition(&status)

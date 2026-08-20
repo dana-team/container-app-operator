@@ -74,3 +74,13 @@ func newEventSourceStatus(name string, ready *kapis.Condition) cappv1alpha1.Even
 		Condition: condition,
 	}
 }
+
+func eventingNotReady(es cappv1alpha1.EventingStatus) (string, string, bool) {
+	for _, src := range es.EventSources {
+		if src.Condition.Status != corev1.ConditionTrue {
+			return cappv1alpha1.CappReadyReasonEventingNotReady,
+				"event source " + src.Name + " is not ready", false
+		}
+	}
+	return "", "", true
+}

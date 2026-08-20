@@ -5,10 +5,12 @@ import (
 	"sort"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
+	kapis "knative.dev/pkg/apis"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -84,4 +86,26 @@ func buildKnativeStatus(ctx context.Context, kubeClient client.Client, capp capp
 	}
 
 	return knativeObjectStatus, revisionInfo, nil
+}
+
+func knativeNotReady(ks knativev1.ServiceStatus) (string, string, bool) {
+	if len(ks.Conditions) == 0 {
+		return cappv1alpha1.CappReadyReasonKnativeNotReady, "Knative Service has no status yet", false
+	}
+
+	if ks.LatestCreatedRevisionName != "" &&
+		ks.LatestCreatedRevisionName != ks.LatestReadyRevisionName {
+		return cappv1alpha1.CappReadyReasonKnativeNotReady,
+			"latest revision " + ks.LatestCreatedRevisionName + " is not ready", false
+	}
+
+	for _, c := range ks.Conditions {
+		if c.Type == kapis.ConditionReady {
+			if c.Status == corev1.ConditionTrue {
+				return "", "", true
+			}
+			return cappv1alpha1.CappReadyReasonKnativeNotReady, c.Message, false
+		}
+	}
+	return cappv1alpha1.CappReadyReasonKnativeNotReady, "Knative Service Ready condition not found", false
 }
