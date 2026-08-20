@@ -102,3 +102,41 @@ func TestBuildVolumesStatus(t *testing.T) {
 		assert.Equal(t, nfspvcv1alpha1.NfsPvcStatus{}, result.NFSVolumesStatus[1].NFSPVCStatus)
 	})
 }
+
+func TestVolumesNotReady(t *testing.T) {
+	tests := []struct {
+		name       string
+		status     cappv1alpha1.VolumesStatus
+		wantReason string
+		wantMsg    string
+		wantOK     bool
+	}{
+		{
+			name:   "ready when no volumes exist",
+			status: cappv1alpha1.VolumesStatus{},
+			wantOK: true,
+		},
+		{
+			name:   "ready when all volumes are bound",
+			status: nfsVolumesBound("vol-a", "vol-b"),
+			wantOK: true,
+		},
+		{
+			name:       "not ready when PV is not bound",
+			status:     nfsVolumesUnbound("shared-data"),
+			wantReason: cappv1alpha1.CappReadyReasonVolumesNotReady,
+			wantMsg:    "NFS volume shared-data is not bound",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			reason, msg, ok := volumesNotReady(tt.status)
+			assert.Equal(t, tt.wantOK, ok)
+			if !ok {
+				assert.Equal(t, tt.wantReason, reason)
+				assert.Equal(t, tt.wantMsg, msg)
+			}
+		})
+	}
+}

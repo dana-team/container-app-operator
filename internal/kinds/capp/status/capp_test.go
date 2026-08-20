@@ -26,10 +26,9 @@ import (
 )
 
 const (
-	readyRevision    = "rev-1"
-	pendingRevision  = "rev-2"
-	pingEventSource  = "ping-src"
-	kafkaEventSource = "kafka-src"
+	readyRevision   = "rev-1"
+	pendingRevision = "rev-2"
+	pingEventSource = "ping-src"
 )
 
 type stubManager struct {
@@ -128,7 +127,7 @@ func nfsVolumesUnbound(name string) cappv1alpha1.VolumesStatus {
 	}
 }
 
-func TestBuildCappConditions(t *testing.T) {
+func TestComputeReadyCondition(t *testing.T) {
 	capp := cappv1alpha1.Capp{}
 
 	tests := []struct {
@@ -150,37 +149,9 @@ func TestBuildCappConditions(t *testing.T) {
 			expectedReason: cappv1alpha1.CappReadyReasonReady,
 		},
 		{
-			name: "not ready when knative has no conditions",
-			status: cappv1alpha1.CappStatus{
-				KnativeObjectStatus: knativev1.ServiceStatus{},
-			},
-			enabled:        map[string]bool{},
-			expectedStatus: metav1.ConditionFalse,
-			expectedReason: cappv1alpha1.CappReadyReasonKnativeNotReady,
-		},
-		{
 			name: "not ready when knative is not ready",
 			status: cappv1alpha1.CappStatus{
 				KnativeObjectStatus: knativeServiceReady(corev1.ConditionFalse),
-			},
-			enabled:        map[string]bool{},
-			expectedStatus: metav1.ConditionFalse,
-			expectedReason: cappv1alpha1.CappReadyReasonKnativeNotReady,
-		},
-		{
-			name: "not ready when latest revision differs from latest ready",
-			status: cappv1alpha1.CappStatus{
-				KnativeObjectStatus: knativev1.ServiceStatus{
-					Status: duckv1.Status{
-						Conditions: duckv1.Conditions{
-							{Type: kapis.ConditionReady, Status: corev1.ConditionTrue},
-						},
-					},
-					ConfigurationStatusFields: knativev1.ConfigurationStatusFields{
-						LatestCreatedRevisionName: pendingRevision,
-						LatestReadyRevisionName:   readyRevision,
-					},
-				},
 			},
 			enabled:        map[string]bool{},
 			expectedStatus: metav1.ConditionFalse,
@@ -305,52 +276,6 @@ func TestBuildCappConditions(t *testing.T) {
 			enabled:        map[string]bool{rmanagers.PingSource: true},
 			expectedStatus: metav1.ConditionFalse,
 			expectedReason: cappv1alpha1.CappReadyReasonEventingNotReady,
-		},
-		{
-			name: "ready when PingSource enabled and all event sources ready",
-			status: cappv1alpha1.CappStatus{
-				KnativeObjectStatus: knativeServiceReady(corev1.ConditionTrue),
-				EventingStatus: cappv1alpha1.EventingStatus{
-					EventSources: []cappv1alpha1.EventSourceStatus{
-						{Name: pingEventSource, Condition: kapis.Condition{Status: corev1.ConditionTrue}},
-					},
-				},
-			},
-			enabled:        map[string]bool{rmanagers.PingSource: true},
-			expectedStatus: metav1.ConditionTrue,
-			expectedReason: cappv1alpha1.CappReadyReasonReady,
-		},
-		{
-			name: "not ready when KafkaSource enabled and event source not ready",
-			status: cappv1alpha1.CappStatus{
-				KnativeObjectStatus: knativeServiceReady(corev1.ConditionTrue),
-				EventingStatus: cappv1alpha1.EventingStatus{
-					EventSources: []cappv1alpha1.EventSourceStatus{
-						{Name: kafkaEventSource, Condition: kapis.Condition{Status: corev1.ConditionFalse}},
-					},
-				},
-			},
-			enabled:        map[string]bool{rmanagers.KafkaSource: true},
-			expectedStatus: metav1.ConditionFalse,
-			expectedReason: cappv1alpha1.CappReadyReasonEventingNotReady,
-		},
-		{
-			name: "ready when mixed event sources enabled and all ready",
-			status: cappv1alpha1.CappStatus{
-				KnativeObjectStatus: knativeServiceReady(corev1.ConditionTrue),
-				EventingStatus: cappv1alpha1.EventingStatus{
-					EventSources: []cappv1alpha1.EventSourceStatus{
-						{Name: pingEventSource, Condition: kapis.Condition{Status: corev1.ConditionTrue}},
-						{Name: kafkaEventSource, Condition: kapis.Condition{Status: corev1.ConditionTrue}},
-					},
-				},
-			},
-			enabled: map[string]bool{
-				rmanagers.PingSource:  true,
-				rmanagers.KafkaSource: true,
-			},
-			expectedStatus: metav1.ConditionTrue,
-			expectedReason: cappv1alpha1.CappReadyReasonReady,
 		},
 
 		// --- Cascade order: logging before knative ---

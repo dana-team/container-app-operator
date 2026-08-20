@@ -12,10 +12,12 @@ import (
 	dnsrecordv1alpha1 "github.com/dana-team/provider-dns-v2/apis/namespaced/record/v1alpha1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"knative.dev/pkg/apis"
+	duckv1 "knative.dev/pkg/apis/duck/v1"
 	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
@@ -255,4 +257,108 @@ func TestBuildCNAMERecordStatus(t *testing.T) {
 		require.NotNil(t, result.AtProvider.Cname)
 		assert.Equal(t, target, *result.AtProvider.Cname)
 	})
+}
+
+func TestDomainMappingNotReady(t *testing.T) {
+	tests := []struct {
+		name       string
+		status     cappv1alpha1.RouteStatus
+		wantReason string
+		wantMsg    string
+		wantOK     bool
+	}{
+		{
+			name:   "ready when domain mapping has no conditions",
+			status: cappv1alpha1.RouteStatus{},
+			wantOK: true,
+		},
+		{
+			name: "ready when domain mapping Ready condition is true",
+			status: cappv1alpha1.RouteStatus{
+				DomainMappingObjectStatus: knativev1beta1.DomainMappingStatus{
+					Status: duckv1.Status{
+						Conditions: duckv1.Conditions{
+							{Type: apis.ConditionReady, Status: corev1.ConditionTrue},
+						},
+					},
+				},
+			},
+			wantOK: true,
+		},
+		{
+			name: "not ready when domain mapping Ready condition is false",
+			status: cappv1alpha1.RouteStatus{
+				DomainMappingObjectStatus: knativev1beta1.DomainMappingStatus{
+					Status: duckv1.Status{
+						Conditions: duckv1.Conditions{
+							{Type: apis.ConditionReady, Status: corev1.ConditionFalse, Message: "DNS not propagated"},
+						},
+					},
+				},
+			},
+			wantReason: cappv1alpha1.CappReadyReasonDomainMappingNotReady,
+			wantMsg:    "DNS not propagated",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			reason, msg, ok := domainMappingNotReady(tt.status)
+			assert.Equal(t, tt.wantOK, ok)
+			if !ok {
+				assert.Equal(t, tt.wantReason, reason)
+				assert.Equal(t, tt.wantMsg, msg)
+			}
+		})
+	}
+}
+
+func TestCertificateNotReady(t *testing.T) {
+	tests := []struct {
+		name       string
+		status     cappv1alpha1.RouteStatus
+		wantReason string
+		wantMsg    string
+		wantOK     bool
+	}{
+		{
+			name:   "ready when certificate has no conditions",
+			status: cappv1alpha1.RouteStatus{},
+			wantOK: true,
+		},
+		{
+			name: "ready when certificate Ready condition is true",
+			status: cappv1alpha1.RouteStatus{
+				CertificateObjectStatus: cmapi.CertificateStatus{
+					Conditions: []cmapi.CertificateCondition{
+						{Type: cmapi.CertificateConditionReady, Status: cmmeta.ConditionTrue},
+					},
+				},
+			},
+			wantOK: true,
+		},
+		{
+			name: "not ready when certificate Ready condition is false",
+			status: cappv1alpha1.RouteStatus{
+				CertificateObjectStatus: cmapi.CertificateStatus{
+					Conditions: []cmapi.CertificateCondition{
+						{Type: cmapi.CertificateConditionReady, Status: cmmeta.ConditionFalse, Message: "issuer not found"},
+					},
+				},
+			},
+			wantReason: cappv1alpha1.CappReadyReasonCertificateNotReady,
+			wantMsg:    "issuer not found",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			reason, msg, ok := certificateNotReady(tt.status)
+			assert.Equal(t, tt.wantOK, ok)
+			if !ok {
+				assert.Equal(t, tt.wantReason, reason)
+				assert.Equal(t, tt.wantMsg, msg)
+			}
+		})
+	}
 }
