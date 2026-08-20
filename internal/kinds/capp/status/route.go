@@ -4,13 +4,16 @@ import (
 	"context"
 
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 
 	rmanagers "github.com/dana-team/container-app-operator/internal/kinds/capp/resourcemanagers"
 	dnsrecordv1alpha1 "github.com/dana-team/provider-dns-v2/apis/namespaced/record/v1alpha1"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
+	kapis "knative.dev/pkg/apis"
 	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -113,4 +116,22 @@ func buildCNAMERecordStatus(ctx context.Context, kubeClient client.Client, capp 
 	}
 
 	return cnameRecord.Status, nil
+}
+
+func domainMappingNotReady(rs cappv1alpha1.RouteStatus) (string, string, bool) {
+	for _, c := range rs.DomainMappingObjectStatus.Conditions {
+		if c.Type == kapis.ConditionReady && c.Status != corev1.ConditionTrue {
+			return cappv1alpha1.CappReadyReasonDomainMappingNotReady, c.Message, false
+		}
+	}
+	return "", "", true
+}
+
+func certificateNotReady(rs cappv1alpha1.RouteStatus) (string, string, bool) {
+	for _, c := range rs.CertificateObjectStatus.Conditions {
+		if c.Type == cmapi.CertificateConditionReady && c.Status != cmmeta.ConditionTrue {
+			return cappv1alpha1.CappReadyReasonCertificateNotReady, c.Message, false
+		}
+	}
+	return "", "", true
 }

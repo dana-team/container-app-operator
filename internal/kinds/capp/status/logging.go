@@ -71,3 +71,12 @@ func buildLoggingStatus(ctx context.Context, capp cappv1alpha1.Capp, log logr.Lo
 
 	return loggingStatus, nil
 }
+
+func loggingNotReady(ls cappv1alpha1.LoggingStatus) (string, string, bool) {
+	for _, c := range ls.Conditions {
+		if c.Status == metav1.ConditionFalse {
+			return cappv1alpha1.CappReadyReasonLoggingNotReady, c.Message, false
+		}
+	}
+	return "", "", true
+}
