@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kapis "knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -25,10 +26,9 @@ import (
 )
 
 const (
-	readyRevision    = "rev-1"
-	pendingRevision  = "rev-2"
-	pingEventSource  = "ping-src"
-	kafkaEventSource = "kafka-src"
+	readyRevision   = "rev-1"
+	pendingRevision = "rev-2"
+	pingEventSource = "ping-src"
 )
 
 type stubManager struct {
@@ -127,7 +127,7 @@ func nfsVolumesUnbound(name string) cappv1alpha1.VolumesStatus {
 	}
 }
 
-func TestBuildCappConditions(t *testing.T) {
+func TestComputeReadyCondition(t *testing.T) {
 	capp := cappv1alpha1.Capp{}
 
 	tests := []struct {
@@ -149,37 +149,9 @@ func TestBuildCappConditions(t *testing.T) {
 			expectedReason: cappv1alpha1.CappReadyReasonReady,
 		},
 		{
-			name: "not ready when knative has no conditions",
-			status: cappv1alpha1.CappStatus{
-				KnativeObjectStatus: knativev1.ServiceStatus{},
-			},
-			enabled:        map[string]bool{},
-			expectedStatus: metav1.ConditionFalse,
-			expectedReason: cappv1alpha1.CappReadyReasonKnativeNotReady,
-		},
-		{
 			name: "not ready when knative is not ready",
 			status: cappv1alpha1.CappStatus{
 				KnativeObjectStatus: knativeServiceReady(corev1.ConditionFalse),
-			},
-			enabled:        map[string]bool{},
-			expectedStatus: metav1.ConditionFalse,
-			expectedReason: cappv1alpha1.CappReadyReasonKnativeNotReady,
-		},
-		{
-			name: "not ready when latest revision differs from latest ready",
-			status: cappv1alpha1.CappStatus{
-				KnativeObjectStatus: knativev1.ServiceStatus{
-					Status: duckv1.Status{
-						Conditions: duckv1.Conditions{
-							{Type: kapis.ConditionReady, Status: corev1.ConditionTrue},
-						},
-					},
-					ConfigurationStatusFields: knativev1.ConfigurationStatusFields{
-						LatestCreatedRevisionName: pendingRevision,
-						LatestReadyRevisionName:   readyRevision,
-					},
-				},
 			},
 			enabled:        map[string]bool{},
 			expectedStatus: metav1.ConditionFalse,
@@ -305,52 +277,6 @@ func TestBuildCappConditions(t *testing.T) {
 			expectedStatus: metav1.ConditionFalse,
 			expectedReason: cappv1alpha1.CappReadyReasonEventingNotReady,
 		},
-		{
-			name: "ready when PingSource enabled and all event sources ready",
-			status: cappv1alpha1.CappStatus{
-				KnativeObjectStatus: knativeServiceReady(corev1.ConditionTrue),
-				EventingStatus: cappv1alpha1.EventingStatus{
-					EventSources: []cappv1alpha1.EventSourceStatus{
-						{Name: pingEventSource, Condition: kapis.Condition{Status: corev1.ConditionTrue}},
-					},
-				},
-			},
-			enabled:        map[string]bool{rmanagers.PingSource: true},
-			expectedStatus: metav1.ConditionTrue,
-			expectedReason: cappv1alpha1.CappReadyReasonReady,
-		},
-		{
-			name: "not ready when KafkaSource enabled and event source not ready",
-			status: cappv1alpha1.CappStatus{
-				KnativeObjectStatus: knativeServiceReady(corev1.ConditionTrue),
-				EventingStatus: cappv1alpha1.EventingStatus{
-					EventSources: []cappv1alpha1.EventSourceStatus{
-						{Name: kafkaEventSource, Condition: kapis.Condition{Status: corev1.ConditionFalse}},
-					},
-				},
-			},
-			enabled:        map[string]bool{rmanagers.KafkaSource: true},
-			expectedStatus: metav1.ConditionFalse,
-			expectedReason: cappv1alpha1.CappReadyReasonEventingNotReady,
-		},
-		{
-			name: "ready when mixed event sources enabled and all ready",
-			status: cappv1alpha1.CappStatus{
-				KnativeObjectStatus: knativeServiceReady(corev1.ConditionTrue),
-				EventingStatus: cappv1alpha1.EventingStatus{
-					EventSources: []cappv1alpha1.EventSourceStatus{
-						{Name: pingEventSource, Condition: kapis.Condition{Status: corev1.ConditionTrue}},
-						{Name: kafkaEventSource, Condition: kapis.Condition{Status: corev1.ConditionTrue}},
-					},
-				},
-			},
-			enabled: map[string]bool{
-				rmanagers.PingSource:  true,
-				rmanagers.KafkaSource: true,
-			},
-			expectedStatus: metav1.ConditionTrue,
-			expectedReason: cappv1alpha1.CappReadyReasonReady,
-		},
 
 		// --- Cascade order: logging before knative ---
 		{
@@ -422,7 +348,8 @@ func TestBuildCappConditions(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			status := tt.status
 			managers := buildManagers(tt.enabled)
-			buildCappConditions(&status, capp, managers, tt.syncErrors)
+			condition := computeReadyCondition(&status, capp, managers, tt.syncErrors)
+			meta.SetStatusCondition(&status.Conditions, condition)
 
 			cond := readyCondition(&status)
 			require.NotNil(t, cond, "Ready condition should be set")
@@ -453,7 +380,8 @@ func TestBuildCappConditionsPreservesExistingConditions(t *testing.T) {
 	}
 
 	managers := buildManagers(map[string]bool{})
-	buildCappConditions(&status, cappv1alpha1.Capp{}, managers, nil)
+	condition := computeReadyCondition(&status, cappv1alpha1.Capp{}, managers, nil)
+	meta.SetStatusCondition(&status.Conditions, condition)
 
 	assert.Len(t, status.Conditions, 2)
 	cond := readyCondition(&status)

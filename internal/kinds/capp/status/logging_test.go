@@ -112,3 +112,49 @@ func TestBuildLoggingStatus(t *testing.T) {
 		assert.Equal(t, loggingResourceInvalid, result.Conditions[0].Reason)
 	})
 }
+
+func TestLoggingNotReady(t *testing.T) {
+	tests := []struct {
+		name       string
+		status     cappv1alpha1.LoggingStatus
+		wantReason string
+		wantMsg    string
+		wantOK     bool
+	}{
+		{
+			name:   "ready when logging has no conditions",
+			status: cappv1alpha1.LoggingStatus{},
+			wantOK: true,
+		},
+		{
+			name: "ready when all conditions are true",
+			status: cappv1alpha1.LoggingStatus{
+				Conditions: []metav1.Condition{
+					{Type: loggingReady, Status: metav1.ConditionTrue, Reason: conditionReady},
+				},
+			},
+			wantOK: true,
+		},
+		{
+			name: "not ready when a condition is false",
+			status: cappv1alpha1.LoggingStatus{
+				Conditions: []metav1.Condition{
+					{Type: loggingReady, Status: metav1.ConditionFalse, Reason: loggingResourceInvalid, Message: "syslogng flow invalid"},
+				},
+			},
+			wantReason: cappv1alpha1.CappReadyReasonLoggingNotReady,
+			wantMsg:    "syslogng flow invalid",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			reason, msg, ok := loggingNotReady(tt.status)
+			assert.Equal(t, tt.wantOK, ok)
+			if !ok {
+				assert.Equal(t, tt.wantReason, reason)
+				assert.Equal(t, tt.wantMsg, msg)
+			}
+		})
+	}
+}

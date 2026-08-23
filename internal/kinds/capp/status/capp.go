@@ -8,13 +8,11 @@ import (
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/go-logr/logr"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	kapis "knative.dev/pkg/apis"
-	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -81,7 +79,8 @@ func SyncStatus(ctx context.Context, capp cappv1alpha1.Capp, log logr.Logger, r 
 
 	CreateStateStatus(&cappObject.Status.StateStatus, capp.Spec.State)
 
-	buildCappConditions(&cappObject.Status, capp, resourceManagers, syncErrors)
+	condition := computeReadyCondition(&cappObject.Status, capp, resourceManagers, syncErrors)
+	meta.SetStatusCondition(&cappObject.Status.Conditions, condition)
 
 	if equality.Semantic.DeepEqual(
 		stripVolatileStatusFields(*oldStatus),
@@ -97,12 +96,6 @@ func SyncStatus(ctx context.Context, capp cappv1alpha1.Capp, log logr.Logger, r 
 	}
 
 	return nil
-}
-
-// buildCappConditions derives top-level Capp conditions from the collected sub-statuses.
-func buildCappConditions(status *cappv1alpha1.CappStatus, capp cappv1alpha1.Capp, resourceManagers map[string]rmanagers.ResourceManager, syncErrors []error) {
-	condition := computeReadyCondition(status, capp, resourceManagers, syncErrors)
-	meta.SetStatusCondition(&status.Conditions, condition)
 }
 
 // computeReadyCondition determines the Ready condition by checking sync errors first,
@@ -172,76 +165,6 @@ func readyFalse(reason, message string) metav1.Condition {
 		Reason:  reason,
 		Message: message,
 	}
-}
-
-func loggingNotReady(ls cappv1alpha1.LoggingStatus) (string, string, bool) {
-	for _, c := range ls.Conditions {
-		if c.Status == metav1.ConditionFalse {
-			return cappv1alpha1.CappReadyReasonLoggingNotReady, c.Message, false
-		}
-	}
-	return "", "", true
-}
-
-func domainMappingNotReady(rs cappv1alpha1.RouteStatus) (string, string, bool) {
-	for _, c := range rs.DomainMappingObjectStatus.Conditions {
-		if c.Type == kapis.ConditionReady && c.Status != corev1.ConditionTrue {
-			return cappv1alpha1.CappReadyReasonDomainMappingNotReady, c.Message, false
-		}
-	}
-	return "", "", true
-}
-
-func certificateNotReady(rs cappv1alpha1.RouteStatus) (string, string, bool) {
-	for _, c := range rs.CertificateObjectStatus.Conditions {
-		if string(c.Type) == "Ready" && c.Status != "True" {
-			return cappv1alpha1.CappReadyReasonCertificateNotReady, c.Message, false
-		}
-	}
-	return "", "", true
-}
-
-func volumesNotReady(vs cappv1alpha1.VolumesStatus) (string, string, bool) {
-	for _, v := range vs.NFSVolumesStatus {
-		if v.NFSPVCStatus.PvPhase != string(corev1.VolumeBound) ||
-			v.NFSPVCStatus.PvcPhase != string(corev1.ClaimBound) {
-			return cappv1alpha1.CappReadyReasonVolumesNotReady,
-				"NFS volume " + v.VolumeName + " is not bound", false
-		}
-	}
-	return "", "", true
-}
-
-func eventingNotReady(es cappv1alpha1.EventingStatus) (string, string, bool) {
-	for _, src := range es.EventSources {
-		if src.Condition.Status != corev1.ConditionTrue {
-			return cappv1alpha1.CappReadyReasonEventingNotReady,
-				"event source " + src.Name + " is not ready", false
-		}
-	}
-	return "", "", true
-}
-
-func knativeNotReady(ks knativev1.ServiceStatus) (string, string, bool) {
-	if len(ks.Conditions) == 0 {
-		return cappv1alpha1.CappReadyReasonKnativeNotReady, "Knative Service has no status yet", false
-	}
-
-	if ks.LatestCreatedRevisionName != "" &&
-		ks.LatestCreatedRevisionName != ks.LatestReadyRevisionName {
-		return cappv1alpha1.CappReadyReasonKnativeNotReady,
-			"latest revision " + ks.LatestCreatedRevisionName + " is not ready", false
-	}
-
-	for _, c := range ks.Conditions {
-		if c.Type == kapis.ConditionReady {
-			if c.Status == corev1.ConditionTrue {
-				return "", "", true
-			}
-			return cappv1alpha1.CappReadyReasonKnativeNotReady, c.Message, false
-		}
-	}
-	return cappv1alpha1.CappReadyReasonKnativeNotReady, "Knative Service Ready condition not found", false
 }
 
 // stripVolatileStatusFields clears condition transition timestamps for status comparison.
