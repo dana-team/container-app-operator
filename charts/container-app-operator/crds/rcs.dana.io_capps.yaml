@@ -23,6 +23,14 @@ spec:
       jsonPath: .spec.scaleSpec.metric
       name: AutoScale Type
       type: string
+    - description: whether the Capp and its child resources are ready
+      jsonPath: .status.conditions[?(@.type=='Ready')].status
+      name: Ready
+      type: string
+    - description: reason for the current Ready status
+      jsonPath: .status.conditions[?(@.type=='Ready')].reason
+      name: Reason
+      type: string
     name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -8723,6 +8731,10 @@ spec:
                       Index defines the index name to write events to.
                       Ignored if type is set to "elastic-datastream".
                     type: string
+                  passwordKey:
+                    description: PasswordKey defines the key inside PasswordSecret
+                      that holds the password.
+                    type: string
                   passwordSecret:
                     description: |-
                       PasswordSecret defines the name of the secret
@@ -8739,24 +8751,26 @@ spec:
                     type: string
                 type: object
                 x-kubernetes-validations:
-                - message: elastic log configuration requires host, index, user, and
-                    passwordSecret
+                - message: elastic log configuration requires host, index, user, passwordSecret,
+                    and passwordKey
                   rule: '!has(self.type) || self.type != ''elastic'' || (has(self.host)
                     && size(self.host) > 0 && has(self.index) && size(self.index)
                     > 0 && has(self.user) && size(self.user) > 0 && has(self.passwordSecret)
-                    && size(self.passwordSecret) > 0)'
+                    && size(self.passwordSecret) > 0 && has(self.passwordKey) && size(self.passwordKey)
+                    > 0)'
                 - message: elastic-datastream log configuration requires host, user,
-                    and passwordSecret
+                    passwordSecret, and passwordKey
                   rule: '!has(self.type) || self.type != ''elastic-datastream'' ||
                     (has(self.host) && size(self.host) > 0 && has(self.user) && size(self.user)
                     > 0 && has(self.passwordSecret) && size(self.passwordSecret) >
-                    0)'
+                    0 && has(self.passwordKey) && size(self.passwordKey) > 0)'
                 - message: type must be elastic or elastic-datastream when log configuration
                     fields are set
                   rule: (!has(self.host) || size(self.host) == 0) && (!has(self.index)
                     || size(self.index) == 0) && (!has(self.user) || size(self.user)
                     == 0) && (!has(self.passwordSecret) || size(self.passwordSecret)
-                    == 0) || (has(self.type) && (self.type == 'elastic' || self.type
+                    == 0) && (!has(self.passwordKey) || size(self.passwordKey) ==
+                    0) || (has(self.type) && (self.type == 'elastic' || self.type
                     == 'elastic-datastream'))
               routeSpec:
                 description: RouteSpec defines the route specification for the Capp.

@@ -16,6 +16,7 @@ func CreateElasticLogSpec() cappv1alpha1.LogSpec {
 		Index:          consts.MainIndex,
 		User:           consts.ElasticUserName,
 		PasswordSecret: consts.ElasticSecretName + "-elastic",
+		PasswordKey:    consts.ElasticPasswordKey,
 	}
 }
 
@@ -26,6 +27,7 @@ func CreateElasticDataStreamLogSpec() cappv1alpha1.LogSpec {
 		Host:           consts.ElasticDataStreamURL,
 		User:           consts.ElasticUserName,
 		PasswordSecret: consts.ElasticSecretName + "-datastream",
+		PasswordKey:    consts.ElasticPasswordKey,
 	}
 }
 
@@ -58,7 +60,7 @@ func CreateElasticSecretObject() *corev1.Secret {
 			Namespace: consts.NSName,
 		},
 		Type: corev1.SecretTypeOpaque,
-		Data: map[string][]byte{consts.ElasticUserName: []byte(consts.SecretValue)},
+		Data: map[string][]byte{consts.ElasticPasswordKey: []byte(consts.SecretValue)},
 	}
 }
 
@@ -71,6 +73,6 @@ func CreateElasticDataStreamSecretObject() *corev1.Secret {
 			Namespace: consts.NSName,
 		},
 		Type: corev1.SecretTypeOpaque,
-		Data: map[string][]byte{consts.ElasticUserName: []byte(consts.SecretValue)},
+		Data: map[string][]byte{consts.ElasticPasswordKey: []byte(consts.SecretValue)},
 	}
 }

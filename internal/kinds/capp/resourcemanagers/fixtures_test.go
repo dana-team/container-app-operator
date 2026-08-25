@@ -93,6 +93,7 @@ func newLogSpec(logType cappv1alpha1.LogType) cappv1alpha1.LogSpec {
 		Host:           elasticHost,
 		User:           "elastic-user",
 		PasswordSecret: "elastic-creds",
+		PasswordKey:    "password",
 	}
 	if logType == cappv1alpha1.LogTypeElastic {
 		spec.Index = elasticIndex

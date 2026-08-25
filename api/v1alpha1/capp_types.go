@@ -234,9 +234,9 @@ const (
 )
 
 // LogSpec defines the configuration for shipping Capp logs.
-// +kubebuilder:validation:XValidation:rule="!has(self.type) || self.type != 'elastic' || (has(self.host) && size(self.host) > 0 && has(self.index) && size(self.index) > 0 && has(self.user) && size(self.user) > 0 && has(self.passwordSecret) && size(self.passwordSecret) > 0)",message="elastic log configuration requires host, index, user, and passwordSecret"
-// +kubebuilder:validation:XValidation:rule="!has(self.type) || self.type != 'elastic-datastream' || (has(self.host) && size(self.host) > 0 && has(self.user) && size(self.user) > 0 && has(self.passwordSecret) && size(self.passwordSecret) > 0)",message="elastic-datastream log configuration requires host, user, and passwordSecret"
-// +kubebuilder:validation:XValidation:rule="(!has(self.host) || size(self.host) == 0) && (!has(self.index) || size(self.index) == 0) && (!has(self.user) || size(self.user) == 0) && (!has(self.passwordSecret) || size(self.passwordSecret) == 0) || (has(self.type) && (self.type == 'elastic' || self.type == 'elastic-datastream'))",message="type must be elastic or elastic-datastream when log configuration fields are set"
+// +kubebuilder:validation:XValidation:rule="!has(self.type) || self.type != 'elastic' || (has(self.host) && size(self.host) > 0 && has(self.index) && size(self.index) > 0 && has(self.user) && size(self.user) > 0 && has(self.passwordSecret) && size(self.passwordSecret) > 0 && has(self.passwordKey) && size(self.passwordKey) > 0)",message="elastic log configuration requires host, index, user, passwordSecret, and passwordKey"
+// +kubebuilder:validation:XValidation:rule="!has(self.type) || self.type != 'elastic-datastream' || (has(self.host) && size(self.host) > 0 && has(self.user) && size(self.user) > 0 && has(self.passwordSecret) && size(self.passwordSecret) > 0 && has(self.passwordKey) && size(self.passwordKey) > 0)",message="elastic-datastream log configuration requires host, user, passwordSecret, and passwordKey"
+// +kubebuilder:validation:XValidation:rule="(!has(self.host) || size(self.host) == 0) && (!has(self.index) || size(self.index) == 0) && (!has(self.user) || size(self.user) == 0) && (!has(self.passwordSecret) || size(self.passwordSecret) == 0) && (!has(self.passwordKey) || size(self.passwordKey) == 0) || (has(self.type) && (self.type == 'elastic' || self.type == 'elastic-datastream'))",message="type must be elastic or elastic-datastream when log configuration fields are set"
 type LogSpec struct {
 	// Type defines where to send the Capp logs
 	// +kubebuilder:validation:Enum=elastic;elastic-datastream
@@ -261,6 +261,10 @@ type LogSpec struct {
 	// containing the password for authentication.
 	// +optional
 	PasswordSecret string `json:"passwordSecret,omitempty"`
+
+	// PasswordKey defines the key inside PasswordSecret that holds the password.
+	// +optional
+	PasswordKey string `json:"passwordKey,omitempty"`
 }
 
 // RevisionInfo shows the revision information.

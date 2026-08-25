@@ -32,7 +32,10 @@ const (
 	newHostname               = "new.example.com"
 	elasticHost               = "https://elastic.example.com"
 	elasticIndex              = "my-index"
+	elasticSecretKey          = "elastic"
+	elasticPasswordKey        = "password"
 	missingSecretName         = "missing-secret"
+	existingSecretName        = "existing-secret"
 	missingRequiredKeyMessage = "missing required key"
 
 	allowedHostnamePattern      = `.*\.example\.com`

@@ -24,12 +24,13 @@ func TestCappValidatorHandle(t *testing.T) {
 	decoder := admission.NewDecoder(scheme)
 
 	tests := []struct {
-		name        string
-		operation   admissionv1.Operation
-		capp        *cappv1alpha1.Capp
-		oldCapp     *cappv1alpha1.Capp
-		expectAllow bool
-		expectMsg   string
+		name            string
+		operation       admissionv1.Operation
+		capp            *cappv1alpha1.Capp
+		oldCapp         *cappv1alpha1.Capp
+		existingObjects []client.Object
+		expectAllow     bool
+		expectMsg       string
 	}{
 		{
 			name:      "Allow capp without sources",
@@ -126,17 +127,52 @@ func TestCappValidatorHandle(t *testing.T) {
 						Index:          elasticIndex,
 						User:           elasticSecretKey,
 						PasswordSecret: missingSecretName,
+						PasswordKey:    elasticPasswordKey,
 					},
 				},
 			},
 			expectAllow: false,
 			expectMsg:   "secret \"" + missingSecretName + "\" not found",
 		},
+		{
+			name:      "denies capp when passwordSecret is missing passwordKey",
+			operation: admissionv1.Create,
+			capp: &cappv1alpha1.Capp{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      cappName,
+					Namespace: nsName,
+				},
+				Spec: cappv1alpha1.CappSpec{
+					ScaleSpec: cappv1alpha1.ScaleSpec{
+						Metric: knativeautoscaling.CPU,
+					},
+					LogSpec: cappv1alpha1.LogSpec{
+						Type:           cappv1alpha1.LogTypeElastic,
+						Host:           elasticHost,
+						Index:          elasticIndex,
+						User:           elasticSecretKey,
+						PasswordSecret: existingSecretName,
+						PasswordKey:    elasticPasswordKey,
+					},
+				},
+			},
+			existingObjects: []client.Object{
+				&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      existingSecretName,
+						Namespace: nsName,
+					},
+					Data: map[string][]byte{"some-other-key": []byte("value")},
+				},
+			},
+			expectAllow: false,
+			expectMsg:   missingRequiredKeyMessage,
+		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			validator := newCappValidator(t, scheme, decoder)
+			validator := newCappValidator(t, scheme, decoder, tc.existingObjects...)
 
 			raw, err := json.Marshal(tc.capp)
 			if err != nil {
@@ -795,12 +831,13 @@ func TestValidateDomainName(t *testing.T) {
 	}
 }
 
-func newCappValidator(t *testing.T, scheme *runtime.Scheme, decoder admission.Decoder) *CappValidator {
+func newCappValidator(t *testing.T, scheme *runtime.Scheme, decoder admission.Decoder, extraObjects ...client.Object) *CappValidator {
 	t.Helper()
 
+	objects := append([]client.Object{newCappConfig()}, extraObjects...)
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(newCappConfig()).
+		WithObjects(objects...).
 		Build()
 
 	return &CappValidator{
