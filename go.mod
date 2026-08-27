@@ -7,13 +7,13 @@ require (
 	github.com/cisco-open/operator-tools v0.37.0
 	github.com/cloudevents/sdk-go/v2 v2.16.2
 	github.com/crossplane/crossplane-runtime/v2 v2.2.2
-	github.com/dana-team/nfspvc-operator v0.5.2
+	github.com/dana-team/nfspvc-operator v0.5.3
 	github.com/dana-team/provider-dns-v2 v1.0.2
 	github.com/evanphx/json-patch/v5 v5.9.11
 	github.com/go-logr/logr v1.4.3
 	github.com/go-logr/zapr v1.3.0
 	github.com/kube-logging/logging-operator/pkg/sdk v0.12.1-0.20260415160252-e637b3f6d15d
-	github.com/onsi/ginkgo/v2 v2.32.0
+	github.com/onsi/ginkgo/v2 v2.32.1
 	github.com/onsi/gomega v1.42.1
 	github.com/openshift/api v0.0.0-20251103120323-33ccad512a44
 	github.com/stretchr/testify v1.11.1
@@ -28,7 +28,7 @@ require (
 	knative.dev/eventing-kafka-broker v0.49.1
 	knative.dev/pkg v0.0.0-20260727151759-521cb33b33dd
 	knative.dev/serving v0.50.0
-	sigs.k8s.io/controller-runtime v0.24.0
+	sigs.k8s.io/controller-runtime v0.24.1
 )
 
 require (

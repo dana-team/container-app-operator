@@ -122,10 +122,10 @@ func TestVolumesNotReady(t *testing.T) {
 			wantOK: true,
 		},
 		{
-			name:       "not ready when PV is not bound",
+			name:       "not ready when condition is false",
 			status:     nfsVolumesUnbound("shared-data"),
 			wantReason: cappv1alpha1.CappReadyReasonVolumesNotReady,
-			wantMsg:    "NFS volume shared-data is not bound",
+			wantMsg:    "NFS volume shared-data is not ready",
 		},
 	}
 

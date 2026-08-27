@@ -5,8 +5,8 @@ import (
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	nfspvcv1alpha1 "github.com/dana-team/nfspvc-operator/api/v1alpha1"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/types"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -45,10 +45,9 @@ func buildVolumesStatus(ctx context.Context, kubeClient client.Client, capp capp
 
 func volumesNotReady(vs cappv1alpha1.VolumesStatus) (string, string, bool) {
 	for _, v := range vs.NFSVolumesStatus {
-		if v.NFSPVCStatus.PvPhase != string(corev1.VolumeBound) ||
-			v.NFSPVCStatus.PvcPhase != string(corev1.ClaimBound) {
+		if !meta.IsStatusConditionTrue(v.NFSPVCStatus.Conditions, nfspvcv1alpha1.ConditionReady) {
 			return cappv1alpha1.CappReadyReasonVolumesNotReady,
-				"NFS volume " + v.VolumeName + " is not bound", false
+				"NFS volume " + v.VolumeName + " is not ready", false
 		}
 	}
 	return "", "", true
