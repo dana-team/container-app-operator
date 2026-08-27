@@ -107,6 +107,9 @@ func nfsVolumesBound(names ...string) cappv1alpha1.VolumesStatus {
 			NFSPVCStatus: nfspvcv1alpha1.NfsPvcStatus{
 				PvPhase:  string(corev1.VolumeBound),
 				PvcPhase: string(corev1.ClaimBound),
+				Conditions: []metav1.Condition{
+					{Type: nfspvcv1alpha1.ConditionReady, Status: metav1.ConditionTrue},
+				},
 			},
 		})
 	}
@@ -121,6 +124,9 @@ func nfsVolumesUnbound(name string) cappv1alpha1.VolumesStatus {
 				NFSPVCStatus: nfspvcv1alpha1.NfsPvcStatus{
 					PvPhase:  string(corev1.VolumePending),
 					PvcPhase: string(corev1.ClaimPending),
+					Conditions: []metav1.Condition{
+						{Type: nfspvcv1alpha1.ConditionReady, Status: metav1.ConditionFalse},
+					},
 				},
 			},
 		},

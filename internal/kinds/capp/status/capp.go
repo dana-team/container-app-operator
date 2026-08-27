@@ -185,6 +185,11 @@ func stripVolatileStatusFields(s cappv1alpha1.CappStatus) cappv1alpha1.CappStatu
 	for i := range out.EventingStatus.EventSources {
 		out.EventingStatus.EventSources[i].Condition.LastTransitionTime = kapis.VolatileTime{Inner: metav1.Time{}}
 	}
+	for i := range out.VolumesStatus.NFSVolumesStatus {
+		for j := range out.VolumesStatus.NFSVolumesStatus[i].NFSPVCStatus.Conditions {
+			out.VolumesStatus.NFSVolumesStatus[i].NFSPVCStatus.Conditions[j].LastTransitionTime = metav1.Time{}
+		}
+	}
 
 	return out
 }
