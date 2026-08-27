@@ -29,7 +29,6 @@ const (
 	elasticSSLVersion                     = "tlsv1_2"
 	elasticTemplate                       = "$(format-json --subkeys json# --key-delimiter #)"
 	elasticDataStreamTemplate             = "--subkeys json# --key-delimiter # --exclude DATE --key ISODATE @timestamp=${ISODATE}"
-	elasticSecretKey                      = "elastic"
 )
 
 type SyslogNGOutputManager struct {
@@ -65,7 +64,7 @@ func newElasticHTTPOutput(logSpec cappv1alpha1.LogSpec) output.HTTPOutput {
 			ValueFrom: &secret.ValueFrom{
 				SecretKeyRef: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{Name: logSpec.PasswordSecret},
-					Key:                  elasticSecretKey,
+					Key:                  logSpec.PasswordKey,
 				},
 			},
 		},

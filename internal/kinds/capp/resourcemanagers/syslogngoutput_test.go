@@ -60,6 +60,7 @@ func TestSyslogNGOutputManagerCreateOrUpdate(t *testing.T) {
 		require.Equal(t, elasticIndex, got.Spec.Elasticsearch.Index)
 		require.Equal(t, elasticHost, got.Spec.Elasticsearch.URL)
 		require.Equal(t, cappName, got.OwnerReferences[0].Name)
+		require.Equal(t, "password", got.Spec.Elasticsearch.Password.ValueFrom.SecretKeyRef.Key)
 	})
 
 	t.Run("updates when spec differs", func(t *testing.T) {
@@ -91,6 +92,7 @@ func TestSyslogNGOutputManagerCreateOrUpdate(t *testing.T) {
 		require.NotNil(t, got.Spec.ElasticsearchDatastream)
 		require.Equal(t, elasticHost, got.Spec.ElasticsearchDatastream.URL)
 		require.Equal(t, cappName, got.OwnerReferences[0].Name)
+		require.Equal(t, "password", got.Spec.ElasticsearchDatastream.Password.ValueFrom.SecretKeyRef.Key)
 	})
 }
 

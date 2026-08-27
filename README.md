@@ -234,6 +234,7 @@ spec:
     index: main
     user: elastic
     passwordSecret: es-elastic-user
+    passwordKey: password
   scaleMetric: concurrency
   minReplicas: 2
   state: enabled

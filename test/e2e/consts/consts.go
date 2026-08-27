@@ -44,6 +44,7 @@ const (
 	ElasticDataStreamURL            = "https://" + ElasticHost + "/" + MainIndex + "/_bulk"
 	MainIndex                       = "main"
 	ElasticUserName                 = "elastic"
+	ElasticPasswordKey              = "password"
 	ElasticSecretName               = "credentials"
 	Server                          = "nfs-server"
 	Path                            = "/nfs-path"

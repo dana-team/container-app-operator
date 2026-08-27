@@ -34,6 +34,7 @@ Configures automatic log shipping to Elasticsearch:
 - `index`: Elasticsearch index name
 - `user`: Username for authentication
 - `passwordSecret`: Secret name containing the password
+- `passwordKey`: Key inside `passwordSecret` that holds the password
 
 Creates SyslogNGFlow and SyslogNGOutput resources to collect logs from stdout.
 
@@ -117,6 +118,7 @@ spec:
     index: my-app-logs
     user: elastic
     passwordSecret: es-password-secret
+    passwordKey: password
 ```
 
 Create the secret first:
@@ -294,6 +296,7 @@ spec:
     index: event-processor-logs
     user: analytics-user
     passwordSecret: es-analytics-secret
+    passwordKey: password
 ```
 
 Application with CPU-based autoscaling, NFS persistent storage, Elasticsearch logging, and a custom HTTPS route. Create the Elasticsearch secret before applying:

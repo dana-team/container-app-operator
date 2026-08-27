@@ -35,8 +35,7 @@ import (
 )
 
 const (
-	eventSourcePath  = "spec.eventSourcesSpec.sources"
-	elasticSecretKey = "elastic"
+	eventSourcePath = "spec.eventSourcesSpec.sources"
 )
 
 type CappValidator struct {
@@ -103,7 +102,7 @@ func (c *CappValidator) handle(ctx context.Context, operation admissionv1.Operat
 	}
 
 	if capp.Spec.LogSpec.PasswordSecret != "" {
-		if err := validateSecretHasKeys(ctx, c.Client, capp.Namespace, capp.Spec.LogSpec.PasswordSecret, []string{elasticSecretKey}); err != nil {
+		if err := validateSecretHasKeys(ctx, c.Client, capp.Namespace, capp.Spec.LogSpec.PasswordSecret, []string{capp.Spec.LogSpec.PasswordKey}); err != nil {
 			return admission.Denied(err.Error())
 		}
 	}
