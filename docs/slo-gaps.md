@@ -1,0 +1,12 @@
+# Capp Platform SLO — Gaps & Action Items
+
+Actionable gaps identified during SLO definition. Each item can be addressed by the platform team.
+
+---
+
+## 1. Capp Readiness Time
+
+| Item | Mitigation |
+|---|---|
+| Probe parameter validation | Enforce upper bounds on readiness probe timing via admission control |
+| Image size enforcement | Limit maximum container image size via admission control |
