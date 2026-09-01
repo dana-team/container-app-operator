@@ -14,3 +14,9 @@ Actionable gaps identified during SLO definition. Each item can be addressed by 
 ## 2. Request Routing Latency
 
 No gaps — platform networking components (ingress, Knative networking, DomainMapping, TLS termination) are infrastructure-managed.
+
+## 3. Scale Lag
+
+| Item | Mitigation |
+|---|---|
+| No per-Capp control over scale-up speed | Consider exposing autoscaler responsiveness tuning if tighter scale lag targets are needed |

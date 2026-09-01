@@ -45,3 +45,20 @@ Time spent in the platform networking path before the request enters the applica
 
 Measured as the difference between ingress-reported request duration and application-reported request duration.
 
+---
+
+## 3. Scale Lag
+
+Time from an autoscaling metric threshold breach until additional replicas are ready to serve traffic.
+
+### Target
+
+| Percentile | Autoscaler | Target |
+|---|---|---|
+| p95 | KPA (concurrency, rps) | ≤ 30s |
+| p95 | HPA (cpu, memory) | ≤ 60s |
+
+### Measurement
+
+Time from when the autoscaler decides to scale up until the new pod(s) pass their readiness probe and begin receiving traffic. KPA targets are tighter because Knative's pod autoscaler reacts at request level, while HPA relies on metrics polling intervals.
+
