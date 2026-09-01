@@ -62,3 +62,29 @@ Time from an autoscaling metric threshold breach until additional replicas are r
 
 Time from when the autoscaler decides to scale up until the new pod(s) pass their readiness probe and begin receiving traffic. KPA targets are tighter because Knative's pod autoscaler reacts at request level, while HPA relies on metrics polling intervals.
 
+---
+
+## 4. Service Dependencies Readiness
+
+Time for each Capp child resource to become ready after Capp creation. Each subsystem is an independent failure domain that can block the overall Capp Ready condition.
+
+### Target
+
+All subsystems must report a healthy status for the Capp Ready condition to be `True`:
+
+- Knative Service
+- Logging (SyslogNG flow/output)
+- DNS record
+- DomainMapping
+- Certificate (cert-manager)
+- NFS volumes
+- Event sources (Kafka, PingSource)
+
+### Measurement
+
+Capp Ready condition status and reason. When a subsystem is not ready, the reason identifies the blocking subsystem.
+
+### Exclusions
+
+Failures caused by user misconfiguration or unavailability of user-managed external services are excluded.
+

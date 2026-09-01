@@ -20,3 +20,9 @@ No gaps — platform networking components (ingress, Knative networking, DomainM
 | Item | Mitigation |
 |---|---|
 | No per-Capp control over scale-up speed | Consider exposing autoscaler responsiveness tuning if tighter scale lag targets are needed |
+
+## 4. Service Dependencies Readiness
+
+| Item | Mitigation |
+|---|---|
+| No per-subsystem readiness metrics | Expose per-subsystem transition time as Prometheus metrics for independent alerting |
