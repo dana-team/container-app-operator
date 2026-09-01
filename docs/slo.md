@@ -23,48 +23,7 @@ Time from Capp resource creation until the `Ready` condition becomes `True`. The
 
 ---
 
-## 2. Request Routing Latency
-
-Platform-owned overhead added to each HTTP request, from client initiation until the request reaches the application container. This excludes application processing time.
-
-### Target
-
-| Percentile | Target |
-|---|---|
-| p95 | ≤ 50ms |
-
-### Measurement
-
-Time spent in the platform networking path before the request enters the application container. This includes:
-
-- Ingress controller routing
-- Knative networking layer
-- DomainMapping resolution
-- TLS termination (when `tlsEnabled: true`)
-- Knative activator queue time (when pods are running; scale-from-zero latency is covered in section 3)
-
-Measured as the difference between ingress-reported request duration and application-reported request duration.
-
----
-
-## 3. Scale Lag
-
-Time from an autoscaling metric threshold breach until additional replicas are ready to serve traffic.
-
-### Target
-
-| Percentile | Autoscaler | Target |
-|---|---|---|
-| p95 | KPA (concurrency, rps) | ≤ 30s |
-| p95 | HPA (cpu, memory) | ≤ 60s |
-
-### Measurement
-
-Time from when the autoscaler decides to scale up until the new pod(s) pass their readiness probe and begin receiving traffic. KPA targets are tighter because Knative's pod autoscaler reacts at request level, while HPA relies on metrics polling intervals.
-
----
-
-## 4. Service Dependencies Readiness
+## 2. Service Dependencies Readiness
 
 Time for each Capp child resource to become ready after Capp creation. Each subsystem is an independent failure domain that can block the overall Capp Ready condition.
 
@@ -90,6 +49,47 @@ Failures caused by user misconfiguration or unavailability of user-managed exter
 
 ---
 
+## 3. Request Routing Latency
+
+Platform-owned overhead added to each HTTP request, from client initiation until the request reaches the application container. This excludes application processing time.
+
+### Target
+
+| Percentile | Target |
+|---|---|
+| p95 | ≤ 50ms |
+
+### Measurement
+
+Time spent in the platform networking path before the request enters the application container. This includes:
+
+- Ingress controller routing
+- Knative networking layer
+- DomainMapping resolution
+- TLS termination (when `tlsEnabled: true`)
+- Knative activator queue time (when pods are running)
+
+Measured as the difference between ingress-reported request duration and application-reported request duration.
+
+---
+
+## 4. Scale Lag
+
+Time from an autoscaling metric threshold breach until additional replicas are ready to serve traffic.
+
+### Target
+
+| Percentile | Autoscaler | Target |
+|---|---|---|
+| p95 | KPA (concurrency, rps) | ≤ 30s |
+| p95 | HPA (cpu, memory) | ≤ 60s |
+
+### Measurement
+
+Time from when the autoscaler decides to scale up until the new pod(s) pass their readiness probe and begin receiving traffic. KPA targets are tighter because Knative's pod autoscaler reacts at request level, while HPA relies on metrics polling intervals.
+
+---
+
 ## 5. Backend & Frontend Availability
 
 Availability and responsiveness of the Capp management plane — the backend API and web console.
@@ -105,6 +105,3 @@ Availability and responsiveness of the Capp management plane — the backend API
 
 - **Backend:** Percentage of responses with HTTP 2xx status codes.
 - **Frontend:** Percentage of responses with HTTP 2xx or 3xx status codes.
-
-
-

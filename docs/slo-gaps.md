@@ -11,21 +11,21 @@ Actionable gaps identified during SLO definition. Each item can be addressed by 
 | Probe parameter validation | Enforce upper bounds on readiness probe timing via admission control |
 | Image size enforcement | Limit maximum container image size via admission control |
 
-## 2. Request Routing Latency
-
-No gaps — platform networking components (ingress, Knative networking, DomainMapping, TLS termination) are infrastructure-managed.
-
-## 3. Scale Lag
-
-| Item | Mitigation |
-|---|---|
-| No per-Capp control over scale-up speed | Consider exposing autoscaler responsiveness tuning if tighter scale lag targets are needed |
-
-## 4. Service Dependencies Readiness
+## 2. Service Dependencies Readiness
 
 | Item | Mitigation |
 |---|---|
 | No per-subsystem readiness metrics | Expose per-subsystem transition time as Prometheus metrics for independent alerting |
+
+## 3. Request Routing Latency
+
+No gaps — platform networking components (ingress, Knative networking, DomainMapping, TLS termination) are infrastructure-managed.
+
+## 4. Scale Lag
+
+| Item | Mitigation |
+|---|---|
+| No per-Capp control over scale-up speed | Consider exposing autoscaler responsiveness tuning if tighter scale lag targets are needed |
 
 ## 5. Backend & Frontend Availability
 
