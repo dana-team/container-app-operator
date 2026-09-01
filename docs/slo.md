@@ -25,7 +25,7 @@ Time from Capp resource creation until the `Ready` condition becomes `True`. The
 
 ## 2. Service Dependencies Readiness
 
-Time for each Capp child resource to become ready after Capp creation. Each subsystem is an independent failure domain that can block the overall Capp Ready condition.
+Each Capp child resource must become ready for the Capp to be fully operational. Each subsystem is an independent failure domain that can block the overall Capp Ready condition.
 
 ### Target
 
@@ -92,7 +92,7 @@ Time from when the autoscaler decides to scale up until the new pod(s) pass thei
 
 ## 5. Backend & Frontend Availability
 
-Availability and responsiveness of the Capp management plane — the backend API and web console.
+Availability of the Capp management plane — the backend API and web console.
 
 ### Target
 
