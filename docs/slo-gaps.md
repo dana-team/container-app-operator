@@ -23,9 +23,7 @@ No gaps — platform networking components (ingress, Knative networking, DomainM
 
 ## 4. Scale Lag
 
-| Item | Mitigation |
-|---|---|
-| No per-Capp control over scale-up speed | Consider exposing autoscaler responsiveness tuning if tighter scale lag targets are needed |
+No gaps — scale-up speed is controlled by Knative cluster-level configuration (`config-autoscaler`).
 
 ## 5. Backend & Frontend Availability
 
