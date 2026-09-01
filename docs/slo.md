@@ -8,7 +8,7 @@ This document defines the Service Level Objectives (SLOs) for the Capp platform.
 
 ## 1. Capp Readiness Time
 
-Time from Capp creation (or update that triggers a new revision) until the Capp is ready and serving traffic.
+Time from Capp creation (or update that triggers a new revision) until all required child resources are provisioned and healthy.
 
 ### Target
 
@@ -19,7 +19,7 @@ Time from Capp creation (or update that triggers a new revision) until the Capp 
 
 ### Measurement
 
-Time from Capp resource creation until the `Ready` condition becomes `True`. The Ready condition reflects the health of all child resources — Knative Service, logging, routing, certificates, volumes, and event sources.
+Time from Capp resource creation until the `Ready` condition becomes `True`. The Ready condition reflects that all required child resources have been successfully provisioned.
 
 ---
 
