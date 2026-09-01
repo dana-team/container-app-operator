@@ -10,3 +10,7 @@ Actionable gaps identified during SLO definition. Each item can be addressed by 
 |---|---|
 | Probe parameter validation | Enforce upper bounds on readiness probe timing via admission control |
 | Image size enforcement | Limit maximum container image size via admission control |
+
+## 2. Request Routing Latency
+
+No gaps — platform networking components (ingress, Knative networking, DomainMapping, TLS termination) are infrastructure-managed.
