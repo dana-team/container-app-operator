@@ -26,3 +26,7 @@ No gaps — platform networking components (ingress, Knative networking, DomainM
 | Item | Mitigation |
 |---|---|
 | No per-subsystem readiness metrics | Expose per-subsystem transition time as Prometheus metrics for independent alerting |
+
+## 5. Backend & Frontend Availability
+
+No gaps — backend exposes `/healthz`, `/readyz`, Prometheus metrics, and optional OTLP tracing. Frontend is a static bundle with no server-side state.

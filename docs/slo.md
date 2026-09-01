@@ -88,3 +88,23 @@ Capp Ready condition status and reason. When a subsystem is not ready, the reaso
 
 Failures caused by user misconfiguration or unavailability of user-managed external services are excluded.
 
+---
+
+## 5. Backend & Frontend Availability
+
+Availability and responsiveness of the Capp management plane — the backend API and web console.
+
+### Target
+
+| Component | Target |
+|---|---|
+| capp-backend | 99.9% availability |
+| capp-frontend | 99.9% availability |
+
+### Measurement
+
+- **Backend:** Percentage of responses with HTTP 2xx status codes.
+- **Frontend:** Percentage of responses with HTTP 2xx or 3xx status codes.
+
+
+
