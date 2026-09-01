@@ -1070,8 +1070,8 @@ k8s.io/utils v0.0.0-20260210185600-b8788abfbbc2 h1:AZYQSJemyQB5eRxqcPky+/7EdBj0x
 k8s.io/utils v0.0.0-20260210185600-b8788abfbbc2/go.mod h1:xDxuJ0whA3d0I4mf/C4ppKHxXynQ+fxnkmQH0vTHnuk=
 knative.dev/eventing v0.50.0 h1:4GSn7yyMLgpGUqU0vZjcyFKK0vSi3TtZXPVzb7HW7Ds=
 knative.dev/eventing v0.50.0/go.mod h1:HC1K7A1oa/sMd6X6RHO547NgvL2gtKlmNK+HYnELz6g=
-knative.dev/eventing-kafka-broker v0.49.1 h1:DJOhPjZ+YFEZ4I1K77TXC97LpQrnLbEsgPJwwYtZlpk=
-knative.dev/eventing-kafka-broker v0.49.1/go.mod h1:w50ljSRHbhXnFQXwKGAza9FFW9/rncSdP331zOuTaXk=
+knative.dev/eventing-kafka-broker v0.50.1 h1:iI2gkVO7UpmGq/wXZpo7DWc3FdtX5dAw/JMcEIDHfTM=
+knative.dev/eventing-kafka-broker v0.50.1/go.mod h1:5UOKY3q1eC/DNyCbOGt7EcE4XrjNuzFGpRtkTsZKOU4=
 knative.dev/networking v0.0.0-20260727162500-c7a7b772cac9 h1:DX4tHb6E2L6sqJbbbSoK7ury7jobfC95Tx3To+tQQF0=
 knative.dev/networking v0.0.0-20260727162500-c7a7b772cac9/go.mod h1:B1jEsChm8uZvhXwuc7ySZEKG8B6GK+FrQeGx+cL7GGc=
 knative.dev/pkg v0.0.0-20260727151759-521cb33b33dd h1:Tpo7m+KdcccVGygF/fr0af9Qv4CG4DTAE756fEDURIo=
