@@ -25,7 +25,7 @@ require (
 	k8s.io/client-go v0.37.0
 	k8s.io/utils v0.0.0-20260626114624-be93311217bd
 	knative.dev/eventing v0.50.0
-	knative.dev/eventing-kafka-broker v0.49.1
+	knative.dev/eventing-kafka-broker v0.50.1
 	knative.dev/pkg v0.0.0-20260727151759-521cb33b33dd
 	knative.dev/serving v0.50.0
 	sigs.k8s.io/controller-runtime v0.24.1
