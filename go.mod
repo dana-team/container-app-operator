@@ -10,7 +10,7 @@ require (
 	github.com/dana-team/nfspvc-operator v0.5.3
 	github.com/dana-team/provider-dns-v2 v1.0.2
 	github.com/evanphx/json-patch/v5 v5.9.11
-	github.com/go-logr/logr v1.4.3
+	github.com/go-logr/logr v1.4.4
 	github.com/go-logr/zapr v1.3.0
 	github.com/kube-logging/logging-operator/pkg/sdk v0.12.1-0.20260415160252-e637b3f6d15d
 	github.com/onsi/ginkgo/v2 v2.32.1
