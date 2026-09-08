@@ -234,24 +234,26 @@ const (
 )
 
 // LogSpec defines the configuration for shipping Capp logs.
-// +kubebuilder:validation:XValidation:rule="!has(self.type) || self.type != 'elastic' || (has(self.host) && size(self.host) > 0 && has(self.index) && size(self.index) > 0 && has(self.user) && size(self.user) > 0 && has(self.passwordSecret) && size(self.passwordSecret) > 0 && has(self.passwordKey) && size(self.passwordKey) > 0)",message="elastic log configuration requires host, index, user, passwordSecret, and passwordKey"
-// +kubebuilder:validation:XValidation:rule="!has(self.type) || self.type != 'elastic-datastream' || (has(self.host) && size(self.host) > 0 && has(self.user) && size(self.user) > 0 && has(self.passwordSecret) && size(self.passwordSecret) > 0 && has(self.passwordKey) && size(self.passwordKey) > 0)",message="elastic-datastream log configuration requires host, user, passwordSecret, and passwordKey"
-// +kubebuilder:validation:XValidation:rule="(!has(self.host) || size(self.host) == 0) && (!has(self.index) || size(self.index) == 0) && (!has(self.user) || size(self.user) == 0) && (!has(self.passwordSecret) || size(self.passwordSecret) == 0) && (!has(self.passwordKey) || size(self.passwordKey) == 0) || (has(self.type) && (self.type == 'elastic' || self.type == 'elastic-datastream'))",message="type must be elastic or elastic-datastream when log configuration fields are set"
+// +kubebuilder:validation:XValidation:rule="!has(self.type) || (has(self.host) && size(self.host) > 0 && has(self.target) && size(self.target) > 0 && has(self.user) && size(self.user) > 0 && has(self.passwordSecret) && size(self.passwordSecret) > 0 && has(self.passwordKey) && size(self.passwordKey) > 0)",message="log configuration requires host, target, user, passwordSecret, and passwordKey"
+// +kubebuilder:validation:XValidation:rule="(!has(self.host) || size(self.host) == 0) && (!has(self.target) || size(self.target) == 0) && (!has(self.user) || size(self.user) == 0) && (!has(self.passwordSecret) || size(self.passwordSecret) == 0) && (!has(self.passwordKey) || size(self.passwordKey) == 0) || (has(self.type) && (self.type == 'elastic' || self.type == 'elastic-datastream'))",message="type must be elastic or elastic-datastream when log configuration fields are set"
 type LogSpec struct {
 	// Type defines where to send the Capp logs
 	// +kubebuilder:validation:Enum=elastic;elastic-datastream
 	// +optional
 	Type LogType `json:"type,omitempty"`
 
-	// Host defines Elasticsearch or Splunk host.
-	// Should include full URL with protocol and port (e.g. https://elasticsearch:9200/_bulk).
+	// Host defines the hostname of the logs destination.
+	// Must be a hostname only, without scheme, port or path (e.g. elasticsearch.example.com).
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
 	// +optional
 	Host string `json:"host,omitempty"`
 
-	// Index defines the index name to write events to.
-	// Ignored if type is set to "elastic-datastream".
+	// Target defines where to write the logs to:
+	// the index name if type is set to "elastic",
+	// or the data stream name if type is set to "elastic-datastream".
 	// +optional
-	Index string `json:"index,omitempty"`
+	Target string `json:"target,omitempty"`
 
 	// User defines a User for authentication.
 	// +optional

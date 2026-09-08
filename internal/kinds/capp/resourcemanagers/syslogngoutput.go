@@ -3,6 +3,8 @@ package resourcemanagers
 import (
 	"context"
 	"fmt"
+	"net/url"
+	"path"
 
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/cappmeta"
 
@@ -29,6 +31,8 @@ const (
 	elasticSSLVersion                     = "tlsv1_2"
 	elasticTemplate                       = "$(format-json --subkeys json# --key-delimiter #)"
 	elasticDataStreamTemplate             = "--subkeys json# --key-delimiter # --exclude DATE --key ISODATE @timestamp=${ISODATE}"
+	elasticScheme                         = "https"
+	elasticBulkPath                       = "_bulk"
 )
 
 type SyslogNGOutputManager struct {
@@ -54,11 +58,21 @@ func isLogSpecRequired(capp cappv1alpha1.Capp) bool {
 	return isSupportedLogType(capp.Spec.LogSpec.Type)
 }
 
+// elasticURL builds the HTTPS endpoint of the Elasticsearch host,
+func elasticURL(logSpec cappv1alpha1.LogSpec, pathSegments ...string) string {
+	elasticEndpoint := url.URL{
+		Scheme: elasticScheme,
+		Host:   logSpec.Host,
+		Path:   path.Join(pathSegments...),
+	}
+	return elasticEndpoint.String()
+}
+
 // newElasticHTTPOutput constructs the shared HTTPOutput used by both Elasticsearch output creators.
-func newElasticHTTPOutput(logSpec cappv1alpha1.LogSpec) output.HTTPOutput {
+func newElasticHTTPOutput(logSpec cappv1alpha1.LogSpec, endpoint string) output.HTTPOutput {
 	peerVerify := false
 	return output.HTTPOutput{
-		URL:  logSpec.Host,
+		URL:  endpoint,
 		User: logSpec.User,
 		Password: secret.Secret{
 			ValueFrom: &secret.ValueFrom{
@@ -80,9 +94,9 @@ func newElasticHTTPOutput(logSpec cappv1alpha1.LogSpec) output.HTTPOutput {
 func createElasticsearchOutput(logSpec cappv1alpha1.LogSpec) loggingv1beta1.SyslogNGOutputSpec {
 	return loggingv1beta1.SyslogNGOutputSpec{
 		Elasticsearch: &output.ElasticsearchOutput{
-			Index:      logSpec.Index,
+			Index:      logSpec.Target,
 			Template:   elasticTemplate,
-			HTTPOutput: newElasticHTTPOutput(logSpec),
+			HTTPOutput: newElasticHTTPOutput(logSpec, elasticURL(logSpec, elasticBulkPath)),
 		},
 	}
 }
@@ -92,7 +106,7 @@ func createElasticDataStreamOutput(logSpec cappv1alpha1.LogSpec) loggingv1beta1.
 	return loggingv1beta1.SyslogNGOutputSpec{
 		ElasticsearchDatastream: &output.ElasticsearchDatastreamOutput{
 			Record:     elasticDataStreamTemplate,
-			HTTPOutput: newElasticHTTPOutput(logSpec),
+			HTTPOutput: newElasticHTTPOutput(logSpec, elasticURL(logSpec, logSpec.Target, elasticBulkPath)),
 		},
 	}
 }

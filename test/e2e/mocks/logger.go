@@ -13,7 +13,7 @@ func CreateElasticLogSpec() cappv1alpha1.LogSpec {
 	return cappv1alpha1.LogSpec{
 		Type:           cappv1alpha1.LogTypeElastic,
 		Host:           consts.ElasticHost,
-		Index:          consts.MainIndex,
+		Target:         consts.MainTarget,
 		User:           consts.ElasticUserName,
 		PasswordSecret: consts.ElasticSecretName + "-elastic",
 		PasswordKey:    consts.ElasticPasswordKey,
@@ -24,7 +24,8 @@ func CreateElasticLogSpec() cappv1alpha1.LogSpec {
 func CreateElasticDataStreamLogSpec() cappv1alpha1.LogSpec {
 	return cappv1alpha1.LogSpec{
 		Type:           cappv1alpha1.LogTypeElasticDataStream,
-		Host:           consts.ElasticDataStreamURL,
+		Host:           consts.ElasticHost,
+		Target:         consts.MainTarget,
 		User:           consts.ElasticUserName,
 		PasswordSecret: consts.ElasticSecretName + "-datastream",
 		PasswordKey:    consts.ElasticPasswordKey,
