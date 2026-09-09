@@ -35,9 +35,9 @@ func newSyslogNGOutput() *loggingv1beta1.SyslogNGOutput {
 		},
 		Spec: loggingv1beta1.SyslogNGOutputSpec{
 			Elasticsearch: &output.ElasticsearchOutput{
-				Index: elasticIndex,
+				Index: elasticTarget,
 				HTTPOutput: output.HTTPOutput{
-					URL: elasticHost,
+					URL: elasticIndexURL,
 				},
 			},
 		},
@@ -57,27 +57,27 @@ func TestSyslogNGOutputManagerCreateOrUpdate(t *testing.T) {
 
 		got := &loggingv1beta1.SyslogNGOutput{}
 		require.NoError(t, om.K8sClient.Get(ctx, key, got))
-		require.Equal(t, elasticIndex, got.Spec.Elasticsearch.Index)
-		require.Equal(t, elasticHost, got.Spec.Elasticsearch.URL)
+		require.Equal(t, elasticTarget, got.Spec.Elasticsearch.Index)
+		require.Equal(t, elasticIndexURL, got.Spec.Elasticsearch.URL)
 		require.Equal(t, cappName, got.OwnerReferences[0].Name)
 		require.Equal(t, "password", got.Spec.Elasticsearch.Password.ValueFrom.SecretKeyRef.Key)
 	})
 
 	t.Run("updates when spec differs", func(t *testing.T) {
-		const updatedIndex = "my-index-v2"
+		const updatedTarget = "my-target-v2"
 
 		om := newSyslogNGOutputManager(newFakeClient(newSyslogNGScheme()))
 		require.NoError(t, om.K8sClient.Create(ctx, newSyslogNGOutput()))
 
 		spec := newLogSpec(cappv1alpha1.LogTypeElastic)
-		spec.Index = updatedIndex
+		spec.Target = updatedTarget
 		capp := newBaseCapp()
 		capp.Spec.LogSpec = spec
 		require.NoError(t, om.createOrUpdate(ctx, capp))
 
 		got := &loggingv1beta1.SyslogNGOutput{}
 		require.NoError(t, om.K8sClient.Get(ctx, key, got))
-		require.Equal(t, updatedIndex, got.Spec.Elasticsearch.Index)
+		require.Equal(t, updatedTarget, got.Spec.Elasticsearch.Index)
 	})
 
 	t.Run("creates datastream output when log type is elastic-datastream", func(t *testing.T) {
@@ -90,7 +90,7 @@ func TestSyslogNGOutputManagerCreateOrUpdate(t *testing.T) {
 		require.NoError(t, om.K8sClient.Get(ctx, key, got))
 		require.Nil(t, got.Spec.Elasticsearch)
 		require.NotNil(t, got.Spec.ElasticsearchDatastream)
-		require.Equal(t, elasticHost, got.Spec.ElasticsearchDatastream.URL)
+		require.Equal(t, elasticDataStreamURL, got.Spec.ElasticsearchDatastream.URL)
 		require.Equal(t, cappName, got.OwnerReferences[0].Name)
 		require.Equal(t, "password", got.Spec.ElasticsearchDatastream.Password.ValueFrom.SecretKeyRef.Key)
 	})

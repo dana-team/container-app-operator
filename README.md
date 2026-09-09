@@ -230,8 +230,8 @@ spec:
           storage: 200Gi
   logSpec:
     type: elastic
-    host: 10.11.12.13
-    index: main
+    host: elasticsearch.example.com
+    target: main
     user: elastic
     passwordSecret: es-elastic-user
     passwordKey: password

@@ -29,9 +29,9 @@ When `hostname` is set, the operator creates DomainMapping, CNAMERecord, and opt
 
 ### `logSpec`
 Configures automatic log shipping to Elasticsearch:
-- `type`: Log destination (currently only `elastic`)
-- `host`: Elasticsearch host address
-- `index`: Elasticsearch index name
+- `type`: Log destination (`elastic` or `elastic-datastream`)
+- `host`: Hostname of the logs destination, without scheme, port or path (e.g. `elasticsearch.example.com`)
+- `target`: Index name when `type` is `elastic`, or data stream name when `type` is `elastic-datastream`
 - `user`: Username for authentication
 - `passwordSecret`: Secret name containing the password
 - `passwordKey`: Key inside `passwordSecret` that holds the password
@@ -115,7 +115,7 @@ spec:
   logSpec:
     type: elastic
     host: elasticsearch.example.com
-    index: my-app-logs
+    target: my-app-logs
     user: elastic
     passwordSecret: es-password-secret
     passwordKey: password
@@ -293,7 +293,7 @@ spec:
   logSpec:
     type: elastic
     host: elasticsearch.monitoring.svc.cluster.local
-    index: event-processor-logs
+    target: event-processor-logs
     user: analytics-user
     passwordSecret: es-analytics-secret
     passwordKey: password

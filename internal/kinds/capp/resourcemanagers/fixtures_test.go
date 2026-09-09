@@ -17,9 +17,11 @@ const (
 	cappName      = "my-capp"
 	cappNamespace = "my-ns"
 
-	elasticHost        = "https://elastic.example:9200/_bulk"
-	elasticIndex       = "my-index"
-	unsupportedLogType = "splunk"
+	elasticHost          = "elastic.example.com"
+	elasticTarget        = "my-target"
+	elasticIndexURL      = "https://" + elasticHost + "/" + elasticBulkPath
+	elasticDataStreamURL = "https://" + elasticHost + "/" + elasticTarget + "/" + elasticBulkPath
+	unsupportedLogType   = "splunk"
 
 	dnsZone      = "capp-zone.com."
 	dnsCNAME     = "ingress.capp-zone.com."
@@ -88,17 +90,14 @@ func newSyslogNGScheme() *runtime.Scheme {
 }
 
 func newLogSpec(logType cappv1alpha1.LogType) cappv1alpha1.LogSpec {
-	spec := cappv1alpha1.LogSpec{
+	return cappv1alpha1.LogSpec{
 		Type:           logType,
 		Host:           elasticHost,
+		Target:         elasticTarget,
 		User:           "elastic-user",
 		PasswordSecret: "elastic-creds",
 		PasswordKey:    "password",
 	}
-	if logType == cappv1alpha1.LogTypeElastic {
-		spec.Index = elasticIndex
-	}
-	return spec
 }
 
 func newCappConfigWithDNS() *cappv1alpha1.CappConfig {

@@ -124,7 +124,7 @@ func TestCappValidatorHandle(t *testing.T) {
 					LogSpec: cappv1alpha1.LogSpec{
 						Type:           cappv1alpha1.LogTypeElastic,
 						Host:           elasticHost,
-						Index:          elasticIndex,
+						Target:         elasticTarget,
 						User:           elasticSecretKey,
 						PasswordSecret: missingSecretName,
 						PasswordKey:    elasticPasswordKey,
@@ -149,7 +149,7 @@ func TestCappValidatorHandle(t *testing.T) {
 					LogSpec: cappv1alpha1.LogSpec{
 						Type:           cappv1alpha1.LogTypeElastic,
 						Host:           elasticHost,
-						Index:          elasticIndex,
+						Target:         elasticTarget,
 						User:           elasticSecretKey,
 						PasswordSecret: existingSecretName,
 						PasswordKey:    elasticPasswordKey,

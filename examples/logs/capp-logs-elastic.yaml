@@ -16,7 +16,8 @@ spec:
 
   logSpec:
     type: elastic
-    host: "https://elasticsearch.example.com:9200"
-    index: "capp-logs"
+    host: "elasticsearch.example.com"
+    target: "capp-logs"
     user: "elastic"
     passwordSecret: "capp-elastic-credentials"
+    passwordKey: "password"

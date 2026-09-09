@@ -17,30 +17,26 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-// checkOutputParameters checks if the SyslogNGOutput index value matches the desired value based on the logger type.
-func checkOutputParameters(logType cappv1alpha1.LogType, syslogNGOutputName string, syslogNGOutputNamespace string, indexDesiredValue string, urlDesiredValue string) {
+// checkOutputParameters verifies that the SyslogNGOutput contains the expected Elasticsearch value for the logger type.
+func checkOutputParameters(logType cappv1alpha1.LogType, syslogNGOutputName string, syslogNGOutputNamespace string, targetDesiredValue string) {
 	switch logType {
 	case cappv1alpha1.LogTypeElastic:
 		Eventually(func() string {
 			syslogNGOutput := utils.GetSyslogNGOutput(k8sClient, syslogNGOutputName, syslogNGOutputNamespace)
 			return syslogNGOutput.Spec.Elasticsearch.Index
-		}, consts.Timeout, consts.Interval).Should(Equal(indexDesiredValue))
+		}, consts.Timeout, consts.Interval).Should(Equal(targetDesiredValue))
 	case cappv1alpha1.LogTypeElasticDataStream:
+		expectedURL := fmt.Sprintf("https://%s/%s/_bulk", consts.ElasticHost, targetDesiredValue)
 		Eventually(func() string {
 			syslogNGOutput := utils.GetSyslogNGOutput(k8sClient, syslogNGOutputName, syslogNGOutputNamespace)
 			return syslogNGOutput.Spec.ElasticsearchDatastream.URL
-		}, consts.Timeout, consts.Interval).Should(Equal(urlDesiredValue))
+		}, consts.Timeout, consts.Interval).Should(Equal(expectedURL))
 	}
 }
 
-// editCappLogSpec updates the Capp's LogSpec based on the logger type.
-func editCappLogSpec(capp *cappv1alpha1.Capp, logType cappv1alpha1.LogType) {
-	switch logType {
-	case cappv1alpha1.LogTypeElastic:
-		capp.Spec.LogSpec.Index = consts.TestIndex
-	case cappv1alpha1.LogTypeElasticDataStream:
-		capp.Spec.LogSpec.Host = consts.ElasticDataStreamURL
-	}
+// editCappLogSpec updates the Capp's LogSpec target.
+func editCappLogSpec(capp *cappv1alpha1.Capp) {
+	capp.Spec.LogSpec.Target = consts.TestTarget
 }
 
 // testCappWithLogger performs a comprehensive test for creating, updating, and deleting
@@ -96,17 +92,17 @@ func testCappWithLogger(logType cappv1alpha1.LogType) {
 			return *syslogNGFlow.Status.Active
 		}, consts.Timeout, consts.Interval).Should(BeTrue())
 
-		By(fmt.Sprintf("Updating the capp %s logger index/url", logType))
+		By(fmt.Sprintf("Updating the capp %s logger target", logType))
 		err := retry.RetryOnConflict(utils.NewRetryOnConflictBackoff(), func() error {
 			toBeUpdatedCapp := utils.GetCapp(k8sClient, createdCapp.Name, createdCapp.Namespace)
-			editCappLogSpec(toBeUpdatedCapp, logType)
+			editCappLogSpec(toBeUpdatedCapp)
 
 			return utils.UpdateResource(k8sClient, toBeUpdatedCapp)
 		})
 		Expect(err).ToNot(HaveOccurred())
 
-		By("Checking if the SyslogNGOutput index/url was updated")
-		checkOutputParameters(logType, syslogNGOutputName, createdCapp.Namespace, consts.TestIndex, consts.ElasticDataStreamURL)
+		By("Checking if the SyslogNGOutput index/url was updated according to the target")
+		checkOutputParameters(logType, syslogNGOutputName, createdCapp.Namespace, consts.TestTarget)
 
 		By("Deleting the Capp instance")
 		utils.DeleteCapp(Default, k8sClient, createdCapp)
