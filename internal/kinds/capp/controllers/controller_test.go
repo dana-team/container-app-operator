@@ -4,13 +4,16 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	xpv1 "github.com/crossplane/crossplane-runtime/v2/apis/common/v1"
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/cappmeta"
+	nfspvcv1alpha1 "github.com/dana-team/nfspvc-operator/api/v1alpha1"
 	dnsrecordv1alpha1 "github.com/dana-team/provider-dns-v2/apis/namespaced/record/v1alpha1"
+	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -25,6 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -395,6 +399,49 @@ func TestKnativeServiceWatchPredicate(t *testing.T) {
 		return svc
 	}
 
+	// trafficNotMigrated mirrors the Service conditions Knative sets while the traffic is
+	// still migrating to the latest revision.
+	trafficNotMigrated := func() duckv1.Conditions {
+		return duckv1.Conditions{
+			{Type: knativev1.ServiceConditionConfigurationsReady, Status: corev1.ConditionTrue},
+			{
+				Type:    knativev1.ServiceConditionRoutesReady,
+				Status:  corev1.ConditionUnknown,
+				Reason:  "TrafficNotMigrated",
+				Message: "Traffic is not yet migrated to the latest revision.",
+			},
+			{
+				Type:    knativeapis.ConditionReady,
+				Status:  corev1.ConditionUnknown,
+				Reason:  "TrafficNotMigrated",
+				Message: "Traffic is not yet migrated to the latest revision.",
+			},
+		}
+	}
+
+	// trafficReady mirrors the Service conditions once the traffic has finished migrating.
+	trafficReady := func() duckv1.Conditions {
+		return duckv1.Conditions{
+			{Type: knativev1.ServiceConditionConfigurationsReady, Status: corev1.ConditionTrue},
+			{Type: knativev1.ServiceConditionRoutesReady, Status: corev1.ConditionTrue},
+			{Type: knativeapis.ConditionReady, Status: corev1.ConditionTrue},
+		}
+	}
+
+	restamp := func(conds duckv1.Conditions, at time.Time) duckv1.Conditions {
+		out := make(duckv1.Conditions, len(conds))
+		copy(out, conds)
+		for i := range out {
+			out[i].LastTransitionTime = knativeapis.VolatileTime{Inner: metav1.NewTime(at)}
+		}
+		return out
+	}
+
+	setConditions := func(svc *knativev1.Service, conds ...knativeapis.Condition) *knativev1.Service {
+		svc.Status.Conditions = conds
+		return svc
+	}
+
 	tests := []struct {
 		name     string
 		oldObj   client.Object
@@ -419,6 +466,18 @@ func TestKnativeServiceWatchPredicate(t *testing.T) {
 			newObj:   makeSvc("rev-1", "rev-4"),
 			expected: true,
 		},
+		{
+			name:     "triggers when traffic finishes migrating without a revision name change",
+			oldObj:   setConditions(makeSvc("rev-1", "rev-1"), trafficNotMigrated()...),
+			newObj:   setConditions(makeSvc("rev-1", "rev-1"), trafficReady()...),
+			expected: true,
+		},
+		{
+			name:     "no change when only condition transition timestamps are restamped",
+			oldObj:   setConditions(makeSvc("rev-1", "rev-1"), restamp(trafficReady(), time.Unix(0, 0))...),
+			newObj:   setConditions(makeSvc("rev-1", "rev-1"), restamp(trafficReady(), time.Unix(3600, 0))...),
+			expected: false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -427,6 +486,136 @@ func TestKnativeServiceWatchPredicate(t *testing.T) {
 			assert.Equal(t, tt.expected, pred.Update(e))
 		})
 	}
+}
+
+func TestNfsPvcWatchPredicate(t *testing.T) {
+	pred := nfsPvcWatchPredicate()
+
+	makeNfsPvc := func(readyStatus metav1.ConditionStatus, pvcPhase string) *nfspvcv1alpha1.NfsPvc {
+		nfspvc := &nfspvcv1alpha1.NfsPvc{}
+		nfspvc.Generation = 1
+		nfspvc.Status.PvcPhase = pvcPhase
+		nfspvc.Status.Conditions = []metav1.Condition{
+			{Type: nfspvcv1alpha1.ConditionReady, Status: readyStatus, Reason: "Bound"},
+		}
+		return nfspvc
+	}
+
+	restamp := func(nfspvc *nfspvcv1alpha1.NfsPvc, at time.Time) *nfspvcv1alpha1.NfsPvc {
+		for i := range nfspvc.Status.Conditions {
+			nfspvc.Status.Conditions[i].LastTransitionTime = metav1.NewTime(at)
+		}
+		return nfspvc
+	}
+
+	tests := []struct {
+		name     string
+		oldObj   client.Object
+		newObj   client.Object
+		expected bool
+	}{
+		{
+			name:     "triggers when the volume becomes ready",
+			oldObj:   makeNfsPvc(metav1.ConditionFalse, "Pending"),
+			newObj:   makeNfsPvc(metav1.ConditionTrue, "Bound"),
+			expected: true,
+		},
+		{
+			name:     "no change when status is identical",
+			oldObj:   makeNfsPvc(metav1.ConditionTrue, "Bound"),
+			newObj:   makeNfsPvc(metav1.ConditionTrue, "Bound"),
+			expected: false,
+		},
+		{
+			name:     "no change when only condition transition timestamps are restamped",
+			oldObj:   restamp(makeNfsPvc(metav1.ConditionTrue, "Bound"), time.Unix(0, 0)),
+			newObj:   restamp(makeNfsPvc(metav1.ConditionTrue, "Bound"), time.Unix(3600, 0)),
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			e := event.UpdateEvent{ObjectOld: tt.oldObj, ObjectNew: tt.newObj}
+			assert.Equal(t, tt.expected, pred.Update(e))
+		})
+	}
+}
+
+func TestSyslogNGWatchPredicates(t *testing.T) {
+	makeFlow := func(problemsCount int) *loggingv1beta1.SyslogNGFlow {
+		flow := &loggingv1beta1.SyslogNGFlow{}
+		flow.Generation = 1
+		flow.Status.ProblemsCount = problemsCount
+		if problemsCount > 0 {
+			flow.Status.Problems = []string{"output not found"}
+		}
+		return flow
+	}
+
+	makeOutput := func(problemsCount int) *loggingv1beta1.SyslogNGOutput {
+		output := &loggingv1beta1.SyslogNGOutput{}
+		output.Generation = 1
+		output.Status.ProblemsCount = problemsCount
+		if problemsCount > 0 {
+			output.Status.Problems = []string{"secret not found"}
+		}
+		return output
+	}
+
+	tests := []struct {
+		name     string
+		pred     predicate.Predicate
+		oldObj   client.Object
+		newObj   client.Object
+		expected bool
+	}{
+		{
+			name:     "flow triggers when problems are cleared",
+			pred:     syslogNGFlowWatchPredicate(),
+			oldObj:   makeFlow(1),
+			newObj:   makeFlow(0),
+			expected: true,
+		},
+		{
+			name:     "flow ignores an unchanged status",
+			pred:     syslogNGFlowWatchPredicate(),
+			oldObj:   makeFlow(0),
+			newObj:   makeFlow(0),
+			expected: false,
+		},
+		{
+			name:     "output triggers when problems are cleared",
+			pred:     syslogNGOutputWatchPredicate(),
+			oldObj:   makeOutput(1),
+			newObj:   makeOutput(0),
+			expected: true,
+		},
+		{
+			name:     "output ignores an unchanged status",
+			pred:     syslogNGOutputWatchPredicate(),
+			oldObj:   makeOutput(0),
+			newObj:   makeOutput(0),
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			e := event.UpdateEvent{ObjectOld: tt.oldObj, ObjectNew: tt.newObj}
+			assert.Equal(t, tt.expected, tt.pred.Update(e))
+		})
+	}
+}
+
+func TestStatusChangedPredicateIgnoresMismatchedTypes(t *testing.T) {
+	pred := knativeServiceWatchPredicate()
+
+	e := event.UpdateEvent{
+		ObjectOld: &knativev1.Service{},
+		ObjectNew: &nfspvcv1alpha1.NfsPvc{},
+	}
+	assert.False(t, pred.Update(e))
 }
 
 func TestFindCappsForCappConfig(t *testing.T) {
