@@ -151,8 +151,11 @@ func TestCertificateConditions(t *testing.T) {
 }
 
 func TestDomainMappingWatchPredicate(t *testing.T) {
+	pred := domainMappingWatchPredicate()
+
 	makeDM := func(condStatus corev1.ConditionStatus) *knativev1beta1.DomainMapping {
 		dm := &knativev1beta1.DomainMapping{}
+		dm.Generation = 1
 		if condStatus != "" {
 			dm.Status.Conditions = duckv1.Conditions{
 				{Type: knativev1beta1.DomainMappingConditionReady, Status: condStatus},
@@ -163,8 +166,8 @@ func TestDomainMappingWatchPredicate(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		oldObj   *knativev1beta1.DomainMapping
-		newObj   *knativev1beta1.DomainMapping
+		oldObj   client.Object
+		newObj   client.Object
 		expected bool
 	}{
 		{
@@ -187,14 +190,14 @@ func TestDomainMappingWatchPredicate(t *testing.T) {
 		},
 		{
 			name: "ignores non-Ready condition changes",
-			oldObj: func() *knativev1beta1.DomainMapping {
+			oldObj: func() client.Object {
 				dm := makeDM(corev1.ConditionTrue)
 				dm.Status.Conditions = append(dm.Status.Conditions, knativeapis.Condition{
 					Type: knativev1beta1.DomainMappingConditionIngressReady, Status: corev1.ConditionFalse,
 				})
 				return dm
 			}(),
-			newObj: func() *knativev1beta1.DomainMapping {
+			newObj: func() client.Object {
 				dm := makeDM(corev1.ConditionTrue)
 				dm.Status.Conditions = append(dm.Status.Conditions, knativeapis.Condition{
 					Type: knativev1beta1.DomainMappingConditionIngressReady, Status: corev1.ConditionTrue,
@@ -207,19 +210,18 @@ func TestDomainMappingWatchPredicate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := conditionStatusChanged(
-				knativeConditions(tt.oldObj.Status.Conditions),
-				knativeConditions(tt.newObj.Status.Conditions),
-				string(knativev1beta1.DomainMappingConditionReady),
-			)
-			assert.Equal(t, tt.expected, result)
+			e := event.UpdateEvent{ObjectOld: tt.oldObj, ObjectNew: tt.newObj}
+			assert.Equal(t, tt.expected, pred.Update(e))
 		})
 	}
 }
 
 func TestCertificateWatchPredicate(t *testing.T) {
+	pred := certificateWatchPredicate()
+
 	makeCert := func(condStatus cmmeta.ConditionStatus) *cmapi.Certificate {
 		cert := &cmapi.Certificate{}
+		cert.Generation = 1
 		if condStatus != "" {
 			cert.Status.Conditions = []cmapi.CertificateCondition{
 				{Type: cmapi.CertificateConditionReady, Status: condStatus},
@@ -230,8 +232,8 @@ func TestCertificateWatchPredicate(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		oldObj   *cmapi.Certificate
-		newObj   *cmapi.Certificate
+		oldObj   client.Object
+		newObj   client.Object
 		expected bool
 	}{
 		{
@@ -254,14 +256,14 @@ func TestCertificateWatchPredicate(t *testing.T) {
 		},
 		{
 			name: "ignores non-Ready condition changes",
-			oldObj: func() *cmapi.Certificate {
+			oldObj: func() client.Object {
 				cert := makeCert(cmmeta.ConditionTrue)
 				cert.Status.Conditions = append(cert.Status.Conditions, cmapi.CertificateCondition{
 					Type: cmapi.CertificateConditionIssuing, Status: cmmeta.ConditionTrue,
 				})
 				return cert
 			}(),
-			newObj: func() *cmapi.Certificate {
+			newObj: func() client.Object {
 				cert := makeCert(cmmeta.ConditionTrue)
 				cert.Status.Conditions = append(cert.Status.Conditions, cmapi.CertificateCondition{
 					Type: cmapi.CertificateConditionIssuing, Status: cmmeta.ConditionFalse,
@@ -274,12 +276,8 @@ func TestCertificateWatchPredicate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := conditionStatusChanged(
-				certificateConditions(tt.oldObj.Status.Conditions),
-				certificateConditions(tt.newObj.Status.Conditions),
-				string(cmapi.CertificateConditionReady),
-			)
-			assert.Equal(t, tt.expected, result)
+			e := event.UpdateEvent{ObjectOld: tt.oldObj, ObjectNew: tt.newObj}
+			assert.Equal(t, tt.expected, pred.Update(e))
 		})
 	}
 }
