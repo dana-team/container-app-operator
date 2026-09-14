@@ -21,6 +21,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
+	kafkasourcev1 "knative.dev/eventing-kafka-broker/control-plane/pkg/apis/sources/v1"
+	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	knativeapis "knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
@@ -604,6 +606,86 @@ func TestSyslogNGWatchPredicates(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			e := event.UpdateEvent{ObjectOld: tt.oldObj, ObjectNew: tt.newObj}
 			assert.Equal(t, tt.expected, tt.pred.Update(e))
+		})
+	}
+}
+
+func TestPingSourceWatchPredicate(t *testing.T) {
+	pred := pingSourceWatchPredicate()
+
+	makePingSource := func(readyStatus corev1.ConditionStatus) *sourcesv1.PingSource {
+		ps := &sourcesv1.PingSource{}
+		ps.Generation = 1
+		ps.Status.Conditions = duckv1.Conditions{
+			{Type: sourcesv1.PingSourceConditionReady, Status: readyStatus},
+		}
+		return ps
+	}
+
+	tests := []struct {
+		name     string
+		oldObj   client.Object
+		newObj   client.Object
+		expected bool
+	}{
+		{
+			name:     "triggers when Ready status changes",
+			oldObj:   makePingSource(corev1.ConditionFalse),
+			newObj:   makePingSource(corev1.ConditionTrue),
+			expected: true,
+		},
+		{
+			name:     "no change when Ready status is identical",
+			oldObj:   makePingSource(corev1.ConditionTrue),
+			newObj:   makePingSource(corev1.ConditionTrue),
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			e := event.UpdateEvent{ObjectOld: tt.oldObj, ObjectNew: tt.newObj}
+			assert.Equal(t, tt.expected, pred.Update(e))
+		})
+	}
+}
+
+func TestKafkaSourceWatchPredicate(t *testing.T) {
+	pred := kafkaSourceWatchPredicate()
+
+	makeKafkaSource := func(readyStatus corev1.ConditionStatus) *kafkasourcev1.KafkaSource {
+		ks := &kafkasourcev1.KafkaSource{}
+		ks.Generation = 1
+		ks.Status.Conditions = duckv1.Conditions{
+			{Type: kafkasourcev1.KafkaConditionReady, Status: readyStatus},
+		}
+		return ks
+	}
+
+	tests := []struct {
+		name     string
+		oldObj   client.Object
+		newObj   client.Object
+		expected bool
+	}{
+		{
+			name:     "triggers when Ready status changes",
+			oldObj:   makeKafkaSource(corev1.ConditionFalse),
+			newObj:   makeKafkaSource(corev1.ConditionTrue),
+			expected: true,
+		},
+		{
+			name:     "no change when Ready status is identical",
+			oldObj:   makeKafkaSource(corev1.ConditionTrue),
+			newObj:   makeKafkaSource(corev1.ConditionTrue),
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			e := event.UpdateEvent{ObjectOld: tt.oldObj, ObjectNew: tt.newObj}
+			assert.Equal(t, tt.expected, pred.Update(e))
 		})
 	}
 }
