@@ -11,11 +11,15 @@ import (
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/cappmeta"
 
 	xpv1 "github.com/crossplane/crossplane-runtime/v2/apis/common/v1"
+	nfspvcv1alpha1 "github.com/dana-team/nfspvc-operator/api/v1alpha1"
 	dnsrecordv1alpha1 "github.com/dana-team/provider-dns-v2/apis/namespaced/record/v1alpha1"
 
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
 
+	"k8s.io/apimachinery/pkg/api/equality"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	kapis "knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
@@ -111,12 +115,17 @@ func (r *CappReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(
 			&loggingv1beta1.SyslogNGOutput{},
 			handler.EnqueueRequestsFromMapFunc(r.findCappFromEvent),
-			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
+			builder.WithPredicates(syslogNGOutputWatchPredicate()),
 		).
 		Watches(
 			&loggingv1beta1.SyslogNGFlow{},
 			handler.EnqueueRequestsFromMapFunc(r.findCappFromEvent),
-			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
+			builder.WithPredicates(syslogNGFlowWatchPredicate()),
+		).
+		Watches(
+			&nfspvcv1alpha1.NfsPvc{},
+			handler.EnqueueRequestsFromMapFunc(r.findCappFromLabels),
+			builder.WithPredicates(nfsPvcWatchPredicate()),
 		).
 		Watches(
 			&sourcesv1.PingSource{},
@@ -133,22 +142,62 @@ func (r *CappReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-// knativeServiceWatchPredicate: spec changes (generation) or revision lifecycle status on the Service.
+func statusChangedPredicate[T client.Object](statusOf func(T) any) predicate.Predicate {
+	return predicate.TypedFuncs[client.Object]{
+		UpdateFunc: func(e event.TypedUpdateEvent[client.Object]) bool {
+			oldObj, okOld := e.ObjectOld.(T)
+			newObj, okNew := e.ObjectNew.(T)
+			if !okOld || !okNew {
+				return false
+			}
+			return !equality.Semantic.DeepEqual(statusOf(oldObj), statusOf(newObj))
+		},
+	}
+}
+
 func knativeServiceWatchPredicate() predicate.Predicate {
 	return predicate.Or(
 		predicate.GenerationChangedPredicate{},
-		predicate.TypedFuncs[client.Object]{
-			UpdateFunc: func(e event.TypedUpdateEvent[client.Object]) bool {
-				oldObj, okOld := e.ObjectOld.(*knativev1.Service)
-				newObj, okNew := e.ObjectNew.(*knativev1.Service)
-				if !okOld || !okNew {
-					return false
-				}
-				oldS, newS := oldObj.Status, newObj.Status
-				return oldS.LatestReadyRevisionName != newS.LatestReadyRevisionName ||
-					oldS.LatestCreatedRevisionName != newS.LatestCreatedRevisionName
-			},
-		},
+		statusChangedPredicate(knativeServiceStatus),
+	)
+}
+
+func knativeServiceStatus(ksvc *knativev1.Service) any {
+	out := ksvc.Status.DeepCopy()
+	for i := range out.Conditions {
+		out.Conditions[i].LastTransitionTime = kapis.VolatileTime{}
+	}
+
+	return out
+}
+
+func nfsPvcWatchPredicate() predicate.Predicate {
+	return predicate.Or(
+		predicate.GenerationChangedPredicate{},
+		statusChangedPredicate(nfsPvcStatus),
+	)
+}
+
+func nfsPvcStatus(nfspvc *nfspvcv1alpha1.NfsPvc) any {
+	out := nfspvc.Status.DeepCopy()
+	for i := range out.Conditions {
+		out.Conditions[i].LastTransitionTime = metav1.Time{}
+	}
+
+	return out
+}
+
+func syslogNGFlowWatchPredicate() predicate.Predicate {
+	return predicate.Or(
+		predicate.GenerationChangedPredicate{},
+		statusChangedPredicate(func(flow *loggingv1beta1.SyslogNGFlow) any { return flow.Status }),
+	)
+}
+
+func syslogNGOutputWatchPredicate() predicate.Predicate {
+	return predicate.Or(
+		predicate.GenerationChangedPredicate{},
+		statusChangedPredicate(func(output *loggingv1beta1.SyslogNGOutput) any { return output.Status }),
 	)
 }
 
