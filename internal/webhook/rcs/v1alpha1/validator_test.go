@@ -13,6 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/ptr"
+	kafkasecurity "knative.dev/eventing-kafka-broker/control-plane/pkg/security"
 	knativeautoscaling "knative.dev/serving/pkg/apis/autoscaling"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -443,9 +444,26 @@ func TestValidateNFSVolumeMounts(t *testing.T) {
 
 func TestValidateEventSources(t *testing.T) {
 	ctx := context.Background()
+	const kafkaSourceName = "kafka-a"
+	kafkaSecretName := "kafka-creds"
+	validKafkaSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: kafkaSecretName, Namespace: nsName},
+		Data: map[string][]byte{
+			kafkasecurity.SaslUserKey:      []byte("admin"),
+			kafkasecurity.SaslPasswordKey:  []byte("secret"),
+			kafkasecurity.SaslMechanismKey: []byte("PLAIN"),
+		},
+	}
+	validKafkaCfg := &cappv1alpha1.KafkaSourceConfiguration{
+		BootstrapServers: []string{"broker:9092"},
+		Topics:           []string{"events"},
+		SecretRef:        corev1.LocalObjectReference{Name: kafkaSecretName},
+	}
+
 	tests := []struct {
 		name            string
 		sources         []cappv1alpha1.SourceConfiguration
+		secret          *corev1.Secret
 		wantErrContains []string
 	}{
 		{
@@ -471,12 +489,6 @@ func TestValidateEventSources(t *testing.T) {
 			},
 		},
 		{
-			name: "allows source with ping configuration",
-			sources: []cappv1alpha1.SourceConfiguration{
-				{Name: eventSourceName, PingSourceConfiguration: &cappv1alpha1.PingSourceConfiguration{Schedule: "* * * * * *"}},
-			},
-		},
-		{
 			name: "rejects source with invalid cron schedule",
 			sources: []cappv1alpha1.SourceConfiguration{
 				{Name: eventSourceName, PingSourceConfiguration: &cappv1alpha1.PingSourceConfiguration{Schedule: "not-a-cron"}},
@@ -496,13 +508,52 @@ func TestValidateEventSources(t *testing.T) {
 				{Name: eventSourceName, PingSourceConfiguration: &cappv1alpha1.PingSourceConfiguration{Schedule: "*/5 * * * *", Data: `{"key":"value"}`}},
 			},
 		},
+		{
+			name: "allows valid kafka source with secret",
+			sources: []cappv1alpha1.SourceConfiguration{
+				{Name: kafkaSourceName, KafkaSourceConfiguration: validKafkaCfg},
+			},
+			secret: validKafkaSecret,
+		},
+		{
+			name: "rejects kafka source when secret is missing",
+			sources: []cappv1alpha1.SourceConfiguration{
+				{Name: kafkaSourceName, KafkaSourceConfiguration: validKafkaCfg},
+			},
+			wantErrContains: []string{"not found"},
+		},
+		{
+			name: "allows mixed ping and kafka sources",
+			sources: []cappv1alpha1.SourceConfiguration{
+				{Name: eventSourceName, PingSourceConfiguration: &cappv1alpha1.PingSourceConfiguration{Schedule: "*/5 * * * *"}},
+				{Name: kafkaSourceName, KafkaSourceConfiguration: validKafkaCfg},
+			},
+			secret: validKafkaSecret,
+		},
+		{
+			name: "rejects duplicate names across different source types",
+			sources: []cappv1alpha1.SourceConfiguration{
+				{Name: eventSourceName, PingSourceConfiguration: &cappv1alpha1.PingSourceConfiguration{}},
+				{Name: eventSourceName, KafkaSourceConfiguration: validKafkaCfg},
+			},
+			secret: validKafkaSecret,
+			wantErrContains: []string{
+				"duplicate",
+				eventSourceName,
+			},
+		},
 	}
-
-	fakeClient := fake.NewClientBuilder().WithScheme(newScheme(t)).Build()
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			var objects []client.Object
+			if tc.secret != nil {
+				objects = append(objects, tc.secret)
+			}
+			fakeClient := fake.NewClientBuilder().WithScheme(newScheme(t)).WithObjects(objects...).Build()
+
 			capp := cappv1alpha1.Capp{
+				ObjectMeta: metav1.ObjectMeta{Namespace: nsName},
 				Spec: cappv1alpha1.CappSpec{
 					EventSourcesSpec: cappv1alpha1.EventSourcesSpec{
 						Sources: tc.sources,
