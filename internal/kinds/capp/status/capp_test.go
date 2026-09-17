@@ -9,7 +9,7 @@ import (
 
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
-	xpv1 "github.com/crossplane/crossplane-runtime/v2/apis/common/v1"
+	xpv2 "github.com/crossplane/crossplane/apis/v2/core/v2"
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	rmanagers "github.com/dana-team/container-app-operator/internal/kinds/capp/resourcemanagers"
 	nfspvcv1alpha1 "github.com/dana-team/nfspvc-operator/api/v1alpha1"
@@ -462,10 +462,10 @@ func TestStripVolatileStatusFields(t *testing.T) {
 			},
 			DNSRecordObjectStatus: cappv1alpha1.DNSRecordObjectStatus{
 				CNAMERecordObjectStatus: dnsrecordv1alpha1.CNAMERecordStatus{
-					ResourceStatus: xpv1.ResourceStatus{
-						ConditionedStatus: xpv1.ConditionedStatus{
-							Conditions: []xpv1.Condition{
-								{Type: xpv1.TypeReady, Status: corev1.ConditionTrue, LastTransitionTime: ts},
+					ManagedResourceStatus: xpv2.ManagedResourceStatus{
+						ConditionedStatus: xpv2.ConditionedStatus{
+							Conditions: []xpv2.Condition{
+								{Type: xpv2.TypeReady, Status: corev1.ConditionTrue, LastTransitionTime: ts},
 							},
 						},
 					},
