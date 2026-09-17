@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	xpv1 "github.com/crossplane/crossplane-runtime/v2/apis/common/v1"
+	xpv2 "github.com/crossplane/crossplane/apis/v2/core/v2"
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/cappmeta"
 	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/resourceclient"
 	dnsrecordv1alpha1 "github.com/dana-team/provider-dns-v2/apis/namespaced/record/v1alpha1"
@@ -58,7 +58,7 @@ func newCNAMERecord(mutate func(*dnsrecordv1alpha1.CNAMERecord)) *dnsrecordv1alp
 			},
 		},
 	}
-	rec.Spec.ProviderConfigReference = &xpv1.ProviderConfigReference{
+	rec.Spec.ProviderConfigReference = &xpv2.ProviderConfigReference{
 		Name: dnsProvider,
 		Kind: ClusterProviderConfigKind,
 	}
@@ -112,7 +112,7 @@ func TestDNSRecordManagerCreateOrUpdate(t *testing.T) {
 	t.Run("updates when ProviderConfigReference differs", func(t *testing.T) {
 		wrongProvider := "wrong-provider"
 		existing := newCNAMERecord(func(rec *dnsrecordv1alpha1.CNAMERecord) {
-			rec.Spec.ProviderConfigReference = &xpv1.ProviderConfigReference{
+			rec.Spec.ProviderConfigReference = &xpv2.ProviderConfigReference{
 				Name: wrongProvider,
 				Kind: ClusterProviderConfigKind,
 			}

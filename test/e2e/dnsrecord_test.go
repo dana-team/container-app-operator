@@ -1,7 +1,7 @@
 package e2e
 
 import (
-	xpv1 "github.com/crossplane/crossplane-runtime/v2/apis/common/v1"
+	xpv2 "github.com/crossplane/crossplane/apis/v2/core/v2"
 	"github.com/dana-team/container-app-operator/test/e2e/consts"
 	"github.com/dana-team/container-app-operator/test/e2e/mocks"
 	"github.com/dana-team/container-app-operator/test/e2e/utils"
@@ -67,21 +67,21 @@ var _ = Describe("Validate DNSRecord functionality", func() {
 		By("Simulating external mutation of DNSRecord spec")
 		err := retry.RetryOnConflict(utils.NewRetryOnConflictBackoff(), func() error {
 			dnsRecord := utils.GetDNSRecord(k8sClient, dnsRecordName, createdCapp.Namespace)
-			dnsRecord.Spec.ManagementPolicies = []xpv1.ManagementAction{xpv1.ManagementActionCreate}
+			dnsRecord.Spec.ManagementPolicies = []xpv2.ManagementAction{xpv2.ManagementActionCreate}
 			return utils.UpdateResource(k8sClient, dnsRecord)
 		})
 		Expect(err).ToNot(HaveOccurred())
 
 		By("Confirming external mutation is persisted")
-		Eventually(func() []xpv1.ManagementAction {
+		Eventually(func() []xpv2.ManagementAction {
 			currentDNSRecord := utils.GetDNSRecord(k8sClient, dnsRecordName, createdCapp.Namespace)
 			return currentDNSRecord.Spec.ManagementPolicies
-		}, consts.Timeout, consts.Interval).Should(Equal([]xpv1.ManagementAction{xpv1.ManagementActionCreate}))
+		}, consts.Timeout, consts.Interval).Should(Equal([]xpv2.ManagementAction{xpv2.ManagementActionCreate}))
 
 		By("Should preserve external DNSRecord spec fields on Capp metadata-only changes")
-		Consistently(func() []xpv1.ManagementAction {
+		Consistently(func() []xpv2.ManagementAction {
 			currentDNSRecord := utils.GetDNSRecord(k8sClient, dnsRecordName, createdCapp.Namespace)
 			return currentDNSRecord.Spec.ManagementPolicies
-		}, consts.DefaultConsistently, consts.Interval).Should(Equal([]xpv1.ManagementAction{xpv1.ManagementActionCreate}))
+		}, consts.DefaultConsistently, consts.Interval).Should(Equal([]xpv2.ManagementAction{xpv2.ManagementActionCreate}))
 	})
 })

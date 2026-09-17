@@ -10,7 +10,7 @@ import (
 
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/cappmeta"
 
-	xpv1 "github.com/crossplane/crossplane-runtime/v2/apis/common/v1"
+	xpv2 "github.com/crossplane/crossplane/apis/v2/core/v2"
 	nfspvcv1alpha1 "github.com/dana-team/nfspvc-operator/api/v1alpha1"
 	dnsrecordv1alpha1 "github.com/dana-team/provider-dns-v2/apis/namespaced/record/v1alpha1"
 
@@ -253,15 +253,15 @@ func cnameRecordWatchPredicate() predicate.Predicate {
 			if !okOld || !okNew {
 				return false
 			}
-			return cnameRecordConditionChanged(oldObj, newObj, xpv1.TypeReady) ||
-				cnameRecordConditionChanged(oldObj, newObj, xpv1.TypeSynced)
+			return cnameRecordConditionChanged(oldObj, newObj, xpv2.TypeReady) ||
+				cnameRecordConditionChanged(oldObj, newObj, xpv2.TypeSynced)
 		},
 	}
 }
 
 func cnameRecordConditionChanged(
 	oldObj, newObj *dnsrecordv1alpha1.CNAMERecord,
-	conditionType xpv1.ConditionType,
+	conditionType xpv2.ConditionType,
 ) bool {
 	oldCond := oldObj.Status.GetCondition(conditionType)
 	newCond := newObj.Status.GetCondition(conditionType)

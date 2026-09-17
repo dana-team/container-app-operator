@@ -6,7 +6,7 @@ import (
 
 	dnsrecordv1alpha1 "github.com/dana-team/provider-dns-v2/apis/namespaced/record/v1alpha1"
 
-	xpv1 "github.com/crossplane/crossplane-runtime/v2/apis/common/v1"
+	xpv2 "github.com/crossplane/crossplane/apis/v2/core/v2"
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/cappmeta"
 	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/resourceclient"
@@ -57,7 +57,7 @@ func (r DNSRecordManager) prepareResource(capp cappv1alpha1.Capp) dnsrecordv1alp
 			},
 		},
 	}
-	dnsRecord.Spec.ProviderConfigReference = &xpv1.ProviderConfigReference{
+	dnsRecord.Spec.ProviderConfigReference = &xpv2.ProviderConfigReference{
 		Name: dnsConfig.Provider,
 		Kind: ClusterProviderConfigKind,
 	}
