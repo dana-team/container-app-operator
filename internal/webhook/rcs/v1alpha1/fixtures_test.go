@@ -1,6 +1,7 @@
 package webhooks
 
 import (
+	"context"
 	"encoding/json"
 	"testing"
 
@@ -113,4 +114,15 @@ func patchedCapp(t *testing.T, raw []byte, patches []gomodulesjsonpatch.JsonPatc
 	var capp cappv1alpha1.Capp
 	require.NoError(t, json.Unmarshal(modified, &capp))
 	return capp
+}
+
+func withLookupHost(t *testing.T, fn func(ctx context.Context, host string) ([]string, error)) {
+	t.Helper()
+	original := lookupHost
+	lookupHost = fn
+	t.Cleanup(func() { lookupHost = original })
+}
+
+func lookupHostTaken(_ context.Context, _ string) ([]string, error) {
+	return []string{"1.2.3.4"}, nil
 }
