@@ -8,7 +8,7 @@ import (
 
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
-	xpv1 "github.com/crossplane/crossplane-runtime/v2/apis/common/v1"
+	xpv2 "github.com/crossplane/crossplane/apis/v2/core/v2"
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/cappmeta"
 	nfspvcv1alpha1 "github.com/dana-team/nfspvc-operator/api/v1alpha1"
@@ -283,7 +283,7 @@ func TestCertificateWatchPredicate(t *testing.T) {
 }
 
 func TestCnameRecordConditionChanged(t *testing.T) {
-	makeCNAME := func(conds ...xpv1.Condition) *dnsrecordv1alpha1.CNAMERecord {
+	makeCNAME := func(conds ...xpv2.Condition) *dnsrecordv1alpha1.CNAMERecord {
 		rec := &dnsrecordv1alpha1.CNAMERecord{}
 		rec.Status.SetConditions(conds...)
 		return rec
@@ -293,42 +293,42 @@ func TestCnameRecordConditionChanged(t *testing.T) {
 		name          string
 		oldObj        *dnsrecordv1alpha1.CNAMERecord
 		newObj        *dnsrecordv1alpha1.CNAMERecord
-		conditionType xpv1.ConditionType
+		conditionType xpv2.ConditionType
 		expected      bool
 	}{
 		{
 			name:          "stable when both Ready=True",
-			oldObj:        makeCNAME(xpv1.Condition{Type: xpv1.TypeReady, Status: corev1.ConditionTrue}),
-			newObj:        makeCNAME(xpv1.Condition{Type: xpv1.TypeReady, Status: corev1.ConditionTrue}),
-			conditionType: xpv1.TypeReady,
+			oldObj:        makeCNAME(xpv2.Condition{Type: xpv2.TypeReady, Status: corev1.ConditionTrue}),
+			newObj:        makeCNAME(xpv2.Condition{Type: xpv2.TypeReady, Status: corev1.ConditionTrue}),
+			conditionType: xpv2.TypeReady,
 			expected:      false,
 		},
 		{
 			name:          "detects Ready transition False to True",
-			oldObj:        makeCNAME(xpv1.Condition{Type: xpv1.TypeReady, Status: corev1.ConditionFalse}),
-			newObj:        makeCNAME(xpv1.Condition{Type: xpv1.TypeReady, Status: corev1.ConditionTrue}),
-			conditionType: xpv1.TypeReady,
+			oldObj:        makeCNAME(xpv2.Condition{Type: xpv2.TypeReady, Status: corev1.ConditionFalse}),
+			newObj:        makeCNAME(xpv2.Condition{Type: xpv2.TypeReady, Status: corev1.ConditionTrue}),
+			conditionType: xpv2.TypeReady,
 			expected:      true,
 		},
 		{
 			name:          "no change when neither has the condition",
 			oldObj:        makeCNAME(),
 			newObj:        makeCNAME(),
-			conditionType: xpv1.TypeReady,
+			conditionType: xpv2.TypeReady,
 			expected:      false,
 		},
 		{
 			name:          "changed when condition appears",
 			oldObj:        makeCNAME(),
-			newObj:        makeCNAME(xpv1.Condition{Type: xpv1.TypeReady, Status: corev1.ConditionTrue}),
-			conditionType: xpv1.TypeReady,
+			newObj:        makeCNAME(xpv2.Condition{Type: xpv2.TypeReady, Status: corev1.ConditionTrue}),
+			conditionType: xpv2.TypeReady,
 			expected:      true,
 		},
 		{
 			name:          "ignores other condition types",
-			oldObj:        makeCNAME(xpv1.Condition{Type: xpv1.TypeReady, Status: corev1.ConditionTrue}, xpv1.Condition{Type: xpv1.TypeSynced, Status: corev1.ConditionFalse}),
-			newObj:        makeCNAME(xpv1.Condition{Type: xpv1.TypeReady, Status: corev1.ConditionTrue}, xpv1.Condition{Type: xpv1.TypeSynced, Status: corev1.ConditionTrue}),
-			conditionType: xpv1.TypeReady,
+			oldObj:        makeCNAME(xpv2.Condition{Type: xpv2.TypeReady, Status: corev1.ConditionTrue}, xpv2.Condition{Type: xpv2.TypeSynced, Status: corev1.ConditionFalse}),
+			newObj:        makeCNAME(xpv2.Condition{Type: xpv2.TypeReady, Status: corev1.ConditionTrue}, xpv2.Condition{Type: xpv2.TypeSynced, Status: corev1.ConditionTrue}),
+			conditionType: xpv2.TypeReady,
 			expected:      false,
 		},
 	}
@@ -343,7 +343,7 @@ func TestCnameRecordConditionChanged(t *testing.T) {
 func TestCnameRecordWatchPredicate(t *testing.T) {
 	pred := cnameRecordWatchPredicate()
 
-	makeCNAME := func(conds ...xpv1.Condition) *dnsrecordv1alpha1.CNAMERecord {
+	makeCNAME := func(conds ...xpv2.Condition) *dnsrecordv1alpha1.CNAMERecord {
 		rec := &dnsrecordv1alpha1.CNAMERecord{}
 		rec.Status.SetConditions(conds...)
 		return rec
@@ -362,20 +362,20 @@ func TestCnameRecordWatchPredicate(t *testing.T) {
 	}{
 		{
 			name:     "stable when Ready and Synced unchanged",
-			oldObj:   makeCNAME(xpv1.Condition{Type: xpv1.TypeReady, Status: corev1.ConditionTrue}, xpv1.Condition{Type: xpv1.TypeSynced, Status: corev1.ConditionTrue}),
-			newObj:   makeCNAME(xpv1.Condition{Type: xpv1.TypeReady, Status: corev1.ConditionTrue}, xpv1.Condition{Type: xpv1.TypeSynced, Status: corev1.ConditionTrue}),
+			oldObj:   makeCNAME(xpv2.Condition{Type: xpv2.TypeReady, Status: corev1.ConditionTrue}, xpv2.Condition{Type: xpv2.TypeSynced, Status: corev1.ConditionTrue}),
+			newObj:   makeCNAME(xpv2.Condition{Type: xpv2.TypeReady, Status: corev1.ConditionTrue}, xpv2.Condition{Type: xpv2.TypeSynced, Status: corev1.ConditionTrue}),
 			expected: false,
 		},
 		{
 			name:     "triggers when Ready changes",
-			oldObj:   makeCNAME(xpv1.Condition{Type: xpv1.TypeReady, Status: corev1.ConditionFalse}, xpv1.Condition{Type: xpv1.TypeSynced, Status: corev1.ConditionTrue}),
-			newObj:   makeCNAME(xpv1.Condition{Type: xpv1.TypeReady, Status: corev1.ConditionTrue}, xpv1.Condition{Type: xpv1.TypeSynced, Status: corev1.ConditionTrue}),
+			oldObj:   makeCNAME(xpv2.Condition{Type: xpv2.TypeReady, Status: corev1.ConditionFalse}, xpv2.Condition{Type: xpv2.TypeSynced, Status: corev1.ConditionTrue}),
+			newObj:   makeCNAME(xpv2.Condition{Type: xpv2.TypeReady, Status: corev1.ConditionTrue}, xpv2.Condition{Type: xpv2.TypeSynced, Status: corev1.ConditionTrue}),
 			expected: true,
 		},
 		{
 			name:     "triggers when Synced changes",
-			oldObj:   makeCNAME(xpv1.Condition{Type: xpv1.TypeReady, Status: corev1.ConditionTrue}, xpv1.Condition{Type: xpv1.TypeSynced, Status: corev1.ConditionFalse}),
-			newObj:   makeCNAME(xpv1.Condition{Type: xpv1.TypeReady, Status: corev1.ConditionTrue}, xpv1.Condition{Type: xpv1.TypeSynced, Status: corev1.ConditionTrue}),
+			oldObj:   makeCNAME(xpv2.Condition{Type: xpv2.TypeReady, Status: corev1.ConditionTrue}, xpv2.Condition{Type: xpv2.TypeSynced, Status: corev1.ConditionFalse}),
+			newObj:   makeCNAME(xpv2.Condition{Type: xpv2.TypeReady, Status: corev1.ConditionTrue}, xpv2.Condition{Type: xpv2.TypeSynced, Status: corev1.ConditionTrue}),
 			expected: true,
 		},
 	}
