@@ -13,6 +13,7 @@ import (
 
 	"github.com/cloudevents/sdk-go/v2/event"
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	cappmeta "github.com/dana-team/container-app-operator/internal/kinds/capp/cappmeta"
 	rmanagers "github.com/dana-team/container-app-operator/internal/kinds/capp/resourcemanagers"
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -37,6 +38,8 @@ import (
 const (
 	eventSourcePath = "spec.eventSourcesSpec.sources"
 )
+
+var lookupHost = net.DefaultResolver.LookupHost
 
 type CappValidator struct {
 	Client  client.Client
@@ -92,12 +95,14 @@ func (c *CappValidator) handle(ctx context.Context, operation admissionv1.Operat
 		if errs := validateDomainName(capp.Spec.RouteSpec.Hostname, allowedHostnamePatterns); errs != nil {
 			return admission.Denied(errs.Error())
 		}
-		taken, err := isDomainNameTaken(ctx, capp.Spec.RouteSpec.Hostname)
-		if err != nil {
-			return admission.Denied(fmt.Sprintf("hostname check error: %v", err))
-		}
-		if taken {
-			return admission.Denied(fmt.Sprintf("invalid name %q: hostname must be unique and not already taken", capp.Spec.RouteSpec.Hostname))
+		if capp.Annotations[cappmeta.SkipDNSCheckAnnotationKey] != "true" {
+			taken, err := isDomainNameTaken(ctx, capp.Spec.RouteSpec.Hostname)
+			if err != nil {
+				return admission.Denied(fmt.Sprintf("hostname check error: %v", err))
+			}
+			if taken {
+				return admission.Denied(fmt.Sprintf("invalid name %q: hostname must be unique and not already taken", capp.Spec.RouteSpec.Hostname))
+			}
 		}
 	}
 
@@ -340,7 +345,7 @@ func validateDomainName(domainName string, allowedPatterns []cappv1alpha1.Hostna
 }
 
 func isDomainNameTaken(ctx context.Context, domainName string) (bool, error) {
-	_, err := net.DefaultResolver.LookupHost(ctx, domainName)
+	_, err := lookupHost(ctx, domainName)
 	if err != nil {
 		var dnsErr *net.DNSError
 		if errors.As(err, &dnsErr) && dnsErr.IsNotFound {

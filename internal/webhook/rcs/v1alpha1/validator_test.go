@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	cappmeta "github.com/dana-team/container-app-operator/internal/kinds/capp/cappmeta"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	admissionv1 "k8s.io/api/admission/v1"
@@ -203,6 +204,50 @@ func TestCappValidatorHandle(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("denies create when hostname is taken", func(t *testing.T) {
+		withLookupHost(t, lookupHostTaken)
+		validator := newCappValidator(t, scheme, decoder)
+
+		capp := newCapp("taken.example.com")
+		raw, err := json.Marshal(capp)
+		require.NoError(t, err)
+
+		req := admission.Request{
+			AdmissionRequest: admissionv1.AdmissionRequest{
+				Operation: admissionv1.Create,
+				Object:    runtime.RawExtension{Raw: raw},
+				Name:      cappName,
+				Namespace: nsName,
+			},
+		}
+
+		resp := validator.Handle(context.Background(), req)
+		assert.False(t, resp.Allowed)
+		assert.Contains(t, resp.Result.Message, "hostname must be unique")
+	})
+
+	t.Run("allows create with skip-dns-check annotation when hostname is taken", func(t *testing.T) {
+		withLookupHost(t, lookupHostTaken)
+		validator := newCappValidator(t, scheme, decoder)
+
+		capp := newCapp("taken.example.com")
+		capp.Annotations = map[string]string{cappmeta.SkipDNSCheckAnnotationKey: "true"}
+		raw, err := json.Marshal(capp)
+		require.NoError(t, err)
+
+		req := admission.Request{
+			AdmissionRequest: admissionv1.AdmissionRequest{
+				Operation: admissionv1.Create,
+				Object:    runtime.RawExtension{Raw: raw},
+				Name:      cappName,
+				Namespace: nsName,
+			},
+		}
+
+		resp := validator.Handle(context.Background(), req)
+		assert.True(t, resp.Allowed, "expected allowed with skip-dns-check annotation, got: %v", resp.Result)
+	})
 
 }
 
