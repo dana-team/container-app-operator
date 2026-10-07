@@ -3,7 +3,7 @@ module github.com/dana-team/container-app-operator
 go 1.26.8
 
 require (
-	github.com/cert-manager/cert-manager v1.21.1
+	github.com/cert-manager/cert-manager v1.21.2
 	github.com/cisco-open/operator-tools v0.37.0
 	github.com/cloudevents/sdk-go/v2 v2.16.2
 	github.com/crossplane/crossplane/apis/v2 v2.4.0
@@ -358,7 +358,7 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
-	golang.org/x/crypto v0.55.0 // indirect
+	golang.org/x/crypto v0.56.0 // indirect
 	golang.org/x/exp v0.0.0-20260410095643-746e56fc9e2f // indirect
 	golang.org/x/exp/typeparams v0.0.0-20260209203927-2842357ff358 // indirect
 	golang.org/x/mod v0.40.0 // indirect
