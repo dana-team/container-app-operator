@@ -6,7 +6,7 @@ require (
 	github.com/cert-manager/cert-manager v1.21.2
 	github.com/cisco-open/operator-tools v0.37.0
 	github.com/cloudevents/sdk-go/v2 v2.16.2
-	github.com/crossplane/crossplane/apis/v2 v2.4.0
+	github.com/crossplane/crossplane/apis/v2 v2.4.2
 	github.com/dana-team/nfspvc-operator v0.5.3
 	github.com/dana-team/provider-dns-v2 v1.0.4
 	github.com/evanphx/json-patch/v5 v5.9.11
