@@ -180,8 +180,8 @@ github.com/coreos/go-oidc/v3 v3.17.0/go.mod h1:wqPbKFrVnE90vty060SB40FCJ8fTHTxSw
 github.com/cpuguy83/go-md2man/v2 v2.0.6/go.mod h1:oOW0eioCTA6cOiMLiUPZOpcVxMig6NIQQ7OS05n1F4g=
 github.com/crossplane/crossplane-runtime/v2 v2.4.0 h1:m5iGVHbtEh9nZYz7w/wUWDsXVlpG2c8v5i0SZScwHh8=
 github.com/crossplane/crossplane-runtime/v2 v2.4.0/go.mod h1:Pf+hg5A/46QaGjKi7Pk+HdsrFOA/THvST9qM4El8Rzs=
-github.com/crossplane/crossplane/apis/v2 v2.4.0 h1:QmZqZe+vvi9IrnEK8rW7UsCDQBqagK6HFV1mYEw/DkQ=
-github.com/crossplane/crossplane/apis/v2 v2.4.0/go.mod h1:Ev+FjQqTTWJWoaXi63uKER215kDjTo8PghDCT0JapZs=
+github.com/crossplane/crossplane/apis/v2 v2.4.2 h1:mP1xs65G7yrpo17zlME+NNH/dMS05g1r4KURvty7JWY=
+github.com/crossplane/crossplane/apis/v2 v2.4.2/go.mod h1:OBNx+tl5RQh31Hqo2Q1KZ5tlwZXUIetAvpKKozP8HhU=
 github.com/crossplane/upjet/v2 v2.4.1-0.20260911065406-6d9f367b87f4 h1:BzLnZwTJ/3ZQfCPx0br8yQVkR0uCtL1gBY2cRMcbdRY=
 github.com/crossplane/upjet/v2 v2.4.1-0.20260911065406-6d9f367b87f4/go.mod h1:r0gb9iK2JVXDODj/y0474UIhwbgUodP23jWEtP+Nk10=
 github.com/curioswitch/go-reassign v0.3.0 h1:dh3kpQHuADL3cobV/sSGETA8DOv457dwl+fbBAhrQPs=
