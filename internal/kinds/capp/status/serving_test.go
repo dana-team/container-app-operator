@@ -15,8 +15,11 @@ import (
 	kapis "knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
+
+const readyRevision = "rev-1"
 
 func newKnativeScheme() *runtime.Scheme {
 	s := runtime.NewScheme()
@@ -125,93 +128,105 @@ func TestBuildRevisionsStatus(t *testing.T) {
 	})
 }
 
-func TestKnativeNotReady(t *testing.T) {
+func newKsvc(latestCreated, latestReady string, conditions ...kapis.Condition) *knativev1.Service {
+	ksvc := &knativev1.Service{ObjectMeta: metav1.ObjectMeta{Name: cappName, Namespace: cappNamespace}}
+	ksvc.Status.Conditions = conditions
+	ksvc.Status.LatestCreatedRevisionName = latestCreated
+	ksvc.Status.LatestReadyRevisionName = latestReady
+	return ksvc
+}
+
+func TestCheckKnative(t *testing.T) {
+	const latestRevision = cappName + "-00002"
+	const imageError = `Unable to fetch image "bad": failed to resolve image to digest`
+
+	ready := kapis.Condition{Type: kapis.ConditionReady, Status: corev1.ConditionTrue}
+	unknown := kapis.Condition{Type: kapis.ConditionReady, Status: corev1.ConditionUnknown}
+
+	staleKsvc := newKsvc(readyRevision, readyRevision, ready)
+	staleKsvc.Generation = 2
+	staleKsvc.Status.ObservedGeneration = 1
+
+	failedRevision := newRevision(latestRevision, metav1.Now())
+	failedRevision.Status.Conditions = duckv1.Conditions{
+		{Type: knativev1.RevisionConditionContainerHealthy, Status: corev1.ConditionFalse, Reason: knativev1.ReasonContainerMissing, Message: imageError},
+	}
+
+	deployingRevision := newRevision(latestRevision, metav1.Now())
+	deployingRevision.Status.Conditions = duckv1.Conditions{
+		{Type: knativev1.RevisionConditionContainerHealthy, Status: corev1.ConditionTrue},
+		{Type: knativev1.RevisionConditionResourcesAvailable, Status: corev1.ConditionUnknown, Reason: knativev1.ReasonDeploying},
+	}
+
+	pendingKsvc := &metav1.Condition{
+		Status:  metav1.ConditionUnknown,
+		Reason:  cappv1alpha1.CapabilityReasonPending,
+		Message: "KnativeService " + cappName + " not observed yet",
+	}
+
 	tests := []struct {
-		name       string
-		status     knativev1.ServiceStatus
-		wantReason string
-		wantMsg    string
-		wantOK     bool
+		name    string
+		objects []client.Object
+		want    *metav1.Condition
 	}{
 		{
-			name:       "not ready when no conditions exist",
-			status:     knativev1.ServiceStatus{},
-			wantReason: cappv1alpha1.CappReadyReasonKnativeNotReady,
-			wantMsg:    "Knative Service has no status yet",
+			name:    "pending when the service status is stale",
+			objects: []client.Object{staleKsvc},
+			want:    pendingKsvc,
 		},
 		{
-			name: "not ready when knative Ready condition is false",
-			status: knativev1.ServiceStatus{
-				Status: duckv1.Status{
-					Conditions: duckv1.Conditions{
-						{Type: kapis.ConditionReady, Status: corev1.ConditionFalse, Message: "image pull failed"},
-					},
-				},
-				ConfigurationStatusFields: knativev1.ConfigurationStatusFields{
-					LatestCreatedRevisionName: readyRevision,
-					LatestReadyRevisionName:   readyRevision,
-				},
-			},
-			wantReason: cappv1alpha1.CappReadyReasonKnativeNotReady,
-			wantMsg:    "image pull failed",
+			name:    "nil when the service is ready",
+			objects: []client.Object{newKsvc(readyRevision, readyRevision, ready)},
 		},
 		{
-			name: "not ready when latest revision differs from latest ready",
-			status: knativev1.ServiceStatus{
-				Status: duckv1.Status{
-					Conditions: duckv1.Conditions{
-						{Type: kapis.ConditionReady, Status: corev1.ConditionTrue},
-					},
-				},
-				ConfigurationStatusFields: knativev1.ConfigurationStatusFields{
-					LatestCreatedRevisionName: pendingRevision,
-					LatestReadyRevisionName:   readyRevision,
-				},
+			name: "reports the service condition when the latest revision is ready",
+			objects: []client.Object{newKsvc(readyRevision, readyRevision,
+				kapis.Condition{Type: kapis.ConditionReady, Status: corev1.ConditionFalse, Reason: "RevisionMissing", Message: "no ready revision"})},
+			want: &metav1.Condition{
+				Status:  metav1.ConditionFalse,
+				Reason:  "RevisionMissing",
+				Message: "KnativeService " + cappName + ": no ready revision",
 			},
-			wantReason: cappv1alpha1.CappReadyReasonKnativeNotReady,
-			wantMsg:    "latest revision " + pendingRevision + " is not ready",
 		},
 		{
-			name: "not ready when Ready condition is missing from non-empty conditions",
-			status: knativev1.ServiceStatus{
-				Status: duckv1.Status{
-					Conditions: duckv1.Conditions{
-						{Type: "ConfigurationsReady", Status: corev1.ConditionTrue},
-					},
-				},
-				ConfigurationStatusFields: knativev1.ConfigurationStatusFields{
-					LatestCreatedRevisionName: readyRevision,
-					LatestReadyRevisionName:   readyRevision,
-				},
+			name: "reports the latest revision when it failed",
+			objects: []client.Object{
+				newKsvc(latestRevision, "", kapis.Condition{Type: kapis.ConditionReady, Status: corev1.ConditionFalse, Reason: "RevisionFailed"}),
+				failedRevision,
 			},
-			wantReason: cappv1alpha1.CappReadyReasonKnativeNotReady,
-			wantMsg:    "Knative Service Ready condition not found",
+			want: &metav1.Condition{
+				Status:  metav1.ConditionFalse,
+				Reason:  knativev1.ReasonContainerMissing,
+				Message: "Revision " + latestRevision + ": " + imageError,
+			},
 		},
 		{
-			name: "ready when Ready condition is true and revisions match",
-			status: knativev1.ServiceStatus{
-				Status: duckv1.Status{
-					Conditions: duckv1.Conditions{
-						{Type: kapis.ConditionReady, Status: corev1.ConditionTrue},
-					},
-				},
-				ConfigurationStatusFields: knativev1.ConfigurationStatusFields{
-					LatestCreatedRevisionName: readyRevision,
-					LatestReadyRevisionName:   readyRevision,
-				},
+			name:    "reports the latest revision as unknown while it deploys",
+			objects: []client.Object{newKsvc(latestRevision, readyRevision, unknown), deployingRevision},
+			want: &metav1.Condition{
+				Status:  metav1.ConditionUnknown,
+				Reason:  knativev1.ReasonDeploying,
+				Message: "Revision " + latestRevision,
 			},
-			wantOK: true,
+		},
+		{
+			name:    "pending when the latest revision is missing",
+			objects: []client.Object{newKsvc(latestRevision, readyRevision, unknown)},
+			want: &metav1.Condition{
+				Status:  metav1.ConditionUnknown,
+				Reason:  cappv1alpha1.CapabilityReasonPending,
+				Message: "Revision " + latestRevision + " not observed yet",
+			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			reason, msg, ok := knativeNotReady(tt.status)
-			assert.Equal(t, tt.wantOK, ok)
-			if !ok {
-				assert.Equal(t, tt.wantReason, reason)
-				assert.Equal(t, tt.wantMsg, msg)
-			}
+			fakeClient := fake.NewClientBuilder().WithScheme(newKnativeScheme()).WithObjects(tt.objects...).Build()
+
+			got, err := checkKnative(context.Background(), fakeClient, newCapp(), nil)
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }

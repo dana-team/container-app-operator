@@ -2,8 +2,11 @@ package status
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	rmanagers "github.com/dana-team/container-app-operator/internal/kinds/capp/resourcemanagers"
 	"github.com/go-logr/logr"
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -72,11 +75,34 @@ func buildLoggingStatus(ctx context.Context, capp cappv1alpha1.Capp, log logr.Lo
 	return loggingStatus, nil
 }
 
-func loggingNotReady(ls cappv1alpha1.LoggingStatus) (string, string, bool) {
-	for _, c := range ls.Conditions {
-		if c.Status == metav1.ConditionFalse {
-			return cappv1alpha1.CappReadyReasonLoggingNotReady, c.Message, false
-		}
+// checkLogging returns why the SyslogNGOutput or SyslogNGFlow is not ready, or nil when both are.
+func checkLogging(ctx context.Context, k8sClient client.Client, capp cappv1alpha1.Capp, _ *cappv1alpha1.CappConfig) (*metav1.Condition, error) {
+	key := types.NamespacedName{Namespace: capp.Namespace, Name: capp.Name}
+
+	output := &loggingv1beta1.SyslogNGOutput{}
+	if cond, err := getChildResource(ctx, k8sClient, rmanagers.SyslogNGOutput, key, output); cond != nil || err != nil {
+		return cond, err
 	}
-	return "", "", true
+	if cond := syslogNGProblems(rmanagers.SyslogNGOutput, output.Name, output.Status.ProblemsCount, output.Status.Problems); cond != nil {
+		return cond, nil
+	}
+
+	flow := &loggingv1beta1.SyslogNGFlow{}
+	if cond, err := getChildResource(ctx, k8sClient, rmanagers.SyslogNGFlow, key, flow); cond != nil || err != nil {
+		return cond, err
+	}
+	return syslogNGProblems(rmanagers.SyslogNGFlow, flow.Name, flow.Status.ProblemsCount, flow.Status.Problems), nil
+}
+
+// syslogNGProblems returns a False condition when the logging operator reported problems, or nil.
+func syslogNGProblems(kind, name string, problemsCount int, problems []string) *metav1.Condition {
+	if problemsCount == 0 && len(problems) == 0 {
+		return nil
+	}
+
+	message := strings.Join(problems, "; ")
+	if message == "" {
+		message = fmt.Sprintf("%d problems reported", problemsCount)
+	}
+	return formatChildCondition(kind, name, metav1.ConditionFalse, loggingResourceInvalid, message)
 }

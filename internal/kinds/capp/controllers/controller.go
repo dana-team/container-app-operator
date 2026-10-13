@@ -201,7 +201,7 @@ func syslogNGOutputWatchPredicate() predicate.Predicate {
 	)
 }
 
-// pingSourceWatchPredicate triggers on spec changes (generation) or condition changes that affect Capp flow.
+// pingSourceWatchPredicate triggers on spec changes (generation), Ready condition changes or observed generation changes.
 func pingSourceWatchPredicate() predicate.Predicate {
 	return predicate.Or(
 		predicate.GenerationChangedPredicate{},
@@ -216,13 +216,13 @@ func pingSourceWatchPredicate() predicate.Predicate {
 					knativeConditions(oldObj.Status.Conditions),
 					knativeConditions(newObj.Status.Conditions),
 					string(sourcesv1.PingSourceConditionReady),
-				)
+				) || oldObj.Status.ObservedGeneration != newObj.Status.ObservedGeneration
 			},
 		},
 	)
 }
 
-// kafkaSourceWatchPredicate triggers on spec changes (generation) or condition changes that affect Capp flow.
+// kafkaSourceWatchPredicate triggers on spec changes (generation), Ready condition changes or observed generation changes.
 func kafkaSourceWatchPredicate() predicate.Predicate {
 	return predicate.Or(
 		predicate.GenerationChangedPredicate{},
@@ -237,7 +237,7 @@ func kafkaSourceWatchPredicate() predicate.Predicate {
 					knativeConditions(oldObj.Status.Conditions),
 					knativeConditions(newObj.Status.Conditions),
 					string(kafkasourcev1.KafkaConditionReady),
-				)
+				) || oldObj.Status.ObservedGeneration != newObj.Status.ObservedGeneration
 			},
 		},
 	)
@@ -265,7 +265,7 @@ func cnameRecordConditionChanged(
 ) bool {
 	oldCond := oldObj.Status.GetCondition(conditionType)
 	newCond := newObj.Status.GetCondition(conditionType)
-	return oldCond.Status != newCond.Status
+	return oldCond.Status != newCond.Status || oldCond.ObservedGeneration != newCond.ObservedGeneration
 }
 
 // conditionStatusChanged reports whether the status value of condType differs
@@ -288,7 +288,7 @@ type conditionPair struct {
 	status   string
 }
 
-// domainMappingWatchPredicate triggers on spec changes (generation) or Ready condition status changes.
+// domainMappingWatchPredicate triggers on spec changes (generation), Ready condition changes or observed generation changes.
 func domainMappingWatchPredicate() predicate.Predicate {
 	return predicate.Or(
 		predicate.GenerationChangedPredicate{},
@@ -303,7 +303,7 @@ func domainMappingWatchPredicate() predicate.Predicate {
 					knativeConditions(oldObj.Status.Conditions),
 					knativeConditions(newObj.Status.Conditions),
 					string(knativev1beta1.DomainMappingConditionReady),
-				)
+				) || oldObj.Status.ObservedGeneration != newObj.Status.ObservedGeneration
 			},
 		},
 	)
@@ -317,7 +317,7 @@ func knativeConditions(conds duckv1.Conditions) []conditionPair {
 	return out
 }
 
-// certificateWatchPredicate triggers on spec changes (generation) or Ready condition status changes.
+// certificateWatchPredicate triggers on spec changes (generation), Ready condition changes or observed generation changes.
 func certificateWatchPredicate() predicate.Predicate {
 	return predicate.Or(
 		predicate.GenerationChangedPredicate{},
@@ -332,10 +332,20 @@ func certificateWatchPredicate() predicate.Predicate {
 					certificateConditions(oldObj.Status.Conditions),
 					certificateConditions(newObj.Status.Conditions),
 					string(cmapi.CertificateConditionReady),
-				)
+				) || certificateReadyObservedGeneration(oldObj) != certificateReadyObservedGeneration(newObj)
 			},
 		},
 	)
+}
+
+// certificateReadyObservedGeneration returns the generation the Certificate's Ready condition was set for.
+func certificateReadyObservedGeneration(cert *cmapi.Certificate) int64 {
+	for _, c := range cert.Status.Conditions {
+		if c.Type == cmapi.CertificateConditionReady {
+			return c.ObservedGeneration
+		}
+	}
+	return 0
 }
 
 func certificateConditions(conds []cmapi.CertificateCondition) []conditionPair {
@@ -453,13 +463,18 @@ func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 // It ensures all manifests are applied according to the specification and synchronizes the status accordingly.
 func (r *CappReconciler) SyncApplication(ctx context.Context, capp cappv1alpha1.Capp, resourceManagers []rmanagers.ResourceManagerEntry, cappConfig *cappv1alpha1.CappConfig, logger logr.Logger) error {
 	var syncErrors []error
+	syncErrorsByManager := map[string]error{}
 	for _, entry := range resourceManagers {
 		if err := entry.Manager.Manage(ctx, capp); err != nil {
-			syncErrors = append(syncErrors, fmt.Errorf("%s: %w", entry.Name, err))
+			err = fmt.Errorf("%s: %w", entry.Name, err)
+			syncErrors = append(syncErrors, err)
+			if !errors.IsConflict(err) {
+				syncErrorsByManager[entry.Name] = err
+			}
 		}
 	}
 
-	if err := status.SyncStatus(ctx, capp, logger, r.Client, rmanagers.ManagerMap(resourceManagers), cappConfig, syncErrors); err != nil {
+	if err := status.SyncStatus(ctx, capp, logger, r.Client, rmanagers.ManagerMap(resourceManagers), cappConfig, syncErrorsByManager); err != nil {
 		return err
 	}
 

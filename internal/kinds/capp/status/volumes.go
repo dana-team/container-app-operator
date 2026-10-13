@@ -4,9 +4,11 @@ import (
 	"context"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
+	rmanagers "github.com/dana-team/container-app-operator/internal/kinds/capp/resourcemanagers"
 	nfspvcv1alpha1 "github.com/dana-team/nfspvc-operator/api/v1alpha1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -43,12 +45,22 @@ func buildVolumesStatus(ctx context.Context, kubeClient client.Client, capp capp
 	return volumesStatus, nil
 }
 
-func volumesNotReady(vs cappv1alpha1.VolumesStatus) (string, string, bool) {
-	for _, v := range vs.NFSVolumesStatus {
-		if !meta.IsStatusConditionTrue(v.NFSPVCStatus.Conditions, nfspvcv1alpha1.ConditionReady) {
-			return cappv1alpha1.CappReadyReasonVolumesNotReady,
-				"NFS volume " + v.VolumeName + " is not ready", false
+// checkVolumes returns why an NFS volume is not ready, or nil when all are ready.
+func checkVolumes(ctx context.Context, k8sClient client.Client, capp cappv1alpha1.Capp, _ *cappv1alpha1.CappConfig) (*metav1.Condition, error) {
+	for _, volume := range capp.Spec.VolumesSpec.NFSVolumes {
+		pvc := &nfspvcv1alpha1.NfsPvc{}
+		key := types.NamespacedName{Namespace: capp.Namespace, Name: volume.Name}
+		if cond, err := getChildResource(ctx, k8sClient, rmanagers.NfsPvc, key, pvc); cond != nil || err != nil {
+			return cond, err
+		}
+
+		ready := meta.FindStatusCondition(pvc.Status.Conditions, nfspvcv1alpha1.ConditionReady)
+		if ready == nil || isConditionStale(ready.ObservedGeneration, pvc) {
+			return newPendingCondition(rmanagers.NfsPvc, pvc.Name), nil
+		}
+		if cond := formatChildCondition(rmanagers.NfsPvc, pvc.Name, ready.Status, ready.Reason, ready.Message); cond != nil {
+			return cond, nil
 		}
 	}
-	return "", "", true
+	return nil, nil
 }

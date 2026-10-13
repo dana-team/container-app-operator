@@ -3,7 +3,6 @@ package status
 import (
 	"context"
 	"errors"
-	"strings"
 	"testing"
 	"time"
 
@@ -12,23 +11,28 @@ import (
 	xpv2 "github.com/crossplane/crossplane/apis/v2/core/v2"
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	rmanagers "github.com/dana-team/container-app-operator/internal/kinds/capp/resourcemanagers"
-	nfspvcv1alpha1 "github.com/dana-team/nfspvc-operator/api/v1alpha1"
 	dnsrecordv1alpha1 "github.com/dana-team/provider-dns-v2/apis/namespaced/record/v1alpha1"
+	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	kafkasourcev1 "knative.dev/eventing-kafka-broker/control-plane/pkg/apis/sources/v1"
+	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	kapis "knative.dev/pkg/apis"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
-	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 const (
-	readyRevision   = "rev-1"
-	pendingRevision = "rev-2"
-	pingEventSource = "ping-src"
+	reasonResolveFailed  = "ResolveFailed"
+	reasonPvcPending     = "PvcPending"
+	pendingVolumeMessage = "NfsPvc vol-a not observed yet"
 )
 
 type stubManager struct {
@@ -39,7 +43,7 @@ func (s stubManager) Manage(_ context.Context, _ cappv1alpha1.Capp) error  { ret
 func (s stubManager) CleanUp(_ context.Context, _ cappv1alpha1.Capp) error { return nil }
 func (s stubManager) IsRequired(_ cappv1alpha1.Capp) bool                  { return s.required }
 
-func buildManagers(enabled map[string]bool) map[string]rmanagers.ResourceManager {
+func buildManagers(required map[string]bool) map[string]rmanagers.ResourceManager {
 	all := []string{
 		rmanagers.KnativeService,
 		rmanagers.SyslogNGFlow,
@@ -53,355 +57,209 @@ func buildManagers(enabled map[string]bool) map[string]rmanagers.ResourceManager
 	}
 	m := make(map[string]rmanagers.ResourceManager, len(all))
 	for _, name := range all {
-		m[name] = stubManager{required: enabled[name]}
+		m[name] = stubManager{required: required[name]}
 	}
 	return m
 }
 
-func readyCondition(status *cappv1alpha1.CappStatus) *metav1.Condition {
-	for i := range status.Conditions {
-		if status.Conditions[i].Type == cappv1alpha1.CappConditionReady {
-			return &status.Conditions[i]
-		}
-	}
-	return nil
-}
-
-func knativeServiceReady(ready corev1.ConditionStatus) knativev1.ServiceStatus {
-	return knativev1.ServiceStatus{
-		Status: duckv1.Status{
-			Conditions: duckv1.Conditions{
-				{Type: kapis.ConditionReady, Status: ready},
-			},
-		},
-		ConfigurationStatusFields: knativev1.ConfigurationStatusFields{
-			LatestCreatedRevisionName: readyRevision,
-			LatestReadyRevisionName:   readyRevision,
-		},
-	}
-}
-
-func domainMappingStatus(ready corev1.ConditionStatus) knativev1beta1.DomainMappingStatus {
-	return knativev1beta1.DomainMappingStatus{
-		Status: duckv1.Status{
-			Conditions: duckv1.Conditions{
-				{Type: kapis.ConditionReady, Status: ready},
-			},
-		},
-	}
-}
-
-func certificateStatus(ready cmmeta.ConditionStatus) cmapi.CertificateStatus {
-	return cmapi.CertificateStatus{
-		Conditions: []cmapi.CertificateCondition{
-			{Type: cmapi.CertificateConditionReady, Status: ready},
-		},
-	}
-}
-
-func nfsVolumesBound(names ...string) cappv1alpha1.VolumesStatus {
-	vs := cappv1alpha1.VolumesStatus{}
-	for _, n := range names {
-		vs.NFSVolumesStatus = append(vs.NFSVolumesStatus, cappv1alpha1.NFSVolumeStatus{
-			VolumeName: n,
-			NFSPVCStatus: nfspvcv1alpha1.NfsPvcStatus{
-				PvPhase:  string(corev1.VolumeBound),
-				PvcPhase: string(corev1.ClaimBound),
-				Conditions: []metav1.Condition{
-					{Type: nfspvcv1alpha1.ConditionReady, Status: metav1.ConditionTrue},
-				},
-			},
-		})
-	}
-	return vs
-}
-
-func nfsVolumesUnbound(name string) cappv1alpha1.VolumesStatus {
-	return cappv1alpha1.VolumesStatus{
-		NFSVolumesStatus: []cappv1alpha1.NFSVolumeStatus{
-			{
-				VolumeName: name,
-				NFSPVCStatus: nfspvcv1alpha1.NfsPvcStatus{
-					PvPhase:  string(corev1.VolumePending),
-					PvcPhase: string(corev1.ClaimPending),
-					Conditions: []metav1.Condition{
-						{Type: nfspvcv1alpha1.ConditionReady, Status: metav1.ConditionFalse},
-					},
-				},
-			},
-		},
-	}
+func newStatusScheme() *runtime.Scheme {
+	s := newRouteScheme()
+	utilruntime.Must(knativev1.AddToScheme(s))
+	utilruntime.Must(sourcesv1.AddToScheme(s))
+	utilruntime.Must(kafkasourcev1.AddToScheme(s))
+	return s
 }
 
 func TestComputeReadyCondition(t *testing.T) {
-	capp := cappv1alpha1.Capp{}
-
 	tests := []struct {
-		name           string
-		status         cappv1alpha1.CappStatus
-		enabled        map[string]bool
-		syncErrors     []error
-		expectedStatus metav1.ConditionStatus
-		expectedReason string
-		expectedMsg    string
+		name       string
+		state      string
+		conditions []metav1.Condition
+		want       metav1.Condition
 	}{
 		{
-			name: "ready when knative is ready and no optional features enabled",
-			status: cappv1alpha1.CappStatus{
-				KnativeObjectStatus: knativeServiceReady(corev1.ConditionTrue),
+			name: "ready when all capabilities are ready",
+			conditions: []metav1.Condition{
+				{Type: cappv1alpha1.CappConditionServingReady, Status: metav1.ConditionTrue, Reason: cappv1alpha1.CapabilityReasonReady},
+				{Type: cappv1alpha1.CappConditionRouteReady, Status: metav1.ConditionTrue, Reason: cappv1alpha1.CapabilityReasonReady},
 			},
-			enabled:        map[string]bool{},
-			expectedStatus: metav1.ConditionTrue,
-			expectedReason: cappv1alpha1.CappReadyReasonReady,
+			want: metav1.Condition{
+				Type:    cappv1alpha1.CappConditionReady,
+				Status:  metav1.ConditionTrue,
+				Reason:  cappv1alpha1.CappReadyReasonReady,
+				Message: readyMessage,
+			},
 		},
 		{
-			name: "not ready when knative is not ready",
-			status: cappv1alpha1.CappStatus{
-				KnativeObjectStatus: knativeServiceReady(corev1.ConditionFalse),
+			name: "reports serving instead of the route symptom",
+			conditions: []metav1.Condition{
+				{Type: cappv1alpha1.CappConditionServingReady, Status: metav1.ConditionFalse, Reason: knativev1.ReasonContainerMissing, Message: "Revision my-capp-00001: Unable to fetch image"},
+				{Type: cappv1alpha1.CappConditionRouteReady, Status: metav1.ConditionFalse, Reason: reasonResolveFailed, Message: "DomainMapping app.example.com: no address"},
 			},
-			enabled:        map[string]bool{},
-			expectedStatus: metav1.ConditionFalse,
-			expectedReason: cappv1alpha1.CappReadyReasonKnativeNotReady,
-		},
-
-		// --- Logging ---
-		{
-			name: "not ready when logging is enabled and has problems",
-			status: cappv1alpha1.CappStatus{
-				KnativeObjectStatus: knativeServiceReady(corev1.ConditionTrue),
-				LoggingStatus: cappv1alpha1.LoggingStatus{
-					Conditions: []metav1.Condition{
-						{Type: loggingReady, Status: metav1.ConditionFalse, Reason: loggingResourceInvalid, Message: "flow has errors"},
-					},
-				},
+			want: metav1.Condition{
+				Type:    cappv1alpha1.CappConditionReady,
+				Status:  metav1.ConditionFalse,
+				Reason:  cappv1alpha1.CappReadyReasonServingNotReady,
+				Message: knativev1.ReasonContainerMissing + ": Revision my-capp-00001: Unable to fetch image",
 			},
-			enabled:        map[string]bool{rmanagers.SyslogNGFlow: true},
-			expectedStatus: metav1.ConditionFalse,
-			expectedReason: cappv1alpha1.CappReadyReasonLoggingNotReady,
 		},
 		{
-			name: "ready when logging is NOT enabled even though conditions are false",
-			status: cappv1alpha1.CappStatus{
-				KnativeObjectStatus: knativeServiceReady(corev1.ConditionTrue),
-				LoggingStatus: cappv1alpha1.LoggingStatus{
-					Conditions: []metav1.Condition{
-						{Type: loggingReady, Status: metav1.ConditionFalse, Reason: loggingResourceInvalid},
-					},
-				},
+			name: "reports a False root cause before an Unknown one",
+			conditions: []metav1.Condition{
+				{Type: cappv1alpha1.CappConditionVolumesReady, Status: metav1.ConditionUnknown, Reason: cappv1alpha1.CapabilityReasonPending, Message: pendingVolumeMessage},
+				{Type: cappv1alpha1.CappConditionLoggingReady, Status: metav1.ConditionFalse, Reason: loggingResourceInvalid, Message: "SyslogNGFlow my-capp: invalid host"},
 			},
-			enabled:        map[string]bool{},
-			expectedStatus: metav1.ConditionTrue,
-			expectedReason: cappv1alpha1.CappReadyReasonReady,
-		},
-
-		// --- DomainMapping ---
-		{
-			name: "not ready when domain mapping is enabled and not ready",
-			status: cappv1alpha1.CappStatus{
-				KnativeObjectStatus: knativeServiceReady(corev1.ConditionTrue),
-				RouteStatus: cappv1alpha1.RouteStatus{
-					DomainMappingObjectStatus: domainMappingStatus(corev1.ConditionFalse),
-				},
+			want: metav1.Condition{
+				Type:    cappv1alpha1.CappConditionReady,
+				Status:  metav1.ConditionFalse,
+				Reason:  cappv1alpha1.CappReadyReasonLoggingNotReady,
+				Message: loggingResourceInvalid + ": SyslogNGFlow my-capp: invalid host",
 			},
-			enabled:        map[string]bool{rmanagers.DomainMapping: true},
-			expectedStatus: metav1.ConditionFalse,
-			expectedReason: cappv1alpha1.CappReadyReasonDomainMappingNotReady,
 		},
 		{
-			name: "ready when domain mapping is NOT enabled even though DM is false",
-			status: cappv1alpha1.CappStatus{
-				KnativeObjectStatus: knativeServiceReady(corev1.ConditionTrue),
-				RouteStatus: cappv1alpha1.RouteStatus{
-					DomainMappingObjectStatus: domainMappingStatus(corev1.ConditionFalse),
-				},
+			name: "reports an Unknown root cause instead of its symptom",
+			conditions: []metav1.Condition{
+				{Type: cappv1alpha1.CappConditionVolumesReady, Status: metav1.ConditionUnknown, Reason: cappv1alpha1.CapabilityReasonPending, Message: pendingVolumeMessage},
+				{Type: cappv1alpha1.CappConditionServingReady, Status: metav1.ConditionFalse, Reason: "RevisionFailed", Message: "KnativeService my-capp: volume not found"},
 			},
-			enabled:        map[string]bool{},
-			expectedStatus: metav1.ConditionTrue,
-			expectedReason: cappv1alpha1.CappReadyReasonReady,
-		},
-
-		// --- Certificate ---
-		{
-			name: "not ready when certificate is enabled and not ready",
-			status: cappv1alpha1.CappStatus{
-				KnativeObjectStatus: knativeServiceReady(corev1.ConditionTrue),
-				RouteStatus: cappv1alpha1.RouteStatus{
-					CertificateObjectStatus: certificateStatus(cmmeta.ConditionFalse),
-				},
+			want: metav1.Condition{
+				Type:    cappv1alpha1.CappConditionReady,
+				Status:  metav1.ConditionUnknown,
+				Reason:  cappv1alpha1.CappReadyReasonVolumesNotReady,
+				Message: cappv1alpha1.CapabilityReasonPending + ": " + pendingVolumeMessage,
 			},
-			enabled:        map[string]bool{rmanagers.Certificate: true},
-			expectedStatus: metav1.ConditionFalse,
-			expectedReason: cappv1alpha1.CappReadyReasonCertificateNotReady,
 		},
 		{
-			name: "ready when certificate is NOT enabled even though cert is false",
-			status: cappv1alpha1.CappStatus{
-				KnativeObjectStatus: knativeServiceReady(corev1.ConditionTrue),
-				RouteStatus: cappv1alpha1.RouteStatus{
-					CertificateObjectStatus: certificateStatus(cmmeta.ConditionFalse),
-				},
+			name: "reports a sync error before other root causes",
+			conditions: []metav1.Condition{
+				{Type: cappv1alpha1.CappConditionVolumesReady, Status: metav1.ConditionFalse, Reason: reasonPvcPending, Message: "NfsPvc vol-a: waiting for the PVC to bind"},
+				{Type: cappv1alpha1.CappConditionRouteReady, Status: metav1.ConditionFalse, Reason: cappv1alpha1.CapabilityReasonResourceSyncFailed, Message: "DomainMapping: admission webhook denied the request"},
 			},
-			enabled:        map[string]bool{},
-			expectedStatus: metav1.ConditionTrue,
-			expectedReason: cappv1alpha1.CappReadyReasonReady,
-		},
-
-		// --- NFS Volumes ---
-		{
-			name: "not ready when NFS volumes enabled and not bound",
-			status: cappv1alpha1.CappStatus{
-				KnativeObjectStatus: knativeServiceReady(corev1.ConditionTrue),
-				VolumesStatus:       nfsVolumesUnbound("shared-data"),
+			want: metav1.Condition{
+				Type:    cappv1alpha1.CappConditionReady,
+				Status:  metav1.ConditionFalse,
+				Reason:  cappv1alpha1.CappReadyReasonRouteNotReady,
+				Message: cappv1alpha1.CapabilityReasonResourceSyncFailed + ": DomainMapping: admission webhook denied the request",
 			},
-			enabled:        map[string]bool{rmanagers.NfsPvc: true},
-			expectedStatus: metav1.ConditionFalse,
-			expectedReason: cappv1alpha1.CappReadyReasonVolumesNotReady,
 		},
 		{
-			name: "ready when NFS volumes enabled and bound",
-			status: cappv1alpha1.CappStatus{
-				KnativeObjectStatus: knativeServiceReady(corev1.ConditionTrue),
-				VolumesStatus:       nfsVolumesBound("shared-data"),
+			name:  "ready and disabled when the Capp is disabled",
+			state: cappv1alpha1.CappStateDisabled,
+			conditions: []metav1.Condition{
+				{Type: cappv1alpha1.CappConditionVolumesReady, Status: metav1.ConditionUnknown, Reason: cappv1alpha1.CapabilityReasonPending, Message: pendingVolumeMessage},
 			},
-			enabled:        map[string]bool{rmanagers.NfsPvc: true},
-			expectedStatus: metav1.ConditionTrue,
-			expectedReason: cappv1alpha1.CappReadyReasonReady,
-		},
-
-		// --- Eventing ---
-		{
-			name: "not ready when PingSource enabled and event source not ready",
-			status: cappv1alpha1.CappStatus{
-				KnativeObjectStatus: knativeServiceReady(corev1.ConditionTrue),
-				EventingStatus: cappv1alpha1.EventingStatus{
-					EventSources: []cappv1alpha1.EventSourceStatus{
-						{Name: pingEventSource, Condition: kapis.Condition{Status: corev1.ConditionFalse}},
-					},
-				},
+			want: metav1.Condition{
+				Type:    cappv1alpha1.CappConditionReady,
+				Status:  metav1.ConditionTrue,
+				Reason:  cappv1alpha1.CappReadyReasonDisabled,
+				Message: disabledMessage,
 			},
-			enabled:        map[string]bool{rmanagers.PingSource: true},
-			expectedStatus: metav1.ConditionFalse,
-			expectedReason: cappv1alpha1.CappReadyReasonEventingNotReady,
-		},
-
-		// --- Cascade order: logging before knative ---
-		{
-			name: "logging failure reported before knative failure",
-			status: cappv1alpha1.CappStatus{
-				KnativeObjectStatus: knativeServiceReady(corev1.ConditionFalse),
-				LoggingStatus: cappv1alpha1.LoggingStatus{
-					Conditions: []metav1.Condition{
-						{Type: loggingReady, Status: metav1.ConditionFalse, Reason: loggingResourceInvalid, Message: "flow err"},
-					},
-				},
-			},
-			enabled:        map[string]bool{rmanagers.SyslogNGFlow: true},
-			expectedStatus: metav1.ConditionFalse,
-			expectedReason: cappv1alpha1.CappReadyReasonLoggingNotReady,
-		},
-
-		// --- Resource sync errors ---
-		{
-			name: "not ready when a single resource manager fails, even though knative is ready",
-			status: cappv1alpha1.CappStatus{
-				KnativeObjectStatus: knativeServiceReady(corev1.ConditionTrue),
-			},
-			enabled:        map[string]bool{},
-			syncErrors:     []error{errors.New("KnativeService: failed to create resource Service capp-name: admission webhook denied the request")},
-			expectedStatus: metav1.ConditionFalse,
-			expectedReason: cappv1alpha1.CappReadyReasonResourceSyncFailed,
-			expectedMsg:    "KnativeService: failed to create resource Service capp-name: admission webhook denied the request",
-		},
-		{
-			name: "sync errors take priority over an otherwise-ready cascade",
-			status: cappv1alpha1.CappStatus{
-				KnativeObjectStatus: knativeServiceReady(corev1.ConditionTrue),
-				VolumesStatus:       nfsVolumesBound("shared-data"),
-			},
-			enabled:        map[string]bool{rmanagers.NfsPvc: true},
-			syncErrors:     []error{errors.New("NfsPvc: conflict")},
-			expectedStatus: metav1.ConditionFalse,
-			expectedReason: cappv1alpha1.CappReadyReasonResourceSyncFailed,
-			expectedMsg:    "NfsPvc: conflict",
-		},
-		{
-			name: "only the first of multiple sync errors is surfaced in the condition message",
-			status: cappv1alpha1.CappStatus{
-				KnativeObjectStatus: knativeServiceReady(corev1.ConditionTrue),
-			},
-			enabled: map[string]bool{},
-			syncErrors: []error{
-				errors.New("Certificate: cert failed"),
-				errors.New("KnativeService: ksvc failed"),
-			},
-			expectedStatus: metav1.ConditionFalse,
-			expectedReason: cappv1alpha1.CappReadyReasonResourceSyncFailed,
-			expectedMsg:    "Certificate: cert failed",
-		},
-		{
-			name: "empty (non-nil) sync errors slice falls through to the existing cascade unchanged",
-			status: cappv1alpha1.CappStatus{
-				KnativeObjectStatus: knativeServiceReady(corev1.ConditionTrue),
-			},
-			enabled:        map[string]bool{},
-			syncErrors:     []error{},
-			expectedStatus: metav1.ConditionTrue,
-			expectedReason: cappv1alpha1.CappReadyReasonReady,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			status := tt.status
-			managers := buildManagers(tt.enabled)
-			condition := computeReadyCondition(&status, capp, managers, tt.syncErrors)
-			meta.SetStatusCondition(&status.Conditions, condition)
+			capp := newCapp()
+			capp.Spec.State = tt.state
 
-			cond := readyCondition(&status)
-			require.NotNil(t, cond, "Ready condition should be set")
-			assert.Equal(t, tt.expectedStatus, cond.Status)
-			assert.Equal(t, tt.expectedReason, cond.Reason)
-			if tt.expectedMsg != "" {
-				assert.Equal(t, tt.expectedMsg, cond.Message)
-			}
+			assert.Equal(t, tt.want, computeReadyCondition(capp, tt.conditions))
 		})
 	}
 }
 
-func TestFormatSyncErrorTruncatesLongMessages(t *testing.T) {
-	longErr := errors.New(strings.Repeat("x", maxSyncErrorMessageLen+1000))
+func TestSetStatusConditions(t *testing.T) {
+	const generation = 3
 
-	got := formatSyncError(longErr)
+	ready := kapis.Condition{Type: kapis.ConditionReady, Status: corev1.ConditionTrue}
+	objects := []client.Object{
+		newKsvc(readyRevision, readyRevision, ready),
+		newCNAMERecord(
+			xpv2.Condition{Type: xpv2.TypeSynced, Status: corev1.ConditionTrue},
+			xpv2.Condition{Type: xpv2.TypeReady, Status: corev1.ConditionTrue},
+		),
+		newDomainMapping(ready),
+	}
+	routeManagers := map[string]bool{rmanagers.KnativeService: true, rmanagers.DNSRecord: true, rmanagers.DomainMapping: true}
+	applyErr := errors.New("DomainMapping: admission webhook denied the request")
+	cleanupErr := errors.New("NfsPvc: failed to delete")
 
-	assert.LessOrEqual(t, len(got), maxSyncErrorMessageLen+len("...(truncated)"))
-	assert.True(t, strings.HasSuffix(got, "...(truncated)"))
-}
-
-func TestBuildCappConditionsPreservesExistingConditions(t *testing.T) {
-	status := cappv1alpha1.CappStatus{
-		KnativeObjectStatus: knativeServiceReady(corev1.ConditionTrue),
-		Conditions: []metav1.Condition{
-			{Type: "SomeOtherCondition", Status: metav1.ConditionTrue, Reason: "test"},
+	tests := []struct {
+		name       string
+		state      string
+		required   map[string]bool
+		syncErrors map[string]error
+		want       []metav1.Condition
+	}{
+		{
+			name:     "sets the configured capabilities and removes the others",
+			required: routeManagers,
+			want: []metav1.Condition{
+				{Type: cappv1alpha1.CappConditionServingReady, Status: metav1.ConditionTrue, Reason: cappv1alpha1.CapabilityReasonReady, ObservedGeneration: generation},
+				{Type: cappv1alpha1.CappConditionRouteReady, Status: metav1.ConditionTrue, Reason: cappv1alpha1.CapabilityReasonReady, ObservedGeneration: generation},
+				{Type: cappv1alpha1.CappConditionReady, Status: metav1.ConditionTrue, Reason: cappv1alpha1.CappReadyReasonReady, Message: readyMessage, ObservedGeneration: generation},
+			},
+		},
+		{
+			name:       "reports sync errors on their capabilities, even when not configured",
+			required:   routeManagers,
+			syncErrors: map[string]error{rmanagers.DomainMapping: applyErr, rmanagers.NfsPvc: cleanupErr},
+			want: []metav1.Condition{
+				{Type: cappv1alpha1.CappConditionVolumesReady, Status: metav1.ConditionFalse, Reason: cappv1alpha1.CapabilityReasonResourceSyncFailed, Message: cleanupErr.Error(), ObservedGeneration: generation},
+				{Type: cappv1alpha1.CappConditionServingReady, Status: metav1.ConditionTrue, Reason: cappv1alpha1.CapabilityReasonReady, ObservedGeneration: generation},
+				{Type: cappv1alpha1.CappConditionRouteReady, Status: metav1.ConditionFalse, Reason: cappv1alpha1.CapabilityReasonResourceSyncFailed, Message: applyErr.Error(), ObservedGeneration: generation},
+				{Type: cappv1alpha1.CappConditionReady, Status: metav1.ConditionFalse, Reason: cappv1alpha1.CappReadyReasonVolumesNotReady, Message: cappv1alpha1.CapabilityReasonResourceSyncFailed + ": " + cleanupErr.Error(), ObservedGeneration: generation},
+			},
+		},
+		{
+			name:     "removes the capabilities that depend on serving when disabled",
+			state:    cappv1alpha1.CappStateDisabled,
+			required: map[string]bool{rmanagers.DNSRecord: true, rmanagers.DomainMapping: true},
+			want: []metav1.Condition{
+				{Type: cappv1alpha1.CappConditionReady, Status: metav1.ConditionTrue, Reason: cappv1alpha1.CappReadyReasonDisabled, Message: disabledMessage, ObservedGeneration: generation},
+			},
 		},
 	}
 
-	managers := buildManagers(map[string]bool{})
-	condition := computeReadyCondition(&status, cappv1alpha1.Capp{}, managers, nil)
-	meta.SetStatusCondition(&status.Conditions, condition)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			capp := routeCapp()
+			capp.Generation = generation
+			capp.Spec.State = tt.state
+			status := cappv1alpha1.CappStatus{
+				Conditions: []metav1.Condition{
+					{Type: cappv1alpha1.CappConditionVolumesReady, Status: metav1.ConditionTrue, Reason: cappv1alpha1.CapabilityReasonReady},
+				},
+			}
+			fakeClient := fake.NewClientBuilder().WithScheme(newStatusScheme()).WithObjects(objects...).Build()
 
-	assert.Len(t, status.Conditions, 2)
-	cond := readyCondition(&status)
-	require.NotNil(t, cond)
-	assert.Equal(t, metav1.ConditionTrue, cond.Status)
+			err := setStatusConditions(context.Background(), fakeClient, &status, capp, buildManagers(tt.required), newCappConfig(), tt.syncErrors)
+			require.NoError(t, err)
 
-	var other *metav1.Condition
-	for i := range status.Conditions {
-		if status.Conditions[i].Type == "SomeOtherCondition" {
-			other = &status.Conditions[i]
-		}
+			for i := range status.Conditions {
+				status.Conditions[i].LastTransitionTime = metav1.Time{}
+			}
+			assert.Equal(t, tt.want, status.Conditions)
+		})
 	}
-	require.NotNil(t, other)
-	assert.Equal(t, metav1.ConditionTrue, other.Status)
+}
+
+func TestSyncStatus(t *testing.T) {
+	ctx := context.Background()
+	capp := newCapp()
+	capp.Generation = 2
+	ksvc := newKsvc(readyRevision, readyRevision, kapis.Condition{Type: kapis.ConditionReady, Status: corev1.ConditionTrue})
+	fakeClient := fake.NewClientBuilder().WithScheme(newStatusScheme()).
+		WithObjects(&capp, ksvc).WithStatusSubresource(&cappv1alpha1.Capp{}).Build()
+
+	err := SyncStatus(ctx, capp, logr.Discard(), fakeClient, buildManagers(map[string]bool{rmanagers.KnativeService: true}), newCappConfig(), nil)
+	require.NoError(t, err)
+
+	updated := cappv1alpha1.Capp{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Namespace: cappNamespace, Name: cappName}, &updated))
+	assert.Equal(t, int64(2), updated.Status.ObservedGeneration)
+	readyCondition := meta.FindStatusCondition(updated.Status.Conditions, cappv1alpha1.CappConditionReady)
+	require.NotNil(t, readyCondition)
+	assert.Equal(t, metav1.ConditionTrue, readyCondition.Status)
 }
 
 func TestCreateStateStatus(t *testing.T) {
@@ -441,6 +299,7 @@ func TestCreateStateStatus(t *testing.T) {
 	})
 }
 
+//nolint:staticcheck // reads deprecated fields
 func TestStripVolatileStatusFields(t *testing.T) {
 	ts := metav1.NewTime(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC))
 	ptrTs := &ts

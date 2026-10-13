@@ -12,6 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
@@ -113,48 +114,46 @@ func TestBuildLoggingStatus(t *testing.T) {
 	})
 }
 
-func TestLoggingNotReady(t *testing.T) {
+func TestCheckLogging(t *testing.T) {
+	outputWithProblems := newSyslogNGOutput(2)
+	outputWithProblems.Status.Problems = []string{"invalid host", "invalid credentials"}
+
 	tests := []struct {
-		name       string
-		status     cappv1alpha1.LoggingStatus
-		wantReason string
-		wantMsg    string
-		wantOK     bool
+		name    string
+		objects []client.Object
+		want    *metav1.Condition
 	}{
 		{
-			name:   "ready when logging has no conditions",
-			status: cappv1alpha1.LoggingStatus{},
-			wantOK: true,
+			name:    "reports the output problems",
+			objects: []client.Object{outputWithProblems, newSyslogNGFlow(0)},
+			want: &metav1.Condition{
+				Status:  metav1.ConditionFalse,
+				Reason:  loggingResourceInvalid,
+				Message: "SyslogNGOutput " + cappName + ": invalid host; invalid credentials",
+			},
 		},
 		{
-			name: "ready when all conditions are true",
-			status: cappv1alpha1.LoggingStatus{
-				Conditions: []metav1.Condition{
-					{Type: loggingReady, Status: metav1.ConditionTrue, Reason: conditionReady},
-				},
+			name:    "reports a problem count without details",
+			objects: []client.Object{newSyslogNGOutput(0), newSyslogNGFlow(2)},
+			want: &metav1.Condition{
+				Status:  metav1.ConditionFalse,
+				Reason:  loggingResourceInvalid,
+				Message: "SyslogNGFlow " + cappName + ": 2 problems reported",
 			},
-			wantOK: true,
 		},
 		{
-			name: "not ready when a condition is false",
-			status: cappv1alpha1.LoggingStatus{
-				Conditions: []metav1.Condition{
-					{Type: loggingReady, Status: metav1.ConditionFalse, Reason: loggingResourceInvalid, Message: "syslogng flow invalid"},
-				},
-			},
-			wantReason: cappv1alpha1.CappReadyReasonLoggingNotReady,
-			wantMsg:    "syslogng flow invalid",
+			name:    "nil when the output and flow are healthy",
+			objects: []client.Object{newSyslogNGOutput(0), newSyslogNGFlow(0)},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			reason, msg, ok := loggingNotReady(tt.status)
-			assert.Equal(t, tt.wantOK, ok)
-			if !ok {
-				assert.Equal(t, tt.wantReason, reason)
-				assert.Equal(t, tt.wantMsg, msg)
-			}
+			fakeClient := fake.NewClientBuilder().WithScheme(newLoggingScheme()).WithObjects(tt.objects...).Build()
+
+			got, err := checkLogging(context.Background(), fakeClient, newCapp(), nil)
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }

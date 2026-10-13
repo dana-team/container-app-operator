@@ -31,6 +31,11 @@ spec:
       jsonPath: .status.conditions[?(@.type=='Ready')].reason
       name: Reason
       type: string
+    - description: message for the current Ready status
+      jsonPath: .status.conditions[?(@.type=='Ready')].message
+      name: Message
+      priority: 1
+      type: string
     name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -9380,8 +9385,10 @@ spec:
                     type: array
                 type: object
               knativeObjectStatus:
-                description: KnativeObjectStatus represents the Status stanza of the
-                  Service resource.
+                description: |-
+                  KnativeObjectStatus represents the Status stanza of the Service resource.
+
+                  Deprecated: use the ServingReady condition. Will be removed in a future release.
                 properties:
                   address:
                     description: Address holds the information needed for a Route
@@ -9527,8 +9534,10 @@ spec:
                     type: string
                 type: object
               loggingStatus:
-                description: LoggingStatus defines the state of the Flow and Output
-                  objects linked to the Capp.
+                description: |-
+                  LoggingStatus defines the state of the Flow and Output objects linked to the Capp.
+
+                  Deprecated: use the LoggingReady condition. Will be removed in a future release.
                 properties:
                   conditions:
                     description: Conditions contain details about the current state
@@ -9616,8 +9625,14 @@ spec:
                         type: integer
                     type: object
                 type: object
+              observedGeneration:
+                format: int64
+                type: integer
               revisions:
-                description: RevisionInfo shows the revision information.
+                description: |-
+                  RevisionInfo shows the revision information.
+
+                  Deprecated: use the ServingReady condition. Will be removed in a future release.
                 items:
                   description: RevisionInfo shows the revision information.
                   properties:
@@ -9736,8 +9751,10 @@ spec:
                   type: object
                 type: array
               routeStatus:
-                description: RouteStatus shows the state of the DomainMapping object
-                  linked to the Capp.
+                description: |-
+                  RouteStatus shows the state of the DomainMapping object linked to the Capp.
+
+                  Deprecated: use the RouteReady condition. Will be removed in a future release.
                 properties:
                   certificateObjectStatus:
                     description: CertificateObjectStatus is the status of the underlying
@@ -9990,6 +10007,13 @@ spec:
                             x-kubernetes-list-map-keys:
                             - type
                             x-kubernetes-list-type: map
+                          lastHandledReconcileAt:
+                            description: |-
+                              LastHandledReconcileAt holds the value of the most recent
+                              reconcile-requested-at annotation token that the controller has
+                              processed. Users can compare this to the annotation to determine
+                              whether a reconcile request has been handled.
+                            type: string
                           observedGeneration:
                             description: |-
                               ObservedGeneration is the latest metadata.generation
@@ -10091,8 +10115,10 @@ spec:
                     type: string
                 type: object
               volumesStatus:
-                description: VolumesStatus shows the state of the Volumes objects
-                  linked to the Capp.
+                description: |-
+                  VolumesStatus shows the state of the Volumes objects linked to the Capp.
+
+                  Deprecated: use the VolumesReady condition. Will be removed in a future release.
                 properties:
                   nfsVolumesStatus:
                     description: NFSVolumeStatus is the status of the underlying NFSVolume

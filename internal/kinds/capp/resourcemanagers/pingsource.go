@@ -94,7 +94,7 @@ func (p PingSourceManager) prepareResource(capp cappv1alpha1.Capp, source cappv1
 	cfg := source.PingSourceConfiguration
 	return sourcesv1.PingSource{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-%s", capp.Name, source.Name),
+			Name:      GenerateEventSourceName(capp.Name, source.Name),
 			Namespace: capp.Namespace,
 			Labels:    cappmeta.ManagedResourceLabels(capp.Name),
 		},
@@ -121,7 +121,7 @@ func (p PingSourceManager) cleanUpOrphans(ctx context.Context, capp cappv1alpha1
 	desired := make(map[string]struct{})
 	for _, source := range capp.Spec.EventSourcesSpec.Sources {
 		if source.PingSourceConfiguration != nil {
-			desired[fmt.Sprintf("%s-%s", capp.Name, source.Name)] = struct{}{}
+			desired[GenerateEventSourceName(capp.Name, source.Name)] = struct{}{}
 		}
 	}
 	owned, err := p.getPingSources(ctx, capp)

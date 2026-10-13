@@ -96,7 +96,7 @@ func (k KafkaSourceManager) createOrUpdate(ctx context.Context, capp cappv1alpha
 // prepareResource prepares a KafkaSource resource based on the provided Capp and source entry.
 func (k KafkaSourceManager) prepareResource(capp cappv1alpha1.Capp, source cappv1alpha1.SourceConfiguration) kafkasourcev1.KafkaSource {
 	cfg := source.KafkaSourceConfiguration
-	name := fmt.Sprintf("%s-%s", capp.Name, source.Name)
+	name := GenerateEventSourceName(capp.Name, source.Name)
 
 	consumers := int32(1)
 	if cfg.Consumers != nil {
@@ -147,7 +147,7 @@ func (k KafkaSourceManager) cleanUpOrphans(ctx context.Context, capp cappv1alpha
 	desired := make(map[string]struct{})
 	for _, source := range capp.Spec.EventSourcesSpec.Sources {
 		if source.KafkaSourceConfiguration != nil {
-			desired[fmt.Sprintf("%s-%s", capp.Name, source.Name)] = struct{}{}
+			desired[GenerateEventSourceName(capp.Name, source.Name)] = struct{}{}
 		}
 	}
 	owned, err := k.getKafkaSources(ctx, capp)

@@ -11,16 +11,20 @@ import (
 	xpv2 "github.com/crossplane/crossplane/apis/v2/core/v2"
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/cappmeta"
+	rmanagers "github.com/dana-team/container-app-operator/internal/kinds/capp/resourcemanagers"
 	nfspvcv1alpha1 "github.com/dana-team/nfspvc-operator/api/v1alpha1"
 	dnsrecordv1alpha1 "github.com/dana-team/provider-dns-v2/apis/namespaced/record/v1alpha1"
+	"github.com/go-logr/logr"
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	kafkasourcev1 "knative.dev/eventing-kafka-broker/control-plane/pkg/apis/sources/v1"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	knativeapis "knative.dev/pkg/apis"
@@ -206,6 +210,16 @@ func TestDomainMappingWatchPredicate(t *testing.T) {
 			}(),
 			expected: false,
 		},
+		{
+			name:   "changed when the DomainMapping observed generation changes",
+			oldObj: makeDM(corev1.ConditionTrue),
+			newObj: func() client.Object {
+				dm := makeDM(corev1.ConditionTrue)
+				dm.Status.ObservedGeneration = 1
+				return dm
+			}(),
+			expected: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -272,6 +286,16 @@ func TestCertificateWatchPredicate(t *testing.T) {
 			}(),
 			expected: false,
 		},
+		{
+			name:   "changed when the Ready observed generation changes",
+			oldObj: makeCert(cmmeta.ConditionTrue),
+			newObj: func() client.Object {
+				cert := makeCert(cmmeta.ConditionTrue)
+				cert.Status.Conditions[0].ObservedGeneration = 1
+				return cert
+			}(),
+			expected: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -330,6 +354,13 @@ func TestCnameRecordConditionChanged(t *testing.T) {
 			newObj:        makeCNAME(xpv2.Condition{Type: xpv2.TypeReady, Status: corev1.ConditionTrue}, xpv2.Condition{Type: xpv2.TypeSynced, Status: corev1.ConditionTrue}),
 			conditionType: xpv2.TypeReady,
 			expected:      false,
+		},
+		{
+			name:          "changed when the CNAMERecord observed generation changes",
+			oldObj:        makeCNAME(xpv2.Condition{Type: xpv2.TypeReady, Status: corev1.ConditionTrue}),
+			newObj:        makeCNAME(xpv2.Condition{Type: xpv2.TypeReady, Status: corev1.ConditionTrue, ObservedGeneration: 1}),
+			conditionType: xpv2.TypeReady,
+			expected:      true,
 		},
 	}
 
@@ -638,6 +669,16 @@ func TestPingSourceWatchPredicate(t *testing.T) {
 			newObj:   makePingSource(corev1.ConditionTrue),
 			expected: false,
 		},
+		{
+			name:   "changed when the PingSource observed generation changes",
+			oldObj: makePingSource(corev1.ConditionTrue),
+			newObj: func() client.Object {
+				ps := makePingSource(corev1.ConditionTrue)
+				ps.Status.ObservedGeneration = 1
+				return ps
+			}(),
+			expected: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -677,6 +718,16 @@ func TestKafkaSourceWatchPredicate(t *testing.T) {
 			oldObj:   makeKafkaSource(corev1.ConditionTrue),
 			newObj:   makeKafkaSource(corev1.ConditionTrue),
 			expected: false,
+		},
+		{
+			name:   "changed when the KafkaSource observed generation changes",
+			oldObj: makeKafkaSource(corev1.ConditionTrue),
+			newObj: func() client.Object {
+				ks := makeKafkaSource(corev1.ConditionTrue)
+				ks.Status.ObservedGeneration = 1
+				return ks
+			}(),
+			expected: true,
 		},
 	}
 
@@ -829,6 +880,74 @@ func TestFindCappFromLabels(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			assert.Equal(t, tt.expected, r.findCappFromLabels(ctx, tt.object))
+		})
+	}
+}
+
+type syncStubManager struct {
+	manageErr error
+	required  bool
+}
+
+func (s syncStubManager) Manage(_ context.Context, _ cappv1alpha1.Capp) error  { return s.manageErr }
+func (s syncStubManager) CleanUp(_ context.Context, _ cappv1alpha1.Capp) error { return nil }
+func (s syncStubManager) IsRequired(_ cappv1alpha1.Capp) bool                  { return s.required }
+
+func TestSyncApplicationReportsSyncErrors(t *testing.T) {
+	conflictErr := apierrors.NewConflict(schema.GroupResource{Resource: "services"}, cappName, errors.New("object was modified"))
+	webhookErr := errors.New("admission webhook denied the request")
+
+	tests := []struct {
+		name         string
+		manageErr    error
+		wantConflict bool
+		wantReason   string
+	}{
+		{
+			name:         "does not report a conflict in the status",
+			manageErr:    conflictErr,
+			wantConflict: true,
+			wantReason:   cappv1alpha1.CapabilityReasonPending,
+		},
+		{
+			name:       "reports other errors on their capability",
+			manageErr:  webhookErr,
+			wantReason: cappv1alpha1.CapabilityReasonResourceSyncFailed,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			s := newScheme()
+			utilruntime.Must(sourcesv1.AddToScheme(s))
+			utilruntime.Must(kafkasourcev1.AddToScheme(s))
+			k8sClient := fake.NewClientBuilder().WithScheme(s).WithObjects(newCapp()).WithStatusSubresource(&cappv1alpha1.Capp{}).Build()
+
+			names := []string{
+				rmanagers.KnativeService, rmanagers.NfsPvc, rmanagers.SyslogNGOutput, rmanagers.SyslogNGFlow, rmanagers.Certificate,
+				rmanagers.DomainMapping, rmanagers.DNSRecord, rmanagers.PingSource, rmanagers.KafkaSource,
+			}
+			entries := make([]rmanagers.ResourceManagerEntry, 0, len(names))
+			for _, name := range names {
+				manager := syncStubManager{}
+				if name == rmanagers.KnativeService {
+					manager = syncStubManager{manageErr: tt.manageErr, required: true}
+				}
+				entries = append(entries, rmanagers.ResourceManagerEntry{Name: name, Manager: manager})
+			}
+			r := &CappReconciler{Client: k8sClient}
+
+			err := r.SyncApplication(ctx, *newCapp(), entries, &cappv1alpha1.CappConfig{}, logr.Discard())
+			assert.Error(t, err)
+			assert.Equal(t, tt.wantConflict, hasConflictError(err))
+
+			capp := cappv1alpha1.Capp{}
+			assert.NoError(t, k8sClient.Get(ctx, types.NamespacedName{Namespace: nsName, Name: cappName}, &capp))
+			serving := meta.FindStatusCondition(capp.Status.Conditions, cappv1alpha1.CappConditionServingReady)
+			if assert.NotNil(t, serving) {
+				assert.Equal(t, tt.wantReason, serving.Reason)
+			}
 		})
 	}
 }

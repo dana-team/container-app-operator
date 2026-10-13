@@ -5,8 +5,9 @@ import (
 	"sort"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
-	corev1 "k8s.io/api/core/v1"
+	rmanagers "github.com/dana-team/container-app-operator/internal/kinds/capp/resourcemanagers"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
@@ -88,24 +89,51 @@ func buildKnativeStatus(ctx context.Context, kubeClient client.Client, capp capp
 	return knativeObjectStatus, revisionInfo, nil
 }
 
-func knativeNotReady(ks knativev1.ServiceStatus) (string, string, bool) {
-	if len(ks.Conditions) == 0 {
-		return cappv1alpha1.CappReadyReasonKnativeNotReady, "Knative Service has no status yet", false
+// revisionConditionTypes are checked in order to explain why a revision is not ready.
+var revisionConditionTypes = []kapis.ConditionType{
+	knativev1.RevisionConditionContainerHealthy,
+	knativev1.RevisionConditionResourcesAvailable,
+	knativev1.RevisionConditionReady,
+}
+
+// checkKnative returns why the Knative Service is not ready, or nil when it is.
+// If the latest created revision is not ready, it is reported instead of the service.
+func checkKnative(ctx context.Context, k8sClient client.Client, capp cappv1alpha1.Capp, _ *cappv1alpha1.CappConfig) (*metav1.Condition, error) {
+	ksvc := &knativev1.Service{}
+	key := types.NamespacedName{Namespace: capp.Namespace, Name: capp.Name}
+	if cond, err := getChildResource(ctx, k8sClient, rmanagers.KnativeService, key, ksvc); cond != nil || err != nil {
+		return cond, err
 	}
 
-	if ks.LatestCreatedRevisionName != "" &&
-		ks.LatestCreatedRevisionName != ks.LatestReadyRevisionName {
-		return cappv1alpha1.CappReadyReasonKnativeNotReady,
-			"latest revision " + ks.LatestCreatedRevisionName + " is not ready", false
+	ready := ksvc.Status.GetCondition(kapis.ConditionReady)
+	if ready == nil || ksvc.Status.ObservedGeneration < ksvc.Generation {
+		return newPendingCondition(rmanagers.KnativeService, ksvc.Name), nil
 	}
 
-	for _, c := range ks.Conditions {
-		if c.Type == kapis.ConditionReady {
-			if c.Status == corev1.ConditionTrue {
-				return "", "", true
-			}
-			return cappv1alpha1.CappReadyReasonKnativeNotReady, c.Message, false
+	if latest := ksvc.Status.LatestCreatedRevisionName; latest != "" && latest != ksvc.Status.LatestReadyRevisionName {
+		cond, err := checkRevision(ctx, k8sClient, types.NamespacedName{Namespace: capp.Namespace, Name: latest})
+		if cond != nil || err != nil {
+			return cond, err
 		}
 	}
-	return cappv1alpha1.CappReadyReasonKnativeNotReady, "Knative Service Ready condition not found", false
+
+	return formatChildCondition(rmanagers.KnativeService, ksvc.Name, metav1.ConditionStatus(ready.Status), ready.Reason, ready.Message), nil
+}
+
+// checkRevision returns the first non-True condition of a revision, or nil when there is none.
+func checkRevision(ctx context.Context, k8sClient client.Client, key types.NamespacedName) (*metav1.Condition, error) {
+	rev := &knativev1.Revision{}
+	if cond, err := getChildResource(ctx, k8sClient, kindRevision, key, rev); cond != nil || err != nil {
+		return cond, err
+	}
+	if rev.Status.ObservedGeneration < rev.Generation {
+		return newPendingCondition(kindRevision, rev.Name), nil
+	}
+
+	for _, conditionType := range revisionConditionTypes {
+		if rc := rev.Status.GetCondition(conditionType); rc != nil && !rc.IsTrue() {
+			return formatChildCondition(kindRevision, rev.Name, metav1.ConditionStatus(rc.Status), rc.Reason, rc.Message), nil
+		}
+	}
+	return nil, nil
 }
