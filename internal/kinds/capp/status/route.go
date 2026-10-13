@@ -4,16 +4,15 @@ import (
 	"context"
 
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
-	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
+	xpv2 "github.com/crossplane/crossplane/apis/v2/core/v2"
 
 	rmanagers "github.com/dana-team/container-app-operator/internal/kinds/capp/resourcemanagers"
 	dnsrecordv1alpha1 "github.com/dana-team/provider-dns-v2/apis/namespaced/record/v1alpha1"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	kapis "knative.dev/pkg/apis"
 	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -118,20 +117,74 @@ func buildCNAMERecordStatus(ctx context.Context, kubeClient client.Client, capp 
 	return cnameRecord.Status, nil
 }
 
-func domainMappingNotReady(rs cappv1alpha1.RouteStatus) (string, string, bool) {
-	for _, c := range rs.DomainMappingObjectStatus.Conditions {
-		if c.Type == kapis.ConditionReady && c.Status != corev1.ConditionTrue {
-			return cappv1alpha1.CappReadyReasonDomainMappingNotReady, c.Message, false
+// cnameRecordConditionTypes are checked in order: Synced reports provider errors, Ready reports availability.
+var cnameRecordConditionTypes = []xpv2.ConditionType{xpv2.TypeSynced, xpv2.TypeReady}
+
+// checkRoute returns why the custom hostname is not ready, or nil when it is.
+// The CNAMERecord, Certificate (when TLS is enabled) and DomainMapping are checked in that order.
+func checkRoute(ctx context.Context, k8sClient client.Client, capp cappv1alpha1.Capp, cappConfig *cappv1alpha1.CappConfig) (*metav1.Condition, error) {
+	zone := cappConfig.Spec.DNSConfig.Zone
+	key := types.NamespacedName{Namespace: capp.Namespace, Name: rmanagers.GenerateResourceName(capp.Spec.RouteSpec.Hostname, zone)}
+
+	if cond, err := checkCNAMERecord(ctx, k8sClient, key); cond != nil || err != nil {
+		return cond, err
+	}
+	if capp.Spec.RouteSpec.TlsEnabled {
+		if cond, err := checkCertificate(ctx, k8sClient, key); cond != nil || err != nil {
+			return cond, err
 		}
 	}
-	return "", "", true
+	return checkDomainMapping(ctx, k8sClient, key)
 }
 
-func certificateNotReady(rs cappv1alpha1.RouteStatus) (string, string, bool) {
-	for _, c := range rs.CertificateObjectStatus.Conditions {
-		if c.Type == cmapi.CertificateConditionReady && c.Status != cmmeta.ConditionTrue {
-			return cappv1alpha1.CappReadyReasonCertificateNotReady, c.Message, false
+// checkCNAMERecord returns why the CNAMERecord is not ready, or nil when it is.
+func checkCNAMERecord(ctx context.Context, k8sClient client.Client, key types.NamespacedName) (*metav1.Condition, error) {
+	record := &dnsrecordv1alpha1.CNAMERecord{}
+	if cond, err := getChildResource(ctx, k8sClient, dnsrecordv1alpha1.CNAMERecord_Kind, key, record); cond != nil || err != nil {
+		return cond, err
+	}
+
+	for _, conditionType := range cnameRecordConditionTypes {
+		rc := record.Status.GetCondition(conditionType)
+		if isConditionStale(rc.ObservedGeneration, record) {
+			return newPendingCondition(dnsrecordv1alpha1.CNAMERecord_Kind, record.Name), nil
+		}
+		if cond := formatChildCondition(dnsrecordv1alpha1.CNAMERecord_Kind, record.Name, metav1.ConditionStatus(rc.Status), string(rc.Reason), rc.Message); cond != nil {
+			return cond, nil
 		}
 	}
-	return "", "", true
+	return nil, nil
+}
+
+// checkCertificate returns why the Certificate is not ready, or nil when it is.
+func checkCertificate(ctx context.Context, k8sClient client.Client, key types.NamespacedName) (*metav1.Condition, error) {
+	cert := &cmapi.Certificate{}
+	if cond, err := getChildResource(ctx, k8sClient, rmanagers.Certificate, key, cert); cond != nil || err != nil {
+		return cond, err
+	}
+
+	var ready *cmapi.CertificateCondition
+	for i := range cert.Status.Conditions {
+		if cert.Status.Conditions[i].Type == cmapi.CertificateConditionReady {
+			ready = &cert.Status.Conditions[i]
+		}
+	}
+	if ready == nil || isConditionStale(ready.ObservedGeneration, cert) {
+		return newPendingCondition(rmanagers.Certificate, cert.Name), nil
+	}
+	return formatChildCondition(rmanagers.Certificate, cert.Name, metav1.ConditionStatus(ready.Status), ready.Reason, ready.Message), nil
+}
+
+// checkDomainMapping returns why the DomainMapping is not ready, or nil when it is.
+func checkDomainMapping(ctx context.Context, k8sClient client.Client, key types.NamespacedName) (*metav1.Condition, error) {
+	dm := &knativev1beta1.DomainMapping{}
+	if cond, err := getChildResource(ctx, k8sClient, rmanagers.DomainMapping, key, dm); cond != nil || err != nil {
+		return cond, err
+	}
+
+	ready := dm.Status.GetCondition(knativev1beta1.DomainMappingConditionReady)
+	if ready == nil || dm.Status.ObservedGeneration < dm.Generation {
+		return newPendingCondition(rmanagers.DomainMapping, dm.Name), nil
+	}
+	return formatChildCondition(rmanagers.DomainMapping, dm.Name, metav1.ConditionStatus(ready.Status), ready.Reason, ready.Message), nil
 }

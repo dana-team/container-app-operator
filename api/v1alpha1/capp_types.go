@@ -35,22 +35,33 @@ const (
 	// CappStateDisabled is the disabled state value for a Capp.
 	CappStateDisabled = "disabled"
 
-	// CappConditionReady indicates that all Capp child resources are healthy
-	// and the workload is serving traffic.
+	// CappConditionReady summarizes the capability conditions of the Capp.
 	CappConditionReady = "Ready"
 
-	// Reasons for the Ready condition.
-	CappReadyReasonReady                 = "Ready"
-	CappReadyReasonKnativeNotReady       = "KnativeServiceNotReady"
-	CappReadyReasonLoggingNotReady       = "LoggingNotReady"
-	CappReadyReasonDomainMappingNotReady = "DomainMappingNotReady"
-	CappReadyReasonCertificateNotReady   = "CertificateNotReady"
-	CappReadyReasonVolumesNotReady       = "VolumesNotReady"
-	CappReadyReasonEventingNotReady      = "EventingNotReady"
+	// Capability condition types, set only when the capability is configured on a Capp.
+	CappConditionVolumesReady  = "VolumesReady"
+	CappConditionServingReady  = "ServingReady"
+	CappConditionRouteReady    = "RouteReady"
+	CappConditionEventingReady = "EventingReady"
+	CappConditionLoggingReady  = "LoggingReady"
 
-	// CappReadyReasonResourceSyncFailed indicates that one or more child resources
-	// could not be created or updated during reconciliation (e.g. a webhook validation error).
-	CappReadyReasonResourceSyncFailed = "ResourceSyncFailed"
+	// Reasons for the Ready condition.
+	CappReadyReasonReady            = "Ready"
+	CappReadyReasonDisabled         = "Disabled"
+	CappReadyReasonVolumesNotReady  = "VolumesNotReady"
+	CappReadyReasonServingNotReady  = "ServingNotReady"
+	CappReadyReasonRouteNotReady    = "RouteNotReady"
+	CappReadyReasonEventingNotReady = "EventingNotReady"
+	CappReadyReasonLoggingNotReady  = "LoggingNotReady"
+
+	// Reasons for capability conditions. Otherwise, the child resource's reason is used.
+	CapabilityReasonReady    = "Ready"
+	CapabilityReasonPending  = "Pending"
+	CapabilityReasonNotReady = "NotReady"
+
+	// CapabilityReasonResourceSyncFailed indicates that a child resource could not be
+	// created or updated (e.g. a webhook validation error).
+	CapabilityReasonResourceSyncFailed = "ResourceSyncFailed"
 )
 
 // CappSpec defines the desired state of Capp.
@@ -361,10 +372,14 @@ type NFSVolumeStatus struct {
 type CappStatus struct {
 	// KnativeObjectStatus represents the Status stanza of the Service resource.
 	// +optional
+	//
+	// Deprecated: use the ServingReady condition. Will be removed in a future release.
 	KnativeObjectStatus knativev1.ServiceStatus `json:"knativeObjectStatus,omitempty"`
 
 	// RevisionInfo shows the revision information.
 	// +optional
+	//
+	// Deprecated: use the ServingReady condition. Will be removed in a future release.
 	RevisionInfo []RevisionInfo `json:"revisions,omitempty"`
 
 	// StateStatus shows the current Capp state
@@ -373,19 +388,28 @@ type CappStatus struct {
 
 	// LoggingStatus defines the state of the Flow and Output objects linked to the Capp.
 	// +optional
+	//
+	// Deprecated: use the LoggingReady condition. Will be removed in a future release.
 	LoggingStatus LoggingStatus `json:"loggingStatus,omitempty"`
 
 	// RouteStatus shows the state of the DomainMapping object linked to the Capp.
 	// +optional
+	//
+	// Deprecated: use the RouteReady condition. Will be removed in a future release.
 	RouteStatus RouteStatus `json:"routeStatus,omitempty"`
 
 	// VolumesStatus shows the state of the Volumes objects linked to the Capp.
 	// +optional
+	//
+	// Deprecated: use the VolumesReady condition. Will be removed in a future release.
 	VolumesStatus VolumesStatus `json:"volumesStatus,omitempty"`
 
 	// EventingStatus shows the state of event sources linked to the Capp.
 	// +optional
 	EventingStatus EventingStatus `json:"eventingStatus,omitempty"`
+
+	// +optional
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 
 	// Conditions contain details about the current state of the Capp.
 	// +optional
@@ -397,6 +421,7 @@ type CappStatus struct {
 // +kubebuilder:printcolumn:name="AutoScale Type",type="string",JSONPath=".spec.scaleSpec.metric",description="autoscale metric"
 // +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.conditions[?(@.type=='Ready')].status",description="whether the Capp and its child resources are ready"
 // +kubebuilder:printcolumn:name="Reason",type="string",JSONPath=".status.conditions[?(@.type=='Ready')].reason",description="reason for the current Ready status"
+// +kubebuilder:printcolumn:name="Message",type="string",JSONPath=".status.conditions[?(@.type=='Ready')].message",priority=1,description="message for the current Ready status"
 // +kubebuilder:subresource:status
 
 // Capp is the Schema for the capps API.

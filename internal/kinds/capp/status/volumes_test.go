@@ -11,6 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
@@ -103,40 +104,62 @@ func TestBuildVolumesStatus(t *testing.T) {
 	})
 }
 
-func TestVolumesNotReady(t *testing.T) {
+func TestCheckVolumes(t *testing.T) {
+	const otherVolume = "vol-b"
+
+	readyStatus := nfspvcv1alpha1.NfsPvcStatus{
+		Conditions: []metav1.Condition{{Type: nfspvcv1alpha1.ConditionReady, Status: metav1.ConditionTrue}},
+	}
+
+	stalePvc := newNfsPvc(volumeName, nfspvcv1alpha1.NfsPvcStatus{
+		Conditions: []metav1.Condition{{Type: nfspvcv1alpha1.ConditionReady, Status: metav1.ConditionTrue, ObservedGeneration: 1}},
+	})
+	stalePvc.Generation = 2
+
+	pendingVolume := &metav1.Condition{
+		Status:  metav1.ConditionUnknown,
+		Reason:  cappv1alpha1.CapabilityReasonPending,
+		Message: "NfsPvc " + volumeName + " not observed yet",
+	}
+
 	tests := []struct {
-		name       string
-		status     cappv1alpha1.VolumesStatus
-		wantReason string
-		wantMsg    string
-		wantOK     bool
+		name    string
+		objects []client.Object
+		want    *metav1.Condition
 	}{
 		{
-			name:   "ready when no volumes exist",
-			status: cappv1alpha1.VolumesStatus{},
-			wantOK: true,
+			name:    "pending when the Ready condition is stale",
+			objects: []client.Object{stalePvc},
+			want:    pendingVolume,
 		},
 		{
-			name:   "ready when all volumes are bound",
-			status: nfsVolumesBound("vol-a", "vol-b"),
-			wantOK: true,
+			name: "reports an NfsPvc that is not ready",
+			objects: []client.Object{newNfsPvc(volumeName, nfspvcv1alpha1.NfsPvcStatus{
+				Conditions: []metav1.Condition{{
+					Type: nfspvcv1alpha1.ConditionReady, Status: metav1.ConditionFalse, Reason: reasonPvcPending, Message: "waiting for the PVC to bind",
+				}},
+			})},
+			want: &metav1.Condition{
+				Status:  metav1.ConditionFalse,
+				Reason:  reasonPvcPending,
+				Message: "NfsPvc " + volumeName + ": waiting for the PVC to bind",
+			},
 		},
 		{
-			name:       "not ready when condition is false",
-			status:     nfsVolumesUnbound("shared-data"),
-			wantReason: cappv1alpha1.CappReadyReasonVolumesNotReady,
-			wantMsg:    "NFS volume shared-data is not ready",
+			name:    "nil when all volumes are ready",
+			objects: []client.Object{newNfsPvc(volumeName, readyStatus), newNfsPvc(otherVolume, readyStatus)},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			reason, msg, ok := volumesNotReady(tt.status)
-			assert.Equal(t, tt.wantOK, ok)
-			if !ok {
-				assert.Equal(t, tt.wantReason, reason)
-				assert.Equal(t, tt.wantMsg, msg)
-			}
+			capp := newCapp()
+			capp.Spec.VolumesSpec.NFSVolumes = []cappv1alpha1.NFSVolume{{Name: volumeName}, {Name: otherVolume}}
+			fakeClient := fake.NewClientBuilder().WithScheme(newVolumesScheme()).WithObjects(tt.objects...).Build()
+
+			got, err := checkVolumes(context.Background(), fakeClient, capp, nil)
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }

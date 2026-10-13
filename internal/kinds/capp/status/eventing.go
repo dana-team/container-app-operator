@@ -7,9 +7,11 @@ import (
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/cappmeta"
+	rmanagers "github.com/dana-team/container-app-operator/internal/kinds/capp/resourcemanagers"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
 	kafkasourcev1 "knative.dev/eventing-kafka-broker/control-plane/pkg/apis/sources/v1"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	kapis "knative.dev/pkg/apis"
@@ -75,12 +77,50 @@ func newEventSourceStatus(name string, ready *kapis.Condition) cappv1alpha1.Even
 	}
 }
 
-func eventingNotReady(es cappv1alpha1.EventingStatus) (string, string, bool) {
-	for _, src := range es.EventSources {
-		if src.Condition.Status != corev1.ConditionTrue {
-			return cappv1alpha1.CappReadyReasonEventingNotReady,
-				"event source " + src.Name + " is not ready", false
+// checkEventing returns why an event source is not ready, or nil when all are ready.
+func checkEventing(ctx context.Context, k8sClient client.Client, capp cappv1alpha1.Capp, _ *cappv1alpha1.CappConfig) (*metav1.Condition, error) {
+	for _, source := range capp.Spec.EventSourcesSpec.Sources {
+		key := types.NamespacedName{Namespace: capp.Namespace, Name: rmanagers.GenerateEventSourceName(capp.Name, source.Name)}
+
+		var cond *metav1.Condition
+		var err error
+		switch {
+		case source.PingSourceConfiguration != nil:
+			cond, err = checkPingSource(ctx, k8sClient, key)
+		case source.KafkaSourceConfiguration != nil:
+			cond, err = checkKafkaSource(ctx, k8sClient, key)
+		}
+		if cond != nil || err != nil {
+			return cond, err
 		}
 	}
-	return "", "", true
+	return nil, nil
+}
+
+// checkPingSource returns why the PingSource is not ready, or nil when it is.
+func checkPingSource(ctx context.Context, k8sClient client.Client, key types.NamespacedName) (*metav1.Condition, error) {
+	source := &sourcesv1.PingSource{}
+	if cond, err := getChildResource(ctx, k8sClient, rmanagers.PingSource, key, source); cond != nil || err != nil {
+		return cond, err
+	}
+
+	ready := source.Status.GetCondition(sourcesv1.PingSourceConditionReady)
+	if ready == nil || source.Status.ObservedGeneration < source.Generation {
+		return newPendingCondition(rmanagers.PingSource, source.Name), nil
+	}
+	return formatChildCondition(rmanagers.PingSource, source.Name, metav1.ConditionStatus(ready.Status), ready.Reason, ready.Message), nil
+}
+
+// checkKafkaSource returns why the KafkaSource is not ready, or nil when it is.
+func checkKafkaSource(ctx context.Context, k8sClient client.Client, key types.NamespacedName) (*metav1.Condition, error) {
+	source := &kafkasourcev1.KafkaSource{}
+	if cond, err := getChildResource(ctx, k8sClient, rmanagers.KafkaSource, key, source); cond != nil || err != nil {
+		return cond, err
+	}
+
+	ready := source.Status.GetCondition(kafkasourcev1.KafkaConditionReady)
+	if ready == nil || source.Status.ObservedGeneration < source.Generation {
+		return newPendingCondition(rmanagers.KafkaSource, source.Name), nil
+	}
+	return formatChildCondition(rmanagers.KafkaSource, source.Name, metav1.ConditionStatus(ready.Status), ready.Reason, ready.Message), nil
 }

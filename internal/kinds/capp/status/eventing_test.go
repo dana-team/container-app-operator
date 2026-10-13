@@ -17,6 +17,7 @@ import (
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	kapis "knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
@@ -171,50 +172,64 @@ func TestNewEventSourceStatus(t *testing.T) {
 	}
 }
 
-func TestEventingNotReady(t *testing.T) {
+func TestCheckEventing(t *testing.T) {
+	pingSpec := cappv1alpha1.SourceConfiguration{Name: "orders", PingSourceConfiguration: &cappv1alpha1.PingSourceConfiguration{}}
+	kafkaSpec := cappv1alpha1.SourceConfiguration{Name: "events", KafkaSourceConfiguration: &cappv1alpha1.KafkaSourceConfiguration{}}
+	pingName := cappName + "-orders"
+	kafkaName := cappName + "-events"
+
+	stalePing := newPingSource(pingName, corev1.ConditionTrue)
+	stalePing.Generation = 2
+	stalePing.Status.ObservedGeneration = 1
+
+	failedKafka := newKafkaSource(kafkaName, corev1.ConditionFalse)
+	failedKafka.Status.Conditions[0].Reason = "NotFound"
+	failedKafka.Status.Conditions[0].Message = "sink not found"
+
+	pendingPing := &metav1.Condition{
+		Status:  metav1.ConditionUnknown,
+		Reason:  cappv1alpha1.CapabilityReasonPending,
+		Message: "PingSource " + pingName + " not observed yet",
+	}
+
 	tests := []struct {
-		name       string
-		status     cappv1alpha1.EventingStatus
-		wantReason string
-		wantMsg    string
-		wantOK     bool
+		name    string
+		sources []cappv1alpha1.SourceConfiguration
+		objects []client.Object
+		want    *metav1.Condition
 	}{
 		{
-			name:   "ready when no event sources exist",
-			status: cappv1alpha1.EventingStatus{},
-			wantOK: true,
+			name:    "pending when the PingSource status is stale",
+			sources: []cappv1alpha1.SourceConfiguration{pingSpec},
+			objects: []client.Object{stalePing},
+			want:    pendingPing,
 		},
 		{
-			name: "ready when all event sources are ready",
-			status: cappv1alpha1.EventingStatus{
-				EventSources: []cappv1alpha1.EventSourceStatus{
-					{Name: "src-a", Condition: kapis.Condition{Status: corev1.ConditionTrue}},
-					{Name: "src-b", Condition: kapis.Condition{Status: corev1.ConditionTrue}},
-				},
+			name:    "reports a KafkaSource that is not ready",
+			sources: []cappv1alpha1.SourceConfiguration{pingSpec, kafkaSpec},
+			objects: []client.Object{newPingSource(pingName, corev1.ConditionTrue), failedKafka},
+			want: &metav1.Condition{
+				Status:  metav1.ConditionFalse,
+				Reason:  "NotFound",
+				Message: "KafkaSource " + kafkaName + ": sink not found",
 			},
-			wantOK: true,
 		},
 		{
-			name: "not ready when an event source is not ready",
-			status: cappv1alpha1.EventingStatus{
-				EventSources: []cappv1alpha1.EventSourceStatus{
-					{Name: "src-a", Condition: kapis.Condition{Status: corev1.ConditionTrue}},
-					{Name: "src-b", Condition: kapis.Condition{Status: corev1.ConditionFalse}},
-				},
-			},
-			wantReason: cappv1alpha1.CappReadyReasonEventingNotReady,
-			wantMsg:    "event source src-b is not ready",
+			name:    "nil when all event sources are ready",
+			sources: []cappv1alpha1.SourceConfiguration{pingSpec, kafkaSpec},
+			objects: []client.Object{newPingSource(pingName, corev1.ConditionTrue), newKafkaSource(kafkaName, corev1.ConditionTrue)},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			reason, msg, ok := eventingNotReady(tt.status)
-			assert.Equal(t, tt.wantOK, ok)
-			if !ok {
-				assert.Equal(t, tt.wantReason, reason)
-				assert.Equal(t, tt.wantMsg, msg)
-			}
+			capp := newCapp()
+			capp.Spec.EventSourcesSpec.Sources = tt.sources
+			fakeClient := fake.NewClientBuilder().WithScheme(newEventingScheme()).WithObjects(tt.objects...).Build()
+
+			got, err := checkEventing(context.Background(), fakeClient, capp, nil)
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
