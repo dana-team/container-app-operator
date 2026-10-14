@@ -203,11 +203,43 @@ kubectl patch capp my-app -n my-namespace --type=merge -p '{"spec":{"state":"ena
 
 **Check status**:
 ```bash
-kubectl get capp my-app -n my-namespace              # basic status
-kubectl describe capp my-app -n my-namespace         # detailed status
+kubectl get capp my-app -n my-namespace              # Ready status and reason
+kubectl get capp my-app -n my-namespace -o wide      # adds the Ready message
+kubectl describe capp my-app -n my-namespace         # all conditions
 ```
 
-The status section includes: `knativeObjectStatus`, `routeStatus`, `loggingStatus`, `volumesStatus`, `eventingStatus`, and `conditions`.
+#### Status conditions
+
+Each configured capability in Capp spec (Serving, Route, Logging...) has its own condition. A condition is removed when its spec section is removed.
+
+| Condition | Set when | Checks |
+|-----------|----------|--------|
+| `VolumesReady` | `volumesSpec.nfsVolumes` is set | each NfsPvc |
+| `ServingReady` | `state` is `enabled` | the Knative Service and its latest created revision |
+| `RouteReady` | `routeSpec.hostname` is set | CNAMERecord, Certificate (if TLS is enabled), DomainMapping |
+| `EventingReady` | an event source is set | each PingSource / KafkaSource |
+| `LoggingReady` | `logSpec` is set | SyslogNGOutput, SyslogNGFlow |
+| `Ready` | always | summary of the conditions above |
+
+A capability condition is:
+- `False` with reason `ResourceSyncFailed` when the operator can't apply one of its resources.
+- `Unknown` with reason `Pending` while a resource is missing or not yet reconciled.
+- Otherwise, the status and reason of the first resource that isn't ready, or `True` with reason `Ready`.
+
+`Ready` points to the root cause:
+- `state: disabled` gives `Ready=True` with reason `Disabled`.
+- A capability whose dependency isn't ready is a symptom and is skipped. `ServingReady` depends on `VolumesReady`, and `RouteReady` and `EventingReady` depend on `ServingReady`.
+- Otherwise the reason is `<Capability>NotReady` (`VolumesNotReady`, `ServingNotReady`, `RouteNotReady`, `EventingNotReady`, `LoggingNotReady`) and the message is `<capability reason>: <capability message>`. `False` wins over `Unknown`. Ties follow the table order.
+
+For example, when the image can't be pulled:
+
+```
+Ready         False  ServingNotReady   ContainerMissing: Revision my-app-00001: Unable to fetch image "..."
+ServingReady  False  ContainerMissing  Revision my-app-00001: Unable to fetch image "..."
+RouteReady    False  ...               ← symptom of ServingReady
+```
+
+The status also includes `observedGeneration`, `eventingStatus` and `stateStatus`. The fields `knativeObjectStatus`, `revisions`, `routeStatus`, `volumesStatus` and `loggingStatus` are deprecated and will be removed in a later release; use the conditions instead.
 
 ## Practical Examples
 
