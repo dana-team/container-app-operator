@@ -118,7 +118,7 @@ func (r DNSRecordManager) createOrUpdate(ctx context.Context, capp cappv1alpha1.
 	if err := ensureOwnerReference(r.K8sClient, &capp, &dnsRecord, DNSRecord); err != nil {
 		return err
 	}
-	dnsRecord.Spec.ForProvider = *dnsRecordFromCapp.Spec.ForProvider.DeepCopy()
+	dnsRecord.Spec.ForProvider = copyManagedDnsFields(dnsRecord.Spec.ForProvider, dnsRecordFromCapp.Spec.ForProvider)
 	if dnsRecordFromCapp.Spec.ProviderConfigReference != nil {
 		dnsRecord.Spec.ProviderConfigReference = dnsRecordFromCapp.Spec.ProviderConfigReference.DeepCopy()
 	} else {
@@ -132,8 +132,18 @@ func (r DNSRecordManager) createOrUpdate(ctx context.Context, capp cappv1alpha1.
 	return r.UpdateResource(ctx, &dnsRecord)
 }
 
+// copyManagedDnsFields copies only the relevant fields from the desired DNSRecord fields.
+func copyManagedDnsFields(current, desired dnsrecordv1alpha1.CNAMERecordParameters) dnsrecordv1alpha1.CNAMERecordParameters {
+	out := *current.DeepCopy()
+	src := desired.DeepCopy()
+	out.Name = src.Name
+	out.Zone = src.Zone
+	out.Cname = src.Cname
+	return out
+}
+
 func (r DNSRecordManager) dnsRecordNeedsUpdate(current, desired dnsrecordv1alpha1.CNAMERecord, capp *cappv1alpha1.Capp) (bool, error) {
-	if !equality.Semantic.DeepEqual(current.Spec.ForProvider, desired.Spec.ForProvider) ||
+	if !equality.Semantic.DeepEqual(current.Spec.ForProvider, copyManagedDnsFields(current.Spec.ForProvider, desired.Spec.ForProvider)) ||
 		!equality.Semantic.DeepEqual(current.Spec.ProviderConfigReference, desired.Spec.ProviderConfigReference) {
 		return true, nil
 	}
