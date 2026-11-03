@@ -10,13 +10,16 @@ import (
 
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/cappmeta"
 	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/resourceclient"
+	"github.com/dana-team/container-app-operator/internal/kinds/capp/rollout"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/events"
+	"k8s.io/utils/ptr"
 	kautoscaling "knative.dev/serving/pkg/apis/autoscaling"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 
@@ -81,8 +84,16 @@ func (k KnativeServiceManager) prepareResource(capp cappv1alpha1.Capp, ctx conte
 	knativeService.Spec.Template.Spec.EnableServiceLinks = new(bool)
 	knativeService.Spec.ConfigurationSpec.SetDefaults(ctx)
 	knativeService.Spec.RouteSpec.SetDefaults(ctx)
+	if traffic := buildTraffic(capp); traffic != nil {
+		knativeService.Spec.Traffic = traffic
+	}
 	knativeService.Spec.Template.Spec.SetDefaults(ctx)
-	knativeService.Spec.Template.Spec.TimeoutSeconds = capp.Spec.RouteSpec.RouteTimeoutSeconds
+	// An unset timeout stays nil so the Knative webhook applies the cluster default. Knative treats zero as unset too.
+	timeout := capp.Spec.RouteSpec.RouteTimeoutSeconds
+	if timeout != nil && *timeout == 0 {
+		timeout = nil
+	}
+	knativeService.Spec.Template.Spec.TimeoutSeconds = timeout
 
 	for _, nfsVolume := range capp.Spec.VolumesSpec.NFSVolumes {
 		knativeService.Spec.Template.Spec.Volumes = append(knativeService.Spec.Template.Spec.Volumes, corev1.Volume{
@@ -99,6 +110,55 @@ func (k KnativeServiceManager) prepareResource(capp cappv1alpha1.Capp, ctx conte
 	knativeService.Spec.Template.Labels = knativeServiceLabels
 
 	return knativeService
+}
+
+// buildTraffic converts the rollout status traffic split into Knative traffic targets.
+// Without a rollout strategy, traffic is pinned to the stable revision only while a rejected candidate is pinned.
+// It returns nil otherwise, leaving Knative defaults in place.
+func buildTraffic(capp cappv1alpha1.Capp) []knativev1.TrafficTarget {
+	if capp.Status.Rollout == nil {
+		return nil
+	}
+	if capp.Spec.RouteSpec.RolloutStrategy == nil {
+		if pinned := capp.Status.Rollout.PinnedRevision; pinned != "" {
+			return []knativev1.TrafficTarget{{
+				RevisionName:   pinned,
+				Percent:        ptr.To(int64(100)),
+				Tag:            rollout.TagStable,
+				LatestRevision: ptr.To(false),
+			}}
+		}
+		return nil
+	}
+	if len(capp.Status.Rollout.Traffic) == 0 {
+		return nil
+	}
+
+	targets := make([]knativev1.TrafficTarget, 0, len(capp.Status.Rollout.Traffic))
+	for _, entry := range capp.Status.Rollout.Traffic {
+		targets = append(targets, knativev1.TrafficTarget{
+			RevisionName:   entry.RevisionName,
+			Percent:        ptr.To(entry.Percent),
+			Tag:            entry.Tag,
+			LatestRevision: ptr.To(false),
+		})
+	}
+
+	return targets
+}
+
+// DesiredTemplate returns the revision template that the Knative Service of the Capp must hold.
+func (k KnativeServiceManager) DesiredTemplate(ctx context.Context, capp cappv1alpha1.Capp) knativev1.RevisionTemplateSpec {
+	return k.prepareResource(capp, ctx).Spec.Template
+}
+
+// TemplateApplied reports whether the Knative Service holds every field set in the desired template. Fields that are
+// unset in the desired template are ignored, because the Knative webhook and other mutating webhooks default them using
+// cluster config this operator cannot see. Removing any field or trailing list element is not detected here; the
+// generation, configuration and latest revision checks in the status cover it once Knative sees the update. A mutating
+// webhook that prepends to a list or rewrites a value set in the desired template makes this report false permanently.
+func (k KnativeServiceManager) TemplateApplied(ctx context.Context, capp cappv1alpha1.Capp, ksvc *knativev1.Service) bool {
+	return equality.Semantic.DeepDerivative(k.DesiredTemplate(ctx, capp), ksvc.Spec.Template)
 }
 
 // CleanUp ensures the Knative Service is not left behind when it is no longer required for this Capp.

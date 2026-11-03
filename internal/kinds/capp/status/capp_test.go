@@ -30,9 +30,11 @@ import (
 )
 
 const (
-	reasonResolveFailed  = "ResolveFailed"
-	reasonPvcPending     = "PvcPending"
-	pendingVolumeMessage = "NfsPvc vol-a not observed yet"
+	reasonResolveFailed   = "ResolveFailed"
+	reasonPvcPending      = "PvcPending"
+	pendingVolumeMessage  = "NfsPvc vol-a not observed yet"
+	pendingKsvcMessage    = "KnativeService my-capp not observed yet"
+	pendingRolloutMessage = "rollout status for latest revision rev-1 is not recorded yet"
 )
 
 type stubManager struct {
@@ -42,6 +44,16 @@ type stubManager struct {
 func (s stubManager) Manage(_ context.Context, _ cappv1alpha1.Capp) error  { return nil }
 func (s stubManager) CleanUp(_ context.Context, _ cappv1alpha1.Capp) error { return nil }
 func (s stubManager) IsRequired(_ cappv1alpha1.Capp) bool                  { return s.required }
+
+// knativeStubManager is a stubManager for the Knative Service that checks its template with the real manager.
+type knativeStubManager struct {
+	stubManager
+	manager rmanagers.KnativeServiceManager
+}
+
+func (s knativeStubManager) TemplateApplied(ctx context.Context, capp cappv1alpha1.Capp, ksvc *knativev1.Service) bool {
+	return s.manager.TemplateApplied(ctx, capp, ksvc)
+}
 
 func buildManagers(required map[string]bool) map[string]rmanagers.ResourceManager {
 	all := []string{
@@ -58,6 +70,10 @@ func buildManagers(required map[string]bool) map[string]rmanagers.ResourceManage
 	m := make(map[string]rmanagers.ResourceManager, len(all))
 	for _, name := range all {
 		m[name] = stubManager{required: required[name]}
+	}
+	m[rmanagers.KnativeService] = knativeStubManager{
+		stubManager: stubManager{required: required[rmanagers.KnativeService]},
+		manager:     rmanagers.KnativeServiceManager{CappConfig: newCappConfig()},
 	}
 	return m
 }
@@ -196,6 +212,8 @@ func TestSetStatusConditions(t *testing.T) {
 			want: []metav1.Condition{
 				{Type: cappv1alpha1.CappConditionServingReady, Status: metav1.ConditionTrue, Reason: cappv1alpha1.CapabilityReasonReady, ObservedGeneration: generation},
 				{Type: cappv1alpha1.CappConditionRouteReady, Status: metav1.ConditionTrue, Reason: cappv1alpha1.CapabilityReasonReady, ObservedGeneration: generation},
+				{Type: cappv1alpha1.CappConditionAvailable, Status: metav1.ConditionUnknown, Reason: cappv1alpha1.CapabilityReasonPending, Message: pendingKsvcMessage, ObservedGeneration: generation},
+				{Type: cappv1alpha1.CappConditionRolloutSucceeded, Status: metav1.ConditionUnknown, Reason: cappv1alpha1.CapabilityReasonPending, Message: pendingRolloutMessage, ObservedGeneration: generation},
 				{Type: cappv1alpha1.CappConditionReady, Status: metav1.ConditionTrue, Reason: cappv1alpha1.CappReadyReasonReady, Message: readyMessage, ObservedGeneration: generation},
 			},
 		},
@@ -207,6 +225,8 @@ func TestSetStatusConditions(t *testing.T) {
 				{Type: cappv1alpha1.CappConditionVolumesReady, Status: metav1.ConditionFalse, Reason: cappv1alpha1.CapabilityReasonResourceSyncFailed, Message: cleanupErr.Error(), ObservedGeneration: generation},
 				{Type: cappv1alpha1.CappConditionServingReady, Status: metav1.ConditionTrue, Reason: cappv1alpha1.CapabilityReasonReady, ObservedGeneration: generation},
 				{Type: cappv1alpha1.CappConditionRouteReady, Status: metav1.ConditionFalse, Reason: cappv1alpha1.CapabilityReasonResourceSyncFailed, Message: applyErr.Error(), ObservedGeneration: generation},
+				{Type: cappv1alpha1.CappConditionAvailable, Status: metav1.ConditionUnknown, Reason: cappv1alpha1.CapabilityReasonPending, Message: pendingKsvcMessage, ObservedGeneration: generation},
+				{Type: cappv1alpha1.CappConditionRolloutSucceeded, Status: metav1.ConditionUnknown, Reason: cappv1alpha1.CapabilityReasonPending, Message: pendingRolloutMessage, ObservedGeneration: generation},
 				{Type: cappv1alpha1.CappConditionReady, Status: metav1.ConditionFalse, Reason: cappv1alpha1.CappReadyReasonVolumesNotReady, Message: cappv1alpha1.CapabilityReasonResourceSyncFailed + ": " + cleanupErr.Error(), ObservedGeneration: generation},
 			},
 		},
@@ -215,6 +235,8 @@ func TestSetStatusConditions(t *testing.T) {
 			state:    cappv1alpha1.CappStateDisabled,
 			required: map[string]bool{rmanagers.DNSRecord: true, rmanagers.DomainMapping: true},
 			want: []metav1.Condition{
+				{Type: cappv1alpha1.CappConditionAvailable, Status: metav1.ConditionUnknown, Reason: cappv1alpha1.CapabilityReasonPending, Message: pendingKsvcMessage, ObservedGeneration: generation},
+				{Type: cappv1alpha1.CappConditionRolloutSucceeded, Status: metav1.ConditionUnknown, Reason: cappv1alpha1.CapabilityReasonPending, Message: pendingRolloutMessage, ObservedGeneration: generation},
 				{Type: cappv1alpha1.CappConditionReady, Status: metav1.ConditionTrue, Reason: cappv1alpha1.CappReadyReasonDisabled, Message: disabledMessage, ObservedGeneration: generation},
 			},
 		},
@@ -361,4 +383,147 @@ func TestStripVolatileStatusFields(t *testing.T) {
 
 	require.Len(t, result.EventingStatus.EventSources, 1)
 	assert.True(t, result.EventingStatus.EventSources[0].Condition.LastTransitionTime.Inner.IsZero())
+}
+
+func TestSetStatusConditionsRollout(t *testing.T) {
+	managers := buildManagers(map[string]bool{rmanagers.KnativeService: true})
+	const message = "candidate revision rev-2 rolled back"
+	// routeRolloutCapp is newRolloutCapp with the hostname of routeCapp, so that the Knative Service of the fixtures matches the Capp.
+	routeRolloutCapp := func() cappv1alpha1.Capp {
+		capp := newRolloutCapp()
+		capp.Spec.RouteSpec.Hostname = hostname
+		return capp
+	}
+
+	newFakeClient := func(objects ...client.Object) client.Client {
+		return fake.NewClientBuilder().WithScheme(newStatusScheme()).WithObjects(objects...).Build()
+	}
+	servingKsvc := newRolloutKsvc(stableRevision, corev1.ConditionTrue, trafficTo(stableRevision, 100))
+	servingObjects := []client.Object{servingKsvc, newRevisionWithReady(stableRevision, corev1.ConditionTrue), newRevisionWithReady(candidateRevision, corev1.ConditionFalse)}
+
+	t.Run("Ready is unchanged by a rolled back rollout, which reports RolloutSucceeded=False and Available=True", func(t *testing.T) {
+		capp := routeRolloutCapp()
+		capp.Spec.RouteSpec.RolloutStrategy = &cappv1alpha1.RolloutStrategy{}
+		capp.Status.Rollout = &cappv1alpha1.RolloutStatus{StableRevision: stableRevision, Phase: cappv1alpha1.RolloutPhaseRolledBack, Message: message}
+		status := cappv1alpha1.CappStatus{}
+
+		require.NoError(t, setStatusConditions(context.Background(), newFakeClient(servingObjects...), &status, capp, managers, newCappConfig(), nil))
+
+		readyCond := meta.FindStatusCondition(status.Conditions, cappv1alpha1.CappConditionReady)
+		require.NotNil(t, readyCond)
+		assert.Equal(t, metav1.ConditionTrue, readyCond.Status)
+		assert.Equal(t, cappv1alpha1.CappReadyReasonReady, readyCond.Reason)
+
+		succeeded := meta.FindStatusCondition(status.Conditions, cappv1alpha1.CappConditionRolloutSucceeded)
+		require.NotNil(t, succeeded)
+		assert.Equal(t, metav1.ConditionFalse, succeeded.Status)
+		assert.Equal(t, string(cappv1alpha1.RolloutPhaseRolledBack), succeeded.Reason)
+		assert.Equal(t, message, succeeded.Message)
+
+		available := meta.FindStatusCondition(status.Conditions, cappv1alpha1.CappConditionAvailable)
+		require.NotNil(t, available)
+		assert.Equal(t, metav1.ConditionTrue, available.Status)
+	})
+
+	t.Run("a failed rollout sets RolloutSucceeded=False but leaves Ready True", func(t *testing.T) {
+		capp := routeRolloutCapp()
+		capp.Status.Rollout = &cappv1alpha1.RolloutStatus{StableRevision: stableRevision, Phase: cappv1alpha1.RolloutPhaseFailed, Message: message}
+		status := cappv1alpha1.CappStatus{}
+
+		require.NoError(t, setStatusConditions(context.Background(), newFakeClient(servingObjects...), &status, capp, managers, newCappConfig(), nil))
+
+		succeeded := meta.FindStatusCondition(status.Conditions, cappv1alpha1.CappConditionRolloutSucceeded)
+		require.NotNil(t, succeeded)
+		assert.Equal(t, metav1.ConditionFalse, succeeded.Status)
+		readyCond := meta.FindStatusCondition(status.Conditions, cappv1alpha1.CappConditionReady)
+		require.NotNil(t, readyCond)
+		assert.Equal(t, metav1.ConditionTrue, readyCond.Status)
+	})
+
+	t.Run("RolloutSucceeded is Unknown while promoting", func(t *testing.T) {
+		capp := routeRolloutCapp()
+		capp.Status.Rollout = &cappv1alpha1.RolloutStatus{StableRevision: stableRevision, CandidateRevision: candidateRevision, Phase: cappv1alpha1.RolloutPhasePromoting}
+		status := cappv1alpha1.CappStatus{}
+
+		require.NoError(t, setStatusConditions(context.Background(), newFakeClient(servingObjects...), &status, capp, managers, newCappConfig(), nil))
+
+		succeeded := meta.FindStatusCondition(status.Conditions, cappv1alpha1.CappConditionRolloutSucceeded)
+		require.NotNil(t, succeeded)
+		assert.Equal(t, metav1.ConditionUnknown, succeeded.Status)
+		assert.Equal(t, string(cappv1alpha1.RolloutPhasePromoting), succeeded.Reason)
+	})
+
+	t.Run("RolloutSucceeded is True once the stable revision is confirmed", func(t *testing.T) {
+		capp := routeRolloutCapp()
+		capp.Status.Rollout = &cappv1alpha1.RolloutStatus{StableRevision: stableRevision, Phase: cappv1alpha1.RolloutPhaseStable}
+		status := cappv1alpha1.CappStatus{}
+
+		require.NoError(t, setStatusConditions(context.Background(), newFakeClient(servingObjects...), &status, capp, managers, newCappConfig(), nil))
+
+		succeeded := meta.FindStatusCondition(status.Conditions, cappv1alpha1.CappConditionRolloutSucceeded)
+		require.NotNil(t, succeeded)
+		assert.Equal(t, metav1.ConditionTrue, succeeded.Status)
+	})
+
+	t.Run("RolloutSucceeded is unknown before the rollout status is recorded, and Available is always set", func(t *testing.T) {
+		capp := routeRolloutCapp()
+		status := cappv1alpha1.CappStatus{}
+
+		require.NoError(t, setStatusConditions(context.Background(), newFakeClient(servingObjects...), &status, capp, managers, newCappConfig(), nil))
+
+		succeeded := meta.FindStatusCondition(status.Conditions, cappv1alpha1.CappConditionRolloutSucceeded)
+		require.NotNil(t, succeeded)
+		assert.Equal(t, metav1.ConditionUnknown, succeeded.Status)
+		available := meta.FindStatusCondition(status.Conditions, cappv1alpha1.CappConditionAvailable)
+		require.NotNil(t, available)
+		assert.Equal(t, metav1.ConditionTrue, available.Status)
+	})
+}
+
+func TestSetStatusConditionsRolloutSucceededSyncErrors(t *testing.T) {
+	const generation = 2
+	applyErr := errors.New("Knative Service: admission webhook denied the request")
+	otherErr := errors.New("DomainMapping: admission webhook denied the request")
+
+	tests := []struct {
+		name       string
+		syncErrors map[string]error
+		want       metav1.ConditionStatus
+		wantReason string
+	}{
+		{
+			name:       "knative service sync error fails the rollout",
+			syncErrors: map[string]error{rmanagers.KnativeService: applyErr},
+			want:       metav1.ConditionFalse,
+			wantReason: cappv1alpha1.CapabilityReasonResourceSyncFailed,
+		},
+		{
+			name:       "other manager sync errors leave the rollout unchanged",
+			syncErrors: map[string]error{rmanagers.DomainMapping: otherErr},
+			want:       metav1.ConditionTrue,
+			wantReason: string(cappv1alpha1.RolloutPhaseStable),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			capp := newRolloutCapp()
+			capp.Generation = generation
+			capp.Status.Rollout = &cappv1alpha1.RolloutStatus{StableRevision: stableRevision, Phase: cappv1alpha1.RolloutPhaseStable}
+			k8sClient := newRolloutClient(
+				newRolloutKsvc(stableRevision, corev1.ConditionTrue, trafficTo(stableRevision, 100)),
+				newRevisionWithReady(stableRevision, corev1.ConditionTrue),
+			)
+
+			var status cappv1alpha1.CappStatus
+			err := setStatusConditions(context.Background(), k8sClient, &status, capp,
+				buildManagers(map[string]bool{rmanagers.KnativeService: true}), newCappConfig(), tt.syncErrors)
+			require.NoError(t, err)
+
+			succeeded := meta.FindStatusCondition(status.Conditions, cappv1alpha1.CappConditionRolloutSucceeded)
+			require.NotNil(t, succeeded)
+			assert.Equal(t, tt.want, succeeded.Status)
+			assert.Equal(t, tt.wantReason, succeeded.Reason)
+			assert.Equal(t, int64(generation), succeeded.ObservedGeneration)
+		})
+	}
 }
