@@ -8,6 +8,7 @@ import (
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -52,4 +53,40 @@ func GetCapp(k8sClient client.Client, name string, namespace string) *cappv1alph
 func GenerateUniqueCappName(baseCappName string) string {
 	randString := generateRandomString(consts.RandStrLength)
 	return baseCappName + "-" + randString
+}
+
+// UpdateCappImage sets the image of the first container of a Capp, retrying on conflicts.
+func UpdateCappImage(k8sClient client.Client, name, namespace, image string) {
+	GinkgoHelper()
+	err := retry.RetryOnConflict(NewRetryOnConflictBackoff(), func() error {
+		capp := GetCapp(k8sClient, name, namespace)
+		capp.Spec.ConfigurationSpec.Template.Spec.Containers[0].Image = image
+		return UpdateResource(k8sClient, capp)
+	})
+	Expect(err).ToNot(HaveOccurred())
+}
+
+// ClearRolloutStrategy removes the rollout strategy of a Capp, retrying on conflicts.
+func ClearRolloutStrategy(k8sClient client.Client, name, namespace string) {
+	GinkgoHelper()
+	err := retry.RetryOnConflict(NewRetryOnConflictBackoff(), func() error {
+		capp := GetCapp(k8sClient, name, namespace)
+		capp.Spec.RouteSpec.RolloutStrategy = nil
+		return UpdateResource(k8sClient, capp)
+	})
+	Expect(err).ToNot(HaveOccurred())
+}
+
+// AnnotateCapp sets an annotation on a Capp, retrying on conflicts.
+func AnnotateCapp(k8sClient client.Client, name, namespace, key, value string) {
+	GinkgoHelper()
+	err := retry.RetryOnConflict(NewRetryOnConflictBackoff(), func() error {
+		capp := GetCapp(k8sClient, name, namespace)
+		if capp.Annotations == nil {
+			capp.Annotations = map[string]string{}
+		}
+		capp.Annotations[key] = value
+		return UpdateResource(k8sClient, capp)
+	})
+	Expect(err).ToNot(HaveOccurred())
 }
