@@ -12,12 +12,23 @@ var (
 	CappResourceKey           = CappAPIGroup + "/parent-capp"
 	ManagedByLabelKey         = CappAPIGroup + "/managed-by"
 	SkipDNSCheckAnnotationKey = CappAPIGroup + "/skip-dns-check"
+	RolloutAnnotationKey      = CappAPIGroup + "/rollout"
 )
 
 const (
 	CappConfigName = "capp-config"
 	CappNS         = "container-app-operator-system"
 	CappKey        = "capp"
+
+	// RolloutActionPromote is the value of RolloutAnnotationKey that promotes the candidate revision.
+	RolloutActionPromote = "promote"
+
+	// RolloutActionAbort is the value of RolloutAnnotationKey that aborts the rollout.
+	RolloutActionAbort = "abort"
+
+	// RolloutActionRetry is the value of RolloutAnnotationKey that restarts a failed, rolled back or aborted rollout,
+	// or a rollout held by a strategy change.
+	RolloutActionRetry = "retry"
 )
 
 // ManagedResourceLabels returns labels used for child resources reconciled from a Capp.
