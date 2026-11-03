@@ -17,6 +17,7 @@ import (
 	"github.com/go-logr/logr"
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -25,14 +26,18 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/client-go/tools/events"
+	"k8s.io/utils/ptr"
 	kafkasourcev1 "knative.dev/eventing-kafka-broker/control-plane/pkg/apis/sources/v1"
 	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	knativeapis "knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/serving/pkg/apis/serving"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -45,6 +50,7 @@ const (
 	cappNameC          = "app-c"
 	nsName1            = "ns-1"
 	nsName2            = "ns-2"
+	appContainerName   = "app"
 )
 
 func TestHasConflictError(t *testing.T) {
@@ -884,6 +890,80 @@ func TestFindCappFromLabels(t *testing.T) {
 	}
 }
 
+func TestFindCappFromRevision(t *testing.T) {
+	r := &CappReconciler{}
+	ctx := context.Background()
+
+	newRevision := func(namespace string, labels map[string]string) *knativev1.Revision {
+		return &knativev1.Revision{ObjectMeta: metav1.ObjectMeta{Name: cappName + "-00001", Namespace: namespace, Labels: labels}}
+	}
+
+	tests := []struct {
+		name     string
+		object   client.Object
+		expected []reconcile.Request
+	}{
+		{
+			name:     "maps the revision to the Capp named by the service label in the same namespace",
+			object:   newRevision(nsName1, map[string]string{serving.ServiceLabelKey: cappNameA}),
+			expected: []reconcile.Request{{NamespacedName: types.NamespacedName{Namespace: nsName1, Name: cappNameA}}},
+		},
+		{
+			name:     "returns nil when the service label is missing",
+			object:   newRevision(nsName1, map[string]string{}),
+			expected: nil,
+		},
+		{
+			name:     "returns nil when the labels are nil",
+			object:   newRevision(nsName1, nil),
+			expected: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, r.findCappFromRevision(ctx, tt.object))
+		})
+	}
+}
+
+func TestRevisionWatchPredicate(t *testing.T) {
+	pred := revisionWatchPredicate()
+
+	newRevision := func(ready corev1.ConditionStatus) *knativev1.Revision {
+		rev := &knativev1.Revision{}
+		rev.Status.Conditions = duckv1.Conditions{{Type: knativeapis.ConditionReady, Status: ready}}
+		return rev
+	}
+
+	t.Run("triggers on create and delete", func(t *testing.T) {
+		rev := newRevision(corev1.ConditionTrue)
+		assert.True(t, pred.Create(event.TypedCreateEvent[client.Object]{Object: rev}))
+		assert.True(t, pred.Delete(event.TypedDeleteEvent[client.Object]{Object: rev}))
+	})
+
+	t.Run("triggers when the Ready status changes", func(t *testing.T) {
+		assert.True(t, pred.Update(event.TypedUpdateEvent[client.Object]{
+			ObjectOld: newRevision(corev1.ConditionUnknown),
+			ObjectNew: newRevision(corev1.ConditionFalse),
+		}))
+	})
+
+	t.Run("ignores updates that keep the Ready status", func(t *testing.T) {
+		assert.False(t, pred.Update(event.TypedUpdateEvent[client.Object]{
+			ObjectOld: newRevision(corev1.ConditionTrue),
+			ObjectNew: newRevision(corev1.ConditionTrue),
+		}))
+	})
+
+	t.Run("ignores objects of another type", func(t *testing.T) {
+		assert.False(t, pred.Update(event.TypedUpdateEvent[client.Object]{
+			ObjectOld: &corev1.ConfigMap{},
+			ObjectNew: &corev1.ConfigMap{},
+		}))
+	})
+}
+
 type syncStubManager struct {
 	manageErr error
 	required  bool
@@ -950,4 +1030,164 @@ func TestSyncApplicationReportsSyncErrors(t *testing.T) {
 			}
 		})
 	}
+}
+
+// conflictingKnativeManager fails to update the Knative Service with a conflict and checks its template with the real manager.
+type conflictingKnativeManager struct {
+	syncStubManager
+	templates rmanagers.KnativeServiceManager
+}
+
+func (c conflictingKnativeManager) TemplateApplied(ctx context.Context, capp cappv1alpha1.Capp, ksvc *knativev1.Service) bool {
+	return c.templates.TemplateApplied(ctx, capp, ksvc)
+}
+
+// TestSyncApplicationConflictedKnativeServiceIsNotRolledOut covers a Capp update whose Knative Service update conflicted.
+// The conflict is not reported as a sync error, so the Knative Service still holds the old template at the old generation
+// and RolloutSucceeded must not be True for the new generation.
+func TestSyncApplicationConflictedKnativeServiceIsNotRolledOut(t *testing.T) {
+	ctx := context.Background()
+	conflictErr := apierrors.NewConflict(schema.GroupResource{Resource: "services"}, cappName, errors.New("object was modified"))
+
+	capp := newCapp()
+	capp.Generation = 2
+	capp.Spec.ConfigurationSpec.Template.Spec.Containers = []corev1.Container{{Name: appContainerName, Image: "example.com/app:v2"}}
+	capp.Status.Rollout = &cappv1alpha1.RolloutStatus{StableRevision: cappName + "-00001", Phase: cappv1alpha1.RolloutPhaseStable}
+
+	ksvc := &knativev1.Service{ObjectMeta: metav1.ObjectMeta{Name: cappName, Namespace: nsName}}
+	ksvc.Generation = 1
+	ksvc.Spec.Template.Spec.Containers = []corev1.Container{{Name: appContainerName, Image: "example.com/app:v1"}}
+	ksvc.Status.ObservedGeneration = 1
+	ksvc.Status.LatestCreatedRevisionName = cappName + "-00001"
+	ksvc.Status.LatestReadyRevisionName = cappName + "-00001"
+	ksvc.Status.Traffic = []knativev1.TrafficTarget{{RevisionName: cappName + "-00001", Percent: ptr.To(int64(100))}}
+	ksvc.Status.SetConditions(knativeapis.Conditions{
+		{Type: knativeapis.ConditionReady, Status: corev1.ConditionTrue},
+		{Type: knativev1.ServiceConditionConfigurationsReady, Status: corev1.ConditionTrue},
+		{Type: knativev1.ServiceConditionRoutesReady, Status: corev1.ConditionTrue},
+	})
+
+	s := newScheme()
+	utilruntime.Must(sourcesv1.AddToScheme(s))
+	utilruntime.Must(kafkasourcev1.AddToScheme(s))
+	k8sClient := fake.NewClientBuilder().WithScheme(s).WithObjects(capp, ksvc).WithStatusSubresource(&cappv1alpha1.Capp{}).Build()
+
+	cappConfig := &cappv1alpha1.CappConfig{}
+	names := []string{
+		rmanagers.KnativeService, rmanagers.NfsPvc, rmanagers.SyslogNGOutput, rmanagers.SyslogNGFlow, rmanagers.Certificate,
+		rmanagers.DomainMapping, rmanagers.DNSRecord, rmanagers.PingSource, rmanagers.KafkaSource,
+	}
+	entries := make([]rmanagers.ResourceManagerEntry, 0, len(names))
+	for _, name := range names {
+		var manager rmanagers.ResourceManager = syncStubManager{}
+		if name == rmanagers.KnativeService {
+			manager = conflictingKnativeManager{
+				syncStubManager: syncStubManager{manageErr: conflictErr, required: true},
+				templates:       rmanagers.KnativeServiceManager{CappConfig: cappConfig},
+			}
+		}
+		entries = append(entries, rmanagers.ResourceManagerEntry{Name: name, Manager: manager})
+	}
+	r := &CappReconciler{Client: k8sClient}
+
+	err := r.SyncApplication(ctx, *capp, entries, cappConfig, logr.Discard())
+	require.Error(t, err)
+	require.True(t, hasConflictError(err))
+
+	updated := cappv1alpha1.Capp{}
+	require.NoError(t, k8sClient.Get(ctx, types.NamespacedName{Namespace: nsName, Name: cappName}, &updated))
+	succeeded := meta.FindStatusCondition(updated.Status.Conditions, cappv1alpha1.CappConditionRolloutSucceeded)
+	require.NotNil(t, succeeded)
+	assert.Equal(t, metav1.ConditionUnknown, succeeded.Status)
+	assert.Equal(t, int64(2), succeeded.ObservedGeneration)
+}
+
+func TestSyncApplicationRemovesRolloutAnnotation(t *testing.T) {
+	webhookErr := errors.New("admission webhook denied the request")
+	statusErr := errors.New("status write failed")
+
+	tests := []struct {
+		name           string
+		statusWriteErr error
+		wantErr        error
+		wantAnnotation bool
+	}{
+		{
+			name:           "removes the annotation once the status is persisted despite a manager error",
+			wantErr:        webhookErr,
+			wantAnnotation: false,
+		},
+		{
+			name:           "keeps the annotation when the status write fails",
+			statusWriteErr: statusErr,
+			wantErr:        statusErr,
+			wantAnnotation: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			s := newScheme()
+			utilruntime.Must(sourcesv1.AddToScheme(s))
+			utilruntime.Must(kafkasourcev1.AddToScheme(s))
+
+			capp := newCapp()
+			capp.Annotations = map[string]string{cappmeta.RolloutAnnotationKey: cappmeta.RolloutActionPromote}
+			interceptorFuncs := interceptor.Funcs{}
+			if tt.statusWriteErr != nil {
+				interceptorFuncs.SubResourceUpdate = func(_ context.Context, _ client.Client, _ string, _ client.Object, _ ...client.SubResourceUpdateOption) error {
+					return tt.statusWriteErr
+				}
+			}
+			k8sClient := fake.NewClientBuilder().WithScheme(s).WithObjects(capp.DeepCopy()).WithStatusSubresource(&cappv1alpha1.Capp{}).WithInterceptorFuncs(interceptorFuncs).Build()
+
+			names := []string{
+				rmanagers.KnativeService, rmanagers.NfsPvc, rmanagers.SyslogNGOutput, rmanagers.SyslogNGFlow, rmanagers.Certificate,
+				rmanagers.DomainMapping, rmanagers.DNSRecord, rmanagers.PingSource, rmanagers.KafkaSource,
+			}
+			entries := make([]rmanagers.ResourceManagerEntry, 0, len(names))
+			for _, name := range names {
+				manager := syncStubManager{}
+				if name == rmanagers.KnativeService {
+					manager = syncStubManager{manageErr: webhookErr, required: true}
+				}
+				entries = append(entries, rmanagers.ResourceManagerEntry{Name: name, Manager: manager})
+			}
+			r := &CappReconciler{Client: k8sClient}
+
+			err := r.SyncApplication(ctx, *capp, entries, &cappv1alpha1.CappConfig{}, logr.Discard())
+			assert.ErrorIs(t, err, tt.wantErr)
+
+			stored := cappv1alpha1.Capp{}
+			assert.NoError(t, k8sClient.Get(ctx, types.NamespacedName{Namespace: nsName, Name: cappName}, &stored))
+			_, found := stored.Annotations[cappmeta.RolloutAnnotationKey]
+			assert.Equal(t, tt.wantAnnotation, found)
+		})
+	}
+}
+
+func TestReconcileRequeuesWhenRolloutAnnotationChanged(t *testing.T) {
+	ctx := context.Background()
+	s := newScheme()
+	utilruntime.Must(sourcesv1.AddToScheme(s))
+	utilruntime.Must(kafkasourcev1.AddToScheme(s))
+
+	capp := newCapp()
+	capp.Annotations = map[string]string{cappmeta.RolloutAnnotationKey: cappmeta.RolloutActionPromote + ":r2"}
+	cappConfig := &cappv1alpha1.CappConfig{ObjectMeta: metav1.ObjectMeta{Name: cappmeta.CappConfigName, Namespace: cappmeta.CappNS}}
+	k8sClient := fake.NewClientBuilder().WithScheme(s).WithObjects(capp, cappConfig).WithStatusSubresource(&cappv1alpha1.Capp{}).WithInterceptorFuncs(interceptor.Funcs{
+		Patch: func(ctx context.Context, c client.WithWatch, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
+			if patch.Type() == types.JSONPatchType {
+				// The user changed the annotation after this reconcile read it, so the test op fails with 422 Invalid.
+				return apierrors.NewInvalid(schema.GroupKind{Group: cappv1alpha1.GroupVersion.Group, Kind: "Capp"}, obj.GetName(), nil)
+			}
+			return c.Patch(ctx, obj, patch, opts...)
+		},
+	}).Build()
+	r := &CappReconciler{Client: k8sClient, Scheme: s, EventRecorder: events.NewFakeRecorder(100)}
+
+	res, err := r.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Namespace: nsName, Name: cappName}})
+	require.NoError(t, err)
+	assert.Equal(t, 5*time.Second, res.RequeueAfter)
 }
