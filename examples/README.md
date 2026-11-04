@@ -5,5 +5,6 @@ This folder contains **user-friendly** `Capp` custom resource examples. Each fol
 - **Route**: custom hostname + TLS
 - **Logs**: ship logs to Elasticsearch
 - **Volume**: NFS volume + scale metric
+- **Rollout**: traffic splitting with staged rollouts (canary, steady split, blue-green)
 
 

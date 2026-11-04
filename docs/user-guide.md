@@ -258,7 +258,7 @@ The status also includes `observedGeneration`, `eventingStatus` and `stateStatus
 
 ## Traffic splitting & rollouts
 
-By default, a Capp sends 100% of its traffic to the latest revision. Set `routeSpec.rolloutStrategy` to move traffic to a new revision in stages instead. You describe the rollout once; every time a new revision is created, the operator walks it through the stages on its own.
+By default, a Capp sends 100% of its traffic to the latest revision. Set `routeSpec.rolloutStrategy` to move traffic to a new revision in stages instead. You describe the rollout once; every time a new revision is created, the operator walks it through the stages on its own. Complete manifests for each pattern below are in [`examples/rollout`](../examples/rollout).
 
 The strategy refers to roles, not revision names:
 - **stable**: the last revision that finished a rollout (reached 100%).

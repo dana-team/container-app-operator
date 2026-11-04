@@ -38,6 +38,7 @@ The `container-app-operator` project can work as a standalone solution, but is m
 - [x] Support for external NFS storage connected to `Capp` by using `volumeMounts`.
 - [x] Support for `CappRevisions` to keep track of changes to `Capp` in a different CRD (up to 10 `CappRevisions` are saved for each `Capp`)
 - [x] Support for `Knative Eventing` event sources (ping, Kafka) to trigger `Capp` workloads
+- [x] Support for traffic splitting and staged rollouts (canary, steady split, blue-green) with automatic rollback, using `routeSpec.rolloutStrategy`
 
 ## Getting Started
 
@@ -181,6 +182,44 @@ spec:
 ### Using Event Sources
 
 `Capp` supports Knative Eventing via `eventSourcesSpec`. See the [User Guide](docs/user-guide.md#eventsourcesspec).
+
+### Using Traffic Splitting and Rollouts
+
+By default, a `Capp` sends 100% of its traffic to the latest revision. Set `routeSpec.rolloutStrategy` to have the operator move traffic to every new revision through a list of stages:
+
+```yaml
+spec:
+  routeSpec:
+    rolloutStrategy:
+      stages:
+        - percent: 10
+          duration: 5m
+        - percent: 50
+          duration: 10m
+        - percent: 100
+      autoRollback: true
+      progressDeadline: 10m
+```
+
+| Pattern      | Stages                                                  |
+|--------------|---------------------------------------------------------|
+| Canary       | `10%` for `5m`, then `50%` for `10m`, then `100%`       |
+| Steady split | `50%`, held until promoted or aborted                   |
+| Blue-green   | `0%`, tested on its tag URL, then promoted              |
+
+Use the `rcs.dana.io/rollout` annotation to control a running rollout. The value is `promote`, `abort` or `retry`, followed by the candidate revision:
+
+```bash
+$ kubectl annotate capp my-app -n my-namespace rcs.dana.io/rollout=promote:my-app-00002
+```
+
+To wait for a rollout in a deploy pipeline, use the `RolloutSucceeded` condition:
+
+```bash
+$ kubectl wait capp/my-app -n my-namespace --for=condition=RolloutSucceeded --timeout=30m
+```
+
+`routeSpec.trafficTarget` has been removed, and manifests that still set it must drop the field. See the [User Guide](docs/user-guide.md#traffic-splitting--rollouts) for the full behaviour and the [examples](examples/rollout) for complete manifests.
 
 ### Enable Persistent Volume extension in Knative
 

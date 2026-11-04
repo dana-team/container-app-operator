@@ -1,0 +1,22 @@
+apiVersion: rcs.dana.io/v1alpha1
+kind: Capp
+metadata:
+  name: hello-split
+  namespace: capp-examples
+spec:
+  scaleSpec:
+    metric: concurrency
+  configurationSpec:
+    template:
+      spec:
+        containers:
+          - name: app
+            image: ghcr.io/dana-team/capp-gin-app:v0.2.0
+            env:
+              - name: APP_NAME
+                value: hello-split
+
+  routeSpec:
+    rolloutStrategy:
+      stages:
+        - percent: 50
