@@ -1,0 +1,28 @@
+apiVersion: rcs.dana.io/v1alpha1
+kind: Capp
+metadata:
+  name: hello-canary
+  namespace: capp-examples
+spec:
+  scaleSpec:
+    metric: concurrency
+  configurationSpec:
+    template:
+      spec:
+        containers:
+          - name: app
+            image: ghcr.io/dana-team/capp-gin-app:v0.2.0
+            env:
+              - name: APP_NAME
+                value: hello-canary
+
+  routeSpec:
+    rolloutStrategy:
+      stages:
+        - percent: 10
+          duration: 5m
+        - percent: 50
+          duration: 10m
+        - percent: 100
+      autoRollback: true
+      progressDeadline: 10m
