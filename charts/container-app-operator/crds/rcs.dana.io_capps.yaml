@@ -9115,6 +9115,50 @@ spec:
                       Hostname is the custom DNS name for the Capp route.
                       Required when tlsEnabled is true.
                     type: string
+                  rolloutStrategy:
+                    description: |-
+                      RolloutStrategy defines how traffic is split between the stable and candidate revisions
+                      of the Capp when a new revision is rolled out.
+                    properties:
+                      autoRollback:
+                        description: |-
+                          AutoRollback rolls traffic back to the stable revision when the candidate reports Ready=False or
+                          misses the ProgressDeadline before it first becomes ready. When false, the rollout is marked Failed instead.
+                        type: boolean
+                      progressDeadline:
+                        description: |-
+                          ProgressDeadline is the maximum duration the candidate revision may take to first become ready.
+                          Defaults to 10m when unset.
+                        type: string
+                      stages:
+                        description: Stages is the ordered list of traffic stages
+                          the candidate revision goes through.
+                        items:
+                          description: RolloutStage defines a single traffic stage
+                            of a staged rollout.
+                          properties:
+                            duration:
+                              description: |-
+                                Duration is the minimum time the stage is held before advancing to the next stage. It is counted from when
+                                the operator observes that Knative serves the stage's traffic split, so the stage can last longer.
+                                Every stage except the last must set it. The last stage must not set it: a final stage at 100% promotes
+                                the candidate as soon as it is reached, and a final stage below 100% holds until it is promoted or aborted.
+                              type: string
+                            percent:
+                              description: Percent is the percentage of traffic routed
+                                to the candidate revision during this stage.
+                              format: int64
+                              maximum: 100
+                              minimum: 0
+                              type: integer
+                          required:
+                          - percent
+                          type: object
+                        minItems: 1
+                        type: array
+                    required:
+                    - stages
+                    type: object
                   routeTimeoutSeconds:
                     description: |-
                       RouteTimeoutSeconds is the maximum duration in seconds
@@ -9125,55 +9169,6 @@ spec:
                     description: TlsEnabled enables HTTPS and automatic certificate
                       management for hostname.
                     type: boolean
-                  trafficTarget:
-                    description: TrafficTarget holds a single entry of the routing
-                      table for the Capp route.
-                    properties:
-                      configurationName:
-                        description: |-
-                          ConfigurationName of a configuration to whose latest revision we will send
-                          this portion of traffic. When the "status.latestReadyRevisionName" of the
-                          referenced configuration changes, we will automatically migrate traffic
-                          from the prior "latest ready" revision to the new one.  This field is never
-                          set in Route's status, only its spec.  This is mutually exclusive with
-                          RevisionName.
-                        type: string
-                      latestRevision:
-                        description: |-
-                          LatestRevision may be optionally provided to indicate that the latest
-                          ready Revision of the Configuration should be used for this traffic
-                          target.  When provided LatestRevision must be true if RevisionName is
-                          empty; it must be false when RevisionName is non-empty.
-                        type: boolean
-                      percent:
-                        description: |-
-                          Percent indicates that percentage based routing should be used and
-                          the value indicates the percent of traffic that is be routed to this
-                          Revision or Configuration. `0` (zero) mean no traffic, `100` means all
-                          traffic.
-                          When percentage based routing is being used the follow rules apply:
-                          - the sum of all percent values must equal 100
-                          - when not specified, the implied value for `percent` is zero for
-                            that particular Revision or Configuration
-                        format: int64
-                        type: integer
-                      revisionName:
-                        description: |-
-                          RevisionName of a specific revision to which to send this portion of
-                          traffic.  This is mutually exclusive with ConfigurationName.
-                        type: string
-                      tag:
-                        description: |-
-                          Tag is optionally used to expose a dedicated url for referencing
-                          this target exclusively.
-                        type: string
-                      url:
-                        description: |-
-                          URL displays the URL for accessing named traffic targets. URL is displayed in
-                          status, and is disallowed on spec. URL must contain a scheme (e.g. http://) and
-                          a hostname, but may not contain anything else (e.g. basic auth, url path, etc.)
-                        type: string
-                    type: object
                 type: object
                 x-kubernetes-validations:
                 - message: hostname must be set when tlsEnabled is true
@@ -9750,6 +9745,107 @@ spec:
                       type: object
                   type: object
                 type: array
+              rollout:
+                description: Rollout shows the state of the staged rollout of the
+                  Capp.
+                properties:
+                  candidateReadyOnce:
+                    description: |-
+                      CandidateReadyOnce is true once the candidate revision has been Ready. The ProgressDeadline applies
+                      only until then.
+                    type: boolean
+                  candidateRevision:
+                    description: CandidateRevision is the name of the revision being
+                      rolled out.
+                    type: string
+                  candidateSince:
+                    description: |-
+                      CandidateSince is the start of the ProgressDeadline. It is the creation time of the candidate Revision,
+                      or the time of the retry after a retry. When the Revision could not be read, it falls back to the time
+                      the operator first saw the candidate, and moves to the creation time once the Revision is read.
+                    format: date-time
+                    type: string
+                  candidateSinceFallback:
+                    description: |-
+                      CandidateSinceFallback is true while CandidateSince is the time the operator first saw the candidate because
+                      its Revision could not be read. It is false once CandidateSince is the Revision's creation time or a retry time,
+                      so a later read of the Revision does not move a retry deadline back.
+                    type: boolean
+                  heldPercent:
+                    description: |-
+                      HeldPercent is the candidate's share of traffic while the rollout is held because the strategy was changed
+                      and no stage is at or below the share being served. The candidate keeps this share and never gets more
+                      until the user promotes, aborts or retries the rollout. A promotion keeps it too, so a failed promotion
+                      returns to this share. A failed promotion from a strategy whose only stage is 100% sets it to 0 instead, and
+                      the hold is cleared once the candidate recovers, unless a strategy edit during that fallback moves the
+                      rollout off the final 100% stage. A further strategy edit releases the hold only when a new stage is at or
+                      below the held share: the rollout moves to the last such stage and continues. Otherwise the hold stays, so
+                      traffic never increases as a direct result of the edit.
+                      Nil when the rollout follows its stages.
+                    format: int64
+                    type: integer
+                  message:
+                    description: Message is a human-readable description of the rollout
+                      state.
+                    type: string
+                  phase:
+                    description: Phase is the current phase of the rollout.
+                    type: string
+                  pinnedRevision:
+                    description: |-
+                      PinnedRevision is set when the strategy was removed while the candidate was not promoted. Traffic stays on
+                      the pinned stable revision until a newer revision is Ready. Empty otherwise.
+                    type: string
+                  promotionFallback:
+                    description: |-
+                      PromotionFallback is true while HeldPercent is the 0% hold that a failed promotion from a single 100% stage set.
+                      When the candidate recovers, the hold is lifted only if the rollout is still at the final 100% stage, so it
+                      promotes again. Otherwise, a strategy edit during the fallback has moved the rollout off that stage, and the hold
+                      stays until a user action or a further edit releases it, as described for HeldPercent. False otherwise.
+                    type: boolean
+                  stableRevision:
+                    description: StableRevision is the name of the revision currently
+                      considered stable.
+                    type: string
+                  stageIndex:
+                    description: StageIndex is the index of the current stage in RolloutStrategy.Stages.
+                    format: int32
+                    type: integer
+                  stageStartTime:
+                    description: |-
+                      StageStartTime is when the operator observed that Knative serves the current stage's traffic split.
+                      Nil until then, and cleared when the rollout moves to another stage.
+                      The stage duration is a minimum: the stage lasts at least that long, counted from this time.
+                      Operator downtime can make a stage longer, never shorter.
+                    format: date-time
+                    type: string
+                  traffic:
+                    description: Traffic is the observed traffic routing table of
+                      the stable and candidate revisions.
+                    items:
+                      description: RevisionTraffic describes the traffic share routed
+                        to a single revision.
+                      properties:
+                        percent:
+                          description: Percent is the percentage of traffic routed
+                            to the revision.
+                          format: int64
+                          type: integer
+                        revisionName:
+                          description: RevisionName is the name of the revision receiving
+                            traffic.
+                          type: string
+                        tag:
+                          description: Tag is the tag assigned to the revision in
+                            the traffic routing table.
+                          type: string
+                      required:
+                      - percent
+                      - revisionName
+                      - tag
+                      type: object
+                    type: array
+                type: object
               routeStatus:
                 description: |-
                   RouteStatus shows the state of the DomainMapping object linked to the Capp.
@@ -9769,6 +9865,12 @@ spec:
                               ARI stores the ACME Renewal Information that is fetched from the ACME server
                               in accordance with RFC 9773. This is only populated if the ARI feature gate is enabled.
                             properties:
+                              certID:
+                                description: |-
+                                  CertID is the ARI CertID (RFC 9773) of the certificate this renewal information was
+                                  fetched for. This is used to determine if we need to re-fetch the renewal information
+                                  as changed cert id means that ARI fetched before is stale.
+                                type: string
                               explanationURL:
                                 description: |-
                                   ExplanationURL is a human-readable URL that may explain why the suggested window

@@ -9294,6 +9294,51 @@ spec:
                               Hostname is the custom DNS name for the Capp route.
                               Required when tlsEnabled is true.
                             type: string
+                          rolloutStrategy:
+                            description: |-
+                              RolloutStrategy defines how traffic is split between the stable and candidate revisions
+                              of the Capp when a new revision is rolled out.
+                            properties:
+                              autoRollback:
+                                description: |-
+                                  AutoRollback rolls traffic back to the stable revision when the candidate reports Ready=False or
+                                  misses the ProgressDeadline before it first becomes ready. When false, the rollout is marked Failed instead.
+                                type: boolean
+                              progressDeadline:
+                                description: |-
+                                  ProgressDeadline is the maximum duration the candidate revision may take to first become ready.
+                                  Defaults to 10m when unset.
+                                type: string
+                              stages:
+                                description: Stages is the ordered list of traffic
+                                  stages the candidate revision goes through.
+                                items:
+                                  description: RolloutStage defines a single traffic
+                                    stage of a staged rollout.
+                                  properties:
+                                    duration:
+                                      description: |-
+                                        Duration is the minimum time the stage is held before advancing to the next stage. It is counted from when
+                                        the operator observes that Knative serves the stage's traffic split, so the stage can last longer.
+                                        Every stage except the last must set it. The last stage must not set it: a final stage at 100% promotes
+                                        the candidate as soon as it is reached, and a final stage below 100% holds until it is promoted or aborted.
+                                      type: string
+                                    percent:
+                                      description: Percent is the percentage of traffic
+                                        routed to the candidate revision during this
+                                        stage.
+                                      format: int64
+                                      maximum: 100
+                                      minimum: 0
+                                      type: integer
+                                  required:
+                                  - percent
+                                  type: object
+                                minItems: 1
+                                type: array
+                            required:
+                            - stages
+                            type: object
                           routeTimeoutSeconds:
                             description: |-
                               RouteTimeoutSeconds is the maximum duration in seconds
@@ -9304,55 +9349,6 @@ spec:
                             description: TlsEnabled enables HTTPS and automatic certificate
                               management for hostname.
                             type: boolean
-                          trafficTarget:
-                            description: TrafficTarget holds a single entry of the
-                              routing table for the Capp route.
-                            properties:
-                              configurationName:
-                                description: |-
-                                  ConfigurationName of a configuration to whose latest revision we will send
-                                  this portion of traffic. When the "status.latestReadyRevisionName" of the
-                                  referenced configuration changes, we will automatically migrate traffic
-                                  from the prior "latest ready" revision to the new one.  This field is never
-                                  set in Route's status, only its spec.  This is mutually exclusive with
-                                  RevisionName.
-                                type: string
-                              latestRevision:
-                                description: |-
-                                  LatestRevision may be optionally provided to indicate that the latest
-                                  ready Revision of the Configuration should be used for this traffic
-                                  target.  When provided LatestRevision must be true if RevisionName is
-                                  empty; it must be false when RevisionName is non-empty.
-                                type: boolean
-                              percent:
-                                description: |-
-                                  Percent indicates that percentage based routing should be used and
-                                  the value indicates the percent of traffic that is be routed to this
-                                  Revision or Configuration. `0` (zero) mean no traffic, `100` means all
-                                  traffic.
-                                  When percentage based routing is being used the follow rules apply:
-                                  - the sum of all percent values must equal 100
-                                  - when not specified, the implied value for `percent` is zero for
-                                    that particular Revision or Configuration
-                                format: int64
-                                type: integer
-                              revisionName:
-                                description: |-
-                                  RevisionName of a specific revision to which to send this portion of
-                                  traffic.  This is mutually exclusive with ConfigurationName.
-                                type: string
-                              tag:
-                                description: |-
-                                  Tag is optionally used to expose a dedicated url for referencing
-                                  this target exclusively.
-                                type: string
-                              url:
-                                description: |-
-                                  URL displays the URL for accessing named traffic targets. URL is displayed in
-                                  status, and is disallowed on spec. URL must contain a scheme (e.g. http://) and
-                                  a hostname, but may not contain anything else (e.g. basic auth, url path, etc.)
-                                type: string
-                            type: object
                         type: object
                         x-kubernetes-validations:
                         - message: hostname must be set when tlsEnabled is true

@@ -15,6 +15,7 @@ import (
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	cappmeta "github.com/dana-team/container-app-operator/internal/kinds/capp/cappmeta"
 	rmanagers "github.com/dana-team/container-app-operator/internal/kinds/capp/resourcemanagers"
+	"github.com/dana-team/container-app-operator/internal/kinds/capp/rollout"
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -125,6 +126,14 @@ func (c *CappValidator) handle(ctx context.Context, operation admissionv1.Operat
 	}
 
 	if err := validateScaleSpec(capp, config.Spec.AutoscaleConfig); err != nil {
+		return admission.Denied(err.Error())
+	}
+
+	if err := validateRolloutStrategy(capp); err != nil {
+		return admission.Denied(err.Error())
+	}
+
+	if err := validateRolloutAnnotation(capp); err != nil {
 		return admission.Denied(err.Error())
 	}
 
@@ -354,4 +363,51 @@ func isDomainNameTaken(ctx context.Context, domainName string) (bool, error) {
 		return false, err
 	}
 	return true, nil
+}
+
+// validateRolloutStrategy validates the staged rollout strategy of a Capp, if one is set.
+func validateRolloutStrategy(capp cappv1alpha1.Capp) error {
+	strategy := capp.Spec.RouteSpec.RolloutStrategy
+	if strategy == nil {
+		return nil
+	}
+
+	for i, stage := range strategy.Stages {
+		if i > 0 && stage.Percent <= strategy.Stages[i-1].Percent {
+			return fmt.Errorf("invalid rolloutStrategy: stage %d: percent %d must be greater than the previous stage's percent %d",
+				i, stage.Percent, strategy.Stages[i-1].Percent)
+		}
+		if i == len(strategy.Stages)-1 {
+			if stage.Duration != nil {
+				return fmt.Errorf("invalid rolloutStrategy: stage %d: duration must not be set on the last stage", i)
+			}
+			break
+		}
+		if stage.Duration == nil {
+			return fmt.Errorf("invalid rolloutStrategy: stage %d: duration is required on all but the last stage", i)
+		}
+		if stage.Duration.Duration <= 0 {
+			return fmt.Errorf("invalid rolloutStrategy: stage %d: duration must be positive", i)
+		}
+	}
+
+	if strategy.ProgressDeadline != nil && strategy.ProgressDeadline.Duration <= 0 {
+		return fmt.Errorf("invalid rolloutStrategy: progressDeadline must be positive")
+	}
+
+	return nil
+}
+
+// validateRolloutAnnotation rejects a rollout annotation whose value is not promote:<revision>, abort:<revision>
+// or retry:<revision>.
+func validateRolloutAnnotation(capp cappv1alpha1.Capp) error {
+	value, ok := capp.Annotations[cappmeta.RolloutAnnotationKey]
+	if !ok {
+		return nil
+	}
+	if action, _, valid := rollout.ParseAction(value); !valid || action == rollout.ActionNone {
+		return fmt.Errorf("invalid annotation %s: value %q must be %s:<revision>, %s:<revision> or %s:<revision>",
+			cappmeta.RolloutAnnotationKey, value, cappmeta.RolloutActionPromote, cappmeta.RolloutActionAbort, cappmeta.RolloutActionRetry)
+	}
+	return nil
 }

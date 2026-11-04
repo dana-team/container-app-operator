@@ -2,12 +2,14 @@ package resourcemanagers
 
 import (
 	"context"
+	"encoding/json"
 	"strconv"
 	"testing"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/cappmeta"
 	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/resourceclient"
+	"github.com/dana-team/container-app-operator/internal/kinds/capp/rollout"
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -19,7 +21,9 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/tools/events"
 	"k8s.io/utils/ptr"
+	"knative.dev/pkg/apis"
 	kautoscaling "knative.dev/serving/pkg/apis/autoscaling"
+	"knative.dev/serving/pkg/apis/config"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -105,6 +109,54 @@ func TestKnativeServiceManagerPrepareResource(t *testing.T) {
 		require.Equal(t, cappName, got.Spec.Template.Labels[cappmeta.CappResourceKey])
 		require.Equal(t, cappName, got.Labels[cappmeta.CappResourceKey])
 		require.Equal(t, cappmeta.CappKey, got.Labels[cappmeta.ManagedByLabelKey])
+	})
+
+	t.Run("leaves traffic to knative defaults without rollout strategy", func(t *testing.T) {
+		km, _ := newKsvcManager(newFakeClient(newKsvcScheme()))
+		capp := newKsvcCapp()
+		capp.Status.Rollout = &cappv1alpha1.RolloutStatus{Traffic: []cappv1alpha1.RevisionTraffic{
+			{RevisionName: "r1", Percent: 100, Tag: rollout.TagStable},
+		}}
+
+		got := km.prepareResource(capp, ctx)
+
+		want := knativev1.Service{}
+		want.Spec.RouteSpec.SetDefaults(ctx)
+		require.Equal(t, want.Spec.Traffic, got.Spec.Traffic)
+	})
+
+	t.Run("pins traffic to the stable revision after the strategy was removed", func(t *testing.T) {
+		km, _ := newKsvcManager(newFakeClient(newKsvcScheme()))
+		capp := newKsvcCapp()
+		capp.Status.Rollout = &cappv1alpha1.RolloutStatus{
+			StableRevision:    "r1",
+			CandidateRevision: "r2",
+			PinnedRevision:    "r1",
+			Traffic:           []cappv1alpha1.RevisionTraffic{{RevisionName: "r2", Percent: 50, Tag: rollout.TagCandidate}},
+		}
+
+		got := km.prepareResource(capp, ctx)
+
+		require.Equal(t, []knativev1.TrafficTarget{
+			{RevisionName: "r1", Percent: ptr.To(int64(100)), Tag: rollout.TagStable, LatestRevision: ptr.To(false)},
+		}, got.Spec.Traffic)
+	})
+
+	t.Run("applies rollout traffic split from status", func(t *testing.T) {
+		km, _ := newKsvcManager(newFakeClient(newKsvcScheme()))
+		capp := newKsvcCapp()
+		capp.Spec.RouteSpec.RolloutStrategy = &cappv1alpha1.RolloutStrategy{}
+		capp.Status.Rollout = &cappv1alpha1.RolloutStatus{Traffic: []cappv1alpha1.RevisionTraffic{
+			{RevisionName: "r1", Percent: 90, Tag: rollout.TagStable},
+			{RevisionName: "r2", Percent: 10, Tag: rollout.TagCandidate},
+		}}
+
+		got := km.prepareResource(capp, ctx)
+
+		require.Equal(t, []knativev1.TrafficTarget{
+			{RevisionName: "r1", Percent: ptr.To(int64(90)), Tag: rollout.TagStable, LatestRevision: ptr.To(false)},
+			{RevisionName: "r2", Percent: ptr.To(int64(10)), Tag: rollout.TagCandidate, LatestRevision: ptr.To(false)},
+		}, got.Spec.Traffic)
 	})
 
 	t.Run("sets route timeout on template", func(t *testing.T) {
@@ -358,4 +410,188 @@ func TestSetAutoScaler(t *testing.T) {
 		got := setAutoScaler(capp, defaults)
 		require.Empty(t, got)
 	})
+}
+
+func TestPrepareResourceTimeoutSeconds(t *testing.T) {
+	ctx := context.Background()
+	km, _ := newKsvcManager(newFakeClient(newKsvcScheme()))
+
+	tests := map[string]struct {
+		routeTimeout *int64
+		want         *int64
+	}{
+		"unset stays nil so the webhook applies the cluster default": {routeTimeout: nil, want: nil},
+		"zero stays nil because Knative treats it as unset":          {routeTimeout: ptr.To[int64](0), want: nil},
+		"set value is kept": {routeTimeout: ptr.To[int64](60), want: ptr.To[int64](60)},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			capp := newKsvcCapp()
+			capp.Spec.RouteSpec.RouteTimeoutSeconds = test.routeTimeout
+			ksvc := km.prepareResource(capp, ctx)
+			require.Equal(t, test.want, ksvc.Spec.Template.Spec.TimeoutSeconds)
+		})
+	}
+}
+
+func TestKnativeServiceManagerTemplateApplied(t *testing.T) {
+	ctx := context.Background()
+	km, _ := newKsvcManager(newFakeClient(newKsvcScheme()))
+	capp := newKsvcCapp()
+
+	t.Run("true when the Knative Service holds the desired template", func(t *testing.T) {
+		ksvc := km.prepareResource(capp, ctx)
+		require.True(t, km.TemplateApplied(ctx, capp, &ksvc))
+	})
+
+	t.Run("false when the image differs from the desired template", func(t *testing.T) {
+		ksvc := km.prepareResource(capp, ctx)
+		ksvc.Spec.Template.Spec.Containers[0].Image = "example.com/app:v0"
+		require.False(t, km.TemplateApplied(ctx, capp, &ksvc))
+	})
+
+	t.Run("true when only the traffic differs from the desired traffic", func(t *testing.T) {
+		ksvc := km.prepareResource(capp, ctx)
+		ksvc.Spec.Traffic = []knativev1.TrafficTarget{{RevisionName: "rev-1", Percent: ptr.To(int64(50))}}
+		require.True(t, km.TemplateApplied(ctx, capp, &ksvc))
+	})
+
+	t.Run("against a Knative Service defaulted by the webhook", func(t *testing.T) {
+		base := newKsvcCapp()
+		base.Annotations = map[string]string{"a": "1"}
+		base.Spec.ConfigurationSpec.Template.Spec.Containers[0].Env = []corev1.EnvVar{{Name: "A", Value: "1"}}
+		cfg := newWebhookConfig(ctx, t)
+
+		cases := []struct {
+			name        string
+			storedCapp  func(*cappv1alpha1.Capp)
+			desiredCapp func(*cappv1alpha1.Capp)
+			storedKsvc  func(*knativev1.Service)
+			want        bool
+		}{
+			{
+				name: "true when no timeout is set on the Capp",
+				want: true,
+			},
+			{
+				name:        "true when routeTimeoutSeconds is 600 on both sides",
+				storedCapp:  func(c *cappv1alpha1.Capp) { c.Spec.RouteSpec.RouteTimeoutSeconds = ptr.To(int64(600)) },
+				desiredCapp: func(c *cappv1alpha1.Capp) { c.Spec.RouteSpec.RouteTimeoutSeconds = ptr.To(int64(600)) },
+				want:        true,
+			},
+			{
+				name:        "true when routeTimeoutSeconds is 0 on both sides",
+				storedCapp:  func(c *cappv1alpha1.Capp) { c.Spec.RouteSpec.RouteTimeoutSeconds = ptr.To(int64(0)) },
+				desiredCapp: func(c *cappv1alpha1.Capp) { c.Spec.RouteSpec.RouteTimeoutSeconds = ptr.To(int64(0)) },
+				want:        true,
+			},
+			{
+				name: "true when the webhook adds a template annotation",
+				storedKsvc: func(s *knativev1.Service) {
+					s.Spec.Template.Annotations["webhook"] = "x"
+				},
+				want: true,
+			},
+			{
+				name: "true when the webhook appends a sidecar",
+				storedKsvc: func(s *knativev1.Service) {
+					s.Spec.Template.Spec.Containers = append(s.Spec.Template.Spec.Containers, corev1.Container{Name: "sidecar", Image: "example.com/sidecar:v1"})
+				},
+				want: true,
+			},
+			{
+				name: "false when the image differs",
+				desiredCapp: func(c *cappv1alpha1.Capp) {
+					c.Spec.ConfigurationSpec.Template.Spec.Containers[0].Image = "example.com/app:v2"
+				},
+				want: false,
+			},
+			{
+				name: "false when an env value differs",
+				desiredCapp: func(c *cappv1alpha1.Capp) {
+					c.Spec.ConfigurationSpec.Template.Spec.Containers[0].Env[0].Value = "2"
+				},
+				want: false,
+			},
+			{
+				name: "false when an env var is added to the desired template",
+				desiredCapp: func(c *cappv1alpha1.Capp) {
+					c.Spec.ConfigurationSpec.Template.Spec.Containers[0].Env = append(c.Spec.ConfigurationSpec.Template.Spec.Containers[0].Env, corev1.EnvVar{Name: "B", Value: "2"})
+				},
+				want: false,
+			},
+			{
+				name: "false when an annotation is added to the desired template",
+				desiredCapp: func(c *cappv1alpha1.Capp) {
+					c.Annotations["b"] = "2"
+				},
+				want: false,
+			},
+			{
+				name:        "false when routeTimeoutSeconds differs",
+				desiredCapp: func(c *cappv1alpha1.Capp) { c.Spec.RouteSpec.RouteTimeoutSeconds = ptr.To(int64(600)) },
+				want:        false,
+			},
+			{
+				name: "known gap: true when the last env var is removed from the desired template",
+				desiredCapp: func(c *cappv1alpha1.Capp) {
+					c.Spec.ConfigurationSpec.Template.Spec.Containers[0].Env = nil
+				},
+				want: true,
+			},
+			{
+				name: "known gap: true when an annotation is removed from the desired template",
+				desiredCapp: func(c *cappv1alpha1.Capp) {
+					c.Annotations = nil
+				},
+				want: true,
+			},
+		}
+
+		for _, tc := range cases {
+			t.Run(tc.name, func(t *testing.T) {
+				storedCapp := base.DeepCopy()
+				if tc.storedCapp != nil {
+					tc.storedCapp(storedCapp)
+				}
+				stored := storeLikeWebhook(ctx, t, km, *storedCapp, cfg)
+				if tc.storedKsvc != nil {
+					tc.storedKsvc(&stored)
+				}
+
+				desiredCapp := base.DeepCopy()
+				if tc.desiredCapp != nil {
+					tc.desiredCapp(desiredCapp)
+				}
+				require.Equal(t, tc.want, km.TemplateApplied(ctx, *desiredCapp, &stored))
+			})
+		}
+	})
+}
+
+// newWebhookConfig returns a Knative config with non-default cluster values that the Knative webhook applies when it
+// defaults a Service on create.
+func newWebhookConfig(ctx context.Context, t *testing.T) *config.Config {
+	t.Helper()
+	cfg := config.FromContextOrDefaults(ctx)
+	defaults, err := config.NewDefaultsConfigFromMap(map[string]string{"revision-cpu-request": "100m"})
+	require.NoError(t, err)
+	features, err := config.NewFeaturesConfigFromMap(map[string]string{"secure-pod-defaults": "enabled"})
+	require.NoError(t, err)
+	cfg.Defaults = defaults
+	cfg.Features = features
+	return cfg
+}
+
+// storeLikeWebhook returns the Knative Service the cluster would store for the Capp: the prepared resource is
+// round-tripped through JSON and defaulted by the real Knative Service defaulting on create.
+func storeLikeWebhook(ctx context.Context, t *testing.T, km KnativeServiceManager, capp cappv1alpha1.Capp, cfg *config.Config) knativev1.Service {
+	t.Helper()
+	desired := km.prepareResource(capp, ctx)
+	raw, err := json.Marshal(desired)
+	require.NoError(t, err)
+	var stored knativev1.Service
+	require.NoError(t, json.Unmarshal(raw, &stored))
+	stored.SetDefaults(config.ToContext(apis.WithinCreate(ctx), cfg))
+	return stored
 }

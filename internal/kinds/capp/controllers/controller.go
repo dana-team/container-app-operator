@@ -21,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	kapis "knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
+	"knative.dev/serving/pkg/apis/serving"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -96,6 +97,11 @@ func (r *CappReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			&knativev1.Service{},
 			handler.EnqueueRequestsFromMapFunc(r.findCappFromEvent),
 			builder.WithPredicates(knativeServiceWatchPredicate()),
+		).
+		Watches(
+			&knativev1.Revision{},
+			handler.EnqueueRequestsFromMapFunc(r.findCappFromRevision),
+			builder.WithPredicates(revisionWatchPredicate()),
 		).
 		Watches(
 			&knativev1beta1.DomainMapping{},
@@ -243,6 +249,27 @@ func kafkaSourceWatchPredicate() predicate.Predicate {
 	)
 }
 
+// revisionWatchPredicate triggers on Revision creation and deletion, and on changes to the Ready condition status.
+// A rollout reacts to a candidate that becomes unhealthy after it was first Ready, which the Knative Service does not report.
+func revisionWatchPredicate() predicate.Predicate {
+	return predicate.TypedFuncs[client.Object]{
+		CreateFunc: func(_ event.TypedCreateEvent[client.Object]) bool { return true },
+		DeleteFunc: func(_ event.TypedDeleteEvent[client.Object]) bool { return true },
+		UpdateFunc: func(e event.TypedUpdateEvent[client.Object]) bool {
+			oldObj, okOld := e.ObjectOld.(*knativev1.Revision)
+			newObj, okNew := e.ObjectNew.(*knativev1.Revision)
+			if !okOld || !okNew {
+				return false
+			}
+			return conditionStatusChanged(
+				knativeConditions(oldObj.Status.Conditions),
+				knativeConditions(newObj.Status.Conditions),
+				string(kapis.ConditionReady),
+			)
+		},
+	}
+}
+
 // cnameRecordWatchPredicate triggers on lifecycle changes that affect Capp flow.
 func cnameRecordWatchPredicate() predicate.Predicate {
 	return predicate.TypedFuncs[client.Object]{
@@ -366,6 +393,19 @@ func (r *CappReconciler) findCappFromEvent(ctx context.Context, object client.Ob
 	return []reconcile.Request{request}
 }
 
+// findCappFromRevision maps a Knative Revision to the Capp of the Knative Service that owns it, by the service label.
+func (r *CappReconciler) findCappFromRevision(ctx context.Context, object client.Object) []reconcile.Request {
+	serviceName := object.GetLabels()[serving.ServiceLabelKey]
+	if serviceName == "" {
+		return nil
+	}
+
+	return []reconcile.Request{{NamespacedName: types.NamespacedName{
+		Namespace: object.GetNamespace(),
+		Name:      serviceName,
+	}}}
+}
+
 // findCappsForCappConfig enqueues every Capp in the cluster when CappConfig changes.
 func (r *CappReconciler) findCappsForCappConfig(ctx context.Context, _ client.Object) []reconcile.Request {
 	logger := log.FromContext(ctx)
@@ -449,14 +489,24 @@ func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, fmt.Errorf("failed to ensure finalizer in Capp: %w", err)
 	}
 
+	requeueAfter, err := r.runRollout(ctx, &capp)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to run rollout: %w", err)
+	}
+
 	if err := r.SyncApplication(ctx, capp, resourceManagers, cappConfig, logger); err != nil {
 		if hasConflictError(err) {
 			logger.Info(fmt.Sprintf("Conflict detected, requeuing: %s", err.Error()))
 			return ctrl.Result{RequeueAfter: RequeueTime}, nil
 		}
+		if stderrors.Is(err, errRolloutAnnotationChanged) {
+			logger.Info("Rollout annotation changed during reconcile, requeuing")
+			return ctrl.Result{RequeueAfter: RequeueTime}, nil
+		}
 		return ctrl.Result{}, fmt.Errorf("failed to sync Capp: %w", err)
 	}
-	return ctrl.Result{}, nil
+
+	return ctrl.Result{RequeueAfter: requeueAfter}, nil
 }
 
 // SyncApplication manages the lifecycle of Capp.
@@ -475,6 +525,12 @@ func (r *CappReconciler) SyncApplication(ctx context.Context, capp cappv1alpha1.
 	}
 
 	if err := status.SyncStatus(ctx, capp, logger, r.Client, rmanagers.ManagerMap(resourceManagers), cappConfig, syncErrorsByManager); err != nil {
+		return err
+	}
+
+	// The rollout status is persisted at this point, so the action was consumed even if a manager failed below.
+	// A failed status write returns above and leaves the annotation for the next reconcile.
+	if err := r.removeRolloutAnnotation(ctx, &capp); err != nil {
 		return err
 	}
 

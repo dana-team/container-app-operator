@@ -45,6 +45,12 @@ const (
 	CappConditionEventingReady = "EventingReady"
 	CappConditionLoggingReady  = "LoggingReady"
 
+	// Rollout condition types, set on every Capp. They are not part of the Ready summary.
+	// Available is True when the revisions serving traffic can serve it.
+	// RolloutSucceeded is True when the latest revision has fully rolled out.
+	CappConditionAvailable        = "Available"
+	CappConditionRolloutSucceeded = "RolloutSucceeded"
+
 	// Reasons for the Ready condition.
 	CappReadyReasonReady            = "Ready"
 	CappReadyReasonDisabled         = "Disabled"
@@ -227,14 +233,163 @@ type RouteSpec struct {
 	// +optional
 	TlsEnabled bool `json:"tlsEnabled,omitempty"`
 
-	// TrafficTarget holds a single entry of the routing table for the Capp route.
-	// +optional
-	TrafficTarget knativev1.TrafficTarget `json:"trafficTarget,omitempty"`
-
 	// RouteTimeoutSeconds is the maximum duration in seconds
 	// that the request instance is allowed to respond to a request.
 	// +optional
 	RouteTimeoutSeconds *int64 `json:"routeTimeoutSeconds,omitempty"`
+
+	// RolloutStrategy defines how traffic is split between the stable and candidate revisions
+	// of the Capp when a new revision is rolled out.
+	// +optional
+	RolloutStrategy *RolloutStrategy `json:"rolloutStrategy,omitempty"`
+}
+
+// RolloutStrategy defines a staged rollout of a new Capp revision.
+type RolloutStrategy struct {
+	// Stages is the ordered list of traffic stages the candidate revision goes through.
+	// +kubebuilder:validation:MinItems=1
+	Stages []RolloutStage `json:"stages"`
+
+	// AutoRollback rolls traffic back to the stable revision when the candidate reports Ready=False or
+	// misses the ProgressDeadline before it first becomes ready. When false, the rollout is marked Failed instead.
+	// +optional
+	AutoRollback bool `json:"autoRollback,omitempty"`
+
+	// ProgressDeadline is the maximum duration the candidate revision may take to first become ready.
+	// Defaults to 10m when unset.
+	// +optional
+	ProgressDeadline *metav1.Duration `json:"progressDeadline,omitempty"`
+}
+
+// RolloutStage defines a single traffic stage of a staged rollout.
+type RolloutStage struct {
+	// Percent is the percentage of traffic routed to the candidate revision during this stage.
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=100
+	Percent int64 `json:"percent"`
+
+	// Duration is the minimum time the stage is held before advancing to the next stage. It is counted from when
+	// the operator observes that Knative serves the stage's traffic split, so the stage can last longer.
+	// Every stage except the last must set it. The last stage must not set it: a final stage at 100% promotes
+	// the candidate as soon as it is reached, and a final stage below 100% holds until it is promoted or aborted.
+	// +optional
+	Duration *metav1.Duration `json:"duration,omitempty"`
+}
+
+// RolloutPhase is the current phase of a staged rollout.
+type RolloutPhase string
+
+const (
+	// RolloutPhaseStable indicates that no rollout is in progress.
+	RolloutPhaseStable RolloutPhase = "Stable"
+
+	// RolloutPhaseProgressing indicates that the candidate revision is receiving traffic.
+	RolloutPhaseProgressing RolloutPhase = "Progressing"
+
+	// RolloutPhaseHolding indicates that the rollout is paused until the user promotes or aborts it. A rollout pauses
+	// at a final stage below 100%, or when a strategy change leaves no stage at or below the share the candidate
+	// serves. The second kind of hold can also be retried.
+	RolloutPhaseHolding RolloutPhase = "Holding"
+
+	// RolloutPhasePromoting indicates that the candidate revision receives all traffic and the operator is waiting
+	// for Knative to confirm that split before the candidate becomes the stable revision.
+	RolloutPhasePromoting RolloutPhase = "Promoting"
+
+	// RolloutPhaseFailed indicates that the candidate revision failed to roll out.
+	RolloutPhaseFailed RolloutPhase = "Failed"
+
+	// RolloutPhaseRolledBack indicates that the candidate revision was rolled back to the stable revision.
+	RolloutPhaseRolledBack RolloutPhase = "RolledBack"
+
+	// RolloutPhaseAborted indicates that the rollout was aborted by a user.
+	RolloutPhaseAborted RolloutPhase = "Aborted"
+)
+
+// RevisionTraffic describes the traffic share routed to a single revision.
+type RevisionTraffic struct {
+	// RevisionName is the name of the revision receiving traffic.
+	RevisionName string `json:"revisionName"`
+
+	// Percent is the percentage of traffic routed to the revision.
+	Percent int64 `json:"percent"`
+
+	// Tag is the tag assigned to the revision in the traffic routing table.
+	Tag string `json:"tag"`
+}
+
+// RolloutStatus shows the observed state of a staged rollout.
+type RolloutStatus struct {
+	// StableRevision is the name of the revision currently considered stable.
+	// +optional
+	StableRevision string `json:"stableRevision,omitempty"`
+
+	// CandidateRevision is the name of the revision being rolled out.
+	// +optional
+	CandidateRevision string `json:"candidateRevision,omitempty"`
+
+	// PinnedRevision is set when the strategy was removed while the candidate was not promoted. Traffic stays on
+	// the pinned stable revision until a newer revision is Ready. Empty otherwise.
+	// +optional
+	PinnedRevision string `json:"pinnedRevision,omitempty"`
+
+	// Phase is the current phase of the rollout.
+	// +optional
+	Phase RolloutPhase `json:"phase,omitempty"`
+
+	// StageIndex is the index of the current stage in RolloutStrategy.Stages.
+	// +optional
+	StageIndex int32 `json:"stageIndex,omitempty"`
+
+	// HeldPercent is the candidate's share of traffic while the rollout is held because the strategy was changed
+	// and no stage is at or below the share being served. The candidate keeps this share and never gets more
+	// until the user promotes, aborts or retries the rollout. A promotion keeps it too, so a failed promotion
+	// returns to this share. A failed promotion from a strategy whose only stage is 100% sets it to 0 instead, and
+	// the hold is cleared once the candidate recovers, unless a strategy edit during that fallback moves the
+	// rollout off the final 100% stage. A further strategy edit releases the hold only when a new stage is at or
+	// below the held share: the rollout moves to the last such stage and continues. Otherwise the hold stays, so
+	// traffic never increases as a direct result of the edit.
+	// Nil when the rollout follows its stages.
+	// +optional
+	HeldPercent *int64 `json:"heldPercent,omitempty"`
+
+	// PromotionFallback is true while HeldPercent is the 0% hold that a failed promotion from a single 100% stage set.
+	// When the candidate recovers, the hold is lifted only if the rollout is still at the final 100% stage, so it
+	// promotes again. Otherwise, a strategy edit during the fallback has moved the rollout off that stage, and the hold
+	// stays until a user action or a further edit releases it, as described for HeldPercent. False otherwise.
+	// +optional
+	PromotionFallback bool `json:"promotionFallback,omitempty"`
+
+	// StageStartTime is when the operator observed that Knative serves the current stage's traffic split.
+	// Nil until then, and cleared when the rollout moves to another stage.
+	// The stage duration is a minimum: the stage lasts at least that long, counted from this time.
+	// Operator downtime can make a stage longer, never shorter.
+	// +optional
+	StageStartTime *metav1.Time `json:"stageStartTime,omitempty"`
+
+	// CandidateSince is the start of the ProgressDeadline. It is the creation time of the candidate Revision,
+	// or the time of the retry after a retry. When the Revision could not be read, it falls back to the time
+	// the operator first saw the candidate, and moves to the creation time once the Revision is read.
+	// +optional
+	CandidateSince *metav1.Time `json:"candidateSince,omitempty"`
+
+	// CandidateSinceFallback is true while CandidateSince is the time the operator first saw the candidate because
+	// its Revision could not be read. It is false once CandidateSince is the Revision's creation time or a retry time,
+	// so a later read of the Revision does not move a retry deadline back.
+	// +optional
+	CandidateSinceFallback bool `json:"candidateSinceFallback,omitempty"`
+
+	// CandidateReadyOnce is true once the candidate revision has been Ready. The ProgressDeadline applies
+	// only until then.
+	// +optional
+	CandidateReadyOnce bool `json:"candidateReadyOnce,omitempty"`
+
+	// Traffic is the observed traffic routing table of the stable and candidate revisions.
+	// +optional
+	Traffic []RevisionTraffic `json:"traffic,omitempty"`
+
+	// Message is a human-readable description of the rollout state.
+	// +optional
+	Message string `json:"message,omitempty"`
 }
 
 type LogType string
@@ -414,6 +569,10 @@ type CappStatus struct {
 	// Conditions contain details about the current state of the Capp.
 	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
+
+	// Rollout shows the state of the staged rollout of the Capp.
+	// +optional
+	Rollout *RolloutStatus `json:"rollout,omitempty"`
 }
 
 // +kubebuilder:object:root=true

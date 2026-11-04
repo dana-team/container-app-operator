@@ -17,6 +17,3 @@ spec:
   routeSpec:
     hostname: hello-route.example.com
     tlsEnabled: true
-    trafficTarget:
-      percent: 100
-      latestRevision: true

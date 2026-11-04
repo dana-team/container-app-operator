@@ -90,6 +90,7 @@ func SyncStatus(ctx context.Context, capp cappv1alpha1.Capp, log logr.Logger, r 
 	}
 
 	oldStatus := cappObject.Status.DeepCopy()
+	cappObject.Status.Rollout = capp.Status.Rollout.DeepCopy()
 
 	if err := buildDeprecatedStatus(ctx, &cappObject.Status, capp, log, r, resourceManagers, cappConfig); err != nil {
 		return err
@@ -178,6 +179,13 @@ func setStatusConditions(ctx context.Context, k8sClient client.Client, status *c
 		meta.SetStatusCondition(&status.Conditions, cond)
 	}
 
+	// templates is nil when the Knative Service has no manager that can check its template. The rollout is then never
+	// confirmed, because the template of the Knative Service cannot be compared with the desired one.
+	templates, _ := resourceManagers[rmanagers.KnativeService].(templateApplier)
+	if err := setRolloutConditions(ctx, k8sClient, status, capp, syncErrors[rmanagers.KnativeService], templates); err != nil {
+		return err
+	}
+
 	ready := computeReadyCondition(capp, status.Conditions)
 	ready.ObservedGeneration = capp.Generation
 	meta.SetStatusCondition(&status.Conditions, ready)
@@ -222,11 +230,7 @@ func computeCapabilityCondition(ctx context.Context, k8sClient client.Client, cp
 	if err != nil {
 		return metav1.Condition{}, err
 	}
-	if cond == nil {
-		return metav1.Condition{Type: cp.conditionType, Status: metav1.ConditionTrue, Reason: cappv1alpha1.CapabilityReasonReady}, nil
-	}
-	cond.Type = cp.conditionType
-	return *cond, nil
+	return conditionFromCheck(cp.conditionType, cond), nil
 }
 
 // computeReadyCondition computes Ready from the capability conditions:

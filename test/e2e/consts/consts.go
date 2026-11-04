@@ -55,6 +55,13 @@ const (
 	ServiceAccountName              = "test-user"
 	ExcludedServiceAccountName      = "excluded-sa"
 	ExcludedServiceAccountNamespace = "container-app-operator-system"
+	ImageExampleLatest              = "danateam/autoscale-go:latest"
+	UnpullableImage                 = "invalid.invalid/does-not-exist:v0"
+	RolloutStageDuration            = 15 * time.Second
+	RolloutProgressDeadline         = 30 * time.Second
+	RolloutPromoteAction            = "promote"
+	RolloutAbortAction              = "abort"
+	RolloutRetryAction              = "retry"
 )
 
 var (
@@ -64,4 +71,5 @@ var (
 	ManagedByLabelKey          = CappAPIGroup + "/managed-by"
 	LastUpdatedByAnnotationKey = CappAPIGroup + "/last-updated-by"
 	CappNameLabelKey           = CappAPIGroup + "/cappName"
+	RolloutAnnotationKey       = CappAPIGroup + "/rollout"
 )

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
+	"time"
 
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	cappmeta "github.com/dana-team/container-app-operator/internal/kinds/capp/cappmeta"
@@ -939,5 +940,138 @@ func newCappValidator(t *testing.T, scheme *runtime.Scheme, decoder admission.De
 	return &CappValidator{
 		Client:  fakeClient,
 		Decoder: decoder,
+	}
+}
+
+func TestValidateRolloutStrategy(t *testing.T) {
+	dur := func(d time.Duration) *metav1.Duration { return &metav1.Duration{Duration: d} }
+	tests := []struct {
+		name     string
+		strategy *cappv1alpha1.RolloutStrategy
+		wantErr  string
+	}{
+		{name: "nil strategy"},
+		{
+			name: "canary",
+			strategy: &cappv1alpha1.RolloutStrategy{Stages: []cappv1alpha1.RolloutStage{
+				{Percent: 10, Duration: dur(5 * time.Minute)},
+				{Percent: 50, Duration: dur(10 * time.Minute)},
+				{Percent: 100},
+			}},
+		},
+		{
+			name:     "steady split",
+			strategy: &cappv1alpha1.RolloutStrategy{Stages: []cappv1alpha1.RolloutStage{{Percent: 50}}},
+		},
+		{
+			name:     "blue-green",
+			strategy: &cappv1alpha1.RolloutStrategy{Stages: []cappv1alpha1.RolloutStage{{Percent: 0}}},
+		},
+		{
+			name:     "missing duration on non-final stage",
+			strategy: &cappv1alpha1.RolloutStrategy{Stages: []cappv1alpha1.RolloutStage{{Percent: 10}, {Percent: 100}}},
+			wantErr:  "stage 0: duration is required on all but the last stage",
+		},
+		{
+			name:     "zero duration on non-final stage",
+			strategy: &cappv1alpha1.RolloutStrategy{Stages: []cappv1alpha1.RolloutStage{{Percent: 10, Duration: dur(0)}, {Percent: 100}}},
+			wantErr:  "stage 0: duration must be positive",
+		},
+		{
+			name: "negative progressDeadline",
+			strategy: &cappv1alpha1.RolloutStrategy{
+				Stages:           []cappv1alpha1.RolloutStage{{Percent: 100}},
+				ProgressDeadline: dur(-time.Minute),
+			},
+			wantErr: "progressDeadline must be positive",
+		},
+		{
+			name: "decreasing percents",
+			strategy: &cappv1alpha1.RolloutStrategy{Stages: []cappv1alpha1.RolloutStage{
+				{Percent: 50, Duration: dur(5 * time.Minute)},
+				{Percent: 10, Duration: dur(5 * time.Minute)},
+				{Percent: 100},
+			}},
+			wantErr: "stage 1: percent 10 must be greater than the previous stage's percent 50",
+		},
+		{
+			name: "equal percents",
+			strategy: &cappv1alpha1.RolloutStrategy{Stages: []cappv1alpha1.RolloutStage{
+				{Percent: 10, Duration: dur(5 * time.Minute)},
+				{Percent: 10, Duration: dur(5 * time.Minute)},
+				{Percent: 100},
+			}},
+			wantErr: "stage 1: percent 10 must be greater than the previous stage's percent 10",
+		},
+		{
+			name: "100 before the last stage",
+			strategy: &cappv1alpha1.RolloutStrategy{Stages: []cappv1alpha1.RolloutStage{
+				{Percent: 100, Duration: dur(5 * time.Minute)},
+				{Percent: 50},
+			}},
+			wantErr: "stage 1: percent 50 must be greater than the previous stage's percent 100",
+		},
+		{
+			name: "duration on a final 100% stage",
+			strategy: &cappv1alpha1.RolloutStrategy{Stages: []cappv1alpha1.RolloutStage{
+				{Percent: 10, Duration: dur(5 * time.Minute)},
+				{Percent: 100, Duration: dur(5 * time.Minute)},
+			}},
+			wantErr: "stage 1: duration must not be set on the last stage",
+		},
+		{
+			name:     "duration on a final 50% stage",
+			strategy: &cappv1alpha1.RolloutStrategy{Stages: []cappv1alpha1.RolloutStage{{Percent: 50, Duration: dur(5 * time.Minute)}}},
+			wantErr:  "stage 0: duration must not be set on the last stage",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			capp := cappv1alpha1.Capp{Spec: cappv1alpha1.CappSpec{RouteSpec: cappv1alpha1.RouteSpec{RolloutStrategy: tc.strategy}}}
+			err := validateRolloutStrategy(capp)
+			if tc.wantErr == "" {
+				assert.NoError(t, err)
+				return
+			}
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tc.wantErr)
+		})
+	}
+}
+
+func TestValidateRolloutAnnotation(t *testing.T) {
+	tests := []struct {
+		name       string
+		annotation *string
+		wantErr    bool
+	}{
+		{name: "no annotation"},
+		{name: "promote with revision", annotation: ptr.To("promote:r2")},
+		{name: "abort with revision", annotation: ptr.To("abort:r2")},
+		{name: "retry with revision", annotation: ptr.To("retry:r2")},
+		{name: "bare retry", annotation: ptr.To("retry"), wantErr: true},
+		{name: "empty retry revision", annotation: ptr.To("retry:"), wantErr: true},
+		{name: "bare promote", annotation: ptr.To("promote"), wantErr: true},
+		{name: "bare abort", annotation: ptr.To("abort"), wantErr: true},
+		{name: "empty revision", annotation: ptr.To("promote:"), wantErr: true},
+		{name: "empty value", annotation: ptr.To(""), wantErr: true},
+		{name: "unknown action", annotation: ptr.To("promot:r2"), wantErr: true},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			capp := cappv1alpha1.Capp{}
+			if tc.annotation != nil {
+				capp.Annotations = map[string]string{cappmeta.RolloutAnnotationKey: *tc.annotation}
+			}
+			err := validateRolloutAnnotation(capp)
+			if tc.wantErr {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), cappmeta.RolloutAnnotationKey)
+				return
+			}
+			assert.NoError(t, err)
+		})
 	}
 }
