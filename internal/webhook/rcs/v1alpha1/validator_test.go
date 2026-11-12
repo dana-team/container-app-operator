@@ -232,8 +232,7 @@ func TestCappValidatorHandle(t *testing.T) {
 		withLookupHost(t, lookupHostTaken)
 		validator := newCappValidator(t, scheme, decoder)
 
-		capp := newCapp("taken.example.com")
-		capp.Annotations = map[string]string{cappmeta.SkipDNSCheckAnnotationKey: "true"}
+		capp := withSkipDNSCheck(newCapp("taken.example.com"))
 		raw, err := json.Marshal(capp)
 		require.NoError(t, err)
 
@@ -842,7 +841,7 @@ func TestValidateDomainName(t *testing.T) {
 	}{
 		{
 			name:            "Valid domain matching specific pattern",
-			domainName:      "myapp.example.com",
+			domainName:      exampleHostname,
 			allowedPatterns: []cappv1alpha1.HostnamePattern{{Match: allowedHostnamePattern}},
 			wantErr:         false,
 		},
@@ -861,7 +860,7 @@ func TestValidateDomainName(t *testing.T) {
 		},
 		{
 			name:            "Empty allowed patterns (deny all)",
-			domainName:      "myapp.example.com",
+			domainName:      exampleHostname,
 			allowedPatterns: []cappv1alpha1.HostnamePattern{},
 			wantErr:         true,
 			errContains:     errMustMatchAllowedPatterns,
@@ -869,13 +868,13 @@ func TestValidateDomainName(t *testing.T) {
 		{
 			name:            "Multiple patterns, one match",
 			domainName:      "myapp.org",
-			allowedPatterns: []cappv1alpha1.HostnamePattern{{Match: `.*\.com`}, {Match: `.*\.org`}},
+			allowedPatterns: []cappv1alpha1.HostnamePattern{{Match: comPattern}, {Match: orgPattern}},
 			wantErr:         false,
 		},
 		{
 			name:            "Multiple patterns, no match",
 			domainName:      "myapp.net",
-			allowedPatterns: []cappv1alpha1.HostnamePattern{{Match: `.*\.com`}, {Match: `.*\.org`}},
+			allowedPatterns: []cappv1alpha1.HostnamePattern{{Match: comPattern}, {Match: orgPattern}},
 			wantErr:         true,
 			errContains:     errMustMatchAllowedPatterns,
 		},
@@ -911,11 +910,58 @@ func TestValidateDomainName(t *testing.T) {
 			wantErr:         true,
 			errContains:     allowedHostnamePattern,
 		},
+		{
+			name:            "Pattern must match the whole hostname, not a suffix of it",
+			domainName:      "myapp.example.com.attacker.net",
+			allowedPatterns: []cappv1alpha1.HostnamePattern{{Match: allowedHostnamePattern}},
+			wantErr:         true,
+			errContains:     errMustMatchAllowedPatterns,
+		},
+		{
+			name:            "Pattern must match the whole hostname, not a prefix of it",
+			domainName:      "evil-myapp.org",
+			allowedPatterns: []cappv1alpha1.HostnamePattern{{Match: `myapp\.org`}},
+			wantErr:         true,
+			errContains:     errMustMatchAllowedPatterns,
+		},
+		{
+			name:            "Alternation is anchored as a whole",
+			domainName:      "myapp.org.attacker.net",
+			allowedPatterns: []cappv1alpha1.HostnamePattern{{Match: `.*\.com|.*\.org`}},
+			wantErr:         true,
+			errContains:     errMustMatchAllowedPatterns,
+		},
+		{
+			name:            "Alternation matches either branch fully",
+			domainName:      "myapp.org",
+			allowedPatterns: []cappv1alpha1.HostnamePattern{{Match: `.*\.com|.*\.org`}},
+			wantErr:         false,
+		},
+		{
+			name:            "Already anchored pattern still works",
+			domainName:      exampleHostname,
+			allowedPatterns: []cappv1alpha1.HostnamePattern{{Match: `^.*\.example\.com$`}},
+			wantErr:         false,
+		},
+		{
+			name:            "Invalid regex pattern is reported and skipped",
+			domainName:      exampleHostname,
+			allowedPatterns: []cappv1alpha1.HostnamePattern{{Match: `(`}},
+			wantErr:         true,
+			errContains:     "allowedHostnamePatterns[0].match",
+		},
+		{
+			name:            "Invalid regex pattern is reported even when a later pattern matches",
+			domainName:      exampleHostname,
+			allowedPatterns: []cappv1alpha1.HostnamePattern{{Match: `(`}, {Match: allowedHostnamePattern}},
+			wantErr:         true,
+			errContains:     `invalid pattern "("`,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			errs := validateDomainName(tt.domainName, tt.allowedPatterns)
+			errs := validateDomainName(tt.domainName, compileHostnamePatterns(tt.allowedPatterns))
 			if tt.wantErr {
 				assert.NotNil(t, errs)
 				if tt.errContains != "" {
