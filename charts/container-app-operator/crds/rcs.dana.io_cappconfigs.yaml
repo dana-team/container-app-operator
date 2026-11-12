@@ -55,7 +55,10 @@ spec:
                       maxLength: 100
                       type: string
                     match:
-                      description: Match is a regex used to match Capp hostnames.
+                      description: |-
+                        Match is a regex used to match Capp hostnames.
+                        The regex is anchored, so it must match the whole hostname (e.g. ".*\.example\.com"
+                        does not match "app.example.com.other.net").
                       minLength: 1
                       type: string
                   required:
