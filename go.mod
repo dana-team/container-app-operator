@@ -27,7 +27,7 @@ require (
 	knative.dev/eventing v0.51.0
 	knative.dev/eventing-kafka-broker v0.50.2
 	knative.dev/pkg v0.0.0-20261026113028-cfa0ac991c5a
-	knative.dev/serving v0.50.0
+	knative.dev/serving v0.51.0
 	sigs.k8s.io/controller-runtime v0.25.2
 )
 
@@ -390,7 +390,7 @@ require (
 	k8s.io/klog/v2 v2.140.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20260721132016-d427ff9ee9ad // indirect
 	k8s.io/streaming v0.37.2 // indirect
-	knative.dev/networking v0.0.0-20260727162500-c7a7b772cac9 // indirect
+	knative.dev/networking v0.0.0-20261026130131-cfc431598730 // indirect
 	mvdan.cc/gofumpt v0.12.0 // indirect
 	mvdan.cc/unparam v0.0.0-20260823230713-2fa3d841b0c8 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.36.0 // indirect
