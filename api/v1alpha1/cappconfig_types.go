@@ -8,6 +8,8 @@ import (
 // HostnamePattern defines a regex pattern for validating Capp hostnames.
 type HostnamePattern struct {
 	// Match is a regex used to match Capp hostnames.
+	// The regex is anchored, so it must match the whole hostname (e.g. ".*\.example\.com"
+	// does not match "app.example.com.other.net").
 	// +kubebuilder:validation:MinLength=1
 	Match string `json:"match"`
 	// Explanation is a human-readable description shown in webhook error messages.

@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"sync"
 
 	"github.com/cloudevents/sdk-go/v2/event"
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
@@ -46,6 +47,59 @@ type CappValidator struct {
 	Client  client.Client
 	Decoder admission.Decoder
 	Log     logr.Logger
+
+	// hostnamePatterns caches the compiled CappConfig allowedHostnamePatterns so they are
+	// recompiled only when the patterns change, not on every admission request.
+	hostnamePatterns hostnamePatternCache
+}
+
+// compiledHostnamePattern is a HostnamePattern together with its compiled, anchored regex.
+// err is set instead of re when the pattern is not a valid regex.
+type compiledHostnamePattern struct {
+	pattern cappv1alpha1.HostnamePattern
+	re      *regexp.Regexp
+	err     error
+}
+
+// hostnamePatternCache holds the compiled form of the most recently seen allowedHostnamePatterns.
+// It is keyed by the pattern list itself, so it stays correct across CappConfig updates and
+// delete/recreate cycles without relying on object metadata. It is safe for concurrent use.
+type hostnamePatternCache struct {
+	mu       sync.RWMutex
+	valid    bool
+	source   []cappv1alpha1.HostnamePattern
+	compiled []compiledHostnamePattern
+}
+
+// get returns the compiled form of patterns, compiling them only if they differ from the cached ones.
+func (c *hostnamePatternCache) get(patterns []cappv1alpha1.HostnamePattern) []compiledHostnamePattern {
+	c.mu.RLock()
+	if c.valid && slices.Equal(c.source, patterns) {
+		compiled := c.compiled
+		c.mu.RUnlock()
+		return compiled
+	}
+	c.mu.RUnlock()
+
+	compiled := compileHostnamePatterns(patterns)
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.source = slices.Clone(patterns)
+	c.compiled = compiled
+	c.valid = true
+	return compiled
+}
+
+// compileHostnamePatterns compiles each pattern anchored as ^(?:pattern)$, so a pattern must match
+// the whole hostname rather than any substring of it.
+func compileHostnamePatterns(patterns []cappv1alpha1.HostnamePattern) []compiledHostnamePattern {
+	compiled := make([]compiledHostnamePattern, len(patterns))
+	for i, hp := range patterns {
+		re, err := regexp.Compile("^(?:" + hp.Match + ")$")
+		compiled[i] = compiledHostnamePattern{pattern: hp, re: re, err: err}
+	}
+	return compiled
 }
 
 // +kubebuilder:webhook:path=/validate-capp,mutating=false,sideEffects=None,failurePolicy=fail,groups=rcs.dana.io,resources=capps,verbs=create;update,versions=v1alpha1,name=capp.validate.rcs.dana.io,admissionReviewVersions=v1;v1beta1
@@ -83,16 +137,12 @@ func (c *CappValidator) handle(ctx context.Context, operation admissionv1.Operat
 		return admission.Denied("Failed to fetch CappConfig")
 	}
 
-	var allowedHostnamePatterns []cappv1alpha1.HostnamePattern
-	if config.Spec.AllowedHostnamePatterns != nil {
-		allowedHostnamePatterns = config.Spec.AllowedHostnamePatterns
-	}
-
 	if err := validateHostnameImmutability(operation, capp, oldCapp); err != nil {
 		return admission.Denied(err.Error())
 	}
 
 	if operation == admissionv1.Create || capp.Spec.RouteSpec.Hostname != oldCapp.Spec.RouteSpec.Hostname {
+		allowedHostnamePatterns := c.hostnamePatterns.get(config.Spec.AllowedHostnamePatterns)
 		if errs := validateDomainName(capp.Spec.RouteSpec.Hostname, allowedHostnamePatterns); errs != nil {
 			return admission.Denied(errs.Error())
 		}
@@ -309,8 +359,9 @@ func validatePingSourceConfiguration(ctx context.Context, cfg *cappv1alpha1.Ping
 	return nil
 }
 
-// validateDomainName checks if the hostname is valid domain name and not part of the cluster's domain.
-func validateDomainName(domainName string, allowedPatterns []cappv1alpha1.HostnamePattern) (errs *apis.FieldError) {
+// validateDomainName checks that the hostname is a valid domain name, fully matches one of the
+// allowed patterns, and is not part of the cluster's domain.
+func validateDomainName(domainName string, allowedPatterns []compiledHostnamePattern) (errs *apis.FieldError) {
 	if domainName == "" {
 		return nil
 	}
@@ -321,10 +372,10 @@ func validateDomainName(domainName string, allowedPatterns []cappv1alpha1.Hostna
 	}
 	matched := false
 	descriptions := make([]string, 0, len(allowedPatterns))
-	for i, hp := range allowedPatterns {
-		re, err := regexp.Compile(hp.Match)
-		if err != nil {
-			errs = errs.Also(apis.ErrGeneric(fmt.Sprintf("invalid pattern %q: %s", hp.Match, err), fmt.Sprintf("allowedHostnamePatterns[%d].pattern", i)))
+	for i, cp := range allowedPatterns {
+		hp := cp.pattern
+		if cp.err != nil {
+			errs = errs.Also(apis.ErrGeneric(fmt.Sprintf("invalid pattern %q: %s", hp.Match, cp.err), fmt.Sprintf("allowedHostnamePatterns[%d].match", i)))
 			continue
 		}
 		if hp.Explanation != "" {
@@ -332,7 +383,7 @@ func validateDomainName(domainName string, allowedPatterns []cappv1alpha1.Hostna
 		} else {
 			descriptions = append(descriptions, hp.Match)
 		}
-		if !matched && re.MatchString(domainName) {
+		if cp.re.MatchString(domainName) {
 			matched = true
 			break
 		}

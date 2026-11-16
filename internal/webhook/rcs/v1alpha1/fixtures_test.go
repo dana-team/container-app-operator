@@ -40,6 +40,9 @@ const (
 	missingRequiredKeyMessage = "missing required key"
 
 	allowedHostnamePattern      = `.*\.example\.com`
+	comPattern                  = `.*\.com`
+	orgPattern                  = `.*\.org`
+	exampleHostname             = "myapp.example.com"
 	nonMatchingHostname         = "myapp.other.com"
 	errMustMatchAllowedPatterns = "must match one of the allowed patterns"
 )
@@ -84,6 +87,15 @@ func newCapp(hostname string) *cappv1alpha1.Capp {
 			},
 		},
 	}
+}
+
+// withSkipDNSCheck marks capp so the validator skips the hostname DNS uniqueness lookup.
+func withSkipDNSCheck(capp *cappv1alpha1.Capp) *cappv1alpha1.Capp {
+	if capp.Annotations == nil {
+		capp.Annotations = map[string]string{}
+	}
+	capp.Annotations[cappmeta.SkipDNSCheckAnnotationKey] = "true"
+	return capp
 }
 
 func newDefaultResources() corev1.ResourceRequirements {

@@ -148,7 +148,7 @@ config:
 
   allowedHostnamePatterns:
     # -- A list of hostname patterns that Capp workload hostnames must match.
-    # Each entry has a required `pattern` (regex) and an optional `explanation` shown in webhook error messages.
+    # Each entry has a required `match` (regex, anchored so it must match the whole hostname) and an optional `explanation` shown in webhook error messages.
     - match: ".*"
       explanation: "any hostname"
 

@@ -174,8 +174,9 @@ spec:
       cpu: "1"
       memory: "1Gi"
   allowedHostnamePatterns:
-    - regex: ".*\\.apps\\.capp-zone\\.com"
-    - regex: ".*\\.internal\\.capp-zone\\.com"
+    - match: ".*\\.apps\\.capp-zone\\.com"
+      explanation: "subdomains of apps.capp-zone.com"
+    - match: ".*\\.internal\\.capp-zone\\.com"
 
 ```
 
