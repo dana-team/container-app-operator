@@ -42,8 +42,6 @@ import (
 	rclient "github.com/dana-team/container-app-operator/internal/kinds/capp/resourceclient"
 	rmanagers "github.com/dana-team/container-app-operator/internal/kinds/capp/resourcemanagers"
 	"github.com/go-logr/logr"
-	kafkasourcev1 "knative.dev/eventing-kafka-broker/control-plane/pkg/apis/sources/v1"
-	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
@@ -77,8 +75,6 @@ type CappReconciler struct {
 // +kubebuilder:rbac:groups="nfspvc.dana.io",resources=nfspvcs,verbs=get;list;watch;update;create;delete
 // +kubebuilder:rbac:groups="record.dns-v2.m.crossplane.io",resources=cnamerecords,verbs=get;list;watch;update;create;delete
 // +kubebuilder:rbac:groups="cert-manager.io",resources=certificates,verbs=get;list;watch;update;create;delete
-// +kubebuilder:rbac:groups="sources.knative.dev",resources=pingsources,verbs=get;list;watch;update;create;delete
-// +kubebuilder:rbac:groups="sources.knative.dev",resources=kafkasources,verbs=get;list;watch;update;create;delete
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *CappReconciler) SetupWithManager(mgr ctrl.Manager) error {
@@ -133,14 +129,6 @@ func (r *CappReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			handler.EnqueueRequestsFromMapFunc(r.findCappFromLabels),
 			builder.WithPredicates(nfsPvcWatchPredicate()),
 		).
-		Watches(
-			&sourcesv1.PingSource{},
-			handler.EnqueueRequestsFromMapFunc(r.findCappFromLabels),
-			builder.WithPredicates(pingSourceWatchPredicate())).
-		Watches(
-			&kafkasourcev1.KafkaSource{},
-			handler.EnqueueRequestsFromMapFunc(r.findCappFromLabels),
-			builder.WithPredicates(kafkaSourceWatchPredicate())).
 		Watches(
 			&cappv1alpha1.CappConfig{},
 			handler.EnqueueRequestsFromMapFunc(r.findCappsForCappConfig),
@@ -204,48 +192,6 @@ func syslogNGOutputWatchPredicate() predicate.Predicate {
 	return predicate.Or(
 		predicate.GenerationChangedPredicate{},
 		statusChangedPredicate(func(output *loggingv1beta1.SyslogNGOutput) any { return output.Status }),
-	)
-}
-
-// pingSourceWatchPredicate triggers on spec changes (generation), Ready condition changes or observed generation changes.
-func pingSourceWatchPredicate() predicate.Predicate {
-	return predicate.Or(
-		predicate.GenerationChangedPredicate{},
-		predicate.TypedFuncs[client.Object]{
-			UpdateFunc: func(e event.TypedUpdateEvent[client.Object]) bool {
-				oldObj, okOld := e.ObjectOld.(*sourcesv1.PingSource)
-				newObj, okNew := e.ObjectNew.(*sourcesv1.PingSource)
-				if !okOld || !okNew {
-					return false
-				}
-				return conditionStatusChanged(
-					knativeConditions(oldObj.Status.Conditions),
-					knativeConditions(newObj.Status.Conditions),
-					string(sourcesv1.PingSourceConditionReady),
-				) || oldObj.Status.ObservedGeneration != newObj.Status.ObservedGeneration
-			},
-		},
-	)
-}
-
-// kafkaSourceWatchPredicate triggers on spec changes (generation), Ready condition changes or observed generation changes.
-func kafkaSourceWatchPredicate() predicate.Predicate {
-	return predicate.Or(
-		predicate.GenerationChangedPredicate{},
-		predicate.TypedFuncs[client.Object]{
-			UpdateFunc: func(e event.TypedUpdateEvent[client.Object]) bool {
-				oldObj, okOld := e.ObjectOld.(*kafkasourcev1.KafkaSource)
-				newObj, okNew := e.ObjectNew.(*kafkasourcev1.KafkaSource)
-				if !okOld || !okNew {
-					return false
-				}
-				return conditionStatusChanged(
-					knativeConditions(oldObj.Status.Conditions),
-					knativeConditions(newObj.Status.Conditions),
-					string(kafkasourcev1.KafkaConditionReady),
-				) || oldObj.Status.ObservedGeneration != newObj.Status.ObservedGeneration
-			},
-		},
 	)
 }
 
@@ -472,8 +418,6 @@ func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		{Name: rmanagers.Certificate, Manager: rmanagers.CertificateManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder, CappConfig: cappConfig}},
 		{Name: rmanagers.DomainMapping, Manager: rmanagers.DomainMappingManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder, CappConfig: cappConfig}},
 		{Name: rmanagers.DNSRecord, Manager: rmanagers.DNSRecordManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder, CappConfig: cappConfig}},
-		{Name: rmanagers.PingSource, Manager: rmanagers.PingSourceManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder}},
-		{Name: rmanagers.KafkaSource, Manager: rmanagers.KafkaSourceManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder}},
 	}
 
 	deleted, err := handleResourceDeletion(ctx, capp, rmClient, resourceManagers)

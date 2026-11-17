@@ -37,7 +37,6 @@ The `container-app-operator` project can work as a standalone solution, but is m
 - [x] Support for changing the state of `Capp` from `enabled` (workload is in running state) to `disabled` (workload is not in running state).
 - [x] Support for external NFS storage connected to `Capp` by using `volumeMounts`.
 - [x] Support for `CappRevisions` to keep track of changes to `Capp` in a different CRD (up to 10 `CappRevisions` are saved for each `Capp`)
-- [x] Support for `Knative Eventing` event sources (ping, Kafka) to trigger `Capp` workloads
 - [x] Support for traffic splitting and staged rollouts (canary, steady split, blue-green) with automatic rollback, using `routeSpec.rolloutStrategy`
 
 ## Getting Started
@@ -54,9 +53,7 @@ The `container-app-operator` project can work as a standalone solution, but is m
 
 5. `logging-operator` installed on the cluster (you can [use the Helm Chart](https://kube-logging.dev/docs/install/#deploy-logging-operator-with-helm)).
 
-6. `knative-eventing` installed on the cluster (required for event sources; you can [use the quickstart](https://knative.dev/docs/getting-started/quickstart-install/)).
-
-7. `prometheus-operator` installed on the cluster (optional, for metrics).
+6. `prometheus-operator` installed on the cluster (optional, for metrics).
 
 Everything can also be installed by running:
 
@@ -179,10 +176,6 @@ spec:
     - match: ".*\\.internal\\.capp-zone\\.com"
 
 ```
-
-### Using Event Sources
-
-`Capp` supports Knative Eventing via `eventSourcesSpec`. See the [User Guide](docs/user-guide.md#eventsourcesspec).
 
 ### Using Traffic Splitting and Rollouts
 

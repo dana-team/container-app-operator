@@ -21,8 +21,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	kafkasourcev1 "knative.dev/eventing-kafka-broker/control-plane/pkg/apis/sources/v1"
-	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	kapis "knative.dev/pkg/apis"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -64,8 +62,6 @@ func buildManagers(required map[string]bool) map[string]rmanagers.ResourceManage
 		rmanagers.DNSRecord,
 		rmanagers.Certificate,
 		rmanagers.NfsPvc,
-		rmanagers.PingSource,
-		rmanagers.KafkaSource,
 	}
 	m := make(map[string]rmanagers.ResourceManager, len(all))
 	for _, name := range all {
@@ -78,11 +74,23 @@ func buildManagers(required map[string]bool) map[string]rmanagers.ResourceManage
 	return m
 }
 
+const (
+	cappName      = "my-capp"
+	cappNamespace = "my-ns"
+)
+
+func newCapp() cappv1alpha1.Capp {
+	return cappv1alpha1.Capp{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      cappName,
+			Namespace: cappNamespace,
+		},
+	}
+}
+
 func newStatusScheme() *runtime.Scheme {
 	s := newRouteScheme()
 	utilruntime.Must(knativev1.AddToScheme(s))
-	utilruntime.Must(sourcesv1.AddToScheme(s))
-	utilruntime.Must(kafkasourcev1.AddToScheme(s))
 	return s
 }
 
@@ -353,18 +361,6 @@ func TestStripVolatileStatusFields(t *testing.T) {
 				},
 			},
 		},
-		EventingStatus: cappv1alpha1.EventingStatus{
-			EventSources: []cappv1alpha1.EventSourceStatus{
-				{
-					Name: "src",
-					Condition: kapis.Condition{
-						Type:               kapis.ConditionReady,
-						Status:             corev1.ConditionTrue,
-						LastTransitionTime: kapis.VolatileTime{Inner: ts},
-					},
-				},
-			},
-		},
 	}
 
 	result := stripVolatileStatusFields(status)
@@ -381,8 +377,6 @@ func TestStripVolatileStatusFields(t *testing.T) {
 	require.Len(t, result.RouteStatus.DNSRecordObjectStatus.CNAMERecordObjectStatus.Conditions, 1)
 	assert.True(t, result.RouteStatus.DNSRecordObjectStatus.CNAMERecordObjectStatus.Conditions[0].LastTransitionTime.IsZero())
 
-	require.Len(t, result.EventingStatus.EventSources, 1)
-	assert.True(t, result.EventingStatus.EventSources[0].Condition.LastTransitionTime.Inner.IsZero())
 }
 
 func TestSetStatusConditionsRollout(t *testing.T) {
