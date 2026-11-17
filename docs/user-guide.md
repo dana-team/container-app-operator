@@ -45,28 +45,6 @@ Defines NFS persistent storage volumes with:
 - `path`: Export path
 - `capacity`: Storage size (e.g., `200Gi`)
 
-### `eventSourcesSpec`
-Attaches Knative Eventing sources to the Capp. Each source in `sources` requires:
-- `name`: Unique identifier for this source within the Capp
-- **Exactly one** of `pingSourceConfiguration` or `kafkaSourceConfiguration`
-
-**`pingSourceConfiguration`** — trigger on a cron schedule:
-- `schedule` (optional, default `"* * * * *"`): Cron expression (e.g., `"*/5 * * * *"`)
-- `data` (optional): JSON payload sent with each trigger (e.g., `'{"key":"value"}'`)
-- `uri` (optional, on the source entry): Relative HTTP path on the Capp Knative Service (e.g. `"/events/ping"`)
-
-**`kafkaSourceConfiguration`** — consume from Kafka topics:
-- `bootstrapServers` (required): Kafka broker addresses
-- `topics` (required): Topic names to consume
-- `secretRef` (required): Secret in the same namespace with Kafka cluster credentials
-- `consumerGroup` (optional): Consumer group ID; defaults to `{capp-name}-{source-name}` when omitted
-- `consumers` (optional, default `1`): Number of parallel KafkaSource consumers
-- `uri` (optional, on the source entry): Relative HTTP path on the Capp Knative Service (e.g. `"/events/orders"`)
-
-Required Secret keys: `user`, `password`, `sasl.mechanism` (same namespace as the Capp).
-
-Source readiness is reported in `status.eventingStatus.eventSources`.
-
 ## How to Use Capp
 
 Step-by-step instructions for common scenarios (assumes the operator is installed).
@@ -148,52 +126,7 @@ spec:
           storage: 100Gi
 ```
 
-### Step 6: Attach an Event Source
-
-**Ping:**
-
-```yaml
-spec:
-  eventSourcesSpec:
-    sources:
-      - name: hourly
-        pingSourceConfiguration:
-          schedule: "0 * * * *"
-          data: '{"trigger":"hourly"}'
-```
-
-**Kafka:**
-
-Create a credentials Secret first:
-
-```bash
-kubectl create secret generic kafka-creds -n my-namespace \
-  --from-literal=user=my-user \
-  --from-literal=password=my-password \
-  --from-literal=sasl.mechanism=SCRAM-SHA-256
-```
-
-```yaml
-spec:
-  eventSourcesSpec:
-    sources:
-      - name: orders
-        uri: /events/orders
-        kafkaSourceConfiguration:
-          bootstrapServers:
-            - kafka.example:9092
-          topics:
-            - orders
-            - payments
-          secretRef:
-            name: kafka-creds
-```
-
-```bash
-kubectl get capp my-app -n my-namespace -o jsonpath='{.status.eventingStatus}'
-```
-
-### Step 7: Manage State and Check Status
+### Step 6: Manage State and Check Status
 
 **Disable/enable application**:
 ```bash
@@ -217,7 +150,6 @@ Each configured capability in Capp spec (Serving, Route, Logging...) has its own
 | `VolumesReady` | `volumesSpec.nfsVolumes` is set | each NfsPvc |
 | `ServingReady` | `state` is `enabled` | the Knative Service and its latest created revision |
 | `RouteReady` | `routeSpec.hostname` is set | CNAMERecord, Certificate (if TLS is enabled), DomainMapping |
-| `EventingReady` | an event source is set | each PingSource / KafkaSource |
 | `LoggingReady` | `logSpec` is set | SyslogNGOutput, SyslogNGFlow |
 | `Ready` | always | summary of the conditions above |
 | `Available` | always | the revisions that serve traffic (see below) |
@@ -230,8 +162,8 @@ A capability condition is:
 
 `Ready` points to the root cause:
 - `state: disabled` gives `Ready=True` with reason `Disabled`.
-- A capability whose dependency isn't ready is a symptom and is skipped. `ServingReady` depends on `VolumesReady`, and `RouteReady` and `EventingReady` depend on `ServingReady`.
-- Otherwise the reason is `<Capability>NotReady` (`VolumesNotReady`, `ServingNotReady`, `RouteNotReady`, `EventingNotReady`, `LoggingNotReady`) and the message is `<capability reason>: <capability message>`. `False` wins over `Unknown`. Ties follow the table order.
+- A capability whose dependency isn't ready is a symptom and is skipped. `ServingReady` depends on `VolumesReady`, and `RouteReady` depends on `ServingReady`.
+- Otherwise the reason is `<Capability>NotReady` (`VolumesNotReady`, `ServingNotReady`, `RouteNotReady`, `LoggingNotReady`) and the message is `<capability reason>: <capability message>`. `False` wins over `Unknown`. Ties follow the table order.
 
 For example, when the image can't be pulled:
 
@@ -254,7 +186,7 @@ What to wait on:
 - Availability monitoring and alerting use `Available`.
 - A blue-green Capp stays `Unknown` (`Holding`) until it is promoted, so its pipeline waits after the promote step, not after the deploy.
 
-The status also includes `observedGeneration`, `eventingStatus` and `stateStatus`. The fields `knativeObjectStatus`, `revisions`, `routeStatus`, `volumesStatus` and `loggingStatus` are deprecated and will be removed in a later release; use the conditions instead.
+The status also includes `observedGeneration` and `stateStatus`. The fields `knativeObjectStatus`, `revisions`, `routeStatus`, `volumesStatus` and `loggingStatus` are deprecated and will be removed in a later release; use the conditions instead.
 
 ## Traffic splitting & rollouts
 

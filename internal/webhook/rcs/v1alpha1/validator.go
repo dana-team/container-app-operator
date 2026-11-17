@@ -12,7 +12,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/cloudevents/sdk-go/v2/event"
 	cappv1alpha1 "github.com/dana-team/container-app-operator/api/v1alpha1"
 	cappmeta "github.com/dana-team/container-app-operator/internal/kinds/capp/cappmeta"
 	rmanagers "github.com/dana-team/container-app-operator/internal/kinds/capp/resourcemanagers"
@@ -23,22 +22,14 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	kafkasecurity "knative.dev/eventing-kafka-broker/control-plane/pkg/security"
-	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	"knative.dev/pkg/apis"
-	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/network"
 	kautoscaling "knative.dev/serving/pkg/apis/autoscaling"
-	servingv1 "knative.dev/serving/pkg/apis/serving/v1"
 
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
-)
-
-const (
-	eventSourcePath = "spec.eventSourcesSpec.sources"
 )
 
 var lookupHost = net.DefaultResolver.LookupHost
@@ -167,10 +158,6 @@ func (c *CappValidator) handle(ctx context.Context, operation admissionv1.Operat
 		return admission.Denied(err.Error())
 	}
 
-	if err := validateEventSources(ctx, c.Client, capp, config.Spec.MaxKafkaConsumers); err != nil {
-		return admission.Denied(err.Error())
-	}
-
 	if err := validateTemplateAnnotations(capp); err != nil {
 		return admission.Denied(err.Error())
 	}
@@ -257,32 +244,6 @@ func validateSecretHasKeys(ctx context.Context, r client.Reader, namespace, name
 	return nil
 }
 
-func validateEventSources(ctx context.Context, r client.Reader, capp cappv1alpha1.Capp, maxKafkaConsumers int32) error {
-	seen := make(map[string]struct{})
-	for i, src := range capp.Spec.EventSourcesSpec.Sources {
-		if _, dup := seen[src.Name]; dup {
-			return fmt.Errorf("%s[%d].name: duplicate value %q", eventSourcePath, i, src.Name)
-		}
-		seen[src.Name] = struct{}{}
-
-		switch {
-		case src.PingSourceConfiguration != nil:
-			if err := validatePingSourceConfiguration(ctx, src.PingSourceConfiguration); err != nil {
-				return fmt.Errorf("%s[%d]: %w", eventSourcePath, i, err)
-			}
-		case src.KafkaSourceConfiguration != nil:
-			requiredKeys := []string{kafkasecurity.SaslUserKey, kafkasecurity.SaslPasswordKey, kafkasecurity.SaslMechanismKey}
-			if err := validateSecretHasKeys(ctx, r, capp.Namespace, src.KafkaSourceConfiguration.SecretRef.Name, requiredKeys); err != nil {
-				return fmt.Errorf("%s[%d]: %w", eventSourcePath, i, err)
-			}
-			if err := validateKafkaSourceConsumers(src.KafkaSourceConfiguration, maxKafkaConsumers); err != nil {
-				return fmt.Errorf("%s[%d]: %w", eventSourcePath, i, err)
-			}
-		}
-	}
-	return nil
-}
-
 func validateTemplateAnnotations(capp cappv1alpha1.Capp) error {
 	prefix := kautoscaling.GroupName + "/"
 	for key := range capp.Spec.ConfigurationSpec.Template.Annotations {
@@ -319,43 +280,6 @@ func validateScaleSpec(capp cappv1alpha1.Capp, autoscaleConfig cappv1alpha1.Auto
 		return fmt.Errorf("invalid scaleDelaySeconds %d: must be less than or equal to global max scale delay %d", *scaleDelay, autoscaleConfig.MaxScaleDelay)
 	}
 
-	return nil
-}
-
-func validateKafkaSourceConsumers(cfg *cappv1alpha1.KafkaSourceConfiguration, maxKafkaConsumers int32) error {
-	if cfg.Consumers == nil {
-		return nil
-	}
-	if *cfg.Consumers > maxKafkaConsumers {
-		return fmt.Errorf("invalid consumers %d: must be less than or equal to global max kafka consumers %d", *cfg.Consumers, maxKafkaConsumers)
-	}
-	return nil
-}
-
-// validatePingSourceConfiguration makes sure a pingSource has a valid cron schedule and that the data field (if specified) is valid JSON.
-func validatePingSourceConfiguration(ctx context.Context, cfg *cappv1alpha1.PingSourceConfiguration) error {
-	schedule := cfg.Schedule
-	if schedule == "" {
-		schedule = "* * * * *"
-	}
-	ps := sourcesv1.PingSourceSpec{
-		SourceSpec: duckv1.SourceSpec{
-			Sink: duckv1.Destination{
-				Ref: &duckv1.KReference{
-					APIVersion: servingv1.SchemeGroupVersion.String(),
-					Kind:       "Service",
-					Name:       "placeholder",
-				},
-			},
-		},
-		Schedule:    schedule,
-		Data:        cfg.Data,
-		ContentType: event.ApplicationJSON,
-	}
-
-	if err := ps.Validate(ctx); err != nil {
-		return err
-	}
 	return nil
 }
 

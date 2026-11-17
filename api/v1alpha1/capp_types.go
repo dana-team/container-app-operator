@@ -23,7 +23,6 @@ import (
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kapis "knative.dev/pkg/apis"
 	knativev1 "knative.dev/serving/pkg/apis/serving/v1"
 	knativev1beta1 "knative.dev/serving/pkg/apis/serving/v1beta1"
 )
@@ -39,11 +38,10 @@ const (
 	CappConditionReady = "Ready"
 
 	// Capability condition types, set only when the capability is configured on a Capp.
-	CappConditionVolumesReady  = "VolumesReady"
-	CappConditionServingReady  = "ServingReady"
-	CappConditionRouteReady    = "RouteReady"
-	CappConditionEventingReady = "EventingReady"
-	CappConditionLoggingReady  = "LoggingReady"
+	CappConditionVolumesReady = "VolumesReady"
+	CappConditionServingReady = "ServingReady"
+	CappConditionRouteReady   = "RouteReady"
+	CappConditionLoggingReady = "LoggingReady"
 
 	// Rollout condition types, set on every Capp. They are not part of the Ready summary.
 	// Available is True when the revisions serving traffic can serve it.
@@ -52,13 +50,12 @@ const (
 	CappConditionRolloutSucceeded = "RolloutSucceeded"
 
 	// Reasons for the Ready condition.
-	CappReadyReasonReady            = "Ready"
-	CappReadyReasonDisabled         = "Disabled"
-	CappReadyReasonVolumesNotReady  = "VolumesNotReady"
-	CappReadyReasonServingNotReady  = "ServingNotReady"
-	CappReadyReasonRouteNotReady    = "RouteNotReady"
-	CappReadyReasonEventingNotReady = "EventingNotReady"
-	CappReadyReasonLoggingNotReady  = "LoggingNotReady"
+	CappReadyReasonReady           = "Ready"
+	CappReadyReasonDisabled        = "Disabled"
+	CappReadyReasonVolumesNotReady = "VolumesNotReady"
+	CappReadyReasonServingNotReady = "ServingNotReady"
+	CappReadyReasonRouteNotReady   = "RouteNotReady"
+	CappReadyReasonLoggingNotReady = "LoggingNotReady"
 
 	// Reasons for capability conditions. Otherwise, the child resource's reason is used.
 	CapabilityReasonReady    = "Ready"
@@ -94,10 +91,6 @@ type CappSpec struct {
 
 	// VolumesSpec defines the volumes specification for the Capp.
 	VolumesSpec VolumesSpec `json:"volumesSpec,omitempty"`
-
-	// EventSourcesSpec defines the event sources for the Capp.
-	// +optional
-	EventSourcesSpec EventSourcesSpec `json:"eventSourcesSpec,omitempty"`
 }
 
 // ScaleSpec defines the scale specification for the Capp.
@@ -122,76 +115,6 @@ type ScaleSpec struct {
 	// +kubebuilder:validation:Minimum=0
 	// +optional
 	ScaleDelaySeconds *int32 `json:"scaleDelaySeconds,omitempty"`
-}
-
-// EventSourcesSpec defines all event sources for a Capp.
-type EventSourcesSpec struct {
-	// Sources is the list of event sources connected to the Capp's Knative Service.
-	// +optional
-	Sources []SourceConfiguration `json:"sources,omitempty"`
-}
-
-// PingSourceConfiguration defines the configuration for a Capp PingSource.
-// This event source sends a specified payload to the capp at regular intervals defined by a cron expression schedule.
-type PingSourceConfiguration struct {
-
-	// Schedule is the cron expression that defines the schedule for the PingSource.
-	// +kubebuilder:default:="* * * * *"
-	Schedule string `json:"schedule"`
-	// Data is the payload that the PingSource will send when it triggers.
-	// Must be valid JSON.
-	// +optional
-	Data string `json:"data,omitempty"`
-}
-
-// KafkaSourceConfiguration defines the configuration for a Capp Kafka event source.
-// +kubebuilder:validation:XValidation:rule="size(self.secretRef.name) > 0",message="secretRef.name is required"
-type KafkaSourceConfiguration struct {
-	// BootstrapServers is the list of Kafka broker addresses.
-	// +kubebuilder:validation:Required
-	// +kubebuilder:validation:MinItems=1
-	BootstrapServers []string `json:"bootstrapServers"`
-
-	// Topics is the list of Kafka topics to consume.
-	// +kubebuilder:validation:Required
-	// +kubebuilder:validation:MinItems=1
-	Topics []string `json:"topics"`
-
-	// ConsumerGroup is the Kafka consumer group ID.
-	// Optional; when unset the operator assigns a dedicated group for this source.
-	// +optional
-	ConsumerGroup string `json:"consumerGroup,omitempty"`
-
-	// Consumers is the number of parallel KafkaSource consumers for this source.
-	// +kubebuilder:validation:Minimum=1
-	// +optional
-	Consumers *int32 `json:"consumers,omitempty"`
-
-	// SecretRef references a Secret in the Capp namespace with credentials for the Kafka cluster.
-	// +kubebuilder:validation:Required
-	SecretRef corev1.LocalObjectReference `json:"secretRef"`
-}
-
-// SourceConfiguration defines a single Knative Eventing source connected to the Capp.
-// +kubebuilder:validation:XValidation:rule="(has(self.pingSourceConfiguration) && !has(self.kafkaSourceConfiguration)) || (!has(self.pingSourceConfiguration) && has(self.kafkaSourceConfiguration))",message="exactly one of pingSourceConfiguration or kafkaSourceConfiguration must be set"
-type SourceConfiguration struct {
-	// Name is a unique logical identifier for this source within the Capp.
-	// +kubebuilder:validation:Required
-	// +kubebuilder:validation:MinLength=1
-	Name string `json:"name"`
-
-	// URI is a relative path appended to the resolved Capp Knative Service address (e.g. "/path").
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:validation:XValidation:rule="self.startsWith('/')",message="uri must be a relative path"
-	URI *kapis.URL `json:"uri,omitempty"`
-
-	// Configuration for a PingSource.
-	// +optional
-	PingSourceConfiguration *PingSourceConfiguration `json:"pingSourceConfiguration,omitempty"`
-
-	// Configuration for a KafkaSource.
-	// +optional
-	KafkaSourceConfiguration *KafkaSourceConfiguration `json:"kafkaSourceConfiguration,omitempty"`
 }
 
 // VolumesSpec defines the volumes specification for the Capp.
@@ -456,23 +379,6 @@ type StateStatus struct {
 	LastChange metav1.Time `json:"lastChange,omitempty"`
 }
 
-// EventingStatus shows the observed state of all event sources linked to the Capp.
-type EventingStatus struct {
-	// EventSources lists the status of each owned event source resource.
-	// +optional
-	EventSources []EventSourceStatus `json:"eventSources,omitempty"`
-}
-
-// EventSourceStatus shows the observed state of a single event source resource.
-type EventSourceStatus struct {
-	// Name is the K8s name of the underlying source resource.
-	// +optional
-	Name string `json:"name,omitempty"`
-
-	// Condition holds the readiness condition for the underlying source resource.
-	Condition kapis.Condition `json:"condition"`
-}
-
 // LoggingStatus defines the state of the SyslogNGFlow and SyslogNGOutput objects linked to the Capp.
 type LoggingStatus struct {
 	// SyslogNGFlow represents the Status of the SyslogNGFlow used by the Capp.
@@ -558,10 +464,6 @@ type CappStatus struct {
 	//
 	// Deprecated: use the VolumesReady condition. Will be removed in a future release.
 	VolumesStatus VolumesStatus `json:"volumesStatus,omitempty"`
-
-	// EventingStatus shows the state of event sources linked to the Capp.
-	// +optional
-	EventingStatus EventingStatus `json:"eventingStatus,omitempty"`
 
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`

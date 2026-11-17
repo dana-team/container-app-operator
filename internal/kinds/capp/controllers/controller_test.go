@@ -25,11 +25,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/tools/events"
 	"k8s.io/utils/ptr"
-	kafkasourcev1 "knative.dev/eventing-kafka-broker/control-plane/pkg/apis/sources/v1"
-	sourcesv1 "knative.dev/eventing/pkg/apis/sources/v1"
 	knativeapis "knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/serving/pkg/apis/serving"
@@ -645,106 +642,6 @@ func TestSyslogNGWatchPredicates(t *testing.T) {
 	}
 }
 
-func TestPingSourceWatchPredicate(t *testing.T) {
-	pred := pingSourceWatchPredicate()
-
-	makePingSource := func(readyStatus corev1.ConditionStatus) *sourcesv1.PingSource {
-		ps := &sourcesv1.PingSource{}
-		ps.Generation = 1
-		ps.Status.Conditions = duckv1.Conditions{
-			{Type: sourcesv1.PingSourceConditionReady, Status: readyStatus},
-		}
-		return ps
-	}
-
-	tests := []struct {
-		name     string
-		oldObj   client.Object
-		newObj   client.Object
-		expected bool
-	}{
-		{
-			name:     "triggers when Ready status changes",
-			oldObj:   makePingSource(corev1.ConditionFalse),
-			newObj:   makePingSource(corev1.ConditionTrue),
-			expected: true,
-		},
-		{
-			name:     "no change when Ready status is identical",
-			oldObj:   makePingSource(corev1.ConditionTrue),
-			newObj:   makePingSource(corev1.ConditionTrue),
-			expected: false,
-		},
-		{
-			name:   "changed when the PingSource observed generation changes",
-			oldObj: makePingSource(corev1.ConditionTrue),
-			newObj: func() client.Object {
-				ps := makePingSource(corev1.ConditionTrue)
-				ps.Status.ObservedGeneration = 1
-				return ps
-			}(),
-			expected: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			e := event.UpdateEvent{ObjectOld: tt.oldObj, ObjectNew: tt.newObj}
-			assert.Equal(t, tt.expected, pred.Update(e))
-		})
-	}
-}
-
-func TestKafkaSourceWatchPredicate(t *testing.T) {
-	pred := kafkaSourceWatchPredicate()
-
-	makeKafkaSource := func(readyStatus corev1.ConditionStatus) *kafkasourcev1.KafkaSource {
-		ks := &kafkasourcev1.KafkaSource{}
-		ks.Generation = 1
-		ks.Status.Conditions = duckv1.Conditions{
-			{Type: kafkasourcev1.KafkaConditionReady, Status: readyStatus},
-		}
-		return ks
-	}
-
-	tests := []struct {
-		name     string
-		oldObj   client.Object
-		newObj   client.Object
-		expected bool
-	}{
-		{
-			name:     "triggers when Ready status changes",
-			oldObj:   makeKafkaSource(corev1.ConditionFalse),
-			newObj:   makeKafkaSource(corev1.ConditionTrue),
-			expected: true,
-		},
-		{
-			name:     "no change when Ready status is identical",
-			oldObj:   makeKafkaSource(corev1.ConditionTrue),
-			newObj:   makeKafkaSource(corev1.ConditionTrue),
-			expected: false,
-		},
-		{
-			name:   "changed when the KafkaSource observed generation changes",
-			oldObj: makeKafkaSource(corev1.ConditionTrue),
-			newObj: func() client.Object {
-				ks := makeKafkaSource(corev1.ConditionTrue)
-				ks.Status.ObservedGeneration = 1
-				return ks
-			}(),
-			expected: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			e := event.UpdateEvent{ObjectOld: tt.oldObj, ObjectNew: tt.newObj}
-			assert.Equal(t, tt.expected, pred.Update(e))
-		})
-	}
-}
-
 func TestStatusChangedPredicateIgnoresMismatchedTypes(t *testing.T) {
 	pred := knativeServiceWatchPredicate()
 
@@ -1000,13 +897,11 @@ func TestSyncApplicationReportsSyncErrors(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
 			s := newScheme()
-			utilruntime.Must(sourcesv1.AddToScheme(s))
-			utilruntime.Must(kafkasourcev1.AddToScheme(s))
 			k8sClient := fake.NewClientBuilder().WithScheme(s).WithObjects(newCapp()).WithStatusSubresource(&cappv1alpha1.Capp{}).Build()
 
 			names := []string{
 				rmanagers.KnativeService, rmanagers.NfsPvc, rmanagers.SyslogNGOutput, rmanagers.SyslogNGFlow, rmanagers.Certificate,
-				rmanagers.DomainMapping, rmanagers.DNSRecord, rmanagers.PingSource, rmanagers.KafkaSource,
+				rmanagers.DomainMapping, rmanagers.DNSRecord,
 			}
 			entries := make([]rmanagers.ResourceManagerEntry, 0, len(names))
 			for _, name := range names {
@@ -1068,14 +963,12 @@ func TestSyncApplicationConflictedKnativeServiceIsNotRolledOut(t *testing.T) {
 	})
 
 	s := newScheme()
-	utilruntime.Must(sourcesv1.AddToScheme(s))
-	utilruntime.Must(kafkasourcev1.AddToScheme(s))
 	k8sClient := fake.NewClientBuilder().WithScheme(s).WithObjects(capp, ksvc).WithStatusSubresource(&cappv1alpha1.Capp{}).Build()
 
 	cappConfig := &cappv1alpha1.CappConfig{}
 	names := []string{
 		rmanagers.KnativeService, rmanagers.NfsPvc, rmanagers.SyslogNGOutput, rmanagers.SyslogNGFlow, rmanagers.Certificate,
-		rmanagers.DomainMapping, rmanagers.DNSRecord, rmanagers.PingSource, rmanagers.KafkaSource,
+		rmanagers.DomainMapping, rmanagers.DNSRecord,
 	}
 	entries := make([]rmanagers.ResourceManagerEntry, 0, len(names))
 	for _, name := range names {
@@ -1129,8 +1022,6 @@ func TestSyncApplicationRemovesRolloutAnnotation(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
 			s := newScheme()
-			utilruntime.Must(sourcesv1.AddToScheme(s))
-			utilruntime.Must(kafkasourcev1.AddToScheme(s))
 
 			capp := newCapp()
 			capp.Annotations = map[string]string{cappmeta.RolloutAnnotationKey: cappmeta.RolloutActionPromote}
@@ -1144,7 +1035,7 @@ func TestSyncApplicationRemovesRolloutAnnotation(t *testing.T) {
 
 			names := []string{
 				rmanagers.KnativeService, rmanagers.NfsPvc, rmanagers.SyslogNGOutput, rmanagers.SyslogNGFlow, rmanagers.Certificate,
-				rmanagers.DomainMapping, rmanagers.DNSRecord, rmanagers.PingSource, rmanagers.KafkaSource,
+				rmanagers.DomainMapping, rmanagers.DNSRecord,
 			}
 			entries := make([]rmanagers.ResourceManagerEntry, 0, len(names))
 			for _, name := range names {
@@ -1170,8 +1061,6 @@ func TestSyncApplicationRemovesRolloutAnnotation(t *testing.T) {
 func TestReconcileRequeuesWhenRolloutAnnotationChanged(t *testing.T) {
 	ctx := context.Background()
 	s := newScheme()
-	utilruntime.Must(sourcesv1.AddToScheme(s))
-	utilruntime.Must(kafkasourcev1.AddToScheme(s))
 
 	capp := newCapp()
 	capp.Annotations = map[string]string{cappmeta.RolloutAnnotationKey: cappmeta.RolloutActionPromote + ":r2"}

@@ -99,11 +99,6 @@ func GenerateRecordName(hostname, suffix string) string {
 	return hostname[:len(hostname)-len(suffix)]
 }
 
-// GenerateEventSourceName returns the name of the event source resource created for a Capp source.
-func GenerateEventSourceName(cappName, sourceName string) string {
-	return fmt.Sprintf("%s-%s", cappName, sourceName)
-}
-
 func generateTLSSecretName(resourceName string) string {
 	return fmt.Sprintf("%s-tls", resourceName)
 }

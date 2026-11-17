@@ -27,7 +27,6 @@ const (
 
 	mountedNFSVolumeName      = "mounted"
 	unmountedNFSVolumeName    = "a-data"
-	eventSourceName           = "ping-a"
 	unchangedHostname         = "same.example.com"
 	oldHostname               = "old.example.com"
 	newHostname               = "new.example.com"
@@ -65,7 +64,6 @@ func newCappConfig() *cappv1alpha1.CappConfig {
 		},
 		Spec: cappv1alpha1.CappConfigSpec{
 			AllowedHostnamePatterns: []cappv1alpha1.HostnamePattern{{Match: ".*"}},
-			MaxKafkaConsumers:       5,
 			AutoscaleConfig: cappv1alpha1.AutoscaleConfig{
 				MinReplicasLimit: 10,
 				MaxScaleDelay:    100,
