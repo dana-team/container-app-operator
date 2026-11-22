@@ -27,6 +27,8 @@ Configures custom DNS routing and TLS:
 
 When `hostname` is set, the operator creates DomainMapping, CNAMERecord, and optionally a Certificate resource.
 
+When the CappConfig sets `gatewayAPI` (for Knative on the net-gateway-api ingress, such as Envoy Gateway), the operator creates a ClusterDomainClaim, an HTTPRoute and a CNAMERecord instead of a DomainMapping, plus a Certificate and a ListenerSet when `tlsEnabled` is true. See [Gateway API routing](gateway-api-routing.md).
+
 ### `logSpec`
 Configures automatic log shipping to Elasticsearch:
 - `type`: Log destination (`elastic` or `elastic-datastream`)
@@ -149,7 +151,7 @@ Each configured capability in Capp spec (Serving, Route, Logging...) has its own
 |-----------|----------|--------|
 | `VolumesReady` | `volumesSpec.nfsVolumes` is set | each NfsPvc |
 | `ServingReady` | `state` is `enabled` | the Knative Service and its latest created revision |
-| `RouteReady` | `routeSpec.hostname` is set | CNAMERecord, Certificate (if TLS is enabled), DomainMapping |
+| `RouteReady` | `routeSpec.hostname` is set | CNAMERecord, Certificate (if TLS is enabled), DomainMapping; with `gatewayAPI` set: CNAMERecord, ClusterDomainClaim, Certificate and ListenerSet (TLS in `ListenerSet` mode), HTTPRoute |
 | `LoggingReady` | `logSpec` is set | SyslogNGOutput, SyslogNGFlow |
 | `Ready` | always | summary of the conditions above |
 | `Available` | always | the revisions that serve traffic (see below) |

@@ -54,7 +54,7 @@ var capabilities = []capability{
 		conditionType: cappv1alpha1.CappConditionRouteReady,
 		readyReason:   cappv1alpha1.CappReadyReasonRouteNotReady,
 		dependsOn:     []string{cappv1alpha1.CappConditionServingReady},
-		managers:      []string{rmanagers.DNSRecord, rmanagers.Certificate, rmanagers.DomainMapping},
+		managers:      []string{rmanagers.DNSRecord, rmanagers.Certificate, rmanagers.DomainMapping, rmanagers.ClusterDomainClaim, rmanagers.ListenerSet, rmanagers.HTTPRoute},
 		check:         checkRoute,
 	},
 	{
@@ -184,7 +184,7 @@ func isCapabilityConfigured(cp capability, capp cappv1alpha1.Capp, resourceManag
 		return false
 	}
 	for _, name := range cp.managers {
-		if resourceManagers[name].IsRequired(capp) {
+		if manager, ok := resourceManagers[name]; ok && manager.IsRequired(capp) {
 			return true
 		}
 	}

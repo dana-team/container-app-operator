@@ -36,4 +36,8 @@ spec:
     {{- else }}
     []
     {{- end }}
+  {{- with .Values.config.gatewayAPI }}
+  gatewayAPI:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 {{- end }}

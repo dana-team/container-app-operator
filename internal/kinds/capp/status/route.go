@@ -2,10 +2,15 @@ package status
 
 import (
 	"context"
+	"fmt"
 
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	xpv2 "github.com/crossplane/crossplane/apis/v2/core/v2"
+	"k8s.io/apimachinery/pkg/api/meta"
+	netv1alpha1 "knative.dev/networking/pkg/apis/networking/v1alpha1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	"github.com/dana-team/container-app-operator/internal/kinds/capp/cappmeta"
 	rmanagers "github.com/dana-team/container-app-operator/internal/kinds/capp/resourcemanagers"
 	dnsrecordv1alpha1 "github.com/dana-team/provider-dns-v2/apis/namespaced/record/v1alpha1"
 
@@ -129,12 +134,137 @@ func checkRoute(ctx context.Context, k8sClient client.Client, capp cappv1alpha1.
 	if cond, err := checkCNAMERecord(ctx, k8sClient, key); cond != nil || err != nil {
 		return cond, err
 	}
-	if capp.Spec.RouteSpec.TlsEnabled {
+
+	if !rmanagers.IsGatewayAPIRouting(cappConfig) {
+		if capp.Spec.RouteSpec.TlsEnabled {
+			if cond, err := checkCertificate(ctx, k8sClient, key); cond != nil || err != nil {
+				return cond, err
+			}
+		}
+		return checkDomainMapping(ctx, k8sClient, key)
+	}
+
+	// Gateway API routing: the claim, then the per-Capp certificate and listener when used, then the route.
+	if cond, err := checkClusterDomainClaim(ctx, k8sClient, key.Name, capp); cond != nil || err != nil {
+		return cond, err
+	}
+	gatewayKey := types.NamespacedName{Namespace: capp.Namespace, Name: rmanagers.GatewayObjectName(key.Name)}
+	listenerSetTLS := rmanagers.UsesListenerSetTLS(cappConfig, capp)
+	if listenerSetTLS {
 		if cond, err := checkCertificate(ctx, k8sClient, key); cond != nil || err != nil {
 			return cond, err
 		}
+		if cond, err := checkListenerSet(ctx, k8sClient, gatewayKey); cond != nil || err != nil {
+			return cond, err
+		}
 	}
-	return checkDomainMapping(ctx, k8sClient, key)
+	return checkHTTPRoute(ctx, k8sClient, gatewayKey, cappConfig.Spec.GatewayAPI.Gateway, listenerSetTLS)
+}
+
+// checkClusterDomainClaim returns why the hostname is not claimed by the Capp, or nil when it is.
+func checkClusterDomainClaim(ctx context.Context, k8sClient client.Client, hostname string, capp cappv1alpha1.Capp) (*metav1.Condition, error) {
+	claim := &netv1alpha1.ClusterDomainClaim{}
+	if cond, err := getChildResource(ctx, k8sClient, rmanagers.ClusterDomainClaim, types.NamespacedName{Name: hostname}, claim); cond != nil || err != nil {
+		return cond, err
+	}
+	notReady := func(message string) *metav1.Condition {
+		return &metav1.Condition{
+			Status:  metav1.ConditionFalse,
+			Reason:  cappv1alpha1.CapabilityReasonNotReady,
+			Message: truncateConditionMessage(fmt.Sprintf("%s %s: %s", rmanagers.ClusterDomainClaim, hostname, message)),
+		}
+	}
+	if claim.Spec.Namespace != capp.Namespace {
+		return notReady(fmt.Sprintf("hostname is claimed by namespace %q", claim.Spec.Namespace)), nil
+	}
+	if owner := claim.Labels[cappmeta.CappResourceKey]; owner != "" && owner != capp.Name {
+		return notReady(fmt.Sprintf("hostname is claimed by Capp %q", owner)), nil
+	}
+	return nil, nil
+}
+
+// listenerSetConditionTypes are checked in order: Accepted reports attachment to the Gateway, Programmed reports serving.
+var listenerSetConditionTypes = []string{string(gatewayv1.ListenerSetConditionAccepted), string(gatewayv1.ListenerSetConditionProgrammed)}
+
+// checkListenerSet returns why the ListenerSet is not attached and programmed, or nil when it is.
+func checkListenerSet(ctx context.Context, k8sClient client.Client, key types.NamespacedName) (*metav1.Condition, error) {
+	ls := &gatewayv1.ListenerSet{}
+	if cond, err := getChildResource(ctx, k8sClient, rmanagers.ListenerSet, key, ls); cond != nil || err != nil {
+		return cond, err
+	}
+	for _, conditionType := range listenerSetConditionTypes {
+		c := meta.FindStatusCondition(ls.Status.Conditions, conditionType)
+		if c == nil || isConditionStale(c.ObservedGeneration, ls) {
+			return newPendingCondition(rmanagers.ListenerSet, ls.Name), nil
+		}
+		if cond := formatChildCondition(rmanagers.ListenerSet, ls.Name, c.Status, c.Reason, c.Message); cond != nil {
+			return cond, nil
+		}
+	}
+	return nil, nil
+}
+
+// routeParentConditionTypes are checked in order for each parent of the HTTPRoute.
+var routeParentConditionTypes = []string{string(gatewayv1.RouteConditionAccepted), string(gatewayv1.RouteConditionResolvedRefs)}
+
+// checkHTTPRoute returns why the HTTPRoute is not accepted by the Gateway (and the ListenerSet, when used)
+// or cannot resolve its backend, or nil when it serves.
+func checkHTTPRoute(ctx context.Context, k8sClient client.Client, key types.NamespacedName, gateway cappv1alpha1.NamespacedName, viaListenerSet bool) (*metav1.Condition, error) {
+	route := &gatewayv1.HTTPRoute{}
+	if cond, err := getChildResource(ctx, k8sClient, rmanagers.HTTPRoute, key, route); cond != nil || err != nil {
+		return cond, err
+	}
+
+	parents := []types.NamespacedName{{Namespace: gateway.Namespace, Name: gateway.Name}}
+	if viaListenerSet {
+		if !routeHasListenerSetParent(route, key.Name) {
+			// The route is attached to the ListenerSet on the next reconcile after the ListenerSet exists.
+			return newPendingCondition(rmanagers.HTTPRoute, route.Name), nil
+		}
+		parents = append(parents, key)
+	}
+
+	for _, parent := range parents {
+		status := findRouteParentStatus(route, parent)
+		if status == nil {
+			return newPendingCondition(rmanagers.HTTPRoute, route.Name), nil
+		}
+		for _, conditionType := range routeParentConditionTypes {
+			c := meta.FindStatusCondition(status.Conditions, conditionType)
+			if c == nil || isConditionStale(c.ObservedGeneration, route) {
+				return newPendingCondition(rmanagers.HTTPRoute, route.Name), nil
+			}
+			if cond := formatChildCondition(rmanagers.HTTPRoute, route.Name, c.Status, c.Reason, c.Message); cond != nil {
+				return cond, nil
+			}
+		}
+	}
+	return nil, nil
+}
+
+func routeHasListenerSetParent(route *gatewayv1.HTTPRoute, name string) bool {
+	for _, ref := range route.Spec.ParentRefs {
+		if ref.Kind != nil && string(*ref.Kind) == rmanagers.ListenerSet && string(ref.Name) == name {
+			return true
+		}
+	}
+	return false
+}
+
+// findRouteParentStatus returns the status the implementation reported for parent, matched by name and namespace.
+// A parentRef without a namespace means the route's namespace.
+func findRouteParentStatus(route *gatewayv1.HTTPRoute, parent types.NamespacedName) *gatewayv1.RouteParentStatus {
+	for i := range route.Status.Parents {
+		ref := route.Status.Parents[i].ParentRef
+		namespace := route.Namespace
+		if ref.Namespace != nil {
+			namespace = string(*ref.Namespace)
+		}
+		if string(ref.Name) == parent.Name && namespace == parent.Namespace {
+			return &route.Status.Parents[i]
+		}
+	}
+	return nil
 }
 
 // checkCNAMERecord returns why the CNAMERecord is not ready, or nil when it is.

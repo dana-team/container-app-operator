@@ -17,7 +17,9 @@ import (
 	loggingv1beta1 "github.com/kube-logging/logging-operator/pkg/sdk/logging/api/v1beta1"
 
 	"k8s.io/apimachinery/pkg/api/equality"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	kapis "knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
@@ -29,6 +31,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+
+	corev1 "k8s.io/api/core/v1"
+	netv1alpha1 "knative.dev/networking/pkg/apis/networking/v1alpha1"
 
 	"github.com/dana-team/container-app-operator/internal/kinds/capp/status"
 
@@ -56,6 +62,15 @@ type CappReconciler struct {
 	client.Client
 	Scheme        *runtime.Scheme
 	EventRecorder events.EventRecorder
+
+	// gatewayAPIInstalled and listenerSetInstalled record which Gateway API kinds the API server served at startup.
+	// Watches are set up only for installed kinds, so the operator also starts on clusters without Gateway API.
+	gatewayAPIInstalled  bool
+	listenerSetInstalled bool
+
+	// APIReader reads from the API server, bypassing the cache. The hostname claim is read through it, because the
+	// claim may have been created earlier in the same reconcile, before the cache has it.
+	APIReader client.Reader
 }
 
 // +kubebuilder:rbac:groups=rcs.dana.io,resources=capps,verbs=get;list;watch;create;update;patch;delete
@@ -75,10 +90,23 @@ type CappReconciler struct {
 // +kubebuilder:rbac:groups="nfspvc.dana.io",resources=nfspvcs,verbs=get;list;watch;update;create;delete
 // +kubebuilder:rbac:groups="record.dns-v2.m.crossplane.io",resources=cnamerecords,verbs=get;list;watch;update;create;delete
 // +kubebuilder:rbac:groups="cert-manager.io",resources=certificates,verbs=get;list;watch;update;create;delete
+// +kubebuilder:rbac:groups="gateway.networking.k8s.io",resources=httproutes;listenersets;referencegrants,verbs=get;list;watch;update;create;delete
+// +kubebuilder:rbac:groups="networking.internal.knative.dev",resources=clusterdomainclaims,verbs=get;list;watch;update;create;delete
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *CappReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
+	logger := mgr.GetLogger().WithName(cappControllerName)
+
+	var err error
+	if r.gatewayAPIInstalled, err = kindInstalled(mgr, schema.GroupVersionKind{Group: gatewayv1.GroupVersion.Group, Version: gatewayv1.GroupVersion.Version, Kind: rmanagers.HTTPRoute}); err != nil {
+		return err
+	}
+	if r.listenerSetInstalled, err = kindInstalled(mgr, schema.GroupVersionKind{Group: gatewayv1.GroupVersion.Group, Version: gatewayv1.GroupVersion.Version, Kind: rmanagers.ListenerSet}); err != nil {
+		return err
+	}
+	logger.Info("Gateway API kinds detected", "httpRoute", r.gatewayAPIInstalled, "listenerSet", r.listenerSetInstalled)
+
+	b := ctrl.NewControllerManagedBy(mgr).
 		For(&cappv1alpha1.Capp{},
 			builder.WithPredicates(
 				predicate.Or(
@@ -133,7 +161,109 @@ func (r *CappReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			&cappv1alpha1.CappConfig{},
 			handler.EnqueueRequestsFromMapFunc(r.findCappsForCappConfig),
 			builder.WithPredicates(predicate.GenerationChangedPredicate{})).
-		Complete(r)
+		// A claim the operator holds can be deleted by someone else, for example by the finalizer of the
+		// DomainMapping it replaces; the Capp is reconciled so the claim is created again.
+		Watches(
+			&netv1alpha1.ClusterDomainClaim{},
+			handler.EnqueueRequestsFromMapFunc(findCappFromClaim),
+			builder.WithPredicates(predicate.NewPredicateFuncs(func(object client.Object) bool {
+				_, ok := rmanagers.ClaimCappRequest(object)
+				return ok
+			})),
+		).
+		// cert-manager writes the TLS Secret after the Certificate; the listener that serves it waits for it.
+		Watches(
+			&corev1.Secret{},
+			handler.EnqueueRequestsFromMapFunc(r.findCappFromLabels),
+			builder.WithPredicates(issuedTLSSecretPredicate()),
+		)
+
+	if r.gatewayAPIInstalled {
+		b = b.Watches(
+			&gatewayv1.HTTPRoute{},
+			handler.EnqueueRequestsFromMapFunc(r.findCappFromLabels),
+			builder.WithPredicates(managedResourcePredicate(), predicate.Or(
+				predicate.GenerationChangedPredicate{},
+				statusChangedPredicate(func(route *gatewayv1.HTTPRoute) any { return stripRouteStatusTimes(route.Status) }),
+			)),
+		)
+	}
+	if r.listenerSetInstalled {
+		b = b.Watches(
+			&gatewayv1.ListenerSet{},
+			handler.EnqueueRequestsFromMapFunc(r.findCappFromLabels),
+			builder.WithPredicates(managedResourcePredicate(), predicate.Or(
+				predicate.GenerationChangedPredicate{},
+				statusChangedPredicate(func(ls *gatewayv1.ListenerSet) any { return stripListenerSetStatusTimes(ls.Status) }),
+			)),
+		)
+	}
+
+	return b.Complete(r)
+}
+
+// kindInstalled reports whether the API server serves gvk. A missing kind is not an error.
+func kindInstalled(mgr ctrl.Manager, gvk schema.GroupVersionKind) (bool, error) {
+	if _, err := mgr.GetRESTMapper().RESTMapping(gvk.GroupKind(), gvk.Version); err != nil {
+		if meta.IsNoMatchError(err) {
+			return false, nil
+		}
+		return false, fmt.Errorf("failed to look up %s: %w", gvk.String(), err)
+	}
+	return true, nil
+}
+
+// managedResourcePredicate passes only objects the operator created for a Capp. Knative copies the Capp labels onto
+// the HTTPRoutes it creates, so the owner reference is what tells them apart.
+func managedResourcePredicate() predicate.Predicate {
+	return predicate.NewPredicateFuncs(func(object client.Object) bool {
+		return object.GetLabels()[cappmeta.CappResourceKey] != "" && rmanagers.IsOwnedByAnyCapp(object)
+	})
+}
+
+// issuedTLSSecretPredicate passes the creation of a TLS Secret that cert-manager issued for a Capp's Certificate.
+func issuedTLSSecretPredicate() predicate.Predicate {
+	issued := func(object client.Object) bool {
+		return object.GetLabels()[cappmeta.CappResourceKey] != "" && object.GetAnnotations()[cmapi.CertificateNameKey] != ""
+	}
+	return predicate.Funcs{
+		CreateFunc:  func(e event.CreateEvent) bool { return issued(e.Object) },
+		UpdateFunc:  func(event.UpdateEvent) bool { return false },
+		DeleteFunc:  func(event.DeleteEvent) bool { return false },
+		GenericFunc: func(event.GenericEvent) bool { return false },
+	}
+}
+
+// findCappFromClaim maps a ClusterDomainClaim to the Capp named in its labels.
+func findCappFromClaim(_ context.Context, object client.Object) []reconcile.Request {
+	key, ok := rmanagers.ClaimCappRequest(object)
+	if !ok {
+		return nil
+	}
+	return []reconcile.Request{{NamespacedName: key}}
+}
+
+func stripRouteStatusTimes(routeStatus gatewayv1.HTTPRouteStatus) gatewayv1.HTTPRouteStatus {
+	out := *routeStatus.DeepCopy()
+	for i := range out.Parents {
+		for j := range out.Parents[i].Conditions {
+			out.Parents[i].Conditions[j].LastTransitionTime = metav1.Time{}
+		}
+	}
+	return out
+}
+
+func stripListenerSetStatusTimes(lsStatus gatewayv1.ListenerSetStatus) gatewayv1.ListenerSetStatus {
+	out := *lsStatus.DeepCopy()
+	for i := range out.Conditions {
+		out.Conditions[i].LastTransitionTime = metav1.Time{}
+	}
+	for i := range out.Listeners {
+		for j := range out.Listeners[i].Conditions {
+			out.Listeners[i].Conditions[j].LastTransitionTime = metav1.Time{}
+		}
+	}
+	return out
 }
 
 func statusChangedPredicate[T client.Object](statusOf func(T) any) predicate.Predicate {
@@ -415,7 +545,14 @@ func (r *CappReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		{Name: rmanagers.NfsPvc, Manager: rmanagers.NFSPVCManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder}},
 		{Name: rmanagers.SyslogNGOutput, Manager: rmanagers.SyslogNGOutputManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder}},
 		{Name: rmanagers.SyslogNGFlow, Manager: rmanagers.SyslogNGFlowManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder}},
-		{Name: rmanagers.Certificate, Manager: rmanagers.CertificateManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder, CappConfig: cappConfig}},
+		// With Gateway API routing the claim comes first, and the Certificate, ListenerSet and HTTPRoute managers check
+		// it again before writing, so nothing is issued or routed for a hostname someone else holds. The HTTPRoute
+		// comes before the DomainMapping cleanup, so a switch to Gateway API serves the new route before the old one is
+		// deleted; a switch back keeps the HTTPRoute until the DomainMapping is Ready.
+		{Name: rmanagers.ClusterDomainClaim, Manager: rmanagers.ClusterDomainClaimManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder, CappConfig: cappConfig, APIReader: r.APIReader}},
+		{Name: rmanagers.Certificate, Manager: rmanagers.CertificateManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder, CappConfig: cappConfig, APIReader: r.APIReader}},
+		{Name: rmanagers.ListenerSet, Manager: rmanagers.ListenerSetManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder, CappConfig: cappConfig, APIReader: r.APIReader, Installed: r.listenerSetInstalled}},
+		{Name: rmanagers.HTTPRoute, Manager: rmanagers.HTTPRouteManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder, CappConfig: cappConfig, APIReader: r.APIReader, Installed: r.gatewayAPIInstalled, ListenerSetInstalled: r.listenerSetInstalled}},
 		{Name: rmanagers.DomainMapping, Manager: rmanagers.DomainMappingManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder, CappConfig: cappConfig}},
 		{Name: rmanagers.DNSRecord, Manager: rmanagers.DNSRecordManager{ResourceManagerClient: rmClient, EventRecorder: r.EventRecorder, CappConfig: cappConfig}},
 	}

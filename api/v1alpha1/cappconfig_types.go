@@ -40,6 +40,78 @@ type CappConfigSpec struct {
 	// +kubebuilder:default:=10
 	// +kubebuilder:validation:Minimum=1
 	RevisionHistoryLimit int `json:"revisionHistoryLimit,omitempty"`
+
+	// GatewayAPI makes the operator route Capp hostnames through Gateway API objects that it creates itself,
+	// instead of through Knative DomainMappings. Set it when Knative uses the net-gateway-api ingress, where a
+	// DomainMapping's backend is an ExternalName Service that implementations such as Envoy Gateway refuse.
+	// When unset, hostnames are served through DomainMappings. See docs/gateway-api-routing.md.
+	// +optional
+	GatewayAPI *GatewayAPIConfig `json:"gatewayAPI,omitempty"`
+}
+
+// GatewayTLSMode selects how HTTPS is served for a Capp hostname when GatewayAPI is set.
+type GatewayTLSMode string
+
+const (
+	// GatewayTLSModeListenerSet creates a cert-manager Certificate and a ListenerSet with an HTTPS listener
+	// for each Capp with tlsEnabled. The ListenerSet is attached to the Gateway.
+	GatewayTLSModeListenerSet GatewayTLSMode = "ListenerSet"
+
+	// GatewayTLSModeGateway creates no per-Capp Certificate or listener. An HTTPS listener of the Gateway itself,
+	// such as a wildcard listener for the DNS zone, serves the hostname.
+	GatewayTLSModeGateway GatewayTLSMode = "Gateway"
+)
+
+// GatewayAPIConfig defines the Gateway API objects that Capp hostnames are routed through.
+type GatewayAPIConfig struct {
+	// Gateway is the Gateway that hostname routes and ListenerSets attach to. It is normally the Gateway
+	// of the external-gateways entry in Knative's config-gateway ConfigMap.
+	Gateway NamespacedName `json:"gateway"`
+
+	// LocalGatewayService is the Service in front of Knative's cluster-local gateway: the service of the
+	// local-gateways entry in Knative's config-gateway ConfigMap. Hostname traffic is sent to it with the
+	// Host header rewritten to the Knative Service's cluster-local name, which is the path a DomainMapping takes.
+	LocalGatewayService ServiceReference `json:"localGatewayService"`
+
+	// TLSMode selects how HTTPS is served for Capps with tlsEnabled.
+	// +kubebuilder:validation:Enum=ListenerSet;Gateway
+	// +kubebuilder:default:=ListenerSet
+	// +optional
+	TLSMode GatewayTLSMode `json:"tlsMode,omitempty"`
+
+	// HTTPSPort is the port of the HTTPS listener in each ListenerSet. It must be a port that the
+	// Gateway's load balancer exposes.
+	// +kubebuilder:default:=443
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=65535
+	// +optional
+	HTTPSPort int32 `json:"httpsPort,omitempty"`
+}
+
+// NamespacedName identifies a namespaced object.
+type NamespacedName struct {
+	// Name is the name of the object.
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name"`
+	// Namespace is the namespace of the object.
+	// +kubebuilder:validation:MinLength=1
+	Namespace string `json:"namespace"`
+}
+
+// ServiceReference identifies a port of a Service.
+type ServiceReference struct {
+	// Name is the name of the Service.
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name"`
+	// Namespace is the namespace of the Service.
+	// +kubebuilder:validation:MinLength=1
+	Namespace string `json:"namespace"`
+	// Port is the Service port that serves HTTP.
+	// +kubebuilder:default:=80
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=65535
+	// +optional
+	Port int32 `json:"port,omitempty"`
 }
 
 // IssuerRef identifies a cert-manager issuer by name, kind, and API group.

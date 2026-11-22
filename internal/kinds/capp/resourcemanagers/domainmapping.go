@@ -97,6 +97,12 @@ func (k DomainMappingManager) CleanUp(ctx context.Context, capp cappv1alpha1.Cap
 			}
 		}
 
+		// With Gateway API routing the Certificate, and so its Secret, may still be in use after the DomainMapping
+		// is gone; the Secret is deleted here only when nothing serves it anymore.
+		if capp.DeletionTimestamp == nil && UsesListenerSetTLS(k.CappConfig, capp) {
+			continue
+		}
+
 		secretName := generateTLSSecretName(item.Name)
 		secret := corev1.Secret{}
 		if err := k.K8sClient.Get(ctx, types.NamespacedName{Name: secretName, Namespace: item.Namespace}, &secret); err != nil {
@@ -112,8 +118,9 @@ func (k DomainMappingManager) CleanUp(ctx context.Context, capp cappv1alpha1.Cap
 }
 
 // IsRequired is responsible to determine if resource DomainMapping is required.
+// With Gateway API routing the hostname is served by an HTTPRoute instead.
 func (k DomainMappingManager) IsRequired(capp cappv1alpha1.Capp) bool {
-	return capp.Spec.RouteSpec.Hostname != ""
+	return capp.Spec.RouteSpec.Hostname != "" && !IsGatewayAPIRouting(k.CappConfig)
 }
 
 // Manage creates or updates a DomainMapping resource based on the provided Capp if it's required.

@@ -149,4 +149,11 @@ config:
     - match: ".*"
       explanation: "any hostname"
 
+  # -- Route Capp hostnames through operator-managed Gateway API objects (HTTPRoute, ListenerSet,
+  # ClusterDomainClaim) instead of Knative DomainMappings. Needed when Knative uses net-gateway-api.
+  # Leave empty to keep DomainMappings. Example:
+  # `{gateway: {name: eg-external, namespace: eg-external}, localGatewayService: {name: knative-internal, namespace: envoy-gateway-system, port: 80}, tlsMode: ListenerSet, httpsPort: 443}`.
+  # See docs/gateway-api-routing.md.
+  gatewayAPI: {}
+
   revisionHistoryLimit: 10
