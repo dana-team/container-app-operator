@@ -13,7 +13,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	kapis "knative.dev/pkg/apis"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -59,13 +58,6 @@ var capabilities = []capability{
 		check:         checkRoute,
 	},
 	{
-		conditionType: cappv1alpha1.CappConditionEventingReady,
-		readyReason:   cappv1alpha1.CappReadyReasonEventingNotReady,
-		dependsOn:     []string{cappv1alpha1.CappConditionServingReady},
-		managers:      []string{rmanagers.PingSource, rmanagers.KafkaSource},
-		check:         checkEventing,
-	},
-	{
 		conditionType: cappv1alpha1.CappConditionLoggingReady,
 		readyReason:   cappv1alpha1.CappReadyReasonLoggingNotReady,
 		managers:      []string{rmanagers.SyslogNGOutput, rmanagers.SyslogNGFlow},
@@ -95,12 +87,6 @@ func SyncStatus(ctx context.Context, capp cappv1alpha1.Capp, log logr.Logger, r 
 	if err := buildDeprecatedStatus(ctx, &cappObject.Status, capp, log, r, resourceManagers, cappConfig); err != nil {
 		return err
 	}
-
-	eventingStatus, err := buildEventingStatus(ctx, r, capp)
-	if err != nil {
-		return err
-	}
-	cappObject.Status.EventingStatus = eventingStatus
 
 	CreateStateStatus(&cappObject.Status.StateStatus, capp.Spec.State)
 
@@ -305,9 +291,6 @@ func stripVolatileStatusFields(s cappv1alpha1.CappStatus) cappv1alpha1.CappStatu
 	}
 	for i := range out.RouteStatus.DNSRecordObjectStatus.CNAMERecordObjectStatus.Conditions {
 		out.RouteStatus.DNSRecordObjectStatus.CNAMERecordObjectStatus.Conditions[i].LastTransitionTime = metav1.Time{}
-	}
-	for i := range out.EventingStatus.EventSources {
-		out.EventingStatus.EventSources[i].Condition.LastTransitionTime = kapis.VolatileTime{Inner: metav1.Time{}}
 	}
 	for i := range out.VolumesStatus.NFSVolumesStatus {
 		for j := range out.VolumesStatus.NFSVolumesStatus[i].NFSPVCStatus.Conditions {

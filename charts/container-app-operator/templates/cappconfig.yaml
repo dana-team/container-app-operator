@@ -15,7 +15,6 @@ spec:
     minReplicasLimit: {{ .Values.config.autoscaleConfig.minReplicasLimit }}
     maxReplicasLimit: {{ .Values.config.autoscaleConfig.maxReplicasLimit }}
     maxScaleDelay: {{ .Values.config.autoscaleConfig.maxScaleDelay }}
-  maxKafkaConsumers: {{ .Values.config.maxKafkaConsumers }}
   dnsConfig:
     zone: "{{ .Values.config.dnsConfig.zone }}"
     cname: "{{ .Values.config.dnsConfig.cname }}"
