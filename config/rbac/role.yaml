@@ -49,10 +49,34 @@ rules:
   - update
   - watch
 - apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - httproutes
+  - listenersets
+  - referencegrants
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - update
+  - watch
+- apiGroups:
   - logging.banzaicloud.io
   resources:
   - syslogngflows
   - syslogngoutputs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - update
+  - watch
+- apiGroups:
+  - networking.internal.knative.dev
+  resources:
+  - clusterdomainclaims
   verbs:
   - create
   - delete

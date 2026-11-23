@@ -224,6 +224,76 @@ spec:
                 - provider
                 - zone
                 type: object
+              gatewayAPI:
+                description: |-
+                  GatewayAPI makes the operator route Capp hostnames through Gateway API objects that it creates itself,
+                  instead of through Knative DomainMappings. Set it when Knative uses the net-gateway-api ingress, where a
+                  DomainMapping's backend is an ExternalName Service that implementations such as Envoy Gateway refuse.
+                  When unset, hostnames are served through DomainMappings. See docs/gateway-api-routing.md.
+                properties:
+                  gateway:
+                    description: |-
+                      Gateway is the Gateway that hostname routes and ListenerSets attach to. It is normally the Gateway
+                      of the external-gateways entry in Knative's config-gateway ConfigMap.
+                    properties:
+                      name:
+                        description: Name is the name of the object.
+                        minLength: 1
+                        type: string
+                      namespace:
+                        description: Namespace is the namespace of the object.
+                        minLength: 1
+                        type: string
+                    required:
+                    - name
+                    - namespace
+                    type: object
+                  httpsPort:
+                    default: 443
+                    description: |-
+                      HTTPSPort is the port of the HTTPS listener in each ListenerSet. It must be a port that the
+                      Gateway's load balancer exposes.
+                    format: int32
+                    maximum: 65535
+                    minimum: 1
+                    type: integer
+                  localGatewayService:
+                    description: |-
+                      LocalGatewayService is the Service in front of Knative's cluster-local gateway: the service of the
+                      local-gateways entry in Knative's config-gateway ConfigMap. Hostname traffic is sent to it with the
+                      Host header rewritten to the Knative Service's cluster-local name, which is the path a DomainMapping takes.
+                    properties:
+                      name:
+                        description: Name is the name of the Service.
+                        minLength: 1
+                        type: string
+                      namespace:
+                        description: Namespace is the namespace of the Service.
+                        minLength: 1
+                        type: string
+                      port:
+                        default: 80
+                        description: Port is the Service port that serves HTTP.
+                        format: int32
+                        maximum: 65535
+                        minimum: 1
+                        type: integer
+                    required:
+                    - name
+                    - namespace
+                    type: object
+                  tlsMode:
+                    default: ListenerSet
+                    description: TLSMode selects how HTTPS is served for Capps with
+                      tlsEnabled.
+                    enum:
+                    - ListenerSet
+                    - Gateway
+                    type: string
+                required:
+                - gateway
+                - localGatewayService
+                type: object
               revisionHistoryLimit:
                 default: 10
                 description: RevisionHistoryLimit defines how many CappRevisions will
