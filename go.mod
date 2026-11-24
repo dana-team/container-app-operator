@@ -26,7 +26,7 @@ require (
 	knative.dev/networking v0.0.0-20261026130131-cfc431598730
 	knative.dev/pkg v0.0.0-20261026113028-cfa0ac991c5a
 	knative.dev/serving v0.51.0
-	sigs.k8s.io/controller-runtime v0.25.2
+	sigs.k8s.io/controller-runtime v0.25.3
 	sigs.k8s.io/gateway-api v1.6.0
 )
 
